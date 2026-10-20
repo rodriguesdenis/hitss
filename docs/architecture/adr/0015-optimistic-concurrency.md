@@ -48,9 +48,11 @@ The same user can edit a task from two devices, or an offline device can replay 
 
 - `teams.version` and `tasks.version` (`int`, starts at 1) are incremented on every state change; a no-op (e.g. same status) does not bump it.
 - Single-resource responses (`GET /:id`, `POST`, `PUT`, `PATCH`) include **`ETag: W/"<version>"`** (weak: the representation may vary, e.g. `isOverdue` depends on today). Lists expose `version` per item in the body.
-- `PUT`, `PATCH` and `DELETE` accept **`If-Match: W/"<n>"`** (strong form `"<n>"` also accepted). A `@IfMatch()` param decorator parses it into `expectedVersion` passed in the command.
+- `PUT`, `PATCH` and `DELETE` accept **`If-Match: W/"<n>"`** (strong form `"<n>"` also accepted; any other value → `412`). `If-Match` is checked before no-op detection: a same-status `PATCH` with a matching `If-Match` (or none) returns `200` with an unchanged `ETag`. A `@IfMatch()` param decorator parses it into `expectedVersion` passed in the command.
 - The repository's `save(aggregate, expectedVersion?)` issues a conditional update; 0 affected rows → re-check existence: not found → `404`, otherwise `ConcurrencyConflict` → **`412 PRECONDITION_FAILED`** with `details: { currentVersion }`.
+- **Check order:** request validation (`400 VALIDATION_FAILED`, Nest pipes) always runs before precondition checks (`412`), which run in the handler before no-op detection.
 - Without `If-Match`, the update still increments the version (but does not check it).
+- **Unassignment on `TeamDeleted`** changes a task's `teams`, so it bumps that task's `version` and `updatedAt` (its representation changed).
 - **App usage:** edits (`PUT`) and deletes send `If-Match` from the cached `version`; the quick status toggle does not (last write wins is the intended semantics for a toggle). On `412` the app rolls back and refetches.
 - `If-None-Match` / `304` for GET caching is not implemented (React Query already caches); noted as a possible addition.
 
@@ -64,7 +66,7 @@ The same user can edit a task from two devices, or an offline device can replay 
 **Negative**
 
 - Clients must surface a conflict UX ("changed elsewhere — reloaded"); covered in Spec 005.
-- Team unassignment caused by `TeamDeleted` changes tasks' `teams`. Proposed rule: it bumps `version` and `updatedAt` of affected tasks (their representation changed), so a stale offline `PUT` (sent with `If-Match`) carrying the deleted team id gets `412` instead of `422 UNKNOWN_TEAMS`. To be confirmed in the Spec 002/003 plans.
+- Deleting a team bumps the `version` of every task it was assigned to (decided). A stale offline `PUT` (sent with `If-Match`) carrying the deleted team id therefore gets `412` instead of `422 UNKNOWN_TEAMS`, and the app refetches.
 
 **Neutral**
 

@@ -45,10 +45,11 @@
 - **Request hash:** SHA-256 of method + path + canonical JSON body.
 - **Flow** (an `IdempotencyInterceptor` in shared presentation, backed by an `IdempotencyStore` port):
   1. No header → normal processing.
-  2. Key found, not expired, same hash → **replay** stored status and body (plus `Idempotent-Replayed: true` header); the handler is not executed.
-  3. Key found with a different hash → **`422 IDEMPOTENCY_KEY_REUSED`**.
-  4. Key not found → execute the command and, in the **same transaction** as the create, insert the key row with the response.
-  5. Concurrent requests with the same key: the second transaction's insert blocks on the primary key until the first commits, then fails with a unique violation; its whole transaction (including its create) rolls back and the interceptor re-reads the key and applies rule 2 or 3. No duplicate can be committed.
+  2. Inside the transaction, take `pg_try_advisory_xact_lock` on a hash of `(owner_id, key)`. Not acquired → another request with this key is in flight → **`409 IDEMPOTENCY_REQUEST_IN_PROGRESS`** with `Retry-After: 1`; nothing is executed.
+  3. Key found, not expired, same hash → **replay** stored status and body (plus `Idempotent-Replayed: true` header); the handler is not executed.
+  4. Key found with a different hash → **`422 IDEMPOTENCY_KEY_REUSED`**.
+  5. Key not found → execute the command and, in the **same transaction** as the create, insert the key row with the response. The advisory lock is released on commit/rollback, so a retry after `Retry-After` sees the committed key and gets rule 3 or 4.
+  6. Safety net: if two transactions still race on the insert, the primary key makes the second fail with a unique violation; its whole transaction (including its create) rolls back and the interceptor re-reads the key and applies rule 3 or 4. No duplicate can be committed.
 - **What is stored:** only successful (`2xx`) responses. Validation and domain errors are not stored, so a client can fix and retry with the same key.
 - **TTL:** 24 h (`expires_at`); expired keys are ignored on lookup and removed by a small bounded batch delete of expired rows on insert; a scheduled purge is a production improvement.
 - **Client:** the mobile mutator generates the key when the mutation is _created_ and persists it with the paused mutation, so replays reuse it.
@@ -59,6 +60,7 @@
 
 - Retries and offline replays never create duplicate teams or tasks.
 - Payload mismatch is reported, catching client bugs.
+- A concurrent duplicate (double tap, retry racing the original) fails fast with `409` instead of waiting on a row lock; the mobile mutator retries after `Retry-After`.
 - Works across API restarts; no extra infrastructure.
 
 **Negative**
