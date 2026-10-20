@@ -15,7 +15,7 @@ You own quality for **Teams & Tasks**.
 ## Approach
 
 - One `Feature` per spec; `Rule:` blocks group business rules; `Scenario Outline` + `Examples` for validation boundaries (e.g. title length 2/3/120/121).
-- Cover happy path, validation, authorization (other user's data → 404), not-found, conflicts (stale `version` → 409), pagination edges, filters combined.
+- Cover happy path, validation, authorization (other user's data → 404), not-found, conflicts (stale `If-Match` → 412 `PRECONDITION_FAILED`, duplicate name → 409), pagination edges, filters combined.
 - Test pyramid: domain unit (Jest) → application handler unit → integration (Testcontainers Postgres) → API e2e (supertest) → mobile component (RNTL) → mobile E2E (Maestro). Mutation testing (Stryker) on domain.
 - Each scenario is tagged with its story id (e.g. `@US-03.2`) so the traceability matrix can be checked.
 
