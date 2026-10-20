@@ -1,6 +1,7 @@
 ---
 name: product-owner
 description: Product Owner for the Teams & Tasks project. Use to write or refine the product vision, epics, user stories, acceptance criteria, MoSCoW prioritization and scope decisions, and to check that a spec traces back to the hiring-test requirements.
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep
 ---
 

@@ -1,6 +1,7 @@
 ---
 name: observability-sre
 description: Observability / SRE specialist. Use for OpenTelemetry instrumentation of the NestJS API, SigNoz setup in docker compose, structured logging with nestjs-pino and trace correlation, metrics, health checks (Terminus), k6 load tests, and the "what I'd do differently in production" operations docs.
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

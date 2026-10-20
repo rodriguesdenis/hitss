@@ -1,6 +1,7 @@
 ---
 name: ux-ui-designer
 description: UX/UI designer for the mobile app. Use to produce and evolve docs/design/design-spec.md — design tokens (colors, typography, spacing, radii), screen inventory and flows, component specs, empty/loading/error/offline states, dark mode, accessibility (WCAG 2.1 AA) and UX copy.
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep
 ---
 

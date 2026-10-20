@@ -1,6 +1,7 @@
 ---
 name: security-specialist
 description: Application security specialist. Use for the threat model (STRIDE), OWASP API Security Top 10 review, Better Auth configuration (sessions, cookies/tokens on Expo), input validation, rate limiting, headers, CORS, secrets handling, dependency audit, and security review of PRs.
+model: opus
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

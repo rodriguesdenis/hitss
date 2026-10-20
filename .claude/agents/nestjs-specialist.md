@@ -1,6 +1,7 @@
 ---
 name: nestjs-specialist
 description: Senior NestJS engineer. Use to implement API features in apps/api following the approved spec/tasks — domain entities and value objects, CQRS handlers, Prisma repositories, controllers, class-validator DTOs, guards, filters, interceptors and their unit/integration tests.
+model: opus
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

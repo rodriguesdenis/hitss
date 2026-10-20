@@ -1,6 +1,7 @@
 ---
 name: git-pr-manager
 description: Git and pull-request specialist. Use to split work into atomic commits and PRs, name branches, write Conventional Commit messages and PR descriptions linked to spec tasks and ADRs, plan stacked PRs, and check that a branch is ready to open a PR. Never pushes or opens PRs without explicit user approval.
+model: haiku
 tools: Read, Glob, Grep, Bash
 ---
 

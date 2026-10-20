@@ -1,6 +1,7 @@
 ---
 name: qa-engineer
 description: QA / test engineer. Use to write BDD Gherkin scenarios from acceptance criteria, the test strategy and pyramid, the requirement→test traceability matrix, to review test coverage of a PR, and to run exploratory checks against the running app/API.
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

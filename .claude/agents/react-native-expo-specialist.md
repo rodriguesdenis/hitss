@@ -1,6 +1,7 @@
 ---
 name: react-native-expo-specialist
 description: Senior React Native + Expo engineer. Use to implement the mobile app in apps/mobile — Expo Router screens, NativeWind styling with @apply, React Query (server state, optimistic updates, offline persistence), Zustand + immer (local state), react-hook-form + zod forms, accessibility, i18n and component tests.
+model: opus
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

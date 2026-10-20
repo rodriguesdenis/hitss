@@ -1,6 +1,7 @@
 ---
 name: software-architect
 description: Software architect for Teams & Tasks. Use for ADRs, C4 diagrams, DDD bounded contexts/aggregates, Clean Architecture layering, API contract design, cross-cutting decisions and for reviewing whether code respects the architecture.
+model: opus
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 
