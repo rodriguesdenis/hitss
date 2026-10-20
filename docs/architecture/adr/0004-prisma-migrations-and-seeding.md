@@ -51,7 +51,7 @@ Use **Prisma** (current major, PostgreSQL driver adapter) with:
 - **Apply** with `prisma migrate deploy` in the container entrypoint ([ADR-0018](0018-docker-compose-one-command-run.md)) and in integration tests against Testcontainers.
 - **Mappers** in `infrastructure/` translate rows ↔ aggregates; Prisma types never cross into `application/` or `domain/` (dependency-cruiser rule A2).
 - **Seed** `prisma/seed.ts`:
-  - deterministic: a fixed id for the demo user (a text id, like every Better Auth id) and fixed UUIDs for teams and tasks; fixed faker seed for any generated text; dates computed relative to a fixed anchor so the "overdue" task stays overdue;
+  - deterministic: **fixed literal fixtures** (no faker or random data) — a fixed UUID for the demo user (stored in Better Auth's `text` id column) and fixed UUIDs, titles and descriptions for teams and tasks; due dates of overdue/upcoming tasks are computed **relative to the seeding day** (e.g. today − 3 days, today + 7 days), so the "overdue" task is always overdue;
   - idempotent: teams and tasks are `upsert`ed by fixed id and the demo user is only created when absent, so running it on every container start is safe;
   - creates `demo@teams-tasks.dev` through Better Auth's API (so the password hash matches the library's algorithm), 3 teams, 10 tasks covering every status, a multi-team task, a task without team and an overdue task.
 - Scripts: `pnpm db:migrate`, `pnpm db:seed`, `pnpm db:reset` (drop → migrate → seed).

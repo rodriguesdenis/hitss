@@ -61,7 +61,7 @@ erDiagram
   }
 ```
 
-`sessions`, `accounts` and `verifications` follow the Better Auth schema (generated with `@better-auth/cli generate`) and are owned by the Identity context; other contexts only reference `users.id`.
+`sessions`, `accounts` and `verifications` follow the Better Auth schema (generated with `@better-auth/cli generate`) and are owned by the Identity context; other contexts only reference `users.id`. Better Auth generates user ids as **UUIDs** (`advanced.database.generateId: 'uuid'`), but `users.id` and every `owner_id` stay `text` as in the Better Auth schema; the domain treats `ownerId` as an opaque string ([ADR-0007](adr/0007-better-auth.md)).
 
 ## Relationships
 
@@ -104,7 +104,7 @@ List indexes end with `id` because every sort is tie-broken by `id` for stable o
 ## Migrations & seeding (reproducibility)
 
 - Migrations live in `apps/api/prisma/migrations`, created with `prisma migrate dev`, applied with `prisma migrate deploy` on container start.
-- Seed (`prisma/seed.ts`) is **deterministic and idempotent** ([ADR-0004](adr/0004-prisma-migrations-and-seeding.md)): fixed faker seed, dates relative to a fixed anchor.
-  - The demo user `demo@teams-tasks.dev` / `Demo@1234` is created **through Better Auth's server API** (so the password hash uses the library's algorithm) with an **explicit fixed id** (a text id, like every Better Auth id), only if it doesn't exist yet.
+- Seed (`prisma/seed.ts`) is **deterministic and idempotent** ([ADR-0004](adr/0004-prisma-migrations-and-seeding.md)): **fixed literal fixtures** (no faker or random data); due dates of overdue/upcoming tasks are computed relative to the seeding day, so the overdue task is always overdue.
+  - The demo user `demo@teams-tasks.dev` / `Demo@1234` is created **through Better Auth's server API** (so the password hash uses the library's algorithm) with an **explicit fixed id** (a UUID stored in the `text` column), only if it doesn't exist yet.
   - Teams and tasks are **upserted by fixed UUIDs**, owned by that user id: 3 teams and 10 tasks covering all statuses, multi-team tasks, a task without team and an overdue task.
 - `pnpm db:reset` drops, migrates and seeds; integration tests use a throwaway PostgreSQL via Testcontainers.

@@ -45,12 +45,14 @@ The brief does not require authentication, but without it "teams and tasks" are 
 
 ## Decision outcome
 
-- **Server:** `betterAuth({ database: prismaAdapter(prisma, { provider: "postgresql" }), emailAndPassword: { enabled: true, minPasswordLength: 8, maxPasswordLength: 128 }, plugins: [bearer(), expo()], trustedOrigins: [...] })`, configured from validated env (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`).
+- **Server:** `betterAuth({ database: prismaAdapter(prisma, { provider: "postgresql" }), emailAndPassword: { enabled: true, minPasswordLength: 8, maxPasswordLength: 128 }, plugins: [bearer(), expo()], trustedOrigins: [...], advanced: { database: { generateId: "uuid" } } })`, configured from validated env (`BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`).
+- **User ids:** generated as UUIDs (`generateId: "uuid"`) and stored in Better Auth's `text` columns. The domain keeps `ownerId` as an opaque string and never relies on its format.
 - **Mount:** `@thallesp/nestjs-better-auth` `AuthModule.forRoot({ auth })` exposes Better Auth at **`/api/auth/*`** and registers a **global `AuthGuard`**. Every route is authenticated by default; `@AllowAnonymous()` is used only on health and docs (constitution §VI.1).
 - **Ownership:** controllers read `@Session() session` and pass `session.user.id` as `ownerId` into commands/queries; repositories always filter by `ownerId`; foreign ids → `404`.
 - **trustedOrigins:** the app scheme (`teamstasks://`) always; `exp://*` and the Metro dev origins only when `NODE_ENV=development`.
 - **Mobile:** `createAuthClient({ baseURL, plugins: [expoClient({ scheme: "teamstasks", storagePrefix: "teamstasks", storage: SecureStore })] })`. The generated API client's mutator obtains auth headers from the auth client (`authClient.getCookie()` → `Cookie` header), as recommended by Better Auth for Expo.
-- **Rate limiting:** Better Auth's built-in limiter plus `@nestjs/throttler` at 10 req/min per IP on `/api/auth/*`.
+- **Rate limiting:** `/api/auth/*` is served by Better Auth outside Nest controllers, so the Nest throttler cannot see it. Better Auth's **built-in limiter** (explicitly `enabled`, memory storage) applies per IP: `sign-up`, `sign-in`, `sign-out` 10 req/min (`customRules`), everything else incl. `get-session` 100 req/min. The client IP is the socket address; forwarded headers (`X-Forwarded-For`) are not trusted unless `ipAddressHeaders` is configured for a known proxy. Its `429` uses Better Auth's native format (with `X-Retry-After`). `/api/v1/*` uses `@nestjs/throttler` at 100 req/min per user (falls back to IP), answering `429 RATE_LIMITED` in our envelope.
+- **Response format:** `/api/auth/*` keeps Better Auth's native responses and errors — a documented exception to the envelope (constitution §IV.2).
 - **Logging:** request/response bodies of `/api/auth/*` are redacted in pino; tokens and cookies never logged.
 
 ## Consequences
@@ -64,7 +66,9 @@ The brief does not require authentication, but without it "teams and tasks" are 
 **Negative**
 
 - Dependency on a community Nest adapter; mitigated by pinning and e2e tests on guard behavior (401 without session, public routes reachable).
-- Better Auth uses `text` ids for users; our tables reference `users.id` as `text`.
+- Better Auth uses `text` id columns for users (UUID values); our tables reference `users.id` as `text`.
+- Two limiters with two `429` formats (Better Auth native on `/api/auth/*`, envelope on `/api/v1/*`); clients handle both.
+- The memory limiter storage is per instance; production with several instances would use secondary storage (Redis).
 
 **Neutral**
 

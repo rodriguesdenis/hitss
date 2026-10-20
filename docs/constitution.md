@@ -26,7 +26,7 @@ The non-negotiable principles of **Teams & Tasks**. Every spec, plan, task and p
 ## IV. Contracts
 
 1. The API's NestJS DTOs are the **single source of truth** for the contract → OpenAPI → generated client (`packages/api-client`). The app never hand-writes API types.
-2. Every response uses the envelope `{ data, meta? }`; every error uses `{ error: { code, message, details?, traceId } }` with a stable, documented `code` (see [API contracts](architecture/api-contracts.md#conventions)).
+2. Every response uses the envelope `{ data, meta? }`; every error uses `{ error: { code, message, details?, traceId } }` with a stable, documented `code` (see [API contracts](architecture/api-contracts.md#conventions)). **Documented exceptions:** `/api/auth/*` (Better Auth's native format, including its `429`) and `/api/v1/health/*` (Terminus' native format), both outside our envelope.
 3. Breaking changes require a new API version (`/api/v2`).
 
 ## V. Quality

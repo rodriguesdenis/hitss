@@ -46,7 +46,7 @@
 - **Flow** (an `IdempotencyInterceptor` in shared presentation, backed by an `IdempotencyStore` port):
   1. No header → normal processing.
   2. Inside the transaction, take `pg_try_advisory_xact_lock` on a hash of `(owner_id, key)`. Not acquired → another request with this key is in flight → **`409 IDEMPOTENCY_REQUEST_IN_PROGRESS`** with `Retry-After: 1`; nothing is executed.
-  3. Key found, not expired, same hash → **replay** stored status and body (plus `Idempotent-Replayed: true` header); the handler is not executed.
+  3. Key found, not expired, same hash → **replay** stored status and body with `Location` and `ETag` rebuilt from the stored body, plus the header **`Idempotent-Replayed: true`**; the handler is not executed.
   4. Key found with a different hash → **`422 IDEMPOTENCY_KEY_REUSED`**.
   5. Key not found → execute the command and, in the **same transaction** as the create, insert the key row with the response. The advisory lock is released on commit/rollback, so a retry after `Retry-After` sees the committed key and gets rule 3 or 4.
   6. Safety net: if two transactions still race on the insert, the primary key makes the second fail with a unique violation; its whole transaction (including its create) rolls back and the interceptor re-reads the key and applies rule 3 or 4. No duplicate can be committed.

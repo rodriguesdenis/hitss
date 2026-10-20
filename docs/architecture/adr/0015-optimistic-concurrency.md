@@ -47,7 +47,7 @@ The same user can edit a task from two devices, or an offline device can replay 
 ## Decision outcome
 
 - `teams.version` and `tasks.version` (`int`, starts at 1) are incremented on every state change; a no-op (e.g. same status) does not bump it.
-- Single-resource responses (`GET /:id`, `POST`, `PUT`, `PATCH`) include **`ETag: W/"<version>"`** (weak: the representation may vary, e.g. `isOverdue` depends on today). Lists expose `version` per item in the body.
+- Single-resource responses (`GET /:id` 200, `POST` 201, `PUT` 200, `PATCH` 200 — including idempotent replays) include **`ETag: W/"<version>"`** (weak: the representation may vary, e.g. `isOverdue` depends on today). Lists expose `version` per item in the body.
 - `PUT`, `PATCH` and `DELETE` accept **`If-Match: W/"<n>"`** (strong form `"<n>"` also accepted; any other value → `412`). `If-Match` is checked before no-op detection: a same-status `PATCH` with a matching `If-Match` (or none) returns `200` with an unchanged `ETag`. A `@IfMatch()` param decorator parses it into `expectedVersion` passed in the command.
 - The repository's `save(aggregate, expectedVersion?)` issues a conditional update; 0 affected rows → re-check existence: not found → `404`, otherwise `ConcurrencyConflict` → **`412 PRECONDITION_FAILED`** with `details: { currentVersion }`.
 - **Check order:** request validation (`400 VALIDATION_FAILED`, Nest pipes) always runs before precondition checks (`412`), which run in the handler before no-op detection.
