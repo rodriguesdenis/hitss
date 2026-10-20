@@ -81,27 +81,30 @@ CREATE TYPE task_status AS ENUM ('PENDING', 'IN_PROGRESS', 'DONE');
 
 ## Indexes and why
 
-| Index                                                                | Serves                                                                         |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `teams (owner_id, lower(name)) UNIQUE WHERE deleted_at IS NULL`      | Team-name uniqueness per owner, ignoring soft-deleted rows (case-insensitive). |
-| `teams (owner_id, created_at DESC) WHERE deleted_at IS NULL`         | Default team listing.                                                          |
-| `tasks (owner_id, status, created_at DESC) WHERE deleted_at IS NULL` | Listing filtered by status with default sort — the hottest query.              |
-| `tasks (owner_id, due_date) WHERE deleted_at IS NULL`                | Sort by due date.                                                              |
-| `tasks USING GIN (title gin_trgm_ops, description gin_trgm_ops)`     | `search` with `ILIKE '%term%'` (extension `pg_trgm`).                          |
-| `task_teams (team_id, task_id)`                                      | `teamId` filter (the PK covers `task_id` lookups) and per-team task counts.    |
+| Index                                                                         | Serves                                                                         |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `teams (owner_id, lower(name)) UNIQUE WHERE deleted_at IS NULL`               | Team-name uniqueness per owner, ignoring soft-deleted rows (case-insensitive). |
+| `teams (owner_id, created_at DESC, id DESC) WHERE deleted_at IS NULL`         | Default team listing.                                                          |
+| `tasks (owner_id, created_at DESC, id DESC) WHERE deleted_at IS NULL`         | Default task listing (no `status` filter, default sort).                       |
+| `tasks (owner_id, status, created_at DESC, id DESC) WHERE deleted_at IS NULL` | Listing filtered by status with default sort — the hottest query.              |
+| `tasks (owner_id, due_date, id) WHERE deleted_at IS NULL`                     | Sort by due date.                                                              |
+| `tasks USING GIN (title gin_trgm_ops, description gin_trgm_ops)`              | `search` with `ILIKE '%term%'` (extension `pg_trgm`).                          |
+| `task_teams (team_id, task_id)`                                               | `teamId` filter (the PK covers `task_id` lookups) and per-team task counts.    |
 
-Partial indexes (`WHERE deleted_at IS NULL`) and the trigram index are written as raw SQL inside Prisma migrations, since Prisma schema can't express them.
+List indexes end with `id` because every sort is tie-broken by `id` for stable offset pagination ([API contracts](api-contracts.md#tasks--apiv1tasks)). Partial indexes (`WHERE deleted_at IS NULL`) and the trigram index are written as raw SQL inside Prisma migrations, since Prisma schema can't express them.
 
 ## Soft delete
 
-`deleted_at` on `teams` and `tasks`. Repositories always filter `deleted_at IS NULL`. Deleting a team also **removes** its `task_teams` rows in the same transaction (the tasks remain). A purge job is listed as a production improvement.
+`deleted_at` on `teams` and `tasks`. Repositories always filter `deleted_at IS NULL`. Deleting a team soft-deletes the `teams` row; its `task_teams` rows are **removed** by Task Management's `OnTeamDeletedHandler` (reacting to `TeamDeleted`) in the same transaction — never by the Teams repository. The tasks remain, and each affected task's `version` / `updated_at` are bumped. A purge job is listed as a production improvement.
 
 ## Concurrency
 
-`version` integer starts at 1 and is incremented on every update. Updates use `UPDATE ... WHERE id = $1 AND owner_id = $2 AND version = $3`; zero affected rows → `ConcurrencyConflict` (or not found). Exposed through `ETag` / `If-Match`.
+`version` integer starts at 1 and is incremented on every update — including unassigning a deleted team from a task, which also sets `updated_at` ([ADR-0015](adr/0015-optimistic-concurrency.md)). No-op changes do not bump it. Updates use `UPDATE ... WHERE id = $1 AND owner_id = $2 AND version = $3`; zero affected rows → `ConcurrencyConflict` (or not found). Exposed through `ETag` / `If-Match`.
 
 ## Migrations & seeding (reproducibility)
 
 - Migrations live in `apps/api/prisma/migrations`, created with `prisma migrate dev`, applied with `prisma migrate deploy` on container start.
-- Seed (`prisma/seed.ts`) is **deterministic and idempotent**: fixed faker seed, upserts by fixed ids. Creates the demo user `demo@teams-tasks.dev` / `Demo@1234`, 3 teams and 10 tasks covering all statuses, multi-team tasks, a task without team and an overdue task.
+- Seed (`prisma/seed.ts`) is **deterministic and idempotent** ([ADR-0004](adr/0004-prisma-migrations-and-seeding.md)): fixed faker seed, dates relative to a fixed anchor.
+  - The demo user `demo@teams-tasks.dev` / `Demo@1234` is created **through Better Auth's server API** (so the password hash uses the library's algorithm) with an **explicit fixed id** (a text id, like every Better Auth id), only if it doesn't exist yet.
+  - Teams and tasks are **upserted by fixed UUIDs**, owned by that user id: 3 teams and 10 tasks covering all statuses, multi-team tasks, a task without team and an overdue task.
 - `pnpm db:reset` drops, migrates and seeds; integration tests use a throwaway PostgreSQL via Testcontainers.
