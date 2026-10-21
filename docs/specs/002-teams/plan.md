@@ -56,7 +56,7 @@ apps/api/src/
     ├── infrastructure/
     │   ├── prisma-team.repository.ts        # + team.mapper.ts
     │   ├── prisma-team.read-model.ts        # raw SQL for list (sort, ILIKE with escape) + summaries
-    │   └── team-task-counts.adapter.ts      # sends CountTasksByTeamQuery (003); zero-count placeholder until then
+    │   └── adapters/team-task-counts.adapter.ts  # sends CountTasksByTeamQuery (003); zero-count placeholder until then
     ├── presentation/
     │   ├── teams.controller.ts
     │   ├── dto/{create-team.dto.ts,replace-team.dto.ts,list-teams.query.dto.ts,team.response.dto.ts}

@@ -43,8 +43,8 @@ tasks/
 ├── infrastructure/
 │   ├── prisma-task.repository.ts        # write side: aggregate ⇄ tasks + task_teams
 │   ├── prisma-task.read-model.ts        # read side: parameterized SQL for list/get/count
-│   ├── team-directory.adapter.ts        # sends GetTeamSummariesQuery (teams/contracts) on the QueryBus
-│   └── task.mapper.ts
+│   ├── task.mapper.ts
+│   └── adapters/team-directory.adapter.ts  # sends GetTeamSummariesQuery (teams/contracts) on the QueryBus
 ├── presentation/
 │   ├── tasks.controller.ts
 │   ├── dto/  create-task.dto.ts · replace-task.dto.ts · change-task-status.dto.ts

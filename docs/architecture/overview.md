@@ -324,7 +324,7 @@ apps/api/
 │           │   ├── queries/             # list-tasks/, get-task/, count-tasks-by-team/
 │           │   ├── events/              # on-team-deleted.handler.ts (unassign), record-task-metrics.handler.ts (after commit)
 │           │   └── ports/               # TaskRepository, TaskReadModel, TeamDirectory, task-metrics.ts (TaskMetrics)
-│           ├── infrastructure/          # prisma-task.repository.ts, task.mapper.ts, team-directory.adapter.ts, otel-task-metrics.adapter.ts
+│           ├── infrastructure/          # prisma-task.repository.ts, task.mapper.ts, adapters/ (team-directory.adapter.ts, otel-task-metrics.adapter.ts)
 │           ├── presentation/            # tasks.controller.ts, dto/
 │           └── tasks.module.ts
 ├── test/

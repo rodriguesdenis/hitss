@@ -44,7 +44,7 @@ Order matters; each task is one PR. Sizes: **S** < 150 changed lines, **M** < 40
 ## T-006-05 — RED metrics and task counters
 
 - **Goal:** `http.server.request.duration` with route template; `tasks_created_total`, `tasks_completed_total`, `tasks_deleted_total` from domain events.
-- **Changes:** `TaskMetrics` port (`modules/tasks/application/ports/`), `record-task-metrics.handler.ts` (`modules/tasks/application/events/`), `otel-task-metrics.adapter.ts` (`modules/tasks/infrastructure/`), binding in `tasks.module.ts`; metric views if needed to drop high-cardinality attributes. Only the three task counters exist (no `teams_*` metrics).
+- **Changes:** `TaskMetrics` port (`modules/tasks/application/ports/`), `record-task-metrics.handler.ts` (`modules/tasks/application/events/`), `otel-task-metrics.adapter.ts` (`modules/tasks/infrastructure/adapters/`), binding in `tasks.module.ts`; metric views if needed to drop high-cardinality attributes. Only the three task counters exist (no `teams_*` metrics).
 - **Covers:** @AC-06.4.1, @AC-06.4.2, @AC-06.4.3, @AC-06.4.4, @AC-06.4.5
 - **Done when:** unit tests with a fake counter cover the status outline; integration with `InMemoryMetricExporter` covers idempotent replay and validation rejection; attribute scan finds no ids/emails/URLs.
 
