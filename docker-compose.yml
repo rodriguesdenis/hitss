@@ -1,0 +1,21 @@
+# Teams & Tasks — local stack. Every setting has a working local default, so no .env is needed;
+# if a .env exists compose reads it automatically (see .env.example). Secrets belong in .env only.
+name: teams-tasks
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-teams}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teams}
+      POSTGRES_DB: ${POSTGRES_DB:-teams_tasks}
+    ports: ['${POSTGRES_PORT:-5432}:5432']
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata: {}
