@@ -278,7 +278,7 @@ The config module, its validation library, `APP_ENV` (`local` \| `test` \| `prod
 
 ## Data
 
-Better Auth schema, generated with `pnpm dlx @better-auth/cli generate` (Prisma output) and then mapped to snake_case:
+Better Auth schema, generated with the Better Auth CLI, the `auth` package (`pnpm dlx auth generate --adapter prisma`), and then mapped to snake_case:
 
 | Model          | Table           | Notes                                                                                                                      |
 | -------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
