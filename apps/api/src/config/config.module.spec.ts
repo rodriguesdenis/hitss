@@ -28,6 +28,9 @@ describe('AppConfigModule', () => {
 
     expect(config.port).toBe(3100);
     expect(config.appEnv).toBe('test');
+    expect(config.databaseUrl).toBe(VALID_ENV.DATABASE_URL);
+    expect(config.betterAuthSecret).toBe(VALID_ENV.BETTER_AUTH_SECRET);
+    expect(config.rateLimitMax).toBe(100);
   });
 
   it('AC-06.5.5 refuses to build the module when a variable is invalid', async () => {
