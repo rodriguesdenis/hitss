@@ -47,7 +47,7 @@ Symptom: `api` stays `waiting` or `dependency failed to start: container teams-t
 
 ### API unhealthy or restarting
 
-1. `docker compose logs api | tail -50`.
+1. `docker compose logs migrate api | tail -50` (migrations run in the one-shot `migrate` service; if it failed, the `api` container never starts).
 2. `Invalid configuration: <VAR> …` → fix the named variable in `.env` (or delete `.env` to fall back to defaults).
 3. `prisma migrate deploy` error (`P3009` failed migration, `P1001` can't reach DB) → `make reset` for local data; for a genuinely broken migration fix it in a new migration (never edit an applied one).
 4. Production-rule errors (`APP_ENV=production`): `BETTER_AUTH_SECRET` is the local default, `BETTER_AUTH_URL` not https, `CORS_ORIGINS` has `*`/`http://`/`localhost`, `AUTH_RATE_LIMIT_ENABLED=false`, `APP_SCHEME=exp`, `SEED_DEMO=true` → fix the named variable, or use `APP_ENV=local` locally (`NODE_ENV` is always `production` inside the image; only `APP_ENV` selects these rules). `DOCS_ENABLED` is forced off in production, so `/docs` is 404 there.
