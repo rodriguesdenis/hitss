@@ -47,15 +47,20 @@ export class Team extends AggregateRoot {
       color: p.color,
       description: p.description,
       version: 1,
-      createdAt: p.now,
-      updatedAt: p.now,
+      createdAt: new Date(p.now),
+      updatedAt: new Date(p.now),
       deletedAt: null,
     });
   }
 
   /** Rebuilds a persisted team; raises no events. */
   static reconstitute(props: TeamProps): Team {
-    return new Team({ ...props });
+    return new Team({
+      ...props,
+      createdAt: new Date(props.createdAt),
+      updatedAt: new Date(props.updatedAt),
+      deletedAt: copyDate(props.deletedAt),
+    });
   }
 
   get id(): string {
@@ -82,16 +87,17 @@ export class Team extends AggregateRoot {
     return this.props.version;
   }
 
+  // Dates are mutable: copies in and out keep the aggregate's timestamps private.
   get createdAt(): Date {
-    return this.props.createdAt;
+    return new Date(this.props.createdAt);
   }
 
   get updatedAt(): Date {
-    return this.props.updatedAt;
+    return new Date(this.props.updatedAt);
   }
 
   get deletedAt(): Date | null {
-    return this.props.deletedAt;
+    return copyDate(this.props.deletedAt);
   }
 
   /**
@@ -111,7 +117,7 @@ export class Team extends AggregateRoot {
       name: p.name,
       color: p.color,
       description: p.description,
-      updatedAt: p.now,
+      updatedAt: new Date(p.now),
     };
     return true;
   }
@@ -121,8 +127,10 @@ export class Team extends AggregateRoot {
     if (this.props.deletedAt !== null) {
       return;
     }
-    this.props = { ...this.props, deletedAt: now };
-    this.raise(new TeamDeleted(this.props.id, this.props.ownerId, now));
+    this.props = { ...this.props, deletedAt: new Date(now) };
+    this.raise(
+      new TeamDeleted(this.props.id, this.props.ownerId, new Date(now)),
+    );
   }
 
   assertVersion(expected: ExpectedVersion): void {
@@ -130,4 +138,8 @@ export class Team extends AggregateRoot {
       throw new ConcurrencyConflict(this.props.version);
     }
   }
+}
+
+function copyDate(date: Date | null): Date | null {
+  return date === null ? null : new Date(date);
 }

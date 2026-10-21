@@ -6,8 +6,10 @@ import { Team } from './team';
 import { TeamDescription } from './team-description';
 import { TeamName } from './team-name';
 
-const CREATED_AT = new Date('2026-10-20T10:00:00.000Z');
-const LATER = new Date('2026-10-20T11:00:00.000Z');
+const CREATED_ISO = '2026-10-20T10:00:00.000Z';
+const LATER_ISO = '2026-10-20T11:00:00.000Z';
+const CREATED_AT = new Date(CREATED_ISO);
+const LATER = new Date(LATER_ISO);
 const TEAM_ID = '7d0c5e2a-3f1b-4c8e-9a6d-2b4f8e1c0a93';
 const OWNER_ID = 'owner-1';
 
@@ -163,6 +165,91 @@ describe('Team', () => {
 
       expect(team.deletedAt).toEqual(LATER);
       expect(team.pullEvents()).toEqual([]);
+    });
+  });
+
+  describe('timestamps are not shared with callers', () => {
+    it('getters return copies: mutating them does not change the team', () => {
+      const team = Team.create({
+        id: TEAM_ID,
+        ownerId: OWNER_ID,
+        name: TeamName.create('Backend'),
+        color: ColorHex.create('#2563EB'),
+        description: TeamDescription.create(null),
+        now: new Date(CREATED_ISO),
+      });
+      team.delete(new Date(LATER_ISO));
+
+      team.createdAt.setFullYear(2000);
+      team.updatedAt.setFullYear(2000);
+      team.deletedAt?.setFullYear(2000);
+
+      expect(team.createdAt.toISOString()).toBe(CREATED_ISO);
+      expect(team.updatedAt.toISOString()).toBe(CREATED_ISO);
+      expect(team.deletedAt?.toISOString()).toBe(LATER_ISO);
+    });
+
+    it('inputs are copied: mutating the Date passed in does not change the team', () => {
+      const created = new Date(CREATED_ISO);
+      const replaced = new Date(LATER_ISO);
+      const deleted = new Date(LATER_ISO);
+      const team = Team.create({
+        id: TEAM_ID,
+        ownerId: OWNER_ID,
+        name: TeamName.create('Backend'),
+        color: ColorHex.create('#2563EB'),
+        description: TeamDescription.create(null),
+        now: created,
+      });
+      team.replace({ ...replacement('Platform', '#2563EB'), now: replaced });
+      team.delete(deleted);
+
+      created.setFullYear(2000);
+      replaced.setFullYear(2000);
+      deleted.setFullYear(2000);
+
+      expect(team.createdAt.toISOString()).toBe(CREATED_ISO);
+      expect(team.updatedAt.toISOString()).toBe(LATER_ISO);
+      expect(team.deletedAt?.toISOString()).toBe(LATER_ISO);
+    });
+
+    it('reconstituted dates are copied too', () => {
+      const props = {
+        id: TEAM_ID,
+        ownerId: OWNER_ID,
+        name: TeamName.create('Backend'),
+        color: ColorHex.create('#2563EB'),
+        description: TeamDescription.create(null),
+        version: 3,
+        createdAt: new Date(CREATED_ISO),
+        updatedAt: new Date(LATER_ISO),
+        deletedAt: new Date(LATER_ISO),
+      };
+      const team = Team.reconstitute(props);
+
+      props.createdAt.setFullYear(2000);
+      props.updatedAt.setFullYear(2000);
+      props.deletedAt.setFullYear(2000);
+
+      expect(team.createdAt.toISOString()).toBe(CREATED_ISO);
+      expect(team.updatedAt.toISOString()).toBe(LATER_ISO);
+      expect(team.deletedAt?.toISOString()).toBe(LATER_ISO);
+    });
+
+    it('the TeamDeleted event does not share the deletion Date', () => {
+      const team = Team.create({
+        id: TEAM_ID,
+        ownerId: OWNER_ID,
+        name: TeamName.create('Backend'),
+        color: ColorHex.create('#2563EB'),
+        description: TeamDescription.create(null),
+        now: new Date(CREATED_ISO),
+      });
+      const deleted = new Date(LATER_ISO);
+      team.delete(deleted);
+      deleted.setFullYear(2000);
+
+      expect(team.pullEvents()[0]?.occurredAt.toISOString()).toBe(LATER_ISO);
     });
   });
 
