@@ -43,7 +43,8 @@ const config: Config = {
     {
       ...base,
       displayName: 'unit',
-      roots: ['<rootDir>/src'],
+      // test/support holds shared fakes; their contract specs run with the unit tests.
+      roots: ['<rootDir>/src', '<rootDir>/test/support'],
       testRegex: '.*\\.spec\\.ts$',
       collectCoverageFrom: ['src/**/*.(t|j)s', '!src/generated/**'],
     },
