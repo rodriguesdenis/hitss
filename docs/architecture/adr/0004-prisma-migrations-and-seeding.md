@@ -45,7 +45,7 @@ The API needs type-safe database access, versioned schema migrations that run au
 
 Use **Prisma** (current major, PostgreSQL driver adapter) with:
 
-- **Schema** in `apps/api/prisma/schema.prisma`; Better Auth tables generated with `@better-auth/cli generate` into the same schema.
+- **Schema** in `apps/api/prisma/schema.prisma`; Better Auth tables generated with the Better Auth CLI (the `auth` package: `auth generate --adapter prisma`, then mapped to snake_case) into the same schema.
 - **Explicit** `TaskTeam` join model (not implicit m-n) — see [data model](../data-model.md#relationships).
 - **Migrations** created with `prisma migrate dev --create-only` when raw SQL must be appended (partial unique index on `lower(name)`, partial list indexes, `CREATE EXTENSION pg_trgm` + GIN index). Every migration is committed and reviewed as SQL.
 - **Apply** with `prisma migrate deploy` in the container entrypoint ([ADR-0018](0018-docker-compose-one-command-run.md)) and in integration tests against Testcontainers.
