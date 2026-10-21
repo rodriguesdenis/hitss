@@ -3,7 +3,7 @@ import type * as tracing from '@opentelemetry/sdk-trace';
 
 type ReadableSpan = tracing.ReadableSpan;
 type SpanExporter = tracing.SpanExporter;
-import { sanitizeUrl } from '../logging/sanitize-url';
+import { sanitizeUrl } from '../sanitize-url';
 
 /** Attributes holding a URL or target in old and new HTTP semantic conventions. */
 const URL_ATTRIBUTES = ['url.full', 'http.url', 'http.target'];
