@@ -101,7 +101,7 @@ erDiagram
 
 ## How to run
 
-> ⚠️ **Implementation in progress — commands verified at the end of phase 4.** `docker-compose.yml`, the `Makefile` and the seed are not in the repository yet. Everything in this section is the specified behavior ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
+> ⚠️ **Implementation in progress.** `docker compose up --build` already starts PostgreSQL and the API (verified). The seed, Swagger UI, health routes and the `Makefile` are not in the repository yet; rows marked ⚠️ below are the specified behavior ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
 
 ### Backend (Docker)
 
@@ -112,15 +112,15 @@ git clone <repository-url> && cd hitss
 docker compose up --build
 ```
 
-This starts PostgreSQL, applies the migrations, seeds the demo data and starts the API once the database is healthy. No `.env` is required; to override settings copy `.env.example` to `.env`.
+This starts PostgreSQL, waits until it is healthy, applies the migrations and starts the API on port 3000 (⚠️ seeding the demo data arrives with the seed task). No `.env` is required; to override settings copy `.env.example` to `.env` (for example `API_PORT=3100` when port 3000 is taken).
 
-| What               | Where                                     |
-| ------------------ | ----------------------------------------- |
-| API base URL       | http://localhost:3000/api/v1              |
-| Swagger UI         | http://localhost:3000/docs                |
-| OpenAPI JSON       | http://localhost:3000/docs/openapi.json   |
-| Health (readiness) | http://localhost:3000/api/v1/health/ready |
-| Demo account       | `demo@teams-tasks.dev` / `Demo@1234`      |
+| What            | Where                                     |
+| --------------- | ----------------------------------------- |
+| API base URL    | http://localhost:3000/api/v1              |
+| Swagger UI ⚠️   | http://localhost:3000/docs                |
+| OpenAPI JSON ⚠️ | http://localhost:3000/docs/openapi.json   |
+| Health ⚠️       | http://localhost:3000/api/v1/health/ready |
+| Demo account ⚠️ | `demo@teams-tasks.dev` / `Demo@1234`      |
 
 The seed is deterministic and idempotent: 3 teams and 10 tasks covering every status, tasks in several teams, a task without a team and an overdue task.
 
