@@ -16,3 +16,4 @@ docs
 *.key
 *.p12
 .npmrc
+apps/api/src/generated

@@ -1,0 +1,51 @@
+# syntax=docker/dockerfile:1.7
+# Teams & Tasks API image (ADR-0018): pruned workspace -> cached dependency layer -> build ->
+# small non-root runtime. Build context is the repository root:
+#   docker build -f apps/api/Dockerfile .
+
+# Pinned minor + digest; Dependabot (docker ecosystem) proposes bumps.
+ARG NODE_IMAGE=node:24.22.0-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f
+
+FROM ${NODE_IMAGE} AS base
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
+# openssl: required by Prisma's schema engine on Alpine.
+RUN apk add --no-cache openssl && corepack enable
+WORKDIR /repo
+
+# 1. Prune the monorepo to what @hitss/api needs (manifests + lockfile first, sources second).
+FROM base AS pruner
+COPY . .
+RUN pnpm dlx turbo@2.11.10 prune @hitss/api --docker
+
+# 2. Dependencies: cached until a manifest or the lockfile changes. Install scripts are skipped
+#    (D-1); prisma generate runs explicitly in the build stage.
+FROM base AS deps
+COPY --from=pruner /repo/out/json/ ./
+COPY --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline --ignore-scripts
+
+# 3. Build: generate the Prisma client, compile, and isolate the production dependencies.
+FROM deps AS build
+COPY --from=pruner /repo/out/full/ ./
+RUN pnpm --filter @hitss/api exec prisma generate \
+ && pnpm --filter @hitss/api run build \
+ && pnpm --filter @hitss/api deploy --prod --legacy /out
+
+# 4. Runtime: compiled code, production node_modules, the Prisma schema and migrations only.
+FROM ${NODE_IMAGE} AS runtime
+# The runtime needs neither npm nor corepack: removing them shrinks the image and its attack surface.
+RUN apk add --no-cache openssl \
+ && rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-*
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build --chown=node:node /out/node_modules ./node_modules
+COPY --from=build --chown=node:node /out/package.json ./package.json
+COPY --from=build --chown=node:node /repo/apps/api/dist ./dist
+COPY --from=build --chown=node:node /repo/apps/api/prisma ./prisma
+COPY --chown=node:node apps/api/prisma.runtime.config.cjs ./prisma.runtime.config.cjs
+COPY --chown=node:node apps/api/database-url.cjs ./database-url.cjs
+COPY --chown=node:node --chmod=755 apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
+USER node
+EXPOSE 3000
+ENTRYPOINT ["./docker-entrypoint.sh"]
