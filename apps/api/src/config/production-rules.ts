@@ -53,6 +53,11 @@ export const logLevelIsNotVerbose: ProductionRule = (config) =>
       ]
     : [];
 
+export const logPrettyIsOff: ProductionRule = (config) =>
+  config.LOG_PRETTY
+    ? [{ variable: 'LOG_PRETTY', message: 'must be false in production' }]
+    : [];
+
 /** Collector inside the compose network, reached over plain HTTP by design. */
 export const COMPOSE_COLLECTOR_HOST = 'signoz-otel-collector';
 
@@ -155,6 +160,7 @@ export const productionRules: ProductionRule[] = [
   databaseIsNotTheLocalOne,
   seedIsOff,
   logLevelIsNotVerbose,
+  logPrettyIsOff,
   otlpEndpointIsSecure,
   authUrlIsHttps,
   authUrlIsNotLoopback,
