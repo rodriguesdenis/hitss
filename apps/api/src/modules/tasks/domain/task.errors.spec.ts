@@ -1,6 +1,5 @@
-import { DomainError } from '../../../../shared/domain/domain-error';
-import { TaskNotFound } from './task-not-found.error';
-import { UnknownTeams } from './unknown-teams.error';
+import { DomainError } from '../../../shared/domain/domain-error';
+import { TaskNotFound, UnknownTeams } from './task.errors';
 
 describe('Task errors', () => {
   it('TaskNotFound does not echo the id', () => {

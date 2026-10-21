@@ -1,4 +1,4 @@
-import { TooManyTeams } from './errors/too-many-teams.error';
+import { TooManyTeams } from '../task.errors';
 
 export const MAX_TEAMS_PER_TASK = 10;
 

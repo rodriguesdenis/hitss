@@ -118,16 +118,16 @@ Entering `DONE` sets `completedAt = now`; leaving `DONE` sets it to `null`.
 
 ## Value objects
 
-| VO                | Validation                                                         | Notes                                                                                                                                  |
-| ----------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `TeamName`        | trim, 2–50 chars                                                   | Equality is case-insensitive.                                                                                                          |
-| `ColorHex`        | `#RRGGBB`                                                          | Normalized upper case. Exposes `contrastingTextColor()` (black/white by WCAG relative luminance) — used by the app rule for chip text. |
-| `TeamDescription` | optional, trim, ≤ 280 code points, no `\p{Cc}` except line breaks  | Blank/empty → `null`.                                                                                                                  |
-| `TaskTitle`       | trim, 3–120 chars                                                  |                                                                                                                                        |
-| `TaskDescription` | optional, trim, ≤ 2000 code points, no `\p{Cc}` except line breaks | Blank → `null`.                                                                                                                        |
-| `TaskStatus`      | enum                                                               |                                                                                                                                        |
-| `DueDate`         | ISO `YYYY-MM-DD`                                                   | `isBefore(today)` for overdue.                                                                                                         |
-| `TaskTeamIds`     | set of 0–10 distinct team ids                                      | Order-insensitive equality; > 10 → `TooManyTeams`.                                                                                     |
+| VO                | Validation                                                         | Notes                                                                            |
+| ----------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `TeamName`        | trim, 2–50 chars                                                   | Equality is case-insensitive.                                                    |
+| `ColorHex`        | `#RRGGBB`                                                          | Normalized upper case. (Chip text color is computed by the app, not the domain.) |
+| `TeamDescription` | optional, trim, ≤ 280 code points, no `\p{Cc}` except line breaks  | Blank/empty → `null`.                                                            |
+| `TaskTitle`       | trim, 3–120 chars                                                  |                                                                                  |
+| `TaskDescription` | optional, trim, ≤ 2000 code points, no `\p{Cc}` except line breaks | Blank → `null`.                                                                  |
+| `TaskStatus`      | enum                                                               |                                                                                  |
+| `DueDate`         | ISO `YYYY-MM-DD`                                                   | `isBefore(today)` for overdue.                                                   |
+| `TaskTeamIds`     | set of 0–10 distinct team ids                                      | Order-insensitive equality; > 10 → `TooManyTeams`.                               |
 
 All length limits count **Unicode code points** after trimming (not UTF-16 units or bytes), the same as the DTO validation and the `varchar(n)` columns.
 

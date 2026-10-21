@@ -547,7 +547,7 @@ A team chip shows the **team name** on the **team color**. Color is decorative; 
    - `ratio(a,b) = (Lmax + 0.05) / (Lmin + 0.05)`;
    - choose black if `ratio(bg, black) ≥ ratio(bg, white)` (equivalently `L > ≈ 0.179`).
    - Mathematically one of the two always reaches **≥ 4.58:1**, so every chip meets AA for small text.
-   - Same algorithm as the domain's `ColorHex.contrastingTextColor()`; the app implements a pure function `contrastingText(hex)` in `src/theme/contrast.ts` with table-driven tests from §1.3.
+   - Computed only in the app (the API returns just `colorHex`); the app implements a pure function `contrastingText(hex)` in `src/shared/theme/contrast.ts` with table-driven tests from §1.3.
 3. **Outline:** if `ratio(bg, current surface)` < **3:1** (WCAG 1.4.11 non-text contrast), add `.chip-outline` (1 px `border-strong`). Evaluated against the surface of the active theme, so the same color may need an outline in dark mode and not in light (e.g. Ink `#1E293B`) or vice versa (e.g. Yellow).
 4. **Truncation:** label truncates at 160 pt with an ellipsis; the full name is in the accessibility label.
 5. **Overflow:** a list row shows at most **3** chips, then `+N` (`.chip-overflow`). The detail screen shows all chips, wrapping.

@@ -1,15 +1,13 @@
 import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
 import { ExpectedVersion } from '../../../shared/domain/expected-version';
-import { DueDate } from './due-date';
-import { TaskCreated } from './events/task-created.event';
-import { TaskDeleted } from './events/task-deleted.event';
-import { TaskStatusChanged } from './events/task-status-changed.event';
+import { DueDate } from './value-objects/due-date';
+import { TaskCreated, TaskDeleted, TaskStatusChanged } from './task.events';
 import { isOverdue } from './overdue.policy';
 import { Task, TaskProps } from './task';
-import { TaskDescription } from './task-description';
-import { TaskStatus } from './task-status';
-import { TaskTeamIds } from './task-team-ids';
-import { TaskTitle } from './task-title';
+import { TaskDescription } from './value-objects/task-description';
+import { TaskStatus } from './value-objects/task-status';
+import { TaskTeamIds } from './value-objects/task-team-ids';
+import { TaskTitle } from './value-objects/task-title';
 
 // ISO strings, not shared Date instances, so aliasing bugs cannot hide.
 const CREATED = '2026-10-20T13:00:00.000Z';

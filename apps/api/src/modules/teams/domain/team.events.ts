@@ -1,4 +1,4 @@
-import { DomainEvent } from '../../../../shared/domain/domain-event';
+import { DomainEvent } from '../../../shared/domain/domain-event';
 
 /** Raised by `Team.delete`; Task Management unassigns the team from its tasks. */
 export class TeamDeleted extends DomainEvent {

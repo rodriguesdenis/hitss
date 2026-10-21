@@ -1,4 +1,4 @@
-import { InvalidTaskStatus } from './errors/invalid-task-status.error';
+import { InvalidTaskStatus } from '../task.errors';
 import { isTaskStatus, parseTaskStatus, TaskStatus } from './task-status';
 
 const INVALID = [

@@ -1,4 +1,4 @@
-import { InvalidTaskTitle } from './errors/invalid-task-title.error';
+import { InvalidTaskTitle } from '../task.errors';
 
 const MIN_LENGTH = 3;
 const MAX_LENGTH = 120;

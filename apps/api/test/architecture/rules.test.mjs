@@ -264,6 +264,32 @@ const VIOLATIONS = [
     ['src/modules/teams/contracts/a.ts', 'src/modules/teams/domain/team.ts'],
   ],
   [
+    'contracts-are-thin',
+    'contracts import the domain errors of their own context',
+    {
+      'src/modules/teams/contracts/a.ts': importOf('../domain/team.errors'),
+      'src/modules/teams/domain/team.errors.ts': 'export {};\n',
+    },
+    [
+      'src/modules/teams/contracts/a.ts',
+      'src/modules/teams/domain/team.errors.ts',
+    ],
+  ],
+  [
+    'contracts-are-thin',
+    'contracts import the domain events of another context',
+    {
+      'src/modules/teams/contracts/a.ts': importOf(
+        '../../tasks/domain/task.events',
+      ),
+      'src/modules/tasks/domain/task.events.ts': 'export {};\n',
+    },
+    [
+      'src/modules/teams/contracts/a.ts',
+      'src/modules/tasks/domain/task.events.ts',
+    ],
+  ],
+  [
     'contracts-no-libraries',
     'contracts import a library',
     { 'src/modules/teams/contracts/a.ts': importOf('class-validator') },
@@ -374,9 +400,9 @@ const COMPLIANT = {
   'src/modules/teams/domain/team.ts': importOf(
     '../../../shared/domain/aggregate',
   ),
-  'src/modules/teams/domain/events/team-deleted.ts': 'export {};\n',
+  'src/modules/teams/domain/team.events.ts': 'export {};\n',
   'src/modules/teams/contracts/team-deleted.ts':
-    importOf('../domain/events/team-deleted') + importOf('@nestjs/cqrs'),
+    importOf('../domain/team.events') + importOf('@nestjs/cqrs'),
   'src/modules/tasks/contracts/count.ts':
     importOf('../../teams/contracts/team-deleted') +
     importOf('../../../shared/domain/aggregate'),

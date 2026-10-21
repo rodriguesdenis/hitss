@@ -4,10 +4,10 @@ import {
   ExpectedVersion,
   matchesVersion,
 } from '../../../shared/domain/expected-version';
-import { ColorHex } from './color-hex';
-import { TeamDeleted } from './events/team-deleted.event';
-import { TeamDescription } from './team-description';
-import { TeamName } from './team-name';
+import { ColorHex } from './value-objects/color-hex';
+import { TeamDeleted } from './team.events';
+import { TeamDescription } from './value-objects/team-description';
+import { TeamName } from './value-objects/team-name';
 
 export interface TeamProps {
   id: string;

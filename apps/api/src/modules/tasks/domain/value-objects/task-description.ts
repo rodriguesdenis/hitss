@@ -1,4 +1,4 @@
-import { InvalidTaskDescription } from './errors/invalid-task-description.error';
+import { InvalidTaskDescription } from '../task.errors';
 
 const MAX_LENGTH = 2000;
 const CONTROL_CHARACTER_EXCEPT_LINE_BREAK = /(?![\n\r])\p{Cc}/u;

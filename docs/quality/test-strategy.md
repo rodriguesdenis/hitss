@@ -37,7 +37,7 @@ Proportions are a guide, reviewed in PRs: a feature PR whose tests are mostly E2
 
 ### 1. API unit — Jest (`apps/api`, `*.spec.ts` next to the code)
 
-- **Domain:** aggregates (`Team`, `Task`), value objects (`TeamName`, `ColorHex` incl. `contrastingTextColor()`, `TaskTitle`, `TaskStatus`, `DueDate`), domain events, domain errors. Pure TypeScript, no Nest testing module, no mocks needed.
+- **Domain:** aggregates (`Team`, `Task`), value objects (`TeamName`, `ColorHex`, `TaskTitle`, `TaskStatus`, `DueDate`), domain events, domain errors. Pure TypeScript, no Nest testing module, no mocks needed.
 - **Application:** command/query handlers with **in-memory fakes** of ports (`InMemoryTaskRepository`, `FakeTeamDirectory`, `FixedClock`, `SequentialIdGenerator`). Asserts outcomes and emitted events, not calls.
 - **Presentation units:** DTO validation (`class-validator` `validate()` on DTO instances — boundaries via `it.each`), error-code mapping in the exception filter, ETag/If-Match parsing.
 - **Infrastructure units:** event handlers for metrics (fake meter), config schema, request-id generator.

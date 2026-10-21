@@ -49,7 +49,7 @@ The brief forbids styled-components. The UI needs light/dark themes, a small des
 - **Semantic classes** with `@apply` in `@layer components`:
   - `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-danger`
   - `.card`, `.chip`, `.input`, `.input-error`, `.label`, `.screen`
-- **Dynamic team color:** chips use `className="chip"` plus `style={{ backgroundColor: team.colorHex, color: contrastingTextColor(team.colorHex) }}` — Tailwind cannot generate classes for runtime values, and the contrast rule mirrors the domain `ColorHex.contrastingTextColor()` (WCAG luminance).
+- **Dynamic team color:** chips use `className="chip"` plus `style={{ backgroundColor: team.colorHex, color: contrastingTextColor(team.colorHex) }}` — Tailwind cannot generate classes for runtime values; the text color comes from the app's pure `contrastingText(hex)` (WCAG luminance, `src/shared/theme/contrast.ts`, design-spec §3). The API returns only `colorHex`.
 - **Components** in `src/shared/ui/` encapsulate semantic classes plus accessibility props (roles, labels, minimum 44×44 pt touch targets).
 - **Forbidden:** styled-components and inline style objects for static styling (lint rule); `style` is allowed only for runtime-computed values.
 

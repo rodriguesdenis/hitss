@@ -1,6 +1,5 @@
-import { DomainError } from '../../../../shared/domain/domain-error';
-import { TeamNameAlreadyExists } from './team-name-already-exists.error';
-import { TeamNotFound } from './team-not-found.error';
+import { DomainError } from '../../../shared/domain/domain-error';
+import { TeamNameAlreadyExists, TeamNotFound } from './team.errors';
 
 describe('Team errors', () => {
   it('AC-02.6.6 TeamNotFound is a domain error that does not echo the id', () => {

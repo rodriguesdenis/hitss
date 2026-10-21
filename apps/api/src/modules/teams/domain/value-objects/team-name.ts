@@ -1,4 +1,4 @@
-import { InvalidTeamName } from './errors/invalid-team-name.error';
+import { InvalidTeamName } from '../team.errors';
 
 const MIN_LENGTH = 2;
 const MAX_LENGTH = 50;

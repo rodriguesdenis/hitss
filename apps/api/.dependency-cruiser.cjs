@@ -90,7 +90,7 @@ module.exports = {
         path: '^src/',
         pathNot: [
           '^src/modules/[^/]+/contracts/',
-          '^src/modules/$1/domain/events/',
+          '^src/modules/$1/domain/[^/]+\\.events\\.ts$',
           '^src/shared/domain/',
         ],
       },

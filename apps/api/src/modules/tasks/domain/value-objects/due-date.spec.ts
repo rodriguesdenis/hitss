@@ -1,5 +1,5 @@
 import { DueDate } from './due-date';
-import { InvalidDueDate } from './errors/invalid-due-date.error';
+import { InvalidDueDate } from '../task.errors';
 
 describe('DueDate', () => {
   describe('AC-03.1.5 AC-03.9.3 must be a real calendar date in YYYY-MM-DD form', () => {

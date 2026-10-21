@@ -1,4 +1,4 @@
-import { InvalidTeamDescription } from './errors/invalid-team-description.error';
+import { InvalidTeamDescription } from '../team.errors';
 import { TeamDescription } from './team-description';
 
 const EMOJI = '\u{1F680}';
