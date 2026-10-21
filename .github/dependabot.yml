@@ -1,0 +1,46 @@
+# Weekly, grouped update proposals (AC-07.9.3). Commit prefixes must satisfy commitlint:
+# no `include: scope` (it would yield "deps-dev"), prefixes are fixed per ecosystem.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: 'build(deps)'
+    groups:
+      nestjs:
+        patterns: ['@nestjs/*']
+      opentelemetry:
+        patterns: ['@opentelemetry/*', '@prisma/instrumentation']
+      prisma:
+        patterns: ['prisma', '@prisma/*']
+      expo:
+        patterns: ['expo', 'expo-*', '@expo/*', 'react-native*']
+        update-types: [patch]
+      types:
+        patterns: ['@types/*']
+      dev-tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+    ignore:
+      # Expo SDK upgrades are manual (Expo Go compatibility).
+      - dependency-name: 'expo'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-minor']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'ci'
+  # Container base images. docker-compose.yml covers postgres today; Dockerfile entries
+  # (apps/api, apps/mobile) are added with T-007-04 and T-007-13.
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'build(infra)'
