@@ -33,6 +33,7 @@ const withDatabase = {
   roots: ['<rootDir>/test'],
   globalSetup: '<rootDir>/test/support/global-setup.ts',
   globalTeardown: '<rootDir>/test/support/global-teardown.ts',
+  setupFilesAfterEnv: ['<rootDir>/test/support/after-env.ts'],
   testTimeout: 120_000,
 } satisfies Config;
 

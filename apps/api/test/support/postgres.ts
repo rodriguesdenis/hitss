@@ -10,9 +10,14 @@
  *
  *   const db = useTestDatabase();               // at describe level
  *   beforeAll(async () => { app = await createTestApp(db.url); });
+ *   afterAll(async () => { await app.close(); });
  *
- * or, for an extra database inside a test: `const other = await createTestDatabase()` and
- * `await other.drop()` when done.
+ * or, for an extra database inside a test: `const other = await createTestDatabase()`.
+ *
+ * Every database created in a file is dropped automatically by a root-level `afterAll`
+ * (test/support/after-env.ts, `setupFilesAfterEnv`). Root hooks run after all of the file's own
+ * hooks, so apps and clients are closed before the drop terminates their connections. Call
+ * `drop()` only to remove a database in the middle of a file.
  */
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -152,7 +157,10 @@ export async function startTestServer(): Promise<StartedTestServer> {
   }
 }
 
-/** A fresh, migrated database cloned from the template. Drop it when done. */
+/** Databases created by this test file and not dropped yet. */
+const created = new Map<string, TestDatabase>();
+
+/** A fresh, migrated database cloned from the template; dropped automatically after the file. */
 export async function createTestDatabase(): Promise<TestDatabase> {
   const adminUrl = requireEnv(ADMIN_URL_ENV);
   const template = requireEnv(TEMPLATE_ENV);
@@ -162,20 +170,30 @@ export async function createTestDatabase(): Promise<TestDatabase> {
     adminUrl,
     `CREATE DATABASE ${quoteIdent(name)} TEMPLATE ${quoteIdent(template)}`,
   );
-  return {
+  const database: TestDatabase = {
     name,
     url: withDatabase(adminUrl, name),
-    drop: () =>
-      query(
+    drop: async () => {
+      created.delete(name);
+      await query(
         adminUrl,
         `DROP DATABASE IF EXISTS ${quoteIdent(name)} WITH (FORCE)`,
-      ),
+      );
+    },
   };
+  created.set(name, database);
+  return database;
+}
+
+/** Drops every database this file created. Registered once, at root level, by after-env.ts. */
+export async function dropTestDatabases(): Promise<void> {
+  await Promise.all([...created.values()].map((database) => database.drop()));
 }
 
 /**
- * Registers `beforeAll`/`afterAll` hooks that create a database for the current test file (or
- * describe block) and drop it afterwards. Read `url` inside hooks or tests, not at definition time.
+ * Registers a `beforeAll` that creates a database for the current test file (or describe block).
+ * It is dropped after the file (see the module comment). Read `url` inside hooks or tests, not at
+ * definition time.
  */
 export function useTestDatabase(): {
   readonly url: string;
@@ -184,9 +202,6 @@ export function useTestDatabase(): {
   let database: TestDatabase | undefined;
   beforeAll(async () => {
     database = await createTestDatabase();
-  });
-  afterAll(async () => {
-    await database?.drop();
   });
   const current = (): TestDatabase => {
     if (!database) {
