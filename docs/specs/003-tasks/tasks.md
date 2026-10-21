@@ -41,7 +41,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 ## T-003-02 — Implement task value objects (TDD)
 
 - **Goal:** invalid task values cannot be constructed.
-- **Changes:** `modules/tasks/domain/{task-title,task-description,task-status,due-date,task-team-ids}.ts` + `*.spec.ts`; errors `InvalidTaskTitle`, `InvalidTaskDescription`, `InvalidDueDate`, `TooManyTeams`.
+- **Changes:** `modules/tasks/domain/{task-title,task-description,task-status,due-date,task-team-ids}.ts` + `*.spec.ts`; errors `InvalidTaskTitle`, `InvalidTaskDescription`, `InvalidTaskStatus`, `InvalidDueDate`, `TooManyTeams`.
 - **Covers:** @AC-03.1.2 @AC-03.1.3 @AC-03.1.5 @AC-03.1.6 (count) @AC-03.1.8 — outline rows at unit level.
 - **Done when:** title 0/2/3/120/121 code points (after trim), title with `\n` / NUL / `\u007F` rejected, description 2000/2001 and control characters other than line breaks rejected, all due-date rows, team ids 0/1/10/11 and order-insensitive equality tested; 100 % branch coverage on VOs; no framework imports (dependency-cruiser).
 
