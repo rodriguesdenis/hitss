@@ -50,7 +50,7 @@ Symptom: `api` stays `waiting` or `dependency failed to start: container teams-t
 1. `docker compose logs api | tail -50`.
 2. `Invalid configuration: <VAR> …` → fix the named variable in `.env` (or delete `.env` to fall back to defaults).
 3. `prisma migrate deploy` error (`P3009` failed migration, `P1001` can't reach DB) → `make reset` for local data; for a genuinely broken migration fix it in a new migration (never edit an applied one).
-4. `BETTER_AUTH_SECRET is the local default` with `APP_ENV=production` → set a real secret or use `APP_ENV=local`.
+4. Production-rule errors (`APP_ENV=production`): `BETTER_AUTH_SECRET` is the local default, `BETTER_AUTH_URL` not https, `CORS_ORIGINS` has `*`/`http://`/`localhost`, `AUTH_RATE_LIMIT_ENABLED=false`, `APP_SCHEME=exp`, `SEED_DEMO=true` → fix the named variable, or use `APP_ENV=local` locally (`NODE_ENV` is always `production` inside the image; only `APP_ENV` selects these rules). `DOCS_ENABLED` is forced off in production, so `/docs` is 404 there.
 5. Readiness `503` with `database: down` → DB unreachable; see the previous section.
 
 ### Expo device can't reach the API
@@ -74,7 +74,9 @@ Symptom: the app on a phone shows network errors/timeouts; on an emulator it wor
 
 ### Requests return 429
 
-Rate limit: 100 req/min per user, 10 req/min per IP on auth routes. Wait for `Retry-After` seconds. For load tests use `make load` (raises `RATE_LIMIT_MAX` for that run).
+Rate limit: `RATE_LIMIT_MAX` (default 100) req/min per user, `RATE_LIMIT_IP_MAX` (default 300) req/min per client IP checked before authentication, and 10 req/min per IP on credential routes. Wait for `Retry-After` seconds. For load tests use `make load` (raises `RATE_LIMIT_MAX` and `RATE_LIMIT_IP_MAX` for that run).
+
+**Docker Desktop / WSL2 caveat.** On Docker Desktop (macOS, Windows, WSL2) published ports go through a NAT/userland proxy, so the API usually sees **one client IP (the gateway, e.g. `172.x.0.1` / `192.168.65.1`) for all traffic coming from the host** — Bruno, the app, `curl` and a phone on the LAN. The per-IP limits then act as one shared bucket for everything you run locally, and a burst from one tool can cause `429` in another. This is expected and local-only (native Linux Docker shows real addresses; behind a real proxy set `TRUSTED_PROXIES`). Workarounds: wait for `Retry-After`, sign in once and reuse the token, or raise the limits for a session: `RATE_LIMIT_IP_MAX=1000 make up`. Do not trust client-sent `X-Forwarded-For` / `x-tt-client-ip` to work around it — the API ignores them.
 
 ### SigNoz shows nothing
 

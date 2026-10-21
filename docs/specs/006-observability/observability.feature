@@ -137,6 +137,27 @@ Feature: Observability and operations
         | a session cookie                                |
         | a session token returned in a response header   |
         | a session cookie returned in a response header  |
+        | a new password or current password nested in a request body |
+        | a token nested inside an object in a request body |
+
+    @US-06.3 @AC-06.3.7 @could @security
+    Scenario: Request bodies and auth query strings are never logged
+      Given the log level is the most verbose level
+      When I sign in and I create a task with a description "private notes"
+      Then no log entry contains a request body or the text "private notes"
+      When a client calls a path under the authentication routes with a query string carrying a token
+      Then the logged URL has no query string
+
+    @US-06.3 @AC-06.3.8 @could @security
+    Scenario Outline: Library loggers do not leak secrets
+      Given the log level is the most verbose level
+      When <situation>
+      Then no log entry contains the secret, the password or a query parameter value
+
+      Examples:
+        | situation                                                         |
+        | the authentication library logs a warning during a failed sign-in |
+        | the database client logs a slow query with bound parameters       |
 
     @US-06.3 @AC-06.3.4 @could
     Scenario: Unexpected errors are logged in full and answered generically
@@ -287,6 +308,14 @@ Feature: Observability and operations
       When the smoke test runs using only the container runtime
       Then every documented endpoint is called at least once
       And every check passes and no request fails
+
+    @US-06.7 @AC-06.7.2 @could
+    Scenario: The load test is not throttled by the default rate limits
+      Given the default limits are 100 requests per minute per user and 300 per address
+      When the load test runs with its documented command
+      Then that run uses raised per-user and per-address limits
+      And no request is answered with "RATE_LIMITED"
+      And the defaults are unchanged for every other run
 
     @US-06.7 @AC-06.7.2 @could
     Scenario Outline: The load test enforces the latency and error budget

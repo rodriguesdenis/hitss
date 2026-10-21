@@ -64,6 +64,8 @@ As an operator, I want machine-readable logs correlated with traces and free of 
 - **AC-06.3.4** Given an unexpected error, then one error-level entry with the error type and stack trace is logged, and the response contains only the generic message and the trace id.
 - **AC-06.3.5** The minimum log level is configurable (default: info); a human-readable format can be enabled for local development; the default output is one machine-readable object per line on standard output.
 - **AC-06.3.6** Logs may carry the opaque user id of the authenticated user, but never the email address or name.
+- **AC-06.3.7** Given any request, then no request or response body is ever logged, and the query string of `/api/auth/*` URLs is stripped from log entries (it may carry tokens).
+- **AC-06.3.8** Given log output produced by libraries (the authentication component's logger, at `warn` or above, and the database client's events), then entries carry no query parameters, bound values, secrets or tokens; a unit test exercises nested objects.
 
 ### US-06.4 — RED metrics and business counters (`COULD`)
 
@@ -151,5 +153,5 @@ As an evaluator, I want a documented production-readiness plan, so that I unders
 
 ## Open questions
 
-- **OQ-06.1** The default rate limit (100 requests/min per user) would make the load test fail with throttling responses. Proposed: the limit is configurable and the load-test command raises it for that run only. Needs confirmation by the owners of 001/003 (rate limiting).
+- **OQ-06.1** ~~The default rate limit (100 requests/min per user) would make the load test fail with throttling responses.~~ **Resolved:** `make load` raises `RATE_LIMIT_MAX` and `RATE_LIMIT_IP_MAX` for that run only; the defaults (100/min per user, 300/min per address) are unchanged elsewhere.
 - **OQ-06.2** Should the request id format be restricted to UUIDs, or any printable token up to 128 characters? Proposed: printable ASCII `[A-Za-z0-9._-]`, 1–128 characters.

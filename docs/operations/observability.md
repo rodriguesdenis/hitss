@@ -66,7 +66,9 @@ One JSON object per line. Example completion entry:
 ```
 
 - Levels: `LOG_LEVEL` (`info` default). Human-readable output: `LOG_PRETTY=true`.
-- Redacted: `authorization`, `cookie`, `set-cookie`, `set-auth-token`, `*.password`, `*.token`, `*.secret`, `*.email` → `[REDACTED]`. Bodies are never logged.
+- Redacted (`[REDACTED]`): `req.headers.authorization`, `req.headers.cookie`, `res.headers["set-cookie"]`, `res.headers["set-auth-token"]`, and nested `password`, `newPassword`, `currentPassword`, `token` (also `secret`, `email` as defence in depth). Bodies are never logged.
+- Query strings are stripped from `/api/auth/*` URLs; other routes log the route template.
+- Better Auth's own logger is routed into pino at `warn`; Prisma logs events (warn/error, `query` at `debug`) **without parameters**.
 - Unexpected errors: one `level:50` entry with `err.type`, `err.message`, `err.stack` and the `traceId` returned to the client.
 - Find all logs of a request: `docker compose logs api | grep <traceId>` (or click "Logs" on the trace in SigNoz).
 
@@ -77,7 +79,7 @@ One JSON object per line. Example completion entry:
 | `GET /api/v1/health/live`  | Process up; no dependency check                              | liveness (orchestrator restart)                  |
 | `GET /api/v1/health/ready` | DB reachable (`SELECT 1`, 1.5 s timeout) → `200`, else `503` | compose healthcheck, `depends_on`, load balancer |
 
-Public, unthrottled, not logged/traced. The telemetry backend is never a readiness dependency.
+Public, unthrottled, not logged/traced. Liveness ships with the auth work (001); readiness is added by 006. The telemetry backend is never a readiness dependency.
 
 ## Running SigNoz locally
 
@@ -142,6 +144,8 @@ make smoke    # all endpoints once; fails on any failed check
 make load     # 20 VUs, 2 min; fails if task list p95 >= 100 ms or error rate >= 1 %
 ```
 
+`make load` runs with `RATE_LIMIT_MAX` (per user, default 100/min) and `RATE_LIMIT_IP_MAX` (per IP, default 300/min) raised for the run; otherwise the load would be answered with `429`. Recreate the `api` service without the overrides afterwards.
+
 Run `make load` with SigNoz up to see the latency panels move; compare p95 there with k6's summary.
 
 ## Configuration reference
@@ -154,3 +158,5 @@ Run `make load` with SigNoz up to see the latency panels move; compare p95 there
 | `OTEL_TRACES_SAMPLER`         | `parentbased_always_on`             | sampling                     |
 | `LOG_LEVEL`                   | `info`                              | log threshold                |
 | `LOG_PRETTY`                  | `false`                             | human-readable logs          |
+
+Validated at start by a class-validator env class (`src/config/telemetry.env.ts`); an invalid value fails the start naming the variable (never its value).
