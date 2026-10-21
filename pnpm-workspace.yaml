@@ -1,3 +1,9 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+# Dependencies allowed to run install scripts (pnpm blocks all others).
+# Prisma's install step fetches the schema engine used by `prisma migrate`.
+onlyBuiltDependencies:
+  - '@prisma/engines'
+  - prisma
