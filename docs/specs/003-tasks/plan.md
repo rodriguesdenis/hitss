@@ -263,8 +263,8 @@ model Task {
   dueDate     DateTime?  @map("due_date") @db.Date
   completedAt DateTime?  @map("completed_at") @db.Timestamptz(3)
   version     Int        @default(1)
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt   DateTime   @map("created_at") @db.Timestamptz(3)   // domain clock, no default
+  updatedAt   DateTime   @map("updated_at") @db.Timestamptz(3)   // domain clock, not @updatedAt
   deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz(3)
   owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teams       TaskTeam[]
@@ -283,7 +283,7 @@ model TaskTeam {
 }
 ```
 
-`Team` (002) and `User` (001) need the back-relation fields `taskTeams TaskTeam[]` / `tasks Task[]` — a one-line change each, coordinated in T-003-01. `updatedAt`/`version` are set explicitly by the repository from the aggregate (the clock is the domain's, not the DB's).
+`Team` (002) and `User` (001) need the back-relation fields `taskTeams TaskTeam[]` / `tasks Task[]` — a one-line change each, coordinated in T-003-01. `createdAt`/`updatedAt` come from the aggregate (the clock is the domain's, not the DB's: no DB default, no `@updatedAt`, as for `Team`); the repository increments `version`.
 
 ### Migration `create_tasks` — raw SQL appended to the generated file
 
