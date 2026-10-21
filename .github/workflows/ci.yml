@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  commitlint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - name: Lint commit messages on the PR range
+        run: pnpm exec commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+  static:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm format:check
+      - run: pnpm turbo run lint typecheck
+      - name: CI tooling tests
+        run: pnpm test:tools
+      - name: No tracked .env files
+        run: pnpm guard:env
+
+  secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks (pinned, checksum verified)
+        run: |
+          curl -sSfL -o gitleaks.tar.gz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check
+          tar -xzf gitleaks.tar.gz gitleaks
+          sudo install gitleaks /usr/local/bin/gitleaks
+      - name: Scan the PR commits for secrets
+        if: github.event_name == 'pull_request'
+        run: gitleaks git --redact --verbose --no-banner --exit-code 1 --log-opts "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+      - name: Scan the full history for secrets
+        if: github.event_name != 'pull_request'
+        run: gitleaks git --redact --verbose --no-banner --exit-code 1
+
+  unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm turbo run test
+
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm turbo run build
+
+  ci-success:
+    if: always()
+    needs: [commitlint, static, secrets, unit, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every required job succeeded (or was skipped)
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: echo "$NEEDS" | jq -e 'to_entries | all(.value.result == "success" or .value.result == "skipped")'
