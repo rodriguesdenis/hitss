@@ -60,7 +60,7 @@ Constitution §VII.1: with only Docker installed, `docker compose up` must yield
 
 **Configuration:** `.env.example` with safe local defaults (including a development-only `BETTER_AUTH_SECRET`); Compose reads `.env` if present. `@nestjs/config` validates env on boot (constitution §VII.3).
 
-**Shortcuts:** `Makefile` — `make up`, `make down`, `make logs`, `make seed`, `make reset` (drop volume → up), `make obs-up`, `make mobile`, `make test`.
+**Shortcuts:** `Makefile` — `make up`, `make down`, `make logs`, `make seed`, `make reset` (drop volume → up), `make observability`, `make observability-down`, `make mobile`, `make test`.
 
 **CI (GitHub Actions) only, no CD:** lint, typecheck, unit, integration/E2E (Testcontainers), architecture rules, contract drift, `pnpm audit`, build of the API image (`docker build`, no push), and a smoke job that runs `docker compose up -d --wait` and calls `/api/v1/health/ready`.
 
