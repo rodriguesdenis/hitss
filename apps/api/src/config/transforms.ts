@@ -22,3 +22,9 @@ export const integer = { message: 'must be an integer' };
 export const oneOf = (values: readonly string[]) => ({
   message: `must be one of: ${values.join(', ')}`,
 });
+
+/** Upper bound of the per-minute rate limits: higher values disable the limiter in practice. */
+export const MAX_RATE_LIMIT = 10_000;
+export const atMostMaxRateLimit = {
+  message: `must be at most ${MAX_RATE_LIMIT}`,
+};
