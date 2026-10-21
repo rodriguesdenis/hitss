@@ -44,12 +44,14 @@ ENTRYPOINT ["./docker-migrate.sh"]
 
 # 5. Production dependencies without the Prisma CLI. @prisma/client lists `prisma` as an optional
 #    peer (as is typescript), so even a plain `deploy --prod` links the whole CLI; prune-cli.cjs
-#    removes both and everything only they need, and the build fails if either is left over.
+#    removes both and everything only they need, and the build fails if the CLI, its engines,
+#    typescript or a prisma binary is left over.
 FROM build AS prod-deps
 COPY apps/api/prune-cli.cjs /tmp/prune-cli.cjs
 RUN pnpm --filter @hitss/api deploy --prod --legacy /out \
  && node /tmp/prune-cli.cjs /out/node_modules prisma,typescript \
- && ! ls /out/node_modules/.pnpm | grep -qE '^(prisma|typescript)@'
+ && ! ls /out/node_modules/.pnpm | grep -qE '^(prisma|@prisma\+engines|typescript)@' \
+ && ! test -e /out/node_modules/.bin/prisma
 
 # 6. Runtime: compiled code and production node_modules only. Files stay root-owned and read-only
 #    for the unprivileged `node` user, so the process cannot rewrite its own code or dependencies.

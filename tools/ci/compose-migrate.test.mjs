@@ -59,5 +59,20 @@ describe(
         'runtime stage mentions prisma',
       );
     });
+
+    it('AC-07.1.6 the prod-deps stage fails the build if the CLI, its engines, typescript or a prisma binary remain', () => {
+      const stage = dockerfile.slice(
+        dockerfile.indexOf('AS prod-deps'),
+        dockerfile.indexOf('AS runtime'),
+      );
+      assert.ok(
+        stage.includes('^(prisma|@prisma\\+engines|typescript)@'),
+        'package assertion missing',
+      );
+      assert.ok(
+        stage.includes('/out/node_modules/.bin/prisma'),
+        'binary assertion missing',
+      );
+    });
   },
 );
