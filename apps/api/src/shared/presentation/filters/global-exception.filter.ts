@@ -99,7 +99,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       return {
         status: mapping.status,
         error: withDetails(
-          { code: mapping.code, message: (exception as Error).message },
+          { code: mapping.code, message: mapping.message },
           mapping.details?.(exception as DomainError),
         ),
       };
