@@ -12,3 +12,7 @@
 !.env.example
 *.log
 docs
+*.pem
+*.key
+*.p12
+.npmrc
