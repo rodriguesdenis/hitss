@@ -53,7 +53,7 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 - **Goal:** Safe defaults before any endpoint exists.
 - **Changes:** `helmet()`, CORS allowlist from `CORS_ORIGINS` with `exposedHeaders`, `x-powered-by` disabled, logging rules (constants in `shared/observability/redaction.ts`, consumed by the logger set up in 006 or by a minimal pino logger until then): bodies never logged; redact `req.headers.authorization`, `req.headers.cookie`, `res.headers["set-cookie"]`, `res.headers["set-auth-token"]` and body keys `password`, `newPassword`, `currentPassword`, `token` at any depth; strip query strings from `/api/auth/*` URLs.
 - **Covers:** plan STRIDE rows "Information disclosure (secrets in logs)" and "Tampering (CSRF)".
-- **Done when:** E2E: security headers are present, a disallowed `Origin` gets no `Access-Control-Allow-Origin`. Unit (nested objects): the redaction config masks every path above, including `{ a: { b: { newPassword } } }` and arrays of objects; an `/api/auth/*` URL is logged without its query string; a request body never appears in a log line.
+- **Done when:** E2E: security headers are present, a disallowed `Origin` gets no `Access-Control-Allow-Origin`. `CORS_ORIGINS=*` (allowed locally only) must answer with a literal `Access-Control-Allow-Origin: *` and **never** reflect the request `Origin` together with `Access-Control-Allow-Credentials: true` (PR #19 review); an e2e asserts it. Unit (nested objects): the redaction config masks every path above, including `{ a: { b: { newPassword } } }` and arrays of objects; an `/api/auth/*` URL is logged without its query string; a request body never appears in a log line.
 
 ## T-001-05 — Identity schema and migration
 
