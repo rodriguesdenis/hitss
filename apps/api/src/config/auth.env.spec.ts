@@ -9,6 +9,23 @@ import {
 const check = (env: Record<string, string>, variable: string) =>
   expectInvalid(validate, env, variable);
 
+/** `https://<user>:<x>@<host>` built at runtime, low entropy, so scanners never flag a fixture. */
+const withUserinfo = (host: string): string =>
+  ['https://', 'demo', ':', 'x', '@', host].join('');
+
+describe('URL variables reject credentials and unparseable values (every environment)', () => {
+  it.each([
+    ['BETTER_AUTH_URL', withUserinfo('api.example.test')],
+    ['BETTER_AUTH_URL', 'https://[unclosed'],
+    ['CORS_ORIGINS', withUserinfo('app.example.test')],
+    ['CORS_ORIGINS', 'https://[unclosed'],
+    ['CORS_ORIGINS', 'https://APP.example.test'],
+    ['CORS_ORIGINS', 'https://app.example.test:443'],
+  ])('%s=%j is refused with a fixed message', (variable, value) => {
+    check({ [variable]: value }, variable);
+  });
+});
+
 describe('auth and security variables', () => {
   it('AC-01.8.5 a valid local environment parses with the documented defaults', () => {
     expect(toAppConfig(validate({ ...VALID_ENV }))).toMatchObject({
@@ -179,6 +196,15 @@ describe('auth and security production rules (AC-01.8.5)', () => {
       { ...production, BETTER_AUTH_URL: 'http://api.example.test' },
       'BETTER_AUTH_URL',
     );
+  });
+
+  it.each([
+    ['localhost', 'https://localhost:3000'],
+    ['a localhost subdomain', 'https://api.localhost'],
+    ['an IPv4 loopback address', 'https://127.0.0.1'],
+    ['the IPv6 loopback address', 'https://[::1]:3000'],
+  ])('BETTER_AUTH_URL must not be %s', (_label, url) => {
+    check({ ...production, BETTER_AUTH_URL: url }, 'BETTER_AUTH_URL');
   });
 
   it.each([

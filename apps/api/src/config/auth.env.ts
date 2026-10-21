@@ -4,7 +4,6 @@ import {
   IsIn,
   IsInt,
   isIP,
-  IsUrl,
   Max,
   Min,
   ValidateBy,
@@ -20,11 +19,37 @@ import {
   toNumber,
 } from './transforms';
 
-/** `scheme://host[:port]` with no path, as browsers send in the Origin header. */
-const HTTP_ORIGIN = /^https?:\/\/[^\s/?#]+$/;
+/** WHATWG URL parsing that never throws: its ERR_INVALID_URL message would echo the input. */
+export function parseUrl(value: string): URL | null {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
 
-const isCorsOrigin = (item: string): boolean =>
-  item === '*' || HTTP_ORIGIN.test(item);
+const isHttp = (url: URL): boolean =>
+  url.protocol === 'http:' || url.protocol === 'https:';
+
+/** An absolute http(s) URL without `user:password@`. */
+const isAbsoluteHttpUrl = (value: string): boolean => {
+  const url = parseUrl(value);
+  return (
+    url !== null && isHttp(url) && url.username === '' && url.password === ''
+  );
+};
+
+/**
+ * `*` or a canonical http(s) origin (`scheme://host[:port]`, lower-case host, no default port,
+ * no path or credentials), exactly as browsers send it: CORS compares origins as strings.
+ */
+const isCorsOrigin = (item: string): boolean => {
+  if (item === '*') {
+    return true;
+  }
+  const url = parseUrl(item);
+  return url !== null && isHttp(url) && url.origin === item;
+};
 
 export interface ProxyRange {
   family: 4 | 6;
@@ -117,13 +142,10 @@ function EveryItem(
  */
 export class AuthEnvironmentVariables extends TelemetryEnv {
   /** Public base URL of the API, used by Better Auth for callbacks and cookies. */
-  @IsUrl(
-    {
-      require_tld: false,
-      require_protocol: true,
-      protocols: ['http', 'https'],
-    },
-    { message: 'must be an absolute http(s) URL' },
+  @Satisfies(
+    'isAbsoluteHttpUrl',
+    isAbsoluteHttpUrl,
+    'must be an absolute http(s) URL without credentials',
   )
   BETTER_AUTH_URL: string = 'http://localhost:3000';
 
@@ -132,7 +154,7 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   @EveryItem(
     'isCorsOriginList',
     isCorsOrigin,
-    'must be a comma-separated list of http(s) origins without a path, or *',
+    'must be a comma-separated list of http(s) origins (scheme://host[:port] as browsers send them, without credentials or path), or *',
   )
   CORS_ORIGINS: string[] = ['http://localhost:8081'];
 
