@@ -93,6 +93,7 @@ describe('TeamDescription', () => {
       ['a C1 control character', 'text\u0085'],
       ['a trailing tab (checked before trimming)', 'text\t'],
       ['a tab-only description (not silently blank)', '\t'],
+      ['spaces and a tab and nothing else', '  \t  '],
     ])('rejects %s', (_label, raw) => {
       expect(() => TeamDescription.create(raw)).toThrow(InvalidTeamDescription);
     });
