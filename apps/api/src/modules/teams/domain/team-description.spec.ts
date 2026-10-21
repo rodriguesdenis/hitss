@@ -61,18 +61,42 @@ describe('TeamDescription', () => {
       expect(error).toBeInstanceOf(InvalidTeamDescription);
       expect(error).toMatchObject({
         field: 'description',
-        message: 'Description must be at most 280 characters long.',
+        message:
+          'Description must be at most 280 characters long and contain no control characters other than line breaks.',
       });
     });
   });
 
   describe('AC-02.1.4 blank descriptions become no description', () => {
-    it.each([undefined, null, '', '    ', '\n\t ', '\u00a0\u2028'])(
+    it.each([undefined, null, '', '    ', '\n\r\n ', '\u00a0\u2028'])(
       '%j → null',
       (raw) => {
         expect(TeamDescription.create(raw).value).toBeNull();
       },
     );
+  });
+
+  describe('AC-02.1.11 control characters other than line breaks', () => {
+    it.each([
+      ['LF', 'line 1\nline 2'],
+      ['CRLF', 'line 1\r\nline 2'],
+      ['CR', 'line 1\rline 2'],
+    ])('keeps %s line breaks inside', (_label, raw) => {
+      expect(TeamDescription.create(raw).value).toBe(raw);
+    });
+
+    it.each([
+      ['a tab', 'col 1\tcol 2'],
+      ['a NUL character', 'text\u0000'],
+      ['an escape character', 'text\u001b[31m'],
+      ['a DEL character', 'text\u007f'],
+      ['a C1 control character', 'text\u0085'],
+      ['a trailing tab (checked before trimming)', 'text\t'],
+      ['a tab-only description (not silently blank)', '\t'],
+      ['spaces and a tab and nothing else', '  \t  '],
+    ])('rejects %s', (_label, raw) => {
+      expect(() => TeamDescription.create(raw)).toThrow(InvalidTeamDescription);
+    });
   });
 
   it('keeps inner line breaks', () => {

@@ -127,6 +127,40 @@ Feature: Team management
       When I create a team named "Platform" with color "#0EA5E9" and a description of 280 characters surrounded by spaces
       Then the team is created with that 280-character description without the surrounding spaces
 
+    @US-02.1 @AC-02.1.11 @must @security
+    Scenario Outline: Descriptions reject control characters other than line breaks
+      When I create a team named "Platform" with color "#0EA5E9" and a description containing <characters>
+      Then the creation is rejected with a validation error on field "description"
+      And no team is created
+
+      Examples:
+        | characters                        |
+        | a tab between two words           |
+        | a NUL character                   |
+        | an escape character               |
+        | a DEL character                   |
+        | a C1 control character            |
+        | a tab at the end                  |
+        | only a tab                        |
+        | spaces and a tab and nothing else |
+
+    @US-02.1 @AC-02.1.11 @must
+    Scenario Outline: Line breaks are allowed in descriptions
+      When I create a team named "Platform" with color "#0EA5E9" and a description of two lines separated by <break>
+      Then the team is created
+      And its description keeps the two lines and the line break
+
+      Examples:
+        | break                             |
+        | a line feed                       |
+        | a carriage return                 |
+        | a carriage return and a line feed |
+
+    @US-02.1 @AC-02.1.11 @AC-02.1.4 @must
+    Scenario: A description made only of line breaks and spaces is still blank
+      When I create a team named "Platform" with color "#0EA5E9" and a description made only of line breaks and spaces
+      Then the team is created with no description
+
     @US-02.1 @AC-02.1.8 @must @security
     Scenario Outline: Fields outside the contract are rejected
       When I create a team named "Platform" with color "#0EA5E9" and an extra field "<field>"
@@ -469,6 +503,7 @@ Feature: Team management
         | color "#12345"                       | colorHex    |
         | color "blue"                         | colorHex    |
         | a description of 281 characters      | description |
+        | a description containing a tab       | description |
         | an extra field "ownerId"             | ownerId     |
         | an extra field "owner_id"            | owner_id    |
         | an extra field "userId"              | userId      |
