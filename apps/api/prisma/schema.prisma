@@ -120,7 +120,8 @@ model Team {
 
 // ---------------------------------------------------------------------------------------------
 // Task Management context (plan 003 § Data, data model). Ids come from the domain's IdGenerator;
-// version/updatedAt are written by the repository from the aggregate (V-1).
+// created_at/updated_at come from the domain clock (no DB default, no @updatedAt, as for Team);
+// the repository bumps version (V-1).
 // Raw SQL in migration create_tasks (Prisma cannot express it):
 //   pg_trgm extension (top of the migration; the GIN index below needs it)
 //   tasks_owner_status_created_idx  (owner_id, status, created_at DESC, id DESC) WHERE deleted_at IS NULL
@@ -150,8 +151,8 @@ model Task {
   dueDate     DateTime?  @map("due_date") @db.Date
   completedAt DateTime?  @map("completed_at") @db.Timestamptz(3)
   version     Int        @default(1)
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  createdAt   DateTime   @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime   @map("updated_at") @db.Timestamptz(3)
   deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz(3)
   owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   teams       TaskTeam[]

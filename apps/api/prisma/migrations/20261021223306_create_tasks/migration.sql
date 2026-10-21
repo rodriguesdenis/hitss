@@ -14,7 +14,7 @@ CREATE TABLE "tasks" (
     "due_date" DATE,
     "completed_at" TIMESTAMPTZ(3),
     "version" INTEGER NOT NULL DEFAULT 1,
-    "created_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ(3) NOT NULL,
     "updated_at" TIMESTAMPTZ(3) NOT NULL,
     "deleted_at" TIMESTAMPTZ(3),
 
@@ -64,6 +64,8 @@ CREATE INDEX "tasks_owner_status_created_idx"
 -- Default listing without a status filter, and count(*) per owner.
 CREATE INDEX "tasks_owner_created_idx"
   ON "tasks" ("owner_id", "created_at" DESC, "id" DESC) WHERE "deleted_at" IS NULL;
--- sort=dueDate (ASC NULLS LAST is the B-tree order; DESC is a backward scan).
+-- sort=dueDate ascending (ASC NULLS LAST is the B-tree order). DESC NULLS LAST cannot use this
+-- index order (a backward scan would put NULLs first) and sorts the owner's rows instead, which
+-- is acceptable at per-owner cardinality.
 CREATE INDEX "tasks_owner_due_idx"
   ON "tasks" ("owner_id", "due_date", "id") WHERE "deleted_at" IS NULL;
