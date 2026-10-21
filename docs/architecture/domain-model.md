@@ -59,7 +59,7 @@ flowchart LR
 | `ownerId`                | string             | Opaque user id issued by Identity (Better Auth; UUID values in a text column, but the domain does not rely on the format). Immutable. |
 | `name`                   | `TeamName`         | Trimmed, 2–50 chars, **unique per owner** (case-insensitive) among non-deleted teams.                                                 |
 | `color`                  | `ColorHex`         | `^#[0-9A-Fa-f]{6}$`, normalized to upper case.                                                                                        |
-| `description`            | `TeamDescription?` | ≤ 280 chars, trimmed; empty → `null`.                                                                                                 |
+| `description`            | `TeamDescription?` | ≤ 280 chars, trimmed, no `\p{Cc}` except line breaks; empty → `null`.                                                                 |
 | `version`                | int                | Starts at 1; incremented by **persistence** on every write that changes state (optimistic concurrency, see below).                    |
 | `createdAt`, `updatedAt` | timestamp          |                                                                                                                                       |
 | `deletedAt`              | timestamp?         | Soft delete marker.                                                                                                                   |
@@ -122,7 +122,7 @@ Entering `DONE` sets `completedAt = now`; leaving `DONE` sets it to `null`.
 | ----------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `TeamName`        | trim, 2–50 chars                                                   | Equality is case-insensitive.                                                                                                          |
 | `ColorHex`        | `#RRGGBB`                                                          | Normalized upper case. Exposes `contrastingTextColor()` (black/white by WCAG relative luminance) — used by the app rule for chip text. |
-| `TeamDescription` | optional, trim, ≤ 280 chars                                        | Blank/empty → `null`.                                                                                                                  |
+| `TeamDescription` | optional, trim, ≤ 280 code points, no `\p{Cc}` except line breaks  | Blank/empty → `null`.                                                                                                                  |
 | `TaskTitle`       | trim, 3–120 chars                                                  |                                                                                                                                        |
 | `TaskDescription` | optional, trim, ≤ 2000 code points, no `\p{Cc}` except line breaks | Blank → `null`.                                                                                                                        |
 | `TaskStatus`      | enum                                                               |                                                                                                                                        |

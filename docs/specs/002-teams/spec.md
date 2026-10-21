@@ -39,6 +39,7 @@ As Marina, I want to create a team with a name, a color and an optional descript
 - **AC-02.1.7** Given I deleted my team named "Mobile", when I create a new team named "Mobile", then it is created (deleted teams do not reserve names).
 - **AC-02.1.8** Given a request containing a field other than `name`, `colorHex` and `description` (e.g. `id`, `ownerId`, `owner_id`, `userId`, `owner` as an object, `version`, `taskCount`, `updatedAt`, `deletedAt`, `__proto__`, `constructor`), when I create a team, then it is rejected with a validation error naming that field, and nothing is created.
 - **AC-02.1.10** Given a name that contains a control character (Unicode category `Cc`, e.g. a newline or NUL), when I create a team, then it is a validation error naming `name`.
+- **AC-02.1.11** Given a description that contains a control character other than a line break (e.g. a tab, NUL or escape), when I create a team, then it is a validation error naming `description`. Line breaks are allowed.
 - **AC-02.1.9** Given two create requests with the same name for the same user arrive at the same time, then exactly one team is created and the other request receives `409 TEAM_NAME_ALREADY_EXISTS`.
 
 ### US-02.2 — List teams with pagination metadata (`MUST`)
@@ -99,7 +100,7 @@ As Marina, I want to rename, recolor or re-describe a team, so that it keeps ref
 **Acceptance criteria**
 
 - **AC-02.6.1** Given my team at version _n_, when I replace it with a valid name, color and description, then the new values are stored and returned, `version` becomes _n+1_, `updatedAt` advances, `createdAt` is unchanged, and the new version tag is returned.
-- **AC-02.6.2** Given invalid values, when I update, then the same rules as creation apply (name 2–50 after trim without control characters, `#RRGGBB` color, description ≤ 280, unknown fields rejected — including `updatedAt`, `deletedAt`, `userId`, `owner_id`, `owner`, `__proto__`, `constructor`), and the team is unchanged.
+- **AC-02.6.2** Given invalid values, when I update, then the same rules as creation apply (name 2–50 after trim without control characters, `#RRGGBB` color, description ≤ 280 without control characters other than line breaks, unknown fields rejected — including `updatedAt`, `deletedAt`, `userId`, `owner_id`, `owner`, `__proto__`, `constructor`), and the team is unchanged.
 - **AC-02.6.3** Given my team has a description, when I update it without a description, then the description is cleared (full replacement).
 - **AC-02.6.4** Given I have teams "Mobile" and "Backend", when I rename "Backend" to "mobile", then the update is rejected with `409 TEAM_NAME_ALREADY_EXISTS` and "Backend" is unchanged.
 - **AC-02.6.5** Given my team "mobile", when I rename it to "Mobile" (only the letter case changes), then the update succeeds.

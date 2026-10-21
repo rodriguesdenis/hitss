@@ -102,7 +102,7 @@ export class Team extends AggregateRoot {
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TeamName`        | `trim()`, length in **code points** (`[...s].length`) 2–50, no control characters (`/\p{Cc}/u` → error), `equals` via `toLowerCase()`; raw inner spaces kept | `" ab "` ok → `"ab"`; `"a"`, `""`, `"   "`, 51 chars → `InvalidTeamName`; `"Mobile".equals("MOBILE")`; `"Équipe" ≠ "Equipe"`; `"Ωmega".equals("ωmega")`; 50 emoji ok; `"a\nb"`, `"ab\u0000"` → `InvalidTeamName` |
 | `ColorHex`        | `/^#[0-9A-Fa-f]{6}$/`, stored upper case; `contrastingTextColor()` → `#000000` / `#FFFFFF` by WCAG relative luminance                                        | invalid table from the feature; `#ffffff` → black text, `#000000` → white text, `#7C3AED` → white                                                                                                                |
-| `TeamDescription` | optional, `trim()`, ≤ 280 code points, blank → `null`                                                                                                        | 280 ok, 281 error, `"  "` → null                                                                                                                                                                                 |
+| `TeamDescription` | optional, `trim()`, ≤ 280 code points, no `\p{Cc}` except `\n`/`\r` (checked before trimming), blank → `null`                                                | 280 ok, 281 error, `"  "` → null                                                                                                                                                                                 |
 | `Team`            | version bump is done by persistence (see below); `replace` reports change                                                                                    | no-op replace returns false; delete raises exactly one event; delete twice raises none                                                                                                                           |
 
 `TeamDescription` is a small VO not listed in the domain model's VO table. It keeps the "invalid values cannot be constructed" rule (constitution II.4) for the description too.
@@ -236,6 +236,10 @@ export class CreateTeamDto {
   @IsOptional()
   @IsString()
   @MaxLength(280)
+  @Matches(/^[\P{Cc}\n\r]*$/u, {
+    message:
+      'description must not contain control characters other than line breaks',
+  }) // → 400 (AC-02.1.11)
   description?: string;
 }
 export class ReplaceTeamDto extends CreateTeamDto {} // full replacement
