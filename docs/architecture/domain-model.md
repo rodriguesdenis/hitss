@@ -60,11 +60,19 @@ flowchart LR
 | `name`                   | `TeamName`         | Trimmed, 2–50 chars, **unique per owner** (case-insensitive) among non-deleted teams.                                                 |
 | `color`                  | `ColorHex`         | `^#[0-9A-Fa-f]{6}$`, normalized to upper case.                                                                                        |
 | `description`            | `TeamDescription?` | ≤ 280 chars, trimmed; empty → `null`.                                                                                                 |
-| `version`                | int                | Incremented on every change (optimistic concurrency).                                                                                 |
+| `version`                | int                | Starts at 1; incremented by **persistence** on every write that changes state (optimistic concurrency, see below).                   |
 | `createdAt`, `updatedAt` | timestamp          |                                                                                                                                       |
 | `deletedAt`              | timestamp?         | Soft delete marker.                                                                                                                   |
 
-Behavior: `Team.create(...)`, `rename(name)`, `recolor(color)`, `describe(text)`, `delete(now)` → raises `TeamDeleted`.
+Behavior:
+
+- `Team.create({ id, ownerId, name, color, description, now })` → version 1.
+- `Team.reconstitute(props)` — rebuilds a persisted team; raises no events.
+- `replace({ name, color, description, now })` — full replacement (PUT); returns `false` and changes nothing when every value is already equal. A letter-case-only rename is a change.
+- `delete(now)` → raises `TeamDeleted`; deleting an already deleted team is a no-op.
+- `assertVersion(expected: ExpectedVersion)` → throws `ConcurrencyConflict { currentVersion }` when `If-Match` doesn't match (or is malformed).
+
+**Version-bump convention (both aggregates):** aggregates never touch `version`. They change state, set `updatedAt` and report whether anything changed. The repository increments `version` in the conditional update (`SET version = version + 1 WHERE … AND version = $expected`), and skips the write on a no-op ([ADR-0015](adr/0015-optimistic-concurrency.md)). After a write, handlers read the new version from the query side, never from the aggregate.
 
 Invariant enforced outside the aggregate: name uniqueness per owner (checked by the application handler against the repository **and** guaranteed by a partial unique index).
 
@@ -85,10 +93,10 @@ Invariant enforced outside the aggregate: name uniqueness per owner (checked by 
 Behavior:
 
 - `Task.create(...)` → `TaskCreated { status }` (a task may be created directly as `DONE`, which sets `completedAt`)
-- `changeStatus(status, now)` → `TaskStatusChanged { from, to }`. **Any status → any other status is allowed** (free transitions). Same status → no-op (no event, no version bump).
+- `changeStatus(status, now)` → `TaskStatusChanged { from, to }`. **Any status → any other status is allowed** (free transitions). Same status → no-op (no event, no write, so the version is unchanged).
 - `edit({ title, description, dueDate })`
 - `assignTo(teamIds)` (replaces the set) — validated by the application via `TeamDirectory`.
-- `unassignTeam(teamId, now)` (reaction to `TeamDeleted`) — removes the id from `teamIds` and, if it was present, bumps `version` and `updatedAt` (the task's representation changed), so a stale `PUT` with `If-Match` gets `412` ([ADR-0015](adr/0015-optimistic-concurrency.md)). No-op if the team was not assigned.
+- `unassignTeam(teamId, now)` (reaction to `TeamDeleted`) — removes the id from `teamIds` and, if it was present, sets `updatedAt` and reports a change, so persistence bumps `version` (the task's representation changed), so a stale `PUT` with `If-Match` gets `412` ([ADR-0015](adr/0015-optimistic-concurrency.md)). No-op if the team was not assigned.
 - `delete(now)` → `TaskDeleted`
 
 ### Status lifecycle
@@ -139,7 +147,7 @@ Raised by the domain/application, mapped to HTTP by the presentation layer (see 
 
 | Error                                                                      | When                                                           |
 | -------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `InvalidTeamName`, `InvalidColorHex`, `InvalidTaskTitle`, `InvalidDueDate` | VO construction fails (normally pre-empted by DTO validation). |
+| `InvalidTeamName`, `InvalidColorHex`, `InvalidTeamDescription`, `InvalidTaskTitle`, `InvalidDueDate` | VO construction fails (normally pre-empted by DTO validation). |
 | `TeamNotFound`, `TaskNotFound`                                             | Id unknown **or owned by another user**.                       |
 | `TeamNameAlreadyExists`                                                    | Name collision for the owner.                                  |
 | `UnknownTeams { ids }`                                                     | Task assigned to team ids that don't exist for the owner.      |

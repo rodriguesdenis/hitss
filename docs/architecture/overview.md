@@ -270,7 +270,7 @@ apps/api/
 │   ├── config/                          # env schema as a class-validator class, validated via ConfigModule `validate()` (fail fast) + typed config
 │   │   └── telemetry.env.ts             # OTel/logging env, composed into the same ConfigModule `validate()`
 │   ├── shared/
-│   │   ├── domain/                      # AggregateRoot, DomainEvent, DomainError (pure TS)
+│   │   ├── domain/                      # AggregateRoot, DomainEvent, DomainError + ConcurrencyConflict, expected-version.ts (pure TS)
 │   │   ├── application/                 # Clock, IdGenerator ports, Page<T>, PageRequest
 │   │   ├── infrastructure/
 │   │   │   ├── prisma/                  # PrismaModule, PrismaService, transaction host
