@@ -27,6 +27,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup
+        with:
+          turbo-cache: 'false'
       - name: Lint commit messages on the PR range
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}

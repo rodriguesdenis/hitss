@@ -1,5 +1,10 @@
 name: Setup
 description: Install pnpm and Node from the repo pins, restore caches, and install dependencies with the frozen lockfile.
+inputs:
+  turbo-cache:
+    description: Restore and save the Turborepo cache (disable for jobs that do not run turbo).
+    required: false
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -8,11 +13,14 @@ runs:
       with:
         node-version-file: .nvmrc
         cache: pnpm
-    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    - if: inputs.turbo-cache == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: .turbo/cache
-        key: turbo-${{ runner.os }}-${{ github.sha }}
-        restore-keys: turbo-${{ runner.os }}-
+        key: turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+        restore-keys: |
+          turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('pnpm-lock.yaml') }}-
+          turbo-${{ runner.os }}-${{ github.job }}-
     - name: Install dependencies
       shell: bash
       run: pnpm install --frozen-lockfile
