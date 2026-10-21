@@ -2,6 +2,8 @@ import { INestApplication, VersioningType } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { setupApp } from './app.setup';
+import { APP_CONFIG } from './config/app-config';
+import { corsOptions } from './shared/presentation/cors-options';
 import { requestIdMiddleware } from './shared/observability/logging/request-id';
 import { GlobalExceptionFilter } from './shared/presentation/filters/global-exception.filter';
 import { EnvelopeInterceptor } from './shared/presentation/interceptors/envelope.interceptor';
@@ -15,6 +17,7 @@ describe('setupApp', () => {
     [Logger, logger],
     [GlobalExceptionFilter, filter],
     [Reflector, reflector],
+    [APP_CONFIG, { corsOrigins: ['https://app.example.test'] }],
   ]);
   const calls: string[] = [];
   const track =
@@ -28,6 +31,7 @@ describe('setupApp', () => {
     useLogger: jest.fn(track('useLogger')),
     enableShutdownHooks: jest.fn(track('enableShutdownHooks')),
     use: jest.fn(track('use')),
+    enableCors: jest.fn(track('enableCors')),
     setGlobalPrefix: jest.fn(track('setGlobalPrefix')),
     enableVersioning: jest.fn(track('enableVersioning')),
     useGlobalPipes: jest.fn(track('useGlobalPipes')),
@@ -56,8 +60,16 @@ describe('setupApp', () => {
     });
   });
 
+  it('T-001-04 adds helmet and CORS from CORS_ORIGINS', () => {
+    expect(app.use).toHaveBeenCalledTimes(2);
+    expect(app.use).toHaveBeenNthCalledWith(2, expect.any(Function));
+    expect(app.enableCors).toHaveBeenCalledWith(
+      corsOptions(['https://app.example.test']),
+    );
+  });
+
   it('registers the request-id middleware and the validation pipe', () => {
-    expect(app.use).toHaveBeenCalledWith(requestIdMiddleware);
+    expect(app.use).toHaveBeenNthCalledWith(1, requestIdMiddleware);
     expect(app.useGlobalPipes).toHaveBeenCalledWith(
       expect.any(AppValidationPipe),
     );
@@ -76,6 +88,8 @@ describe('setupApp', () => {
       'useLogger',
       'enableShutdownHooks',
       'use',
+      'use',
+      'enableCors',
       'setGlobalPrefix',
       'enableVersioning',
       'useGlobalPipes',
