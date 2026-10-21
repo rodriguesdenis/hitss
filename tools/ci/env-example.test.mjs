@@ -55,6 +55,8 @@ const schemaFiles = [
 const schema = schemaFiles.flatMap((name) =>
   schemaVariables(read(configDir + name)),
 );
+/** Variables whose empty value is meaningful (documented next to them in .env.example). */
+const EMPTY_ALLOWED = new Set(['TRUSTED_PROXIES']); // empty = trust no proxy
 const defaults = composeDefaults(read('docker-compose.yml'));
 const example = envEntries(read('.env.example'));
 
@@ -77,7 +79,9 @@ describe('.env.example parity with docker-compose.yml', () => {
         defaults.has(name) || schema.includes(name),
         `${name} is used by neither docker-compose.yml nor the API config schema`,
       );
-      assert.notEqual(value, '', `${name} has an empty default`);
+      if (!EMPTY_ALLOWED.has(name)) {
+        assert.notEqual(value, '', `${name} has an empty default`);
+      }
     }
   });
 
