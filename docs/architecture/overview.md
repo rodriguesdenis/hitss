@@ -284,10 +284,12 @@ apps/api/
 │   │   │   ├── idempotency/             # PrismaIdempotencyStore
 │   │   │   └── system-clock.ts · uuid-generator.ts
 │   │   ├── presentation/
-│   │   │   ├── filters/                 # GlobalExceptionFilter (domain error → HTTP)
+│   │   │   ├── http-conventions.module.ts  # global: DomainErrorMappings registry + GlobalExceptionFilter
+│   │   │   ├── filters/                 # GlobalExceptionFilter, error codes, DomainErrorMappings (modules register theirs)
+│   │   │   ├── pipes/                   # AppValidationPipe (global), ParseUuidPipe
 │   │   │   ├── interceptors/            # envelope, etag, idempotency
 │   │   │   ├── dto/                     # PaginationQueryDto, ErrorResponseDto, envelope helpers
-│   │   │   └── decorators/              # @ApiEnvelopedResponse, @IfMatch()
+│   │   │   └── decorators/              # @RawResponse, @ApiEnvelopedResponse, @IfMatch()
 │   │   └── observability/
 │   │       ├── observability.module.ts  # ObservabilityModule: logging, telemetry shutdown (last in AppModule.imports)
 │   │       ├── is-probe.ts              # probe requests (/api/v1/health/*) are never logged or traced
