@@ -63,6 +63,8 @@ Constitution §VII.1: with only Docker installed, `docker compose up` must yield
 
 **Entrypoints:** `docker-migrate.sh` (migrator) runs `prisma migrate deploy` and exits. `docker-entrypoint.sh` (API) runs the idempotent seed (skipped when `SEED_ON_START=false`; arrives with T-007-07) and then `node --import ./dist/instrumentation.js dist/main.js`. Both build `DATABASE_URL` from the `POSTGRES_*` variables when it is not provided, so `docker-compose.yml` never places a password inside a URL; the helper percent-encodes the credentials and never prints them.
 
+**The migrator image is a build artifact, not a deployable service.** It is the full build stage (~1.2 GB: workspace, dev dependencies, compiler, the Prisma CLI and its engines), so it carries tooling an attacker could use. It must only be run as a short-lived job against the database — locally by Compose, in production by a release step — and must never be pushed to a registry as a service image or kept running; only the `runtime` image is deployed.
+
 **Container hardening:** `api` and `migrate` run with `no-new-privileges`, all capabilities dropped, a read-only root filesystem and a tmpfs `/tmp`.
 
 **Configuration:** `.env.example` with safe local defaults (including a development-only `BETTER_AUTH_SECRET`); Compose reads `.env` if present. `@nestjs/config` validates env on boot (constitution §VII.3).
