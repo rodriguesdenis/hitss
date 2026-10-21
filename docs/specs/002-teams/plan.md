@@ -19,9 +19,10 @@ Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi) (au
 ```
 apps/api/src/
 ├── shared/
-│   ├── domain/            aggregate-root.ts (pullEvents), domain-error.ts, domain-event.ts
+│   ├── domain/            aggregate-root.ts (pullEvents), domain-error.ts (+ ConcurrencyConflict), domain-event.ts,
+│   │                      expected-version.ts (used by Team.assertVersion; A1 forbids domain → application)
 │   ├── application/       ports: clock.ts, id-generator.ts, unit-of-work.ts, domain-event-publisher.ts
-│   │                      pagination.ts (PageRequest, Page<T>), expected-version.ts
+│   │                      pagination.ts (PageRequest, Page<T>)
 │   ├── infrastructure/
 │   │   ├── prisma/        cls-unit-of-work.ts (transaction host, @nestjs-cls/transactional)
 │   │   ├── idempotency/   prisma-idempotency.store.ts, request-hash.ts (canonical JSON)

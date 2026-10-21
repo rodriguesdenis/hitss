@@ -30,7 +30,7 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 ## T-002-02 — Team domain
 
 - **Goal:** Framework-free domain where invalid teams cannot be constructed.
-- **Changes:** `modules/teams/domain/**`, `shared/domain/{aggregate-root.ts,domain-error.ts,domain-event.ts}`, `shared/application/expected-version.ts`, plus unit tests alongside each file.
+- **Changes:** `modules/teams/domain/**`, `shared/domain/{aggregate-root.ts,domain-error.ts,domain-event.ts,expected-version.ts}` (`ExpectedVersion` lives in the domain because `Team.assertVersion` uses it and rule A1 forbids `domain → application`), plus unit tests alongside each file.
 - **Covers:** `@AC-02.1.2 @AC-02.1.3 @AC-02.1.4 @AC-02.1.10 @AC-02.6.7 @AC-02.9.2 @AC-02.9.6` (domain level)
 - **Done when:** Unit tests cover every row of the name, color and description outlines in `teams.feature`, plus accents, Greek case-folding, emoji length (code points), control characters (`\n`, NUL → `InvalidTeamName`) and `contrastingTextColor`. `replace` with equal values returns `false`. `delete` raises exactly one `TeamDeleted`. Line coverage ≥ 90 %. Stryker mutation score ≥ 80 % for `modules/teams/domain`. `depcruise` confirms there are no framework imports.
 
