@@ -60,9 +60,10 @@ Feature: Quality gates, CI and developer experience
     Scenario: A failed migration never serves traffic
       Given a migration that fails to apply
       When the stack starts
-      Then the API exits with a non-zero code
+      Then the migrate container exits with a non-zero code
       And its logs contain the migration error
-      And the API never reports ready
+      And the API container never starts
+      And the API is never ready and serves no requests
 
   Rule: Demo data is deterministic and resettable
 
