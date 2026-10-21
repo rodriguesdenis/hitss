@@ -1,3 +1,4 @@
+import { parseProxy } from './auth.env';
 import type { Violation } from './config-validation-error';
 import type { EnvironmentVariables } from './env.schema';
 
@@ -109,6 +110,22 @@ export const authRateLimitIsOn: ProductionRule = (config) =>
         },
       ];
 
+/** Narrowest acceptable prefix per family in production: wider ranges trust too many hosts. */
+export const MIN_PROXY_PREFIX = { 4: 8, 6: 16 } as const;
+
+export const trustedProxiesAreNarrow: ProductionRule = (config) =>
+  config.TRUSTED_PROXIES.some((item) => {
+    const range = parseProxy(item);
+    return range === null || range.prefix < MIN_PROXY_PREFIX[range.family];
+  })
+    ? [
+        {
+          variable: 'TRUSTED_PROXIES',
+          message: `must not contain IPv4 ranges wider than /${MIN_PROXY_PREFIX[4]} or IPv6 ranges wider than /${MIN_PROXY_PREFIX[6]} in production`,
+        },
+      ]
+    : [];
+
 export const demoSeedIsOff: ProductionRule = (config) =>
   config.SEED_DEMO
     ? [{ variable: 'SEED_DEMO', message: 'must be false in production' }]
@@ -124,5 +141,6 @@ export const productionRules: ProductionRule[] = [
   authUrlIsHttps,
   corsOriginsAreSafe,
   authRateLimitIsOn,
+  trustedProxiesAreNarrow,
   demoSeedIsOff,
 ];
