@@ -28,6 +28,13 @@ describe('tracked .env guard', () => {
     ]);
   });
 
+  it('AC-07.6.7 rejects .envrc (direnv files commonly hold exports)', () => {
+    assert.deepEqual(findTrackedEnvFiles(['.envrc', 'apps/api/.envrc']), [
+      '.envrc',
+      'apps/api/.envrc',
+    ]);
+  });
+
   it('AC-07.6.7 ignores files that merely contain "env" in the name', () => {
     assert.deepEqual(
       findTrackedEnvFiles([

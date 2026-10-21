@@ -2,12 +2,13 @@ import { execFileSync } from 'node:child_process';
 import { basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-/** Tracked files that are env files holding real values (`.env`, `.env.*`) — `.env.example` is the template. */
+/** Tracked files that are env files holding real values (`.env`, `.env.*`, `.envrc`) — `.env.example` is the template. */
 export function findTrackedEnvFiles(files) {
   return files.filter((file) => {
     const name = basename(file);
     return (
-      (name === '.env' || name.startsWith('.env.')) && name !== '.env.example'
+      (name === '.env' || name === '.envrc' || name.startsWith('.env.')) &&
+      name !== '.env.example'
     );
   });
 }
