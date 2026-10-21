@@ -6,6 +6,7 @@ import { TeamName } from '../domain/value-objects/team-name';
 
 /** Prisma row ⇄ Team aggregate. Prisma types never leave infrastructure (rule A2). */
 export const TeamMapper = {
+  /** Re-validates through the VOs' create(): tightening a VO rule needs a data migration (ADR-0004). */
   toDomain(row: TeamRow): Team {
     return Team.reconstitute({
       id: row.id,
