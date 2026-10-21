@@ -101,7 +101,7 @@ erDiagram
 
 ## How to run
 
-> ⚠️ **Implementation in progress.** `docker compose up --build` already starts PostgreSQL and the API (verified). The seed, Swagger UI, health routes and the `Makefile` are not in the repository yet; rows marked ⚠️ below are the specified behavior ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
+> ⚠️ **Implementation in progress.** `docker compose up --build` already starts PostgreSQL and the API process (verified), but the API exposes no routes yet. The seed, Swagger UI, health routes and the `Makefile` are not in the repository yet; rows marked ⚠️ below are the specified behavior ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
 
 ### Backend (Docker)
 
@@ -116,13 +116,13 @@ This starts PostgreSQL, waits until it is healthy, applies the migrations and st
 
 | What            | Where                                     |
 | --------------- | ----------------------------------------- |
-| API base URL    | http://localhost:3000/api/v1              |
+| API base URL ⚠️ | http://localhost:3000/api/v1              |
 | Swagger UI ⚠️   | http://localhost:3000/docs                |
 | OpenAPI JSON ⚠️ | http://localhost:3000/docs/openapi.json   |
 | Health ⚠️       | http://localhost:3000/api/v1/health/ready |
 | Demo account ⚠️ | `demo@teams-tasks.dev` / `Demo@1234`      |
 
-The seed is deterministic and idempotent: 3 teams and 10 tasks covering every status, tasks in several teams, a task without a team and an overdue task.
+⚠️ Once the seed task lands, the seed is deterministic and idempotent: 3 teams and 10 tasks covering every status, tasks in several teams, a task without a team and an overdue task.
 
 ### Mobile app (Expo Go)
 
