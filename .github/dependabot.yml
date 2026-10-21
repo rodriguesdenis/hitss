@@ -26,8 +26,17 @@ updates:
         dependency-type: development
         update-types: [minor, patch]
     ignore:
-      # Expo SDK upgrades are manual (Expo Go compatibility).
+      # Expo SDK and React Native upgrades are manual (Expo Go compatibility); only patches flow in.
       - dependency-name: 'expo'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'expo-*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@expo/*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: 'react-native*'
         update-types:
           ['version-update:semver-major', 'version-update:semver-minor']
   - package-ecosystem: github-actions

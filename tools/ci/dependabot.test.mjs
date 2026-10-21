@@ -47,4 +47,16 @@ describe('.github/dependabot.yml', () => {
       );
     }
   });
+
+  it('AC-07.9.3 holds back Expo and React Native minor and major upgrades (Expo Go compatibility)', () => {
+    const npm = updates.find((u) => u['package-ecosystem'] === 'npm');
+    for (const name of ['expo', 'expo-*', '@expo/*', 'react-native*']) {
+      const rule = npm.ignore.find((i) => i['dependency-name'] === name);
+      assert.ok(rule, `${name} is not ignored`);
+      assert.deepEqual(rule['update-types'], [
+        'version-update:semver-major',
+        'version-update:semver-minor',
+      ]);
+    }
+  });
 });
