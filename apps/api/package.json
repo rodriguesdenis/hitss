@@ -6,10 +6,10 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start": "nest build && node --import ./dist/instrumentation.js dist/main.js",
+    "start:dev": "nest start --watch --exec \"node --import ./dist/instrumentation.js\"",
+    "start:debug": "nest start --debug --watch --exec \"node --import ./dist/instrumentation.js\"",
+    "start:prod": "node --import ./dist/instrumentation.js dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\" prisma.config.ts jest.config.ts",
     "test": "jest --selectProjects unit",
     "test:watch": "jest --selectProjects unit --watch",
@@ -17,7 +17,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:integration": "jest --selectProjects integration --runInBand",
     "test:e2e": "jest --selectProjects e2e --runInBand --passWithNoTests",
-    "dev": "nest start --watch",
+    "dev": "nest start --watch --exec \"node --import ./dist/instrumentation.js\"",
     "typecheck": "tsc --noEmit",
     "arch": "depcruise src --config .dependency-cruiser.cjs --output-type err",
     "test:arch": "node --test test/architecture/rules.test.mjs",
@@ -29,8 +29,20 @@
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
+    "@opentelemetry/api": "^1.10.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.82.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.300.0",
+    "@opentelemetry/exporter-metrics-otlp-proto": "^0.300.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.300.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "^0.300.0",
+    "@opentelemetry/instrumentation-http": "^0.300.0",
+    "@opentelemetry/resources": "^3.0.0",
+    "@opentelemetry/sdk-metrics": "^3.0.0",
+    "@opentelemetry/sdk-node": "^0.300.0",
+    "@opentelemetry/semantic-conventions": "^1.43.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "@prisma/instrumentation": "^7.10.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "reflect-metadata": "^0.2.2",
@@ -43,6 +55,7 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
+    "@opentelemetry/sdk-trace-base": "^2.12.0",
     "@testcontainers/postgresql": "12.2.1",
     "@types/express": "^5.0.0",
     "@types/jest": "~30.0.0",
@@ -68,5 +81,25 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0",
     "webpack": "~5.112.0"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node",
+    "setupFiles": [
+      "<rootDir>/../test/setup-env.ts"
+    ]
   }
 }
