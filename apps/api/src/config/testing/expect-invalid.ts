@@ -15,6 +15,9 @@ export const PRODUCTION_ENV: Record<string, string> = {
   BETTER_AUTH_SECRET: `prod-like-${'x'.repeat(40)}`,
   SEED_ON_START: 'false',
   OTEL_EXPORTER_OTLP_ENDPOINT: 'https://collector.example.test:4318',
+  BETTER_AUTH_URL: 'https://api.example.test',
+  CORS_ORIGINS: 'https://app.example.test',
+  SEED_DEMO: 'false',
 };
 
 type Validate = (config: Record<string, unknown>) => unknown;
