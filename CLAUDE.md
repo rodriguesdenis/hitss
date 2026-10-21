@@ -20,6 +20,11 @@ product-owner · software-architect · nestjs-specialist · database-specialist 
 - Mobile: Expo conventions, must run in Expo Go, NativeWind with `@apply` semantic classes, React Query (server state) + Zustand/immer (local state), react-hook-form + zod.
 - Must run with only Docker: `docker compose up` migrates and seeds automatically. No Figma — design lives in `docs/design/design-spec.md`.
 
+## Git worktrees
+
+- Run `pnpm install` in every new worktree before the first commit. Husky's `prepare` script creates `.husky/_`; without it git silently skips the commitlint and lint-staged hooks.
+- The git stash is shared by all worktrees: switch branches with a temporary WIP commit, never a bare `git stash`.
+
 ## Commands
 
 - `pnpm install` · `pnpm build` · `pnpm lint` · `pnpm typecheck` · `pnpm test`

@@ -52,6 +52,7 @@ The same user can edit a task from two devices, or an offline device can replay 
 - The repository's `save(aggregate, expectedVersion?)` issues a conditional update; 0 affected rows → re-check existence: not found → `404`, otherwise `ConcurrencyConflict` → **`412 PRECONDITION_FAILED`** with `details: { currentVersion }`.
 - **Check order:** request validation (`400 VALIDATION_FAILED`, Nest pipes) always runs before precondition checks (`412`), which run in the handler before no-op detection.
 - Without `If-Match`, the update still increments the version (but does not check it).
+- **Who bumps:** persistence, not the aggregate. Aggregates (`Team`, `Task`) only change state and report whether anything changed; the repository's conditional `UPDATE … SET version = version + 1 WHERE … AND version = $expected` is the single place the version is incremented, and a no-op skips the write. Handlers read the new version from the query side after the write.
 - **Unassignment on `TeamDeleted`** changes a task's `teams`, so it bumps that task's `version` and `updatedAt` (its representation changed).
 - **App usage:** edits (`PUT`) and deletes send `If-Match` from the cached `version`; the quick status toggle does not (last write wins is the intended semantics for a toggle). On `412` the app rolls back and refetches.
 - `If-None-Match` / `304` for GET caching is not implemented (React Query already caches); noted as a possible addition.

@@ -62,13 +62,13 @@ flowchart LR
   metro -. "JS bundle" .-> mobile
   mobile -- "HTTPS JSON" --> api
   api -- "TCP 5432" --> pg
-  api -. "OTLP (if OTEL_EXPORTER_OTLP_ENDPOINT set)" .-> otel
+  api -. "OTLP/HTTP (default endpoint;<br/>dropped silently if absent)" .-> otel
   otel --> ch
   signoz --> ch
 ```
 
 - The `api` service waits for `postgres` with `depends_on: condition: service_healthy` and is itself healthy when `GET /api/v1/health/ready` answers ([ADR-0018](adr/0018-docker-compose-one-command-run.md)).
-- The observability stack is behind a Compose **profile** because it needs ~4 GB RAM ([ADR-0013](adr/0013-opentelemetry-and-signoz.md)).
+- The observability stack is behind a Compose **profile** because it needs ~4 GB RAM ([ADR-0013](adr/0013-opentelemetry-and-signoz.md)). The API always has an OTLP endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`, default `http://signoz-otel-collector:4318` in Compose). When the profile is off, exports are dropped silently and the API runs normally. `OTEL_SDK_DISABLED=true` turns telemetry off entirely.
 - The app has no backend of its own: everything persistent on the device is a cache or a queue ([ADR-0012](adr/0012-offline-first-and-optimistic-updates.md)).
 
 ## 3. API components (C4 level 3)
@@ -270,7 +270,7 @@ apps/api/
 │   ├── config/                          # env schema as a class-validator class, validated via ConfigModule `validate()` (fail fast) + typed config
 │   │   └── telemetry.env.ts             # OTel/logging env, composed into the same ConfigModule `validate()`
 │   ├── shared/
-│   │   ├── domain/                      # AggregateRoot, DomainEvent, DomainError (pure TS)
+│   │   ├── domain/                      # AggregateRoot, DomainEvent, DomainError + ConcurrencyConflict, expected-version.ts (pure TS)
 │   │   ├── application/                 # Clock, IdGenerator ports, Page<T>, PageRequest
 │   │   ├── infrastructure/
 │   │   │   ├── prisma/                  # PrismaModule, PrismaService, transaction host
