@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { LogCapture } from '../../../../test/support/logging/capture';
+import { createLoggerParams } from './logger.config';
 import { bootLogApp } from '../../../../test/support/logging/log-app';
 
 const password = 'Password-value-1';
@@ -80,5 +81,26 @@ describe('request logging', () => {
     expect(
       out.lines.find((l) => l.msg === 'request completed'),
     ).not.toHaveProperty('userId');
+  });
+});
+
+describe('LOG_PRETTY', () => {
+  const settings = { level: 'info', pretty: true };
+
+  it('AC-06.3.5 uses the pino-pretty transport when it is installed', () => {
+    const { pinoHttp } = createLoggerParams(settings, undefined, {
+      prettyAvailable: () => true,
+    });
+    expect(pinoHttp).toMatchObject({ transport: { target: 'pino-pretty' } });
+  });
+
+  it('AC-06.3.5 falls back to JSON with one warning when pino-pretty is missing', () => {
+    const warn = jest.fn();
+    const { pinoHttp } = createLoggerParams(settings, undefined, {
+      prettyAvailable: () => false,
+      warn,
+    });
+    expect(pinoHttp).not.toHaveProperty('transport');
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 });

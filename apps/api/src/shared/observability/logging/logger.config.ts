@@ -13,6 +13,21 @@ export interface LoggerSettings {
   pretty: boolean;
 }
 
+/** Seams for tests; defaults probe the installed packages and write to stderr. */
+export interface LoggerEnvironment {
+  prettyAvailable?: () => boolean;
+  warn?: (message: string) => void;
+}
+
+function isPinoPrettyInstalled(): boolean {
+  try {
+    require.resolve('pino-pretty');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 interface SerializedRequest {
   method?: string;
   url?: string;
@@ -34,7 +49,17 @@ function userIdOf(request: UserRequest): string | undefined {
 export function createLoggerParams(
   { level, pretty }: LoggerSettings,
   destination?: DestinationStream,
+  {
+    prettyAvailable = isPinoPrettyInstalled,
+    warn = (message) => process.stderr.write(`[logger] ${message}\n`),
+  }: LoggerEnvironment = {},
 ): Params {
+  // pino-pretty is a dev dependency: the production image does not have it. Fall back to JSON
+  // with one warning instead of crashing on a missing transport.
+  const usePretty = pretty && !destination && prettyAvailable();
+  if (pretty && !destination && !usePretty) {
+    warn('LOG_PRETTY=true but pino-pretty is not installed; logging JSON');
+  }
   const options: NonNullable<Exclude<Params['pinoHttp'], unknown[]>> = {
     level,
     genReqId: (request: IncomingMessage, response: ServerResponse) => {
@@ -75,7 +100,7 @@ export function createLoggerParams(
       }),
     },
     redact: { paths: REDACT_PATHS, censor: REDACTED },
-    ...(pretty && !destination ? { transport: { target: 'pino-pretty' } } : {}),
+    ...(usePretty ? { transport: { target: 'pino-pretty' } } : {}),
   };
   return { pinoHttp: destination ? [options, destination] : options };
 }
