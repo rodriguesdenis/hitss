@@ -1,7 +1,8 @@
 import type { Config } from 'jest';
 
-// Three projects (ADR-0014): `unit` needs nothing but Node; `integration` and `e2e` start a
-// PostgreSQL container through Testcontainers, so they need Docker and run in band.
+// Three projects (ADR-0014). `pnpm test` runs `unit` only: plain Node, no Docker.
+// `integration` and `e2e` need Docker: globalSetup starts one PostgreSQL container per run and
+// migrates a template database; each test file clones it (test/support/postgres.ts).
 const base = {
   rootDir: '.',
   moduleFileExtensions: ['js', 'json', 'ts'],
@@ -13,6 +14,8 @@ const base = {
       'ts-jest',
       {
         tsconfig: {
+          // Transpile file by file, no type check: fast runs. `pnpm typecheck` owns types.
+          isolatedModules: true,
           module: 'commonjs',
           moduleResolution: 'node10',
           resolvePackageJsonExports: false,
@@ -28,6 +31,8 @@ const base = {
 const withDatabase = {
   ...base,
   roots: ['<rootDir>/test'],
+  globalSetup: '<rootDir>/test/support/global-setup.ts',
+  globalTeardown: '<rootDir>/test/support/global-teardown.ts',
   testTimeout: 120_000,
 } satisfies Config;
 
