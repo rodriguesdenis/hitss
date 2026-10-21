@@ -6,7 +6,7 @@ import {
 import {
   RequestValidationException,
   ValidationDetail,
-} from './filters/api-exception';
+} from '../filters/api-exception';
 
 /** Keys that could reach an object's prototype; never valid in a request, at any depth. */
 const PROTOTYPE_KEYS: ReadonlySet<string> = new Set([
