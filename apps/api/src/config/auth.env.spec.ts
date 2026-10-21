@@ -193,6 +193,12 @@ describe('auth and security production rules (AC-01.8.5)', () => {
     expect(() => validate({ ...production })).not.toThrow();
   });
 
+  it('BETTER_AUTH_URL https is read from the parsed URL (scheme case does not matter)', () => {
+    expect(() =>
+      validate({ ...production, BETTER_AUTH_URL: 'HTTPS://api.example.test' }),
+    ).not.toThrow();
+  });
+
   it('BETTER_AUTH_URL must be https', () => {
     check(
       { ...production, BETTER_AUTH_URL: 'http://api.example.test' },
