@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 const BLOCKING = new Set(['high', 'critical']);
+/** An exception may not be parked for longer than this; it forces a periodic re-decision. */
+const MAX_ALLOWLIST_DAYS = 90;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const ALLOWLIST_PATH = new URL(
   '../../security/audit-allowlist.json',
   import.meta.url,
@@ -18,22 +21,52 @@ function isIsoDate(value) {
 
 /**
  * Pure gate: fails on any high/critical advisory that has no valid, unexpired allowlist entry.
- * Entries need an id, a justification and an expiry date (valid through that day, UTC).
+ * Entries need an id, an owner, a justification and an expiry date at most 90 days away (valid through that day, UTC).
  * Lower severities and stale entries are reported, never failing.
  */
 export function evaluateAudit(report, allowlist, today = new Date()) {
+  // Fail closed: `pnpm audit` prints a JSON error object when the registry call fails.
+  if (report?.error) {
+    const { code = 'unknown', message = '' } = report.error;
+    return {
+      ok: false,
+      failures: [`pnpm audit failed (${code}): ${message}`],
+      warnings: [],
+    };
+  }
+  if (
+    report === null ||
+    typeof report?.advisories !== 'object' ||
+    report.advisories === null
+  ) {
+    return {
+      ok: false,
+      failures: ['pnpm audit returned no advisories object; refusing to pass'],
+      warnings: [],
+    };
+  }
+
   const failures = [];
   const warnings = [];
   const todayIso = today.toISOString().slice(0, 10);
+  const horizon = new Date(today.getTime() + MAX_ALLOWLIST_DAYS * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
 
   const usable = new Map();
   for (const entry of allowlist) {
     const label = `allowlist entry ${entry?.id ?? '(no id)'}`;
     if (!entry?.id) failures.push(`${label}: missing id`);
+    else if (typeof entry.owner !== 'string' || entry.owner.trim() === '')
+      failures.push(`${label}: missing owner`);
     else if (typeof entry.reason !== 'string' || entry.reason.trim() === '')
       failures.push(`${label}: missing reason`);
     else if (!isIsoDate(entry.expires))
       failures.push(`${label}: expires must be a YYYY-MM-DD date`);
+    else if (entry.expires > horizon)
+      failures.push(
+        `${label}: expires ${entry.expires}, more than ${MAX_ALLOWLIST_DAYS} days from today (latest ${horizon})`,
+      );
     else usable.set(entry.id, entry);
   }
 
