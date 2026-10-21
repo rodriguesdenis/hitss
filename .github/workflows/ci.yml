@@ -47,6 +47,8 @@ jobs:
       - run: pnpm turbo run lint typecheck
       - name: Architecture rules and their meta-tests
         run: pnpm arch
+      - name: README sections and relative links
+        run: pnpm doc-check
       - name: CI tooling tests
         run: pnpm test:tools
       - name: No tracked .env files
