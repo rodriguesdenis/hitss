@@ -55,7 +55,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 ## T-003-04 — Add `TaskRepository` port + Prisma adapter
 
 - **Goal:** persist the aggregate atomically with its team links and optimistic version check.
-- **Changes:** `application/ports/task.repository.ts`; `infrastructure/prisma-task.repository.ts`, `task.mapper.ts`; integration specs (Testcontainers).
+- **Changes:** `domain/task.repository.ts`; `infrastructure/prisma-task.repository.ts`, `infrastructure/task.mapper.ts`; integration specs (Testcontainers).
 - **Covers:** @AC-03.9.2 (team set replace), @AC-03.11.1 (soft delete invisible to `findById`), @AC-03.12.1 (owner scoping), @AC-03.15.3 (race: two saves of v3 → exactly one wins).
 - **Done when:** `save` inserts/updates `tasks` and diff-syncs `task_teams` in one transaction (`TransactionHost`); update uses `WHERE id, owner_id, version, deleted_at IS NULL` and throws `ConcurrencyConflict` on 0 rows; `findById` / `findByTeam` never return another owner's or deleted rows; round-trip mapping test for every field.
 

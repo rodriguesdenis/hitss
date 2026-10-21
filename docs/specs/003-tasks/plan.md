@@ -33,9 +33,10 @@ tasks/
 │   │                               # TooManyTeams, UnknownTeams, TaskNotFound (ConcurrencyConflict is shared)
 │   ├── task.events.ts              # TaskCreated, TaskStatusChanged, TaskDeleted
 │   ├── overdue.policy.ts           # isOverdue(status, dueDate, today) — pure, reused by the read side
+│   ├── task.repository.ts          # TaskRepository port (abstract class, domain types only)
 │   └── value-objects/  task-title.ts · task-description.ts · task-status.ts · due-date.ts · task-team-ids.ts
 ├── application/
-│   ├── ports/   task.repository.ts · task.read-model.ts · team-directory.ts   (abstract classes = DI tokens)
+│   ├── ports/   task.read-model.ts · team-directory.ts   (abstract classes = DI tokens)
 │   ├── commands/ create-task · replace-task · change-task-status · delete-task   (*.command.ts + *.handler.ts)
 │   ├── queries/  list-tasks · get-task · count-tasks-by-team                    (*.query.ts + *.handler.ts)
 │   ├── events/   on-team-deleted.handler.ts (in-transaction) · task-metrics.handler.ts (after commit)

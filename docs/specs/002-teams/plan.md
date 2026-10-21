@@ -42,12 +42,12 @@ apps/api/src/
     │   ├── team.errors.ts              # InvalidTeamName, InvalidColorHex, InvalidTeamDescription,
     │   │                               # TeamNotFound, TeamNameAlreadyExists (ConcurrencyConflict is shared)
     │   ├── team.events.ts              # TeamDeleted
+    │   ├── team.repository.ts          # TeamRepository port: write side (aggregate in/out), domain types only
     │   └── value-objects/
     │       ├── team-name.ts            # trim, 2–50 code points, no \p{Cc}, case-insensitive equality
     │       ├── color-hex.ts            # #RRGGBB, upper case
     │       └── team-description.ts     # trim, ≤ 280, no \p{Cc} except line breaks, blank → null
     ├── application/
-    │   ├── ports/team.repository.ts         # write side (aggregate in/out)
     │   ├── ports/team.read-model.ts         # query side (TeamView pages)
     │   ├── ports/team-task-counts.ts        # TeamTaskCounts — answered by Task Management (003)
     │   ├── commands/{create-team,replace-team,delete-team}/{*.command.ts,*.handler.ts,*.handler.spec.ts}
@@ -121,7 +121,7 @@ export class Team extends AggregateRoot {
 
 - **Commands return ids.** The controller then runs `GetTeamQuery` to build the response. Writes and reads stay separate, and every single-team response has the same shape, including `taskCount`.
 - `ExpectedVersion` = `{ kind: 'any' }` (no header or `*`) | `{ kind: 'exact', version }` | `{ kind: 'unmatchable' }` (unparseable tag). Handlers check it **after** loading, so 404 wins over 412 (AC-02.9.7).
-- Ports are abstract classes used as DI tokens: `TeamRepository`, `TeamReadModel`, `TeamTaskCounts`, `Clock`, `IdGenerator`, `UnitOfWork`, `DomainEventPublisher`.
+- Ports are abstract classes used as DI tokens. The repository port `TeamRepository` lives in `domain/team.repository.ts` (domain types only, decision P-2); the others are in `application/ports/`: `TeamReadModel`, `TeamTaskCounts`, `Clock`, `IdGenerator`, `UnitOfWork`, `DomainEventPublisher`.
 - **Check order** ([ADR-0015](../../architecture/adr/0015-optimistic-concurrency.md)): request validation (`400`, pipes) → not found (`404`) → `If-Match` (`412`; a malformed value is `unmatchable` → `412`) → no-op detection.
 
 ### Cross-context seams (Team Management ↔ Task Management)
