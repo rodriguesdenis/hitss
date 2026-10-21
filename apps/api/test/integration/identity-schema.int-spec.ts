@@ -1,7 +1,11 @@
 import { INestApplication } from '@nestjs/common';
+import { Client, DatabaseError } from 'pg';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '../support/app';
 import { useTestDatabase } from '../support/postgres';
+
+const UNIQUE_VIOLATION = '23505';
+const CHECK_VIOLATION = '23514';
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -17,15 +21,36 @@ describe('Identity schema (integration, T-001-05)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
   let prisma: PrismaService;
+  let sql: Client;
 
   beforeAll(async () => {
     app = await createTestApp(db.url);
     prisma = app.get(PrismaService);
+    sql = new Client({ connectionString: db.url });
+    await sql.connect();
   });
 
   afterAll(async () => {
+    await sql?.end();
     await app?.close();
   });
+
+  /** Raw insert, as any writer other than Better Auth would do it (no updated_at given). */
+  const insertUser = (name: string, email: string) =>
+    sql.query<{ id: string }>(
+      'INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id',
+      [name, email],
+    );
+
+  async function sqlError(run: () => Promise<unknown>): Promise<DatabaseError> {
+    try {
+      await run();
+    } catch (error) {
+      if (error instanceof DatabaseError) return error;
+      throw error;
+    }
+    throw new Error('expected a database error');
+  }
 
   const columns = () =>
     prisma.$queryRaw<Column[]>`
@@ -135,6 +160,80 @@ describe('Identity schema (integration, T-001-05)', () => {
     ).resolves.toBe(0);
   });
 
+  it('defaults updated_at on raw inserts into every identity table', async () => {
+    const { rows } = await insertUser('Eve', 'eve@example.test');
+    const userId = rows[0]!.id;
+    await sql.query(
+      `INSERT INTO sessions (user_id, token, expires_at) VALUES ($1, 'eve-token', now() + interval '1 hour')`,
+      [userId],
+    );
+    await sql.query(
+      `INSERT INTO accounts (user_id, provider_id, account_id) VALUES ($1, 'credential', $1)`,
+      [userId],
+    );
+    await sql.query(
+      `INSERT INTO verifications (identifier, value, expires_at) VALUES ('eve', 'v', now())`,
+    );
+
+    const missing = await sql.query(
+      `SELECT 1 FROM users WHERE updated_at IS NULL
+       UNION ALL SELECT 1 FROM sessions WHERE updated_at IS NULL
+       UNION ALL SELECT 1 FROM accounts WHERE updated_at IS NULL
+       UNION ALL SELECT 1 FROM verifications WHERE updated_at IS NULL`,
+    );
+    expect(missing.rows).toHaveLength(0);
+  });
+
+  it('rejects a mixed-case email written outside Better Auth (users_email_lowercase)', async () => {
+    const error = await sqlError(() => insertUser('Fay', 'Fay@Example.test'));
+
+    expect(error.code).toBe(CHECK_VIOLATION);
+    expect(error.constraint).toBe('users_email_lowercase');
+  });
+
+  it.each([
+    ['an empty name', '', 'users_name_length'],
+    ['a 101-character name', 'n'.repeat(101), 'users_name_length'],
+  ])('rejects %s (%s)', async (_label, name, constraint) => {
+    const error = await sqlError(() =>
+      insertUser(name, `${constraint}-${name.length}@example.test`),
+    );
+
+    expect(error.code).toBe(CHECK_VIOLATION);
+    expect(error.constraint).toBe(constraint);
+  });
+
+  it('accepts a 100-character name and a 254-character email', async () => {
+    const email = `${'e'.repeat(254 - '@example.test'.length)}@example.test`;
+
+    await expect(insertUser('n'.repeat(100), email)).resolves.toBeDefined();
+  });
+
+  it('rejects a 255-character email (users_email_length)', async () => {
+    const email = `${'e'.repeat(255 - '@example.test'.length)}@example.test`;
+
+    const error = await sqlError(() => insertUser('Gus', email));
+
+    expect(error.code).toBe(CHECK_VIOLATION);
+    expect(error.constraint).toBe('users_email_length');
+  });
+
+  it('rejects a second account for the same provider and account id', async () => {
+    const { rows } = await insertUser('Hal', 'hal@example.test');
+    const userId = rows[0]!.id;
+    const insertAccount = () =>
+      sql.query(
+        `INSERT INTO accounts (user_id, provider_id, account_id) VALUES ($1, 'credential', $1)`,
+        [userId],
+      );
+    await insertAccount();
+
+    const error = await sqlError(insertAccount);
+
+    expect(error.code).toBe(UNIQUE_VIOLATION);
+    expect(error.constraint).toBe('accounts_provider_id_account_id_key');
+  });
+
   it('declares the constraints and indexes the plan requires', async () => {
     const indexes = await prisma.$queryRaw<
       { indexname: string; indexdef: string }[]
@@ -150,6 +249,9 @@ describe('Identity schema (integration, T-001-05)', () => {
     expect(def('sessions_token_key')).toMatch(/UNIQUE INDEX .* \(token\)/);
     expect(def('sessions_user_id_idx')).toMatch(/\(user_id\)/);
     expect(def('accounts_user_id_idx')).toMatch(/\(user_id\)/);
+    expect(def('accounts_provider_id_account_id_key')).toMatch(
+      /UNIQUE INDEX .* \(provider_id, account_id\)/,
+    );
     expect(def('verifications_identifier_idx')).toMatch(/\(identifier\)/);
     expect(fks.map((fk) => fk.name).sort()).toEqual([
       'accounts_user_id_fkey',
