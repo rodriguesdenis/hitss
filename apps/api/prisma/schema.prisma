@@ -10,3 +10,80 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ---------------------------------------------------------------------------------------------
+// Identity context (Better Auth, ADR-0007). Models follow `auth generate --adapter prisma`
+// (better-auth 1.7) with snake_case table/column names. Deviation by design (D16): ids are `text`
+// holding UUIDs, not `uuid`. With `generateId: 'uuid'` on PostgreSQL Better Auth omits the id on
+// insert, so the database generates it (`gen_random_uuid()::text`). Other contexts reference
+// `users.id` as an opaque text owner id.
+// Raw-SQL checks appended to migration create_identity_tables (Prisma cannot express them):
+// users_email_lowercase (email = lower(email)), users_name_length (1..100 chars),
+// users_email_length (<= 254 chars).
+// ---------------------------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false) @map("email_verified")
+  image         String?
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions      Session[]
+  accounts      Account[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Sessions of a user: listing and cascade delete.
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz(3)
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz(3)
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // One account per provider identity (a credential account's id is the user id).
+  @@unique([providerId, accountId])
+  // Credential lookup at sign-in (by user) and cascade delete.
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  // Better Auth looks verifications up by identifier.
+  @@index([identifier])
+  @@map("verifications")
+}

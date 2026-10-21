@@ -19,6 +19,7 @@ erDiagram
     text email UK
     text name
     boolean email_verified
+    text image "nullable"
     timestamptz created_at
     timestamptz updated_at
   }
@@ -61,7 +62,7 @@ erDiagram
   }
 ```
 
-`sessions`, `accounts` and `verifications` follow the Better Auth schema (generated with `@better-auth/cli generate`) and are owned by the Identity context; other contexts only reference `users.id`. Better Auth generates user ids as **UUIDs** (`advanced.database.generateId: 'uuid'`), but `users.id` and every `owner_id` stay `text` as in the Better Auth schema; the domain treats `ownerId` as an opaque string ([ADR-0007](adr/0007-better-auth.md)).
+`sessions`, `accounts` and `verifications` follow the Better Auth schema (generated with the Better Auth CLI, the `auth` package: `auth generate --adapter prisma`, then mapped to snake_case) and are owned by the Identity context; other contexts only reference `users.id`. User ids are **UUIDs** (`advanced.database.generateId: 'uuid'`), but `users.id` and every `owner_id` stay `text`; the domain treats `ownerId` as an opaque string ([ADR-0007](adr/0007-better-auth.md)). With `generateId: 'uuid'` on PostgreSQL, Better Auth omits the id on insert and expects the database to generate it, so every identity id column defaults to `gen_random_uuid()::text` (Better Auth's own generator would emit `uuid` columns; `text` is kept on purpose). Identity indexes: unique `users.email`, unique `sessions.token`, unique `accounts(provider_id, account_id)`, `sessions(user_id)`, `accounts(user_id)`, `verifications(identifier)`; `sessions` and `accounts` reference `users` with `ON DELETE CASCADE`. Integrity checks (raw SQL in `create_identity_tables`): `users_email_lowercase` (`email = lower(email)`), `users_name_length` (1–100 characters), `users_email_length` (≤ 254 characters). `updated_at` defaults to the current time on every identity table.
 
 ## Relationships
 
