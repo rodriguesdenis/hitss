@@ -145,11 +145,11 @@ Two dispatch paths ([ADR-0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md#te
 
 Raised by the domain/application, mapped to HTTP by the presentation layer (see [API contracts](api-contracts.md#error-codes)).
 
-| Error                                                                                                | When                                                           |
-| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `InvalidTeamName`, `InvalidColorHex`, `InvalidTeamDescription`, `InvalidTaskTitle`, `InvalidDueDate` | VO construction fails (normally pre-empted by DTO validation). |
-| `TeamNotFound`, `TaskNotFound`                                                                       | Id unknown **or owned by another user**.                       |
-| `TeamNameAlreadyExists`                                                                              | Name collision for the owner.                                  |
-| `UnknownTeams { ids }`                                                                               | Task assigned to team ids that don't exist for the owner.      |
-| `TooManyTeams`                                                                                       | More than 10 teams on one task.                                |
-| `ConcurrencyConflict`                                                                                | `If-Match` version ≠ current version.                          |
+| Error                                                                                                                          | When                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
+| `InvalidTeamName`, `InvalidColorHex`, `InvalidTeamDescription`, `InvalidTaskTitle`, `InvalidTaskDescription`, `InvalidDueDate` | VO construction fails (normally pre-empted by DTO validation). |
+| `TeamNotFound`, `TaskNotFound`                                                                                                 | Id unknown **or owned by another user**.                       |
+| `TeamNameAlreadyExists`                                                                                                        | Name collision for the owner.                                  |
+| `UnknownTeams { ids }`                                                                                                         | Task assigned to team ids that don't exist for the owner.      |
+| `TooManyTeams`                                                                                                                 | More than 10 teams on one task.                                |
+| `ConcurrencyConflict`                                                                                                          | `If-Match` version ≠ current version.                          |

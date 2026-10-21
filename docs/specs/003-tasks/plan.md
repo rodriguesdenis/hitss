@@ -32,7 +32,7 @@ tasks/
 │   ├── task-title.ts · task-description.ts · task-status.ts · due-date.ts · task-team-ids.ts   # VOs
 │   ├── overdue.policy.ts           # isOverdue(status, dueDate, today) — pure, reused by the read side
 │   ├── events/  task-created.event.ts · task-status-changed.event.ts · task-deleted.event.ts
-│   └── errors/  invalid-task-title.error.ts · invalid-due-date.error.ts · task-not-found.error.ts
+│   └── errors/  invalid-task-title.error.ts · invalid-task-description.error.ts · invalid-due-date.error.ts · task-not-found.error.ts
 │                unknown-teams.error.ts · too-many-teams.error.ts · concurrency-conflict.error.ts
 ├── application/
 │   ├── ports/   task.repository.ts · task.read-model.ts · team-directory.ts   (abstract classes = DI tokens)
@@ -60,7 +60,7 @@ Shared building blocks from `apps/api/src/shared` (delivered by 001/002, reused 
 | Element           | Responsibility                                                                                                                                                                                                                      |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `TaskTitle`       | trim, 3–120 → else `InvalidTaskTitle`                                                                                                                                                                                               |
-| `TaskDescription` | trim, ≤ 2000, blank → `null`                                                                                                                                                                                                        |
+| `TaskDescription` | trim, ≤ 2000, no `\p{Cc}` except line breaks, blank → `null` → else `InvalidTaskDescription`                                                                                                                                        |
 | `TaskStatus`      | `PENDING \| IN_PROGRESS \| DONE`; lifecycle order used by sort                                                                                                                                                                      |
 | `DueDate`         | strict `YYYY-MM-DD` that round-trips through a UTC calendar (rejects `2026-02-30`); `isBefore(today)`                                                                                                                               |
 | `TaskTeamIds`     | set of 0–10 distinct ids; `equals()` ignores order; > 10 → `TooManyTeams`                                                                                                                                                           |
@@ -215,16 +215,16 @@ export class ListTasksQueryDto extends PaginationQueryDto {
 
 ### Error mapping (`task-error.mapper.ts` + global filter)
 
-| Domain / application error                                                     | HTTP | `code`                            | `details`               |
-| ------------------------------------------------------------------------------ | ---- | --------------------------------- | ----------------------- |
-| DTO / pipe failure                                                             | 400  | `VALIDATION_FAILED`               | `[{ field, message }]`  |
-| `InvalidTaskTitle`, `InvalidDueDate` (defensive; DTO pre-empts)                | 400  | `VALIDATION_FAILED`               | field                   |
-| `TaskNotFound` (unknown, deleted, foreign)                                     | 404  | `TASK_NOT_FOUND`                  | —                       |
-| `ConcurrencyConflict` (If-Match mismatch / malformed, or lost race on save)    | 412  | `PRECONDITION_FAILED`             | `{ currentVersion }`    |
-| `TooManyTeams` (11–100 distinct ids; > 100 is a DTO 400)                       | 422  | `TOO_MANY_TEAMS`                  | `{ max: 10, received }` |
-| `UnknownTeams`                                                                 | 422  | `UNKNOWN_TEAMS`                   | `{ teamIds }`           |
-| idempotency key in flight (shared interceptor, advisory lock not acquired)     | 409  | `IDEMPOTENCY_REQUEST_IN_PROGRESS` | — (`Retry-After: 1`)    |
-| idempotency reuse (shared interceptor; also a key first used on another route) | 422  | `IDEMPOTENCY_KEY_REUSED`          | —                       |
+| Domain / application error                                                                | HTTP | `code`                            | `details`               |
+| ----------------------------------------------------------------------------------------- | ---- | --------------------------------- | ----------------------- |
+| DTO / pipe failure                                                                        | 400  | `VALIDATION_FAILED`               | `[{ field, message }]`  |
+| `InvalidTaskTitle`, `InvalidTaskDescription`, `InvalidDueDate` (defensive; DTO pre-empts) | 400  | `VALIDATION_FAILED`               | field                   |
+| `TaskNotFound` (unknown, deleted, foreign)                                                | 404  | `TASK_NOT_FOUND`                  | —                       |
+| `ConcurrencyConflict` (If-Match mismatch / malformed, or lost race on save)               | 412  | `PRECONDITION_FAILED`             | `{ currentVersion }`    |
+| `TooManyTeams` (11–100 distinct ids; > 100 is a DTO 400)                                  | 422  | `TOO_MANY_TEAMS`                  | `{ max: 10, received }` |
+| `UnknownTeams`                                                                            | 422  | `UNKNOWN_TEAMS`                   | `{ teamIds }`           |
+| idempotency key in flight (shared interceptor, advisory lock not acquired)                | 409  | `IDEMPOTENCY_REQUEST_IN_PROGRESS` | — (`Retry-After: 1`)    |
+| idempotency reuse (shared interceptor; also a key first used on another route)            | 422  | `IDEMPOTENCY_KEY_REUSED`          | —                       |
 
 A lost race on save **without** `If-Match` is retried once by the handler (reload + reapply) — the client asked for last-write-wins (AC-03.15.4); with `If-Match` it surfaces as 412.
 
