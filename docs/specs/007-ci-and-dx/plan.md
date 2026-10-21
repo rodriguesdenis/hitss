@@ -130,15 +130,15 @@ volumes: { pgdata: {} }
 - Compose interpolation `${VAR:-default}` means **no `.env` is needed** (AC-07.1.4); if a `.env` exists, compose reads it automatically. `.env.example` lists the same variables with the same defaults and a comment each; a unit test (`tools/ci/env-example.test.mjs`) asserts that every `${VAR:-…}` in `docker-compose.yml` and every key of the API config schema appears in `.env.example` with the same default.
 - `BETTER_AUTH_SECRET` default is obviously local; the API config schema **rejects that value when `APP_ENV=production`** (BR-07.2, threat model). The full production rule set lives in [Configuration validation](#configuration-validation-t-007-02) below.
 - Postgres port is published for developer tooling; bind can be restricted with `POSTGRES_PORT=127.0.0.1:5432`.
-- Images are multi-arch (amd64/arm64) — `postgres:17-alpine`, `node:24-bookworm-slim`, SigNoz and k6 images all publish both.
+- Images are multi-arch (amd64/arm64) — `postgres:17-alpine`, `node:24-alpine`, SigNoz and k6 images all publish both.
 
 ### API Dockerfile (sketch)
 
 ```dockerfile
 # syntax=docker/dockerfile:1.7
-FROM node:24-bookworm-slim AS base
+FROM node:24-alpine AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
-RUN corepack enable && apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache openssl && corepack enable
 WORKDIR /repo
 
 FROM base AS pruner
@@ -157,8 +157,8 @@ RUN pnpm --filter @hitss/api exec prisma generate \
  && pnpm turbo run build --filter=@hitss/api \
  && pnpm --filter @hitss/api deploy --prod --legacy /out   # pnpm 10: --legacy unless inject-workspace-packages
 
-FROM node:24-bookworm-slim AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
+FROM node:24-alpine AS runtime
+RUN apk add --no-cache openssl
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build --chown=node:node /out ./
@@ -739,7 +739,7 @@ No schema change. Seed design above; reset via `prisma migrate reset --force`.
 | Risk                                                                                   | Mitigation                                                                                                                                              |
 | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pnpm deploy` behavior in pnpm 10 (requires `inject-workspace-packages` or `--legacy`) | Decide in T-007-04; image content verified by compose-smoke.                                                                                            |
-| Prisma engines / OpenSSL mismatch in slim images                                       | `bookworm-slim` + `openssl`; Prisma `binaryTargets` include `debian-openssl-3.0.x` and `linux-arm64-openssl-3.0.x`.                                     |
+| Prisma engines / OpenSSL mismatch on musl images                                       | `node:24-alpine` + `openssl` (needed by the schema engine); the pg driver adapter ships no query engine, so no `binaryTargets`.                         |
 | CRLF breaks `docker-entrypoint.sh` on Windows clones                                   | `.gitattributes`: `*.sh text eol=lf`.                                                                                                                   |
 | Cold build > 5 min on slow networks                                                    | BuildKit cache mounts, `pnpm fetch` layer from lockfile only, pruned context.                                                                           |
 | Testcontainers flakiness on CI                                                         | Reuse one container per test file, `wait-for` strategies on log + port, Ryuk enabled; retry the job once only through flakiness policy (test strategy). |
