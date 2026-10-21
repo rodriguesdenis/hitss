@@ -333,7 +333,7 @@ Migration `create_teams` (Prisma-generated, plus raw SQL appended and reviewed):
 CREATE UNIQUE INDEX teams_owner_id_lower_name_key
   ON teams (owner_id, lower(name)) WHERE deleted_at IS NULL;          -- BR-02.2; also serves ORDER BY lower(name)
 CREATE INDEX teams_owner_id_created_at_idx
-  ON teams (owner_id, created_at DESC) WHERE deleted_at IS NULL;      -- default listing
+  ON teams (owner_id, created_at DESC, id DESC) WHERE deleted_at IS NULL;  -- default listing (-createdAt, ties by id)
 ALTER TABLE teams ADD CONSTRAINT teams_color_hex_format CHECK (color_hex ~ '^#[0-9A-F]{6}$');
 ALTER TABLE teams ADD CONSTRAINT teams_version_positive CHECK (version >= 1);
 ```
