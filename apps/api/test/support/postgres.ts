@@ -18,6 +18,12 @@
  * (test/support/after-env.ts, `setupFilesAfterEnv`). Root hooks run after all of the file's own
  * hooks, so apps and clients are closed before the drop terminates their connections. Call
  * `drop()` only to remove a database in the middle of a file.
+ *
+ * Caveat: the registry is module state. A test that calls `jest.resetModules()` or
+ * `jest.isolateModules()` and then creates a database gets a fresh copy of this module, whose
+ * registry the root hook never sees, so that database is not dropped. The leak is harmless (the
+ * container is discarded at the end of the run), but prefer creating databases outside such
+ * blocks.
  */
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';

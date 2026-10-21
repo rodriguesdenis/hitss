@@ -7,6 +7,7 @@ import { useTestDatabase } from '../support/postgres';
 
 const UNIQUE_VIOLATION = '23505';
 const CHECK_VIOLATION = '23514';
+const STRING_TOO_LONG = '22001';
 
 describe('Team schema (integration, T-002-01)', () => {
   const db = useTestDatabase();
@@ -40,6 +41,7 @@ describe('Team schema (integration, T-002-01)', () => {
     name: string,
     extra: {
       colorHex?: string;
+      description?: string;
       version?: number;
       deletedAt?: Date;
       createdAt?: Date;
@@ -48,13 +50,14 @@ describe('Team schema (integration, T-002-01)', () => {
   ): Promise<string> {
     const id = randomUUID();
     await client.query(
-      `INSERT INTO teams (id, owner_id, name, color_hex, version, created_at, updated_at, deleted_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $6, $7)`,
+      `INSERT INTO teams (id, owner_id, name, color_hex, description, version, created_at, updated_at, deleted_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8)`,
       [
         id,
         ownerId,
         name,
         extra.colorHex ?? '#7C3AED',
+        extra.description ?? null,
         extra.version ?? 1,
         extra.createdAt ?? new Date(),
         extra.deletedAt ?? null,
@@ -123,6 +126,18 @@ describe('Team schema (integration, T-002-01)', () => {
     );
   });
 
+  it('AC-02.1.7 allows two soft-deleted teams with the same name', async () => {
+    const ownerId = await aUser();
+    const deletedAt = new Date();
+
+    await expect(
+      insertTeam(ownerId, 'Archive', { deletedAt }),
+    ).resolves.toEqual(expect.any(String));
+    await expect(
+      insertTeam(ownerId, 'archive', { deletedAt }),
+    ).resolves.toEqual(expect.any(String));
+  });
+
   it('allows the same team name for different owners', async () => {
     const [first, second] = [await aUser(), await aUser()];
     await insertTeam(first, 'Backend');
@@ -140,13 +155,17 @@ describe('Team schema (integration, T-002-01)', () => {
     ];
     await Promise.all([first.connect(), second.connect()]);
     try {
+      const { rows: pid } = await second.query<{ pid: number }>(
+        'SELECT pg_backend_pid() AS pid',
+      );
       await first.query('BEGIN');
       await insertTeam(ownerId, 'Design', {}, first);
-      // The second insert blocks on the first transaction's uncommitted index entry...
       const racing = sqlError(() => insertTeam(ownerId, 'design', {}, second));
+
+      // Commit only once the second insert is provably blocked on the first's index entry.
+      await waitForLockWait(pid[0]!.pid);
       await first.query('COMMIT');
 
-      // ...and fails once the first commits.
       const error = await racing;
       expect(error.code).toBe(UNIQUE_VIOLATION);
       expect(error.constraint).toBe('teams_owner_id_lower_name_key');
@@ -158,6 +177,50 @@ describe('Team schema (integration, T-002-01)', () => {
     } finally {
       await Promise.all([first.end(), second.end()]);
     }
+  });
+
+  /** Polls pg_stat_activity (bounded, no fixed sleep) until the backend waits on a lock. */
+  async function waitForLockWait(pid: number): Promise<void> {
+    for (let attempt = 0; attempt < 500; attempt++) {
+      const { rows } = await sql.query<{ wait_event_type: string | null }>(
+        'SELECT wait_event_type FROM pg_stat_activity WHERE pid = $1',
+        [pid],
+      );
+      if (rows[0]?.wait_event_type === 'Lock') return;
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    throw new Error(`backend ${pid} never waited on a lock`);
+  }
+
+  it.each(['#7C3AED0', '#7C3AED\n'])(
+    'rejects the over-long color %j (char(7))',
+    async (colorHex) => {
+      const ownerId = await aUser();
+
+      const error = await sqlError(() =>
+        insertTeam(ownerId, 'Colors', { colorHex }),
+      );
+
+      expect(error.code).toBe(STRING_TOO_LONG);
+    },
+  );
+
+  it('rejects a 51-character name (varchar(50))', async () => {
+    const ownerId = await aUser();
+
+    const error = await sqlError(() => insertTeam(ownerId, 'n'.repeat(51)));
+
+    expect(error.code).toBe(STRING_TOO_LONG);
+  });
+
+  it('rejects a 281-character description (varchar(280))', async () => {
+    const ownerId = await aUser();
+
+    const error = await sqlError(() =>
+      insertTeam(ownerId, 'Described', { description: 'd'.repeat(281) }),
+    );
+
+    expect(error.code).toBe(STRING_TOO_LONG);
   });
 
   it.each(['#7c3aed', '7C3AED', '#7C3AE', '#GGGGGG'])(
@@ -174,16 +237,19 @@ describe('Team schema (integration, T-002-01)', () => {
     },
   );
 
-  it('rejects a version below 1 (teams_version_positive)', async () => {
-    const ownerId = await aUser();
+  it.each([0, -1])(
+    'rejects version %i (teams_version_positive)',
+    async (version) => {
+      const ownerId = await aUser();
 
-    const error = await sqlError(() =>
-      insertTeam(ownerId, 'Versioned', { version: 0 }),
-    );
+      const error = await sqlError(() =>
+        insertTeam(ownerId, 'Versioned', { version }),
+      );
 
-    expect(error.code).toBe(CHECK_VIOLATION);
-    expect(error.constraint).toBe('teams_version_positive');
-  });
+      expect(error.code).toBe(CHECK_VIOLATION);
+      expect(error.constraint).toBe('teams_version_positive');
+    },
+  );
 
   it('deletes the teams of a deleted user (ON DELETE CASCADE)', async () => {
     const ownerId = await aUser();
@@ -209,9 +275,12 @@ describe('Team schema (integration, T-002-01)', () => {
       [owners],
     );
     await sql.query('ANALYZE teams');
+    // Without sequential scans the planner must pick an index; the assertion is about which
+    // one and whether it still has to sort.
+    await sql.query('SET enable_seqscan = off');
 
     const { rows } = await sql.query<{ 'QUERY PLAN': unknown }>(
-      `EXPLAIN (FORMAT JSON)
+      `EXPLAIN (ANALYZE, FORMAT JSON)
        SELECT id, name, color_hex, description, version, created_at, updated_at
        FROM teams
        WHERE owner_id = $1 AND deleted_at IS NULL
@@ -219,9 +288,11 @@ describe('Team schema (integration, T-002-01)', () => {
        LIMIT 20 OFFSET 0`,
       [owners[0]],
     );
+    await sql.query('RESET enable_seqscan');
     const plan = JSON.stringify(rows[0]?.['QUERY PLAN']);
 
     expect(plan).toContain('"Index Name":"teams_owner_id_created_at_idx"');
     expect(plan).not.toContain('"Node Type":"Sort"');
+    expect(plan).not.toContain('"Node Type":"Incremental Sort"');
   });
 });
