@@ -20,7 +20,9 @@
     "prepare": "husky",
     "guard:env": "node tools/ci/no-tracked-env.mjs",
     "arch": "turbo run arch test:arch",
-    "doc-check": "node tools/ci/doc-check.mjs"
+    "doc-check": "node tools/ci/doc-check.mjs",
+    "traceability": "node tools/ci/traceability.mjs --write",
+    "traceability:check": "node tools/ci/traceability.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
