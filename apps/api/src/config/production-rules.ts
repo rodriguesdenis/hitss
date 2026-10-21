@@ -1,4 +1,4 @@
-import { parseProxy } from './auth.env';
+import { parseProxy, parseUrl } from './auth.env';
 import type { Violation } from './config-validation-error';
 import type { EnvironmentVariables } from './env.schema';
 
@@ -83,11 +83,24 @@ const isLoopbackHost = (hostname: string): boolean =>
   hostname.startsWith('127.') ||
   hostname === '[::1]';
 
-/** The origin is already validated as `*` or an http(s) origin. */
+/** Validated values always parse; an unparseable one is treated as unsafe, never thrown. */
+const hasLoopbackHost = (value: string): boolean => {
+  const url = parseUrl(value);
+  return url === null || isLoopbackHost(url.hostname);
+};
+
 const isUnsafeOrigin = (origin: string): boolean =>
-  origin === '*' ||
-  origin.startsWith('http://') ||
-  isLoopbackHost(new URL(origin).hostname);
+  origin === '*' || origin.startsWith('http://') || hasLoopbackHost(origin);
+
+export const authUrlIsNotLoopback: ProductionRule = (config) =>
+  hasLoopbackHost(config.BETTER_AUTH_URL)
+    ? [
+        {
+          variable: 'BETTER_AUTH_URL',
+          message: 'must not be localhost or a loopback address in production',
+        },
+      ]
+    : [];
 
 export const corsOriginsAreSafe: ProductionRule = (config) =>
   config.CORS_ORIGINS.some(isUnsafeOrigin)
@@ -139,6 +152,7 @@ export const productionRules: ProductionRule[] = [
   logLevelIsNotVerbose,
   otlpEndpointIsSecure,
   authUrlIsHttps,
+  authUrlIsNotLoopback,
   corsOriginsAreSafe,
   authRateLimitIsOn,
   trustedProxiesAreNarrow,
