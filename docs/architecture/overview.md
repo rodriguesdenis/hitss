@@ -265,8 +265,10 @@ apps/api/
 │   └── seed.ts                          # deterministic, idempotent
 ├── src/
 │   ├── instrumentation.ts               # OTel NodeSDK, loaded before anything else
-│   ├── main.ts                          # NestFactory.create(AppModule, { bodyParser: false })
+│   ├── main.ts                          # NestFactory.create(AppModule, { bodyParser: false }) → setupApp(app) → listen
+│   ├── app.setup.ts                     # setupApp(app): the single bootstrap seam, used by main.ts and test/support/app.ts; every app-level concern (shutdown hooks, prefix, versioning, helmet, CORS…) goes here, never in main.ts
 │   ├── app.module.ts
+│   ├── generated/                       # Prisma client from `prisma generate` (gitignored, persistence library: infrastructure only)
 │   ├── config/                          # env schema as a class-validator class, validated via ConfigModule `validate()` (fail fast) + typed config
 │   │   └── telemetry.env.ts             # OTel/logging env, composed into the same ConfigModule `validate()`
 │   ├── shared/
@@ -310,6 +312,7 @@ apps/api/
 │           ├── presentation/            # tasks.controller.ts, dto/
 │           └── tasks.module.ts
 ├── test/
+│   ├── support/                         # global-setup (one PG container per run, migrated template DB), postgres.ts (useTestDatabase / createTestDatabase), app.ts (createTestApp)
 │   ├── integration/                     # Testcontainers PostgreSQL: repositories, migrations, seed
 │   └── e2e/                             # supertest against the full Nest app
 ├── stryker.config.mjs                   # mutation testing scope: src/modules/*/domain
