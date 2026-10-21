@@ -251,6 +251,21 @@ describe('Team schema (integration, T-002-01)', () => {
     },
   );
 
+  it('rejects updated_at before created_at (teams_updated_after_created)', async () => {
+    const ownerId = await aUser();
+
+    const error = await sqlError(() =>
+      sql.query(
+        `INSERT INTO teams (id, owner_id, name, color_hex, created_at, updated_at)
+         VALUES ($1, $2, 'Clock', '#7C3AED', $3, $3::timestamptz - interval '1 millisecond')`,
+        [randomUUID(), ownerId, new Date()],
+      ),
+    );
+
+    expect(error.code).toBe(CHECK_VIOLATION);
+    expect(error.constraint).toBe('teams_updated_after_created');
+  });
+
   it('deletes the teams of a deleted user (ON DELETE CASCADE)', async () => {
     const ownerId = await aUser();
     await insertTeam(ownerId, 'Gone');
