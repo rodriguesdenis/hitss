@@ -8,20 +8,42 @@ export interface Violation {
 /** A production rule inspects the already type-valid configuration. Names variables, never values. */
 export type ProductionRule = (config: EnvironmentVariables) => Violation[];
 
-/** `.env.example` ships a secret with this prefix; it must never reach production. */
-export const LOCAL_SECRET_PREFIX = 'local-dev-';
+/** Prefixes of the placeholder secrets shipped in `.env.example` and the unit-test setup. */
+export const PLACEHOLDER_SECRET_PREFIXES = ['local-dev-', 'unit-test-secret-'];
 
-export const secretIsNotTheLocalPlaceholder: ProductionRule = (config) =>
-  config.BETTER_AUTH_SECRET.startsWith(LOCAL_SECRET_PREFIX)
+/** Password of the local database from `.env.example` and docker-compose.yml. */
+export const LOCAL_DATABASE_PASSWORD = 'teams-local-only';
+
+export const secretIsNotAPlaceholder: ProductionRule = (config) =>
+  PLACEHOLDER_SECRET_PREFIXES.some((prefix) =>
+    config.BETTER_AUTH_SECRET.startsWith(prefix),
+  )
     ? [
         {
           variable: 'BETTER_AUTH_SECRET',
-          message: 'must not be the local placeholder from .env.example',
+          message: 'must not be a placeholder from .env.example or the tests',
         },
       ]
     : [];
 
+export const databaseIsNotTheLocalOne: ProductionRule = (config) =>
+  config.DATABASE_URL.includes(LOCAL_DATABASE_PASSWORD)
+    ? [
+        {
+          variable: 'DATABASE_URL',
+          message: 'must not use the local placeholder password',
+        },
+      ]
+    : [];
+
+export const seedIsOff: ProductionRule = (config) =>
+  config.SEED_ON_START
+    ? [{ variable: 'SEED_ON_START', message: 'must be false in production' }]
+    : [];
+
 /** Applied only when APP_ENV=production. Add one entry per rule; validate() never changes. */
 export const productionRules: ProductionRule[] = [
-  secretIsNotTheLocalPlaceholder,
+  secretIsNotAPlaceholder,
+  databaseIsNotTheLocalOne,
+  seedIsOff,
 ];

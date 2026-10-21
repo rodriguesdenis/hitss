@@ -6,6 +6,16 @@ export const VALID_ENV: Record<string, string> = {
   BETTER_AUTH_SECRET: 'unit-test-secret-0123456789abcdef0123456789',
 };
 
+/** Valid configuration for APP_ENV=production (real-looking values, seed off). */
+export const PRODUCTION_ENV: Record<string, string> = {
+  ...VALID_ENV,
+  APP_ENV: 'production',
+  DATABASE_URL: 'postgresql://app:pw@db.internal:5432/app',
+  // Built at runtime with low entropy so scanners never mistake the fixture for a real secret.
+  BETTER_AUTH_SECRET: `prod-like-${'x'.repeat(40)}`,
+  SEED_ON_START: 'false',
+};
+
 type Validate = (config: Record<string, unknown>) => unknown;
 
 /**
@@ -28,8 +38,13 @@ export function expectInvalid(
   const validationError = error as ConfigValidationError;
   expect(validationError.violations.map((v) => v.variable)).toContain(variable);
   expect(validationError.message).toContain(variable);
-  for (const value of Object.values(env)) {
-    if (value.length > 3) expect(validationError.message).not.toContain(value);
+  // Secrets and the offending value must never be echoed (booleans and enum words are not secrets).
+  const guarded = ['DATABASE_URL', 'BETTER_AUTH_SECRET', variable];
+  for (const key of guarded) {
+    const value = merged[key];
+    if (value && value.length > 5 && !['true', 'false'].includes(value)) {
+      expect(validationError.message).not.toContain(value);
+    }
   }
   return validationError;
 }

@@ -1,7 +1,11 @@
 import { toAppConfig } from './app-config';
 import { validate, validateWith } from './env.validation';
 import { productionRules } from './production-rules';
-import { expectInvalid, VALID_ENV } from './testing/expect-invalid';
+import {
+  expectInvalid,
+  PRODUCTION_ENV,
+  VALID_ENV,
+} from './testing/expect-invalid';
 
 const check = (env: Record<string, string>, variable: string) =>
   expectInvalid(validate, env, variable);
@@ -96,23 +100,46 @@ describe('environment validation', () => {
 });
 
 describe('production rules', () => {
-  const production = { APP_ENV: 'production' };
+  const production = PRODUCTION_ENV;
 
-  it('AC-06.5.5 APP_ENV=production refuses the local placeholder secret', () => {
-    check(
+  it('AC-06.5.5 APP_ENV=production accepts a fully valid production configuration', () => {
+    expect(() => validate({ ...production })).not.toThrow();
+  });
+
+  it.each([
+    'local-dev-secret-change-me-0123456789abcdef',
+    'unit-test-secret-0123456789abcdef0123456789',
+  ])(
+    'AC-06.5.5 APP_ENV=production refuses the placeholder secret %s',
+    (secret) => {
+      expectInvalid(
+        validate,
+        { ...production, BETTER_AUTH_SECRET: secret },
+        'BETTER_AUTH_SECRET',
+      );
+    },
+  );
+
+  it('AC-06.5.5 APP_ENV=production refuses the local placeholder database password', () => {
+    expectInvalid(
+      validate,
       {
         ...production,
-        BETTER_AUTH_SECRET: 'local-dev-secret-change-me-0123456789abcdef',
+        DATABASE_URL: 'postgresql://teams:teams-local-only@db:5432/teams',
       },
-      'BETTER_AUTH_SECRET',
+      'DATABASE_URL',
     );
   });
 
-  it('AC-06.5.5 APP_ENV=production accepts a non-placeholder secret', () => {
-    expect(() => validate({ ...VALID_ENV, ...production })).not.toThrow();
+  it('AC-06.5.5 APP_ENV=production refuses SEED_ON_START=true', () => {
+    expectInvalid(
+      validate,
+      { ...production, SEED_ON_START: 'true' },
+      'SEED_ON_START',
+    );
   });
 
-  it('AC-07.1.4 APP_ENV=local accepts the placeholder secret even when NODE_ENV=production (the image)', () => {
+  it('AC-07.1.4 APP_ENV=local accepts the placeholders even when NODE_ENV=production (the image)', () => {
     const previous = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
     try {
@@ -121,6 +148,7 @@ describe('production rules', () => {
           ...VALID_ENV,
           APP_ENV: 'local',
           NODE_ENV: 'production',
+          SEED_ON_START: 'true',
           BETTER_AUTH_SECRET: 'local-dev-secret-change-me-0123456789abcdef',
         }),
       ).not.toThrow();
@@ -130,14 +158,14 @@ describe('production rules', () => {
   });
 
   it('AC-07.1.4 an extra rule registers without changing validate()', () => {
-    const extra = (config: { port: number } | { PORT: number }) =>
-      'PORT' in config && config.PORT === 3000
+    const extra = (config: { PORT: number }) =>
+      config.PORT === 3000
         ? [{ variable: 'PORT', message: 'must not keep the default port' }]
         : [];
     const strict = validateWith([...productionRules, extra]);
 
     expectInvalid(strict, production, 'PORT');
-    expect(() => validate({ ...VALID_ENV, ...production })).not.toThrow();
+    expect(() => validate({ ...production })).not.toThrow();
   });
 
   it('AC-07.1.4 rules do not run outside production', () => {
