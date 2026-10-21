@@ -70,7 +70,7 @@ describe('Task', () => {
       expect(iso(task.createdAt)).toBe(CREATED);
       expect(iso(task.updatedAt)).toBe(CREATED);
       expect(task.deletedAt).toBeNull();
-      expect(task.pullEvents()).toEqual([
+      expect(task.pullEvents()).toStrictEqual([
         new TaskCreated(TASK_ID, OWNER_ID, PENDING, new Date(CREATED)),
       ]);
     });
@@ -86,7 +86,7 @@ describe('Task', () => {
 
         expect(task.status).toBe(status);
         expect(iso(task.completedAt)).toBe(completedAt);
-        expect(task.pullEvents()).toEqual([
+        expect(task.pullEvents()).toStrictEqual([
           new TaskCreated(TASK_ID, OWNER_ID, status, new Date(CREATED)),
         ]);
       },
@@ -102,7 +102,7 @@ describe('Task', () => {
     expect(task.teamIds.values).toEqual(['backend', 'mobile']);
     expect(iso(task.completedAt)).toBe(COMPLETED);
     expect(task.version).toBe(3);
-    expect(task.pullEvents()).toEqual([]);
+    expect(task.pullEvents()).toStrictEqual([]);
   });
 
   describe('changeStatus: transition matrix (AC-03.10.1, AC-03.10.2, AC-03.10.3, AC-03.9.4)', () => {
@@ -130,7 +130,7 @@ describe('Task', () => {
         expect(iso(task.completedAt)).toBe(completedAt);
         expect(task.version).toBe(3);
         expect(iso(task.updatedAt)).toBe(changed ? NOW : CREATED);
-        expect(task.pullEvents()).toEqual(
+        expect(task.pullEvents()).toStrictEqual(
           changed
             ? [new TaskStatusChanged(TASK_ID, from, to, new Date(NOW))]
             : [],
@@ -204,13 +204,13 @@ describe('Task', () => {
       };
 
       expect(task.edit({ ...values, now: new Date(NOW) })).toBe(true);
-      expect(task.title).toBe(values.title);
-      expect(task.description).toBe(values.description);
-      expect(task.dueDate).toBe(values.dueDate);
+      expect(task.title.equals(values.title)).toBe(true);
+      expect(task.description.equals(values.description)).toBe(true);
+      expect(task.dueDate?.value ?? null).toBe(values.dueDate?.value ?? null);
       expect(iso(task.updatedAt)).toBe(NOW);
       expect(task.version).toBe(3);
       expect(task.status).toBe(PENDING);
-      expect(task.pullEvents()).toEqual([]);
+      expect(task.pullEvents()).toStrictEqual([]);
     });
   });
 
@@ -233,7 +233,7 @@ describe('Task', () => {
       expect(task.teamIds.values).toEqual(['design']);
       expect(iso(task.updatedAt)).toBe(NOW);
       expect(task.version).toBe(3);
-      expect(task.pullEvents()).toEqual([]);
+      expect(task.pullEvents()).toStrictEqual([]);
     });
   });
 
@@ -249,7 +249,7 @@ describe('Task', () => {
       expect(task.status).toBe(DONE);
       expect(task.dueDate?.value).toBe('2026-10-31');
       expect(iso(task.completedAt)).toBe(COMPLETED);
-      expect(task.pullEvents()).toEqual([]);
+      expect(task.pullEvents()).toStrictEqual([]);
     });
 
     it('AC-03.13.4 a team that was not assigned changes nothing', () => {
@@ -268,7 +268,7 @@ describe('Task', () => {
       task.delete(new Date(NOW));
 
       expect(iso(task.deletedAt)).toBe(NOW);
-      expect(task.pullEvents()).toEqual([
+      expect(task.pullEvents()).toStrictEqual([
         new TaskDeleted(TASK_ID, new Date(NOW)),
       ]);
     });
@@ -281,7 +281,7 @@ describe('Task', () => {
       task.delete(new Date('2026-10-22T00:00:00.000Z'));
 
       expect(iso(task.deletedAt)).toBe(NOW);
-      expect(task.pullEvents()).toEqual([]);
+      expect(task.pullEvents()).toStrictEqual([]);
     });
   });
 
