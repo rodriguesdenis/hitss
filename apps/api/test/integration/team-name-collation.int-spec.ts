@@ -28,12 +28,15 @@ const AGREE: [string, string, boolean][] = [
 
 /**
  * Known divergence on postgres:17-alpine (libc provider, musl): lower() leaves some code points
- * unchanged that JavaScript lowercases, namely the circled letters U+24B6–U+24CF and scripts
- * added in Unicode 14+ (124 code points). For such names equals() says "same" while the index
- * says "different". Effect: only code that compares with equals() (the in-memory fake) treats
- * them as a collision. The Prisma repository's pre-check and the unique index both use
- * lower(), so the database stays authoritative and production behaviour is consistent.
- * Accepted residual (T-002-03).
+ * unchanged that JavaScript lowercases, such as the circled letters (U+24B6–U+24CF) and code
+ * points added in Unicode 14+. The rows below are the ones verified on the compose image; the
+ * full set was not enumerated. For such names equals() says "same" while the index says
+ * "different". Only code that compares with equals() (the in-memory fake) treats them as a
+ * collision; the Prisma repository's pre-check and the unique index both use lower(), so the
+ * database stays authoritative. Accepted residual (T-002-03).
+ *
+ * If this block fails after an image upgrade: move the rows to AGREE and delete the caveat in
+ * team-name.ts. Do not weaken the assertion.
  */
 const DIVERGE: [string, string][] = [
   ['Ⓐ Team', 'ⓐ team'], // U+24B6 circled letter

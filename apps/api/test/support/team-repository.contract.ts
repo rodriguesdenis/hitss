@@ -22,10 +22,10 @@ const LATER = new Date('2026-10-20T13:00:00.000Z');
 export function aTeam(
   ownerId: string,
   name = 'Mobile',
-  extra: { color?: string; description?: string | null } = {},
+  extra: { id?: string; color?: string; description?: string | null } = {},
 ): Team {
   return Team.create({
-    id: randomUUID(),
+    id: extra.id ?? randomUUID(),
     ownerId,
     name: TeamName.create(name),
     color: ColorHex.create(extra.color ?? '#7C3AED'),
