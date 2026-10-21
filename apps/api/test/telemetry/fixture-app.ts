@@ -1,5 +1,5 @@
 // Test-only Nest app started with `-r ./src/instrumentation.ts`, like production uses --import.
-// `GET /ping` runs a real query through PrismaService so the exported trace shows the DB span.
+// `GET /api/v1/ping` (setupApp adds the prefix and version) runs a real query through PrismaService so the exported trace shows the DB span.
 import 'reflect-metadata';
 import { Controller, Get, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';

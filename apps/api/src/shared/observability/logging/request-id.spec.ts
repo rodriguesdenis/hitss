@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { requestId } from './request-id';
+import { requestId, requestIdMiddleware } from './request-id';
 
 const run = (header?: string) => {
   const headers: Record<string, string> = {};
@@ -33,5 +33,47 @@ describe('requestId', () => {
 
   it('AC-06.2.3 generates an id when none was sent', () => {
     expect(run().id).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('reuses the id already resolved for this request, so pino logs the id the response carries', () => {
+    const headers: Record<string, string> = {};
+    const request = { id: 'resolved-1', headers: { 'x-request-id': 'bad id' } };
+    const response = { setHeader: (k: string, v: string) => (headers[k] = v) };
+
+    expect(
+      requestId(
+        request as unknown as IncomingMessage,
+        response as unknown as ServerResponse,
+      ),
+    ).toBe('resolved-1');
+    expect(headers['X-Request-Id']).toBe('resolved-1');
+  });
+});
+
+describe('requestIdMiddleware', () => {
+  it('AC-06.2.3 resolves the id once, before the body parser, and stores it on the request', () => {
+    const headers: Record<string, string> = {};
+    const request: { id?: unknown; headers: Record<string, string> } = {
+      headers: { 'x-request-id': 'abc\nlevel=error' },
+    };
+    const response = { setHeader: (k: string, v: string) => (headers[k] = v) };
+    const next = jest.fn();
+
+    requestIdMiddleware(
+      request as unknown as IncomingMessage,
+      response as unknown as ServerResponse,
+      next,
+    );
+
+    expect(request.id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(headers['X-Request-Id']).toBe(request.id);
+    expect(next).toHaveBeenCalledTimes(1);
+    // pino's genReqId runs later on the same request and gets the same id.
+    expect(
+      requestId(
+        request as unknown as IncomingMessage,
+        response as unknown as ServerResponse,
+      ),
+    ).toBe(request.id);
   });
 });

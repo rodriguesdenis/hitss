@@ -77,7 +77,7 @@ function dbSpansBelow(spans: ReceivedSpan[], rootId: string | undefined) {
 }
 
 const get = (app: Running, headers: Record<string, string> = {}, query = '') =>
-  fetch(`http://127.0.0.1:${app.port}/ping${query}`, { headers });
+  fetch(`http://127.0.0.1:${app.port}/api/v1/ping${query}`, { headers });
 
 describe('OpenTelemetry bootstrap', () => {
   const db = useTestDatabase();
@@ -222,8 +222,8 @@ describe('OpenTelemetry bootstrap', () => {
     expect(completed).toHaveLength(1);
     expect(completed[0]).toMatchObject({
       traceId: TRACE_ID,
-      route: '/ping',
-      req: { method: 'GET', url: '/ping' },
+      route: '/api/v1/ping',
+      req: { method: 'GET', url: '/api/v1/ping' },
       res: { statusCode: 200 },
     });
     expect(completed[0]?.spanId).toMatch(/^[0-9a-f]{16}$/);
