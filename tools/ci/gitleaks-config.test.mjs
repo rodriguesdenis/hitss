@@ -1,8 +1,11 @@
+// Rule for fixtures and examples in this repo: build tokens, passwords and secret-looking values at
+// RUNTIME with low entropy (e.g. 'prod-like-' + 'x'.repeat(40)); never commit a realistic literal.
+// gitleaks and GitGuardian scan every PR, and the rules below fail on literals that look real.
 import { strict as assert } from 'node:assert';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -14,13 +17,20 @@ const badge =
 const planted = ['AKIA', 'IOSFODNN7REALKEY'].join('');
 const otherToken = ['Zk3pQ9xV7m', 'Lw2RtY8nBc4h'].join('');
 
+// Passwords and URLs with credentials are assembled at runtime: no line of this file contains a
+// literal user:password@ pair or the local placeholder password.
+const localPassword = ['teams', 'local', 'only'].join('-');
+const shortPassword = ['p', 'w'].join('');
+const dbUrl = (scheme, user, password, rest) =>
+  [scheme, '://', user, ':', password, '@', rest].join('');
+
 const workdirs = [];
-/** Exit code of `gitleaks dir` over a README holding the given lines. */
-function scan(lines) {
+/** Exit code of `gitleaks dir` over a file (default: the API README) holding the given lines. */
+function scan(lines, file = 'apps/api/README.md') {
   const dir = mkdtempSync(join(tmpdir(), 'gitleaks-'));
   workdirs.push(dir);
-  mkdirSync(join(dir, 'apps/api'), { recursive: true });
-  writeFileSync(join(dir, 'apps/api/README.md'), `${lines.join('\n')}\n`);
+  mkdirSync(dirname(join(dir, file)), { recursive: true });
+  writeFileSync(join(dir, file), `${lines.join('\n')}\n`);
   return spawnSync('gitleaks', [
     'dir',
     '--no-banner',
@@ -86,6 +96,88 @@ describe(
           "process.env.BETTER_AUTH_SECRET = 'unit-test-secret-0123456789abcdef0123456789';",
           "  BETTER_AUTH_SECRET: 'local-dev-secret-change-me-0123456789abcdef',",
         ]),
+        0,
+      );
+    });
+
+    const urlPassword = ['Zk3pQ9xV', '7mLw2R'].join('');
+
+    it('AC-07.9.1 detects a template-literal (backtick) secret assignment', () => {
+      assert.equal(scan([`const apiToken = \`${fixtureSecret}\`;`]), 1);
+    });
+
+    it('AC-07.9.1 does not flag a template literal that interpolates a runtime value', () => {
+      assert.equal(scan(['const apiToken = `prod-like-${suffix}`;']), 0);
+    });
+
+    it('AC-07.9.1 detects credential- and auth-named assignments', () => {
+      assert.equal(scan([`const dbCredential = '${fixtureSecret}';`]), 1);
+      assert.equal(scan([`const authHeader = '${fixtureSecret}';`]), 1);
+    });
+
+    it('AC-07.9.1 detects unquoted secrets in .env, YAML and compose files', () => {
+      assert.equal(
+        scan([`BETTER_AUTH_SECRET=${fixtureSecret}`], '.env.production'),
+        1,
+      );
+      assert.equal(
+        scan([`    BETTER_AUTH_SECRET: ${fixtureSecret}`], 'compose.yml'),
+        1,
+      );
+      assert.equal(
+        scan(
+          [`      - BETTER_AUTH_SECRET=${fixtureSecret}`],
+          'docker-compose.yml',
+        ),
+        1,
+      );
+    });
+
+    it('AC-07.9.1 allows placeholders and variable references in env-style files', () => {
+      assert.equal(
+        scan(
+          [
+            'BETTER_AUTH_SECRET=local-dev-secret-change-me-0123456789abcdef',
+            '    BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-dev-secret-change-me-0123456789abcdef}',
+            `    POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-${localPassword}}`,
+          ],
+          'docker-compose.yml',
+        ),
+        0,
+      );
+    });
+
+    it('AC-07.9.1 detects a password embedded in a connection URL', () => {
+      assert.equal(
+        scan(
+          [
+            `DATABASE_URL: ${dbUrl('postgresql', 'app', urlPassword, 'db.internal:5432/app')}`,
+          ],
+          'config.yml',
+        ),
+        1,
+      );
+      assert.equal(
+        scan(
+          [
+            `const url = '${dbUrl('postgres', 'app', urlPassword, 'db.internal/app')}';`,
+          ],
+          'src/a.ts',
+        ),
+        1,
+      );
+    });
+
+    it('AC-07.9.1 allows the documented local placeholder and templated URLs', () => {
+      assert.equal(
+        scan(
+          [
+            `DATABASE_URL=${dbUrl('postgresql', 'teams', localPassword, 'localhost:5432/teams_tasks')}`,
+            `DATABASE_URL: ${dbUrl('postgresql', '\${POSTGRES_USER:-teams}', `\${POSTGRES_PASSWORD:-${localPassword}}`, 'postgres:5432/db')}`,
+            `const url = '${dbUrl('postgresql', 'user', shortPassword, 'localhost:5432/db')}';`,
+          ],
+          'docker-compose.yml',
+        ),
         0,
       );
     });

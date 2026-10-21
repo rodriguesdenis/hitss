@@ -1,5 +1,8 @@
 import { ConfigValidationError } from '../env.validation';
 
+// Fixtures: build secret-looking values at RUNTIME with low entropy (e.g. `prod-like-${'x'.repeat(40)}`)
+// and never commit a realistic literal; gitleaks and GitGuardian fail the PR on those (.gitleaks.toml).
+
 /** Valid local configuration; tests override single variables on top of it. */
 export const VALID_ENV: Record<string, string> = {
   DATABASE_URL: 'postgresql://user:pw@localhost:5432/db',
