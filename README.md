@@ -103,6 +103,8 @@ erDiagram
 
 > ⚠️ **Implementation in progress — commands verified at the end of phase 4.** `docker-compose.yml`, the `Makefile` and the seed are not in the repository yet. Everything in this section is the specified behavior ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
 
+### Backend (Docker)
+
 Requirements: **Docker with Compose v2**. Nothing else is needed for the API.
 
 ```bash

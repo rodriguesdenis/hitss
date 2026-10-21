@@ -1,0 +1,21 @@
+[
+  { "title": "Architectural decisions" },
+  { "title": "Data model" },
+  {
+    "title": "How to run",
+    "subsections": [
+      { "name": "backend", "pattern": "backend" },
+      { "name": "mobile", "pattern": "mobile" }
+    ]
+  },
+  {
+    "title": "What I would do differently in production",
+    "aliases": ["What I'd do differently in production"],
+    "topics": [
+      { "name": "caching", "pattern": "cach(e|es|ing)\\b" },
+      { "name": "logging", "pattern": "\\blog(s|ging)?\\b" },
+      { "name": "scalability", "pattern": "scal(e|ing|able|ability)" },
+      { "name": "security", "pattern": "security" }
+    ]
+  }
+]
