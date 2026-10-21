@@ -139,6 +139,20 @@ describe('production rules', () => {
     );
   });
 
+  it.each(['debug', 'trace'])(
+    'AC-06.5.5 APP_ENV=production refuses LOG_LEVEL=%s (query logs and request details)',
+    (level) => {
+      expectInvalid(validate, { ...production, LOG_LEVEL: level }, 'LOG_LEVEL');
+    },
+  );
+
+  it.each(['debug', 'trace'])(
+    'AC-07.1.4 APP_ENV=local accepts LOG_LEVEL=%s',
+    (level) => {
+      expect(() => validate({ ...VALID_ENV, LOG_LEVEL: level })).not.toThrow();
+    },
+  );
+
   it('AC-07.1.4 APP_ENV=local accepts the placeholders even when NODE_ENV=production (the image)', () => {
     const previous = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
