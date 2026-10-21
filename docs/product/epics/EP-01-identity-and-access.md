@@ -1,6 +1,6 @@
 # EP-01 — Identity & Access
 
-- **Priority:** `COULD` (our extra). It is foundational, though: once adopted, every `MUST` feature (teams, tasks) is scoped to its owner and relies on this epic.
+- **Priority:** `MUST` for the access-control core (US-01.2, 01.3, 01.4, 01.5, 01.6, 01.8 — the product requires sign-in and owner scoping, [constitution VI](../../constitution.md)); `COULD` for sign-up and abuse protection (US-01.1, 01.7). Every `MUST` feature (teams, tasks) is scoped to its owner and relies on this epic.
 - **Bounded context:** Identity (generic subdomain), see the [domain model](../../architecture/domain-model.md#bounded-contexts)
 - **Spec:** [001-auth](../../specs/001-auth/spec.md)
 
@@ -36,20 +36,20 @@ A person can create an account, sign in from the mobile app or a command line, a
 
 ## User stories
 
-| ID      | Title                                    | Priority                                       | Spec                                     |
-| ------- | ---------------------------------------- | ---------------------------------------------- | ---------------------------------------- |
-| US-01.1 | Sign up with email and password          | `COULD`                                        | [001-auth](../../specs/001-auth/spec.md) |
-| US-01.2 | Sign in                                  | `COULD`                                        | [001-auth](../../specs/001-auth/spec.md) |
-| US-01.3 | Sign out                                 | `COULD`                                        | [001-auth](../../specs/001-auth/spec.md) |
-| US-01.4 | Get the current session                  | `COULD`                                        | [001-auth](../../specs/001-auth/spec.md) |
-| US-01.5 | Business API requires authentication     | `COULD` (foundational)                         | [001-auth](../../specs/001-auth/spec.md) |
-| US-01.6 | My data is isolated from other users     | `COULD` (foundational)                         | [001-auth](../../specs/001-auth/spec.md) |
-| US-01.7 | Protection against brute force and abuse | `COULD`                                        | [001-auth](../../specs/001-auth/spec.md) |
-| US-01.8 | Demo account for evaluation              | `COULD` (supports the `MUST` seed requirement) | [001-auth](../../specs/001-auth/spec.md) |
+| ID      | Title                                    | Priority                                      | Spec                                     |
+| ------- | ---------------------------------------- | --------------------------------------------- | ---------------------------------------- |
+| US-01.1 | Sign up with email and password          | `COULD`                                       | [001-auth](../../specs/001-auth/spec.md) |
+| US-01.2 | Sign in                                  | `MUST`                                        | [001-auth](../../specs/001-auth/spec.md) |
+| US-01.3 | Sign out                                 | `MUST`                                        | [001-auth](../../specs/001-auth/spec.md) |
+| US-01.4 | Get the current session                  | `MUST`                                        | [001-auth](../../specs/001-auth/spec.md) |
+| US-01.5 | Business API requires authentication     | `MUST` (foundational)                         | [001-auth](../../specs/001-auth/spec.md) |
+| US-01.6 | My data is isolated from other users     | `MUST` (foundational)                         | [001-auth](../../specs/001-auth/spec.md) |
+| US-01.7 | Protection against brute force and abuse | `COULD`                                       | [001-auth](../../specs/001-auth/spec.md) |
+| US-01.8 | Demo account for evaluation              | `MUST` (supports the `MUST` seed requirement) | [001-auth](../../specs/001-auth/spec.md) |
 
 ## Traceability to the brief
 
-The brief does not require authentication. This epic is a `COULD`. It supports these brief items:
+The brief does not mention authentication; the project decision (D5, D34) is that every API route requires it and data is owner-scoped, so the access-control core is `MUST`, while account self-service and abuse protection stay `COULD`. It supports these brief items:
 
 | Brief item                                     | How                                                         |
 | ---------------------------------------------- | ----------------------------------------------------------- |
@@ -58,6 +58,7 @@ The brief does not require authentication. This epic is a `COULD`. It supports t
 
 ## Success criteria
 
+- All 38 `MUST` acceptance criteria of 001 (US-01.2–01.6, 01.8) are covered by ≥ 1 automated scenario (+ 17 `COULD` ones: US-01.1, 01.7).
 - 100 % of `/api/v1` routes other than health reject unauthenticated requests. This is checked automatically by a route-inventory test, not by manual review.
 - 0 cross-owner leaks: every read, update and delete test with another user's id returns "not found".
 - An evaluator signs in with the demo account within 1 minute of `docker compose up`.
