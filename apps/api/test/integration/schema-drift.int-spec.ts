@@ -38,9 +38,11 @@ describe('Schema drift (integration)', () => {
     );
 
     // --exit-code: 0 = no difference, 2 = difference (the script shows it), 1 = error.
-    expect({ status: result.status, diff: result.stdout.trim() }).toEqual({
-      status: 0,
-      diff: '-- This is an empty migration.',
-    });
+    if (result.status !== 0) {
+      throw new Error(
+        `prisma migrate diff exited with ${String(result.status)}:\n${result.stdout}${result.stderr}`,
+      );
+    }
+    expect(result.status).toBe(0);
   });
 });
