@@ -57,7 +57,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Goal:** persist the aggregate atomically with its team links and optimistic version check.
 - **Changes:** `domain/task.repository.ts`; `infrastructure/prisma-task.repository.ts`, `infrastructure/task.mapper.ts`; integration specs (Testcontainers).
 - **Covers:** @AC-03.9.2 (team set replace), @AC-03.11.1 (soft delete invisible to `findById`), @AC-03.12.1 (owner scoping), @AC-03.15.3 (race: two saves of v3 → exactly one wins).
-- **Done when:** `save` inserts/updates `tasks` and diff-syncs `task_teams` in one transaction (`TransactionHost`); update uses `WHERE id, owner_id, version, deleted_at IS NULL` and throws `ConcurrencyConflict` on 0 rows; `findById` / `findByTeam` never return another owner's or deleted rows; round-trip mapping test for every field.
+- **Done when:** the port (`findById`, `findByTeam`, `insert`, `update(task, expectedVersion)`, mirroring `TeamRepository`) writes `tasks` and diff-syncs `task_teams` in one transaction (`TransactionHost` once the CLS unit of work of T-002-05/09 exists; until then one Prisma interactive transaction per call behind a single seam); update uses `WHERE id, owner_id, version, deleted_at IS NULL` and throws `ConcurrencyConflict` on 0 rows; `findById` / `findByTeam` never return another owner's or deleted rows; round-trip mapping test for every field.
 
 ## T-003-05 — Add `TeamDirectory` port + adapter to Teams
 
@@ -106,7 +106,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Goal:** one-tap status change.
 - **Changes:** `commands/change-task-status/*`; `dto/change-task-status.dto.ts`; controller PATCH; specs.
 - **Covers:** @AC-03.10.1 – @AC-03.10.6, @AC-03.12.1 (status), @AC-03.14.3.
-- **Done when:** all 9 matrix rows pass at e2e level (status, version, `completedAt`, `updatedAt`); no-op performs no write (handler spec asserts `save` not called); extra body fields → 400 (`version`, `completedAt`, `createdAt`, `updatedAt`, `deletedAt`, `teams`, `isOverdue`, `__proto__`, `constructor`).
+- **Done when:** all 9 matrix rows pass at e2e level (status, version, `completedAt`, `updatedAt`); no-op performs no write (handler spec asserts `update` not called); extra body fields → 400 (`version`, `completedAt`, `createdAt`, `updatedAt`, `deletedAt`, `teams`, `isOverdue`, `__proto__`, `constructor`).
 
 ## T-003-12 — Add `DeleteTask` command and `DELETE /tasks/:id`
 
@@ -118,7 +118,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 ## T-003-13 — `OnTeamDeletedHandler` (in-transaction)
 
 - **Goal:** tasks survive team deletion, atomically with it.
-- **Changes:** `application/events/on-team-deleted.handler.ts` registered with 002's `@InTransactionHandler(TeamDeleted)` (`TeamDeleted` imported from `teams/contracts/`; **not** an `@EventsHandler`); repository `findByTeam`/`saveAll` (removes the team's `task_teams` rows, bumps each affected task's `version` and `updatedAt`); integration + e2e (through `DELETE /api/v1/teams/:id`).
+- **Changes:** `application/events/on-team-deleted.handler.ts` registered with 002's `@InTransactionHandler(TeamDeleted)` (`TeamDeleted` imported from `teams/contracts/`; **not** an `@EventsHandler`); repository `findByTeam`/`update` per task (removes the team's `task_teams` rows, bumps each affected task's `version` and `updatedAt`); integration + e2e (through `DELETE /api/v1/teams/:id`).
 - **Covers:** @AC-03.13.1 – @AC-03.13.4, @AC-03.2.5 (deleted teams not embedded), and **`@AC-02.7.2`** from 002.
 - **Done when:** affected tasks lose only that team (other assignments untouched) and gain +1 version and a new `updatedAt`; unaffected tasks untouched; replaying the event is a no-op; the handler joins 002's transaction, and a forced failure in it rolls back the team's soft delete (team still active, `task_teams` intact); e2e: a stale `PUT /tasks/:id` with the pre-delete `If-Match` → 412. There is no after-commit fallback or retry.
 
