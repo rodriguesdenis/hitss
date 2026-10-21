@@ -195,7 +195,7 @@ As Marina, on a flaky network, I want retrying a create not to produce duplicate
 | ID       | Rule                                                                                                                                                                             |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | BR-03.1  | Title: trimmed, 3–120 characters; control characters (`\p{Cc}`) rejected.                                                                                                        |
-| BR-03.2  | Description: optional, trimmed, ≤ 2000 characters; blank is stored as "none".                                                                                                    |
+| BR-03.2  | Description: optional, trimmed, ≤ 2000 characters; blank is stored as "none"; control characters (`\p{Cc}`) other than line breaks are rejected.                                 |
 | BR-03.3  | Status ∈ {Pending, In progress, Done}; default Pending.                                                                                                                          |
 | BR-03.4  | Transitions are free: any status → any other status. Same status → no-op (no new version, no event).                                                                             |
 | BR-03.5  | Completion time is set to now when entering Done and cleared when leaving Done; it is never set by the client.                                                                   |
