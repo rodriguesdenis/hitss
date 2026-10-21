@@ -21,8 +21,21 @@ export class TeamName {
     return new TeamName(value);
   }
 
-  /** Case-insensitive, as names are unique per owner regardless of letter case. */
+  /**
+   * Case-insensitive, with the same semantics as the `lower(name)` unique
+   * index: each code point is lowercased on its own (simple case mapping), so
+   * a capital sigma never becomes a final sigma as `String#toLowerCase` does.
+   */
   equals(other: TeamName): boolean {
-    return this.value.toLowerCase() === other.value.toLowerCase();
+    return lowerEachCodePoint(this.value) === lowerEachCodePoint(other.value);
   }
+}
+
+function lowerEachCodePoint(text: string): string {
+  // U+0130 (capital I with dot) is the only code point whose full lowercase
+  // mapping ("i" + U+0307) differs from its simple one ("i").
+  const lowered = Array.from(text, (c) =>
+    c === '\u0130' ? 'i' : c.toLowerCase(),
+  );
+  return lowered.join('');
 }

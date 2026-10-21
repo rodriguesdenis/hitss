@@ -80,7 +80,7 @@ describe('TeamName', () => {
     });
   });
 
-  describe('equals (case-insensitive)', () => {
+  describe('equals (case-insensitive, same as the lower(name) unique index)', () => {
     it.each([
       ['Mobile', 'MOBILE', true],
       ['Mobile', 'mobile', true],
@@ -88,6 +88,14 @@ describe('TeamName', () => {
       ['\u00c9quipe', '\u00e9quipe', true], // capital / small e acute
       ['\u00c9quipe', 'Equipe', false], // accents are significant
       ['Mobile', 'Backend', false],
+      // Greek sigma: PostgreSQL lower() maps each code point on its own, so a
+      // capital sigma always becomes the medial sigma, never the final one.
+      ['\u039f\u0394\u039f\u03a3', '\u03bf\u03b4\u03bf\u03c3', true], // ΟΔΟΣ / οδοσ
+      ['\u039f\u0394\u039f\u03a3', '\u03bf\u03b4\u03bf\u03c2', false], // ΟΔΟΣ / οδος
+      ['\u03bf\u03b4\u03bf\u03c2', '\u03bf\u03b4\u03bf\u03c3', false], // οδος / οδοσ
+      // Dotted capital I lowers to a plain "i" (simple mapping), as in PostgreSQL.
+      ['\u0130stanbul', 'istanbul', true],
+      ['\u0130stanbul', 'i\u0307stanbul', false],
     ])('%j equals %j: %s', (a, b, expected) => {
       expect(TeamName.create(a).equals(TeamName.create(b))).toBe(expected);
     });
