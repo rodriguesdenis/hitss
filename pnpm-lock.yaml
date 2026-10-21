@@ -99,7 +99,7 @@ importers:
         specifier: 7.10.1
         version: 7.10.1(prisma@7.10.1(@types/node@24.19.2)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3))(typescript@5.9.3)
       '@prisma/instrumentation':
-        specifier: ^7.10.1
+        specifier: 7.10.1
         version: 7.10.1(@opentelemetry/api@1.10.0)
       class-transformer:
         specifier: ^0.5.1
