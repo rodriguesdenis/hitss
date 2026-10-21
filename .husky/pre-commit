@@ -3,5 +3,5 @@ pnpm exec lint-staged
 if command -v gitleaks >/dev/null 2>&1; then
   gitleaks git --staged --redact --no-banner
 else
-  echo "gitleaks not installed: skipping local secret scan (CI enforces it)"
+  echo "gitleaks not installed: skipping local secret scan (CI enforces it). Install: https://github.com/gitleaks/gitleaks#installing (e.g. brew install gitleaks)"
 fi
