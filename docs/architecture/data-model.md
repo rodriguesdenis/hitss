@@ -92,7 +92,7 @@ CREATE TYPE task_status AS ENUM ('PENDING', 'IN_PROGRESS', 'DONE');
 | `tasks USING GIN (title gin_trgm_ops, description gin_trgm_ops)`              | `search` with `ILIKE '%term%'` (extension `pg_trgm`).                          |
 | `task_teams (team_id, task_id)`                                               | `teamId` filter (the PK covers `task_id` lookups) and per-team task counts.    |
 
-List indexes end with `id` because every sort is tie-broken by `id` for stable offset pagination ([API contracts](api-contracts.md#tasks--apiv1tasks)). Partial indexes (`WHERE deleted_at IS NULL`) and the trigram index are written as raw SQL inside Prisma migrations, since Prisma schema can't express them. Team integrity checks (raw SQL in `create_teams`): `teams_color_hex_format` (`color_hex ~ '^#[0-9A-F]{6}$'`, the normalized upper-case form) and `teams_version_positive` (`version >= 1`). The index names are `teams_owner_id_lower_name_key` and `teams_owner_id_created_at_idx`; `teams.owner_id` references `users` with `ON DELETE CASCADE`.
+List indexes end with `id` because every sort is tie-broken by `id` for stable offset pagination ([API contracts](api-contracts.md#tasks--apiv1tasks)). Partial indexes (`WHERE deleted_at IS NULL`) and the trigram index are written as raw SQL inside Prisma migrations, since Prisma schema can't express them. Team integrity checks (raw SQL in `create_teams`): `teams_color_hex_format` (`color_hex ~ '^#[0-9A-F]{6}$'`, the normalized upper-case form) and `teams_version_positive` (`version >= 1`) and `teams_updated_after_created` (`updated_at >= created_at`). The index names are `teams_owner_id_lower_name_key` and `teams_owner_id_created_at_idx`; `teams.owner_id` references `users` with `ON DELETE CASCADE`.
 
 ## Soft delete
 
