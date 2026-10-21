@@ -31,8 +31,8 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 
 - **Goal:** Framework-free domain where invalid teams cannot be constructed.
 - **Changes:** `modules/teams/domain/**`, `shared/domain/{aggregate-root.ts,domain-error.ts,domain-event.ts,expected-version.ts}` (`ExpectedVersion` lives in the domain because `Team.assertVersion` uses it and rule A1 forbids `domain → application`), plus unit tests alongside each file.
-- **Covers:** `@AC-02.1.2 @AC-02.1.3 @AC-02.1.4 @AC-02.1.10 @AC-02.6.7 @AC-02.9.2 @AC-02.9.6` (domain level)
-- **Done when:** Unit tests cover every row of the name, color and description outlines in `teams.feature`, plus accents, Greek case-folding, emoji length (code points), control characters (`\n`, NUL → `InvalidTeamName`) and `contrastingTextColor`. `replace` with equal values returns `false`. `delete` raises exactly one `TeamDeleted`. Line coverage ≥ 90 %. Stryker mutation score ≥ 80 % for `modules/teams/domain`. `depcruise` confirms there are no framework imports.
+- **Covers:** `@AC-02.1.2 @AC-02.1.3 @AC-02.1.4 @AC-02.1.10 @AC-02.1.11 @AC-02.6.7 @AC-02.9.2 @AC-02.9.6` (domain level)
+- **Done when:** Unit tests cover every row of the name, color and description outlines in `teams.feature`, plus accents, Greek case-folding, emoji length (code points), control characters (`\n`, NUL → `InvalidTeamName`). `replace` with equal values returns `false`. `delete` raises exactly one `TeamDeleted`. Line coverage ≥ 90 %. Stryker mutation score ≥ 80 % for `modules/teams/domain`. `depcruise` confirms there are no framework imports.
 
 ## T-002-03 — Team repository
 
@@ -45,7 +45,7 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 
 - **Goal:** `POST /api/v1/teams` creates a team and returns it in the envelope.
 - **Changes:** `CreateTeamCommand` and handler. `TeamReadModel.findById` and a `GetTeamHandler` used for the read-back (`TeamTaskCounts` port with the zero-count placeholder adapter, formalized in T-002-10). `CreateTeamDto` (incl. `\p{Cc}` rejection on `name`), `TeamResponseDto`, `team.presenter.ts`, `team-error.mapping.ts`, `TeamsController.create` (`201`, `Location`), `TeamsModule`. Shared `ApiOkEnvelope` swagger helper.
-- **Covers:** `@AC-02.1.1 @AC-02.1.2 @AC-02.1.3 @AC-02.1.4 @AC-02.1.5 @AC-02.1.6 @AC-02.1.7 @AC-02.1.8 @AC-02.1.9 @AC-02.1.10 @AC-02.8.3 @AC-02.11.2 @AC-02.11.3 @AC-02.11.4`, `@AC-01.5.1` (create row), `@AC-01.6.4 @AC-01.6.6` (team create rows)
+- **Covers:** `@AC-02.1.1 @AC-02.1.2 @AC-02.1.3 @AC-02.1.4 @AC-02.1.5 @AC-02.1.6 @AC-02.1.7 @AC-02.1.8 @AC-02.1.9 @AC-02.1.10 @AC-02.1.11 @AC-02.8.3 @AC-02.11.2 @AC-02.11.3 @AC-02.11.4`, `@AC-01.5.1` (create row), `@AC-01.6.4 @AC-01.6.6` (team create rows)
 - **Done when:** Handler unit tests: conflict, same name for another owner, name reuse after delete. E2E: the happy path with envelope, `Location` and the trimmed and upper-cased output; one HTTP row per validation rule, including a name with a control character → 400 naming `name`; extra fields → 400 naming the field for every mass-assignment row (`id`, `ownerId`, `owner_id`, `userId`, `owner` as an object, `version`, `taskCount`, `updatedAt`, `deletedAt`, `__proto__`, `constructor`) and the created team's owner is the signed-in user; Marina and Rafael can both create "Mobile" and neither sees the other's; 409 for each case variant; a concurrent pair (`Promise.all`) → one 201 and one 409; anonymous → 401. OpenAPI shows the operation with its request and response schemas.
 
 ## T-002-05 — Idempotency keys (shared)

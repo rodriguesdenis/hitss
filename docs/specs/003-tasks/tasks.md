@@ -41,14 +41,14 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 ## T-003-02 — Implement task value objects (TDD)
 
 - **Goal:** invalid task values cannot be constructed.
-- **Changes:** `modules/tasks/domain/{task-title,task-description,task-status,due-date,task-team-ids}.ts` + `*.spec.ts`; errors `InvalidTaskTitle`, `InvalidTaskDescription`, `InvalidTaskStatus`, `InvalidDueDate`, `TooManyTeams`.
+- **Changes:** `modules/tasks/domain/value-objects/{task-title,task-description,task-status,due-date,task-team-ids}.ts` + `*.spec.ts`; errors `InvalidTaskTitle`, `InvalidTaskDescription`, `InvalidTaskStatus`, `InvalidDueDate`, `TooManyTeams`.
 - **Covers:** @AC-03.1.2 @AC-03.1.3 @AC-03.1.5 @AC-03.1.6 (count) @AC-03.1.8 — outline rows at unit level.
 - **Done when:** title 0/2/3/120/121 code points (after trim), title with `\n` / NUL / `\u007F` rejected, description 2000/2001 and control characters other than line breaks rejected, all due-date rows, team ids 0/1/10/11 and order-insensitive equality tested; 100 % branch coverage on VOs; no framework imports (dependency-cruiser).
 
 ## T-003-03 — Implement `Task` aggregate, events, errors, overdue policy (TDD)
 
 - **Goal:** lifecycle rules live in the aggregate.
-- **Changes:** `domain/task.ts`, `domain/overdue.policy.ts`, `domain/events/*`, `domain/errors/{task-not-found,unknown-teams}.error.ts` + specs (`ConcurrencyConflict` is reused from `shared/domain`).
+- **Changes:** `domain/task.ts`, `domain/overdue.policy.ts`, `domain/task.events.ts`, `domain/task.errors.ts` (`TaskNotFound`, `UnknownTeams`) + specs (`ConcurrencyConflict` is reused from `shared/domain`).
 - **Covers:** @AC-03.1.1 @AC-03.1.4 @AC-03.9.4 @AC-03.9.5 @AC-03.10.1 @AC-03.10.2 @AC-03.10.3 @AC-03.10.5 @AC-03.13.2 @AC-03.13.4 @AC-03.14.1 @AC-03.14.2 @AC-03.14.3 (unit level).
 - **Done when:** the 9-row transition matrix passes (status, `changed` — which is what makes persistence write version + 1 —, `completedAt`, `updatedAt`, event emitted or not; the aggregate's `version` itself never changes); edit no-op returns `false` and leaves `updatedAt`; `unassignTeam` reports a change (and touches `updatedAt`) only when the team was assigned; overdue table passes with fixed today; Stryker ≥ 80 % on `domain/`.
 

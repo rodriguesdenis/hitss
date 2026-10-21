@@ -29,11 +29,11 @@ tasks/
 ├── contracts/                      # PUBLIC: count-tasks-by-team.query.ts (CountTasksByTeamQuery) + result type
 ├── domain/                         # framework-free TypeScript
 │   ├── task.ts                     # aggregate root
-│   ├── task-title.ts · task-description.ts · task-status.ts · due-date.ts · task-team-ids.ts   # VOs
+│   ├── task.errors.ts              # InvalidTaskTitle, InvalidTaskDescription, InvalidTaskStatus, InvalidDueDate,
+│   │                               # TooManyTeams, UnknownTeams, TaskNotFound (ConcurrencyConflict is shared)
+│   ├── task.events.ts              # TaskCreated, TaskStatusChanged, TaskDeleted
 │   ├── overdue.policy.ts           # isOverdue(status, dueDate, today) — pure, reused by the read side
-│   ├── events/  task-created.event.ts · task-status-changed.event.ts · task-deleted.event.ts
-│   └── errors/  invalid-task-title.error.ts · invalid-task-description.error.ts · invalid-task-status.error.ts · invalid-due-date.error.ts · task-not-found.error.ts
-│                unknown-teams.error.ts · too-many-teams.error.ts   (ConcurrencyConflict is shared: shared/domain/domain-error.ts)
+│   └── value-objects/  task-title.ts · task-description.ts · task-status.ts · due-date.ts · task-team-ids.ts
 ├── application/
 │   ├── ports/   task.repository.ts · task.read-model.ts · team-directory.ts   (abstract classes = DI tokens)
 │   ├── commands/ create-task · replace-task · change-task-status · delete-task   (*.command.ts + *.handler.ts)

@@ -394,7 +394,7 @@ Rule ↔ overview mapping (the rule `name` is what the check prints and what the
 | A3       | `infrastructure-not-to-presentation`    | an `infrastructure/` file imports `presentation/`                                                                                                                             |
 | A4       | `presentation-not-to-infra`             | a `presentation/` file imports `infrastructure/` or `@prisma/*` (no exceptions: controllers use buses)                                                                        |
 | A5       | `contexts-isolated`                     | **any** file (every layer, including `application/` and `presentation/`) of `modules/<a>` imports `modules/<b>/**` unless the target is under `modules/<b>/contracts/`        |
-| A6       | `contracts-are-thin`                    | a `contracts/` file imports anything but another `contracts/`, its own `domain/events/`, `shared/domain/` or `@nestjs/cqrs` (query/event marker types)                        |
+| A6       | `contracts-are-thin`                    | a `contracts/` file imports anything but another `contracts/`, its own `domain/<agg>.events.ts`, `shared/domain/` or `@nestjs/cqrs` (query/event marker types)                |
 | A7       | `shared-not-to-features`                | `src/shared/**` or `src/config/**` imports `src/modules/**`                                                                                                                   |
 | A8       | `no-circular`                           | any import cycle                                                                                                                                                              |
 | A9       | `no-tests-in-production`                | a non-spec `src/**` file imports `*.spec.ts` or anything under `test/`                                                                                                        |
@@ -478,7 +478,7 @@ module.exports = {
         path: '^src/',
         pathNot: [
           '^src/modules/[^/]+/contracts/',
-          '^src/modules/$1/domain/events/',
+          '^src/modules/$1/domain/[^/]+\\.events\\.ts$',
           '^src/shared/domain/',
         ],
       },

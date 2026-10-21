@@ -292,7 +292,11 @@ apps/api/
 │       ├── health/                      # Terminus controller + Prisma indicator
 │       ├── teams/
 │       │   ├── contracts/               # PUBLIC: TeamDeleted, GetTeamSummariesQuery + result types
-│       │   ├── domain/                  # team.ts, team-name.ts, color-hex.ts, events/, errors/
+│       │   ├── domain/                  # pure TypeScript, grouped by aggregate
+│       │   │   ├── team.ts              # aggregate root
+│       │   │   ├── team.errors.ts       # every error of the module
+│       │   │   ├── team.events.ts       # every event of the module (TeamDeleted)
+│       │   │   └── value-objects/       # team-name.ts, color-hex.ts, team-description.ts
 │       │   ├── application/
 │       │   │   ├── commands/            # create-team/, replace-team/, delete-team/ (command + handler + spec)
 │       │   │   ├── queries/             # list-teams/, get-team/, get-team-summaries/
@@ -302,7 +306,12 @@ apps/api/
 │       │   └── teams.module.ts          # composition root: binds ports → adapters
 │       └── tasks/
 │           ├── contracts/               # PUBLIC: CountTasksByTeamQuery + result types
-│           ├── domain/                  # task.ts, task-title.ts, task-status.ts, due-date.ts, events/, errors/
+│           ├── domain/                  # pure TypeScript, grouped by aggregate
+│           │   ├── task.ts              # aggregate root
+│           │   ├── task.errors.ts       # every error of the module
+│           │   ├── task.events.ts       # every event of the module
+│           │   ├── overdue.policy.ts    # isOverdue(status, dueDate, today), reused by the read side
+│           │   └── value-objects/       # task-title.ts, task-description.ts, task-status.ts, due-date.ts, task-team-ids.ts
 │           ├── application/
 │           │   ├── commands/            # create-task/, replace-task/, change-task-status/, delete-task/
 │           │   ├── queries/             # list-tasks/, get-task/, count-tasks-by-team/
@@ -320,6 +329,8 @@ apps/api/
 ```
 
 Unit tests (`*.spec.ts`) sit next to the file they test.
+
+**Module layout.** Every bounded-context module uses the same shape: `domain/` holds `<agg>.ts`, `<agg>.errors.ts` (all of the module's errors), `<agg>.events.ts` (all of its events), `value-objects/` and any pure policy; `application/commands/<use-case>/` and `application/queries/<use-case>/` (message + handler + spec), `application/ports/`; `infrastructure/prisma-<agg>.repository.ts` + `<agg>.mapper.ts` (plus adapters for cross-context ports); `presentation/<ctx>.controller.ts` + `dto/`; `contracts/` (the module's only public surface); and the `<ctx>.module.ts` composition root.
 
 ### 6.3 Mobile (`apps/mobile`)
 
@@ -378,7 +389,7 @@ apps/mobile/
 | A3  | Infrastructure does not reach up          | `src/**/infrastructure/**`   | `presentation/`                                                                                                                                       |
 | A4  | Presentation uses use cases, not adapters | `src/**/presentation/**`     | `infrastructure/`, `@prisma/*`                                                                                                                        |
 | A5  | Contexts are isolated                     | `src/modules/<a>/**`         | `src/modules/<b>/**` except `src/modules/<b>/contracts/**`                                                                                            |
-| A6  | Contracts are thin                        | `src/modules/*/contracts/**` | anything but `domain/events`, `shared/domain` and other `contracts/`                                                                                  |
+| A6  | Contracts are thin                        | `src/modules/*/contracts/**` | anything but its own `domain/<agg>.events.ts`, `shared/domain` and other `contracts/`                                                                 |
 | A7  | Shared does not depend on features        | `src/shared/**`              | `src/modules/**`                                                                                                                                      |
 | A8  | No cycles                                 | any                          | circular dependencies                                                                                                                                 |
 | A9  | Tests stay out of prod                    | `src/**` (non-spec)          | `*.spec.ts`, `test/**`                                                                                                                                |
