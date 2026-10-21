@@ -15,7 +15,25 @@ function logOf(payload: object): string {
 }
 
 describe('REDACT_PATHS', () => {
-  const fields = ['password', 'newPassword', 'currentPassword', 'token'];
+  const fields = [
+    'password',
+    'newPassword',
+    'currentPassword',
+    'token',
+    'accessToken',
+    'refreshToken',
+    'idToken',
+    'sessionToken',
+    'apiKey',
+    'authorization',
+    'Authorization',
+    'cookie',
+    'Cookie',
+    'connectionString',
+    'databaseUrl',
+    'DATABASE_URL',
+    'BETTER_AUTH_SECRET',
+  ];
 
   it.each(fields)('AC-06.3.3 redacts %s at depth 0 to 3', (field) => {
     const value = secret(field);
@@ -43,6 +61,27 @@ describe('REDACT_PATHS', () => {
       expect(raw).not.toContain(value);
     }
     expect(raw).toContain('json');
+  });
+
+  it.each(['set-cookie', 'set-auth-token'])(
+    'AC-06.3.3 redacts the dashed field %s at depth 0 to 3',
+    (field) => {
+      const value = secret(field);
+      const raw = logOf({
+        [field]: value,
+        a: { [field]: value },
+        b: { c: { [field]: value } },
+        d: { e: { f: { [field]: value } } },
+      });
+      expect(raw).not.toContain(value);
+    },
+  );
+
+  it('AC-06.3.8 redacts credentials in headers nested inside arrays of details', () => {
+    const value = secret('authorization');
+    const raw = logOf({ details: [{ headers: { authorization: value } }] });
+    expect(raw).not.toContain(value);
+    expect(raw).toContain(REDACTED);
   });
 
   it('AC-06.3.8 redacts secrets inside arrays of nested objects', () => {
