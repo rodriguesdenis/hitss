@@ -327,7 +327,8 @@ const ORDER: Record<SortField, (dir: 'ASC'|'DESC') => Prisma.Sql> = {
 };
 const where = Prisma.sql`t.owner_id = ${ownerId} AND t.deleted_at IS NULL
   ${teamId ? Prisma.sql`AND EXISTS (SELECT 1 FROM task_teams f WHERE f.task_id = t.id AND f.team_id = ${teamId}::uuid)` : Prisma.empty}
-  ${statuses ? Prisma.sql`AND t.status = ANY(${statuses}::task_status[])` : Prisma.empty}
+  ${statuses?.length === 1 ? Prisma.sql`AND t.status = ${statuses[0]}::task_status` : Prisma.empty}
+  ${statuses && statuses.length > 1 ? Prisma.sql`AND t.status = ANY(${statuses}::task_status[])` : Prisma.empty}
   ${pattern ? Prisma.sql`AND (t.title ILIKE ${pattern} ESCAPE '\\' OR t.description ILIKE ${pattern} ESCAPE '\\')` : Prisma.empty}`;
 
 // page: one query, team ids aggregated per page row (PK lookups), no join to teams
@@ -337,6 +338,8 @@ FROM tasks t WHERE ${where} ORDER BY ${ORDER[field](dir)} LIMIT ${limit} OFFSET 
 ```
 
 Round-trips per list request: `findMissing` (only with `teamId`) + page + count + `summaries` = **≤ 4, independent of page size**. Page and count run in one `$transaction([...])` batch.
+
+**Status filter form (decided).** The read model emits `status = $n` for a single status and `status = ANY($n::task_status[])` only for two or more. `tasks_owner_status_created_idx` returns rows in `created_at` order only under an equality: `status = ANY(...)` never uses it, even with one element (verified on `postgres:17.11-alpine` in T-003-01's schema tests).
 
 **Query plan acceptance (T-003-09).** On a synthetic owner with 10 000 tasks (and 50 other owners), `EXPLAIN (ANALYZE, BUFFERS)` is captured in the PR for:
 
