@@ -33,7 +33,7 @@ tasks/
 │   ├── overdue.policy.ts           # isOverdue(status, dueDate, today) — pure, reused by the read side
 │   ├── events/  task-created.event.ts · task-status-changed.event.ts · task-deleted.event.ts
 │   └── errors/  invalid-task-title.error.ts · invalid-task-description.error.ts · invalid-task-status.error.ts · invalid-due-date.error.ts · task-not-found.error.ts
-│                unknown-teams.error.ts · too-many-teams.error.ts · concurrency-conflict.error.ts
+│                unknown-teams.error.ts · too-many-teams.error.ts   (ConcurrencyConflict is shared: shared/domain/domain-error.ts)
 ├── application/
 │   ├── ports/   task.repository.ts · task.read-model.ts · team-directory.ts   (abstract classes = DI tokens)
 │   ├── commands/ create-task · replace-task · change-task-status · delete-task   (*.command.ts + *.handler.ts)
@@ -57,26 +57,29 @@ Shared building blocks from `apps/api/src/shared` (delivered by 001/002, reused 
 
 ### Domain
 
-| Element           | Responsibility                                                                                                                                                                                                                      |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TaskTitle`       | trim, 3–120 → else `InvalidTaskTitle`                                                                                                                                                                                               |
-| `TaskDescription` | trim, ≤ 2000, no `\p{Cc}` except line breaks, blank → `null` → else `InvalidTaskDescription`                                                                                                                                        |
-| `TaskStatus`      | `PENDING \| IN_PROGRESS \| DONE`; lifecycle order used by sort; `isTaskStatus` / `parseTaskStatus` → else `InvalidTaskStatus`                                                                                                       |
-| `DueDate`         | strict `YYYY-MM-DD` that round-trips through a UTC calendar (rejects `2026-02-30`); `isBefore(today)`                                                                                                                               |
-| `TaskTeamIds`     | set of 0–10 distinct ids; `equals()` ignores order; > 10 → `TooManyTeams`                                                                                                                                                           |
-| `Task`            | `create`, `edit`, `assignTo`, `changeStatus(to, now)`, `unassignTeam(id, now)`, `delete(now)`; owns `completedAt` (BR-03.5), `version` bump (BR-03.12) and no-op detection; records events, pulled by the handler after persistence |
+| Element           | Responsibility                                                                                                                                                                                                                                                                                                          |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TaskTitle`       | trim, 3–120 → else `InvalidTaskTitle`                                                                                                                                                                                                                                                                                   |
+| `TaskDescription` | trim, ≤ 2000, no `\p{Cc}` except line breaks, blank → `null` → else `InvalidTaskDescription`                                                                                                                                                                                                                            |
+| `TaskStatus`      | `PENDING \| IN_PROGRESS \| DONE`; lifecycle order used by sort; `isTaskStatus` / `parseTaskStatus` → else `InvalidTaskStatus`                                                                                                                                                                                           |
+| `DueDate`         | strict `YYYY-MM-DD` that round-trips through a UTC calendar (rejects `2026-02-30`); `isBefore(today)`                                                                                                                                                                                                                   |
+| `TaskTeamIds`     | set of 0–10 distinct ids; `equals()` ignores order; > 10 → `TooManyTeams`                                                                                                                                                                                                                                               |
+| `Task`            | `create`, `edit`, `assignTo`, `changeStatus(to, now)`, `unassignTeam(id, now)`, `delete(now)`; owns `completedAt` (BR-03.5) and no-op detection: each change method returns `changed` and touches `updatedAt`, and persistence increments `version` (BR-03.12); records events, pulled by the handler after persistence |
 
 ```ts
 // domain/task.ts — illustrative
-changeStatus(to: TaskStatus, now: Date): void {
-  if (this.status === to) return;                       // BR-03.4: no event, no bump
+changeStatus(to: TaskStatus, now: Date): boolean {
+  if (this.status === to) return false;                 // BR-03.4: no event, no write
   const from = this.status;
   this.status = to;
   this.completedAt = to === TaskStatus.DONE ? now : null; // BR-03.5
-  this.touch(now);                                      // version++, updatedAt = now
-  this.record(new TaskStatusChanged(this.id, from, to));
+  this.touch(now);                                      // updatedAt = now only
+  this.raise(new TaskStatusChanged(this.id, from, to, now));
+  return true;                                          // the handler saves only when true
 }
 ```
+
+**Version convention** (same as Teams, [ADR-0015](../../architecture/adr/0015-optimistic-concurrency.md)): the aggregate never changes `version`. When a change method returns `true`, the repository writes it with `UPDATE … SET …, version = version + 1 WHERE id = $1 AND owner_id = $2 AND version = $expected AND deleted_at IS NULL`; 0 rows → re-check → `TaskNotFound` or `ConcurrencyConflict`. `Task.touch(now)` only sets `updatedAt`.
 
 ### Application (CQRS)
 
