@@ -17,6 +17,7 @@ const report = (severity, id = 'GHSA-aaaa-bbbb-cccc') => ({
 });
 const entry = (overrides = {}) => ({
   id: 'GHSA-aaaa-bbbb-cccc',
+  owner: 'devops-ci',
   reason: 'not reachable: dev-only tooling',
   expires: '2026-12-31',
   ...overrides,
@@ -109,5 +110,51 @@ describe('dependency audit gate', () => {
       failures: [],
       warnings: [],
     });
+  });
+
+  it('AC-07.9.1 an audit error report fails closed instead of passing as empty', () => {
+    const error = {
+      error: {
+        code: 'ERR_PNPM_AUDIT_BAD_RESPONSE',
+        message: 'registry said no',
+      },
+    };
+    const result = evaluateAudit(error, [], TODAY);
+    assert.equal(result.ok, false);
+    assert.match(
+      result.failures[0],
+      /ERR_PNPM_AUDIT_BAD_RESPONSE.*registry said no/,
+    );
+  });
+
+  it('AC-07.9.1 a report without an advisories object fails closed', () => {
+    for (const bad of [{}, { advisories: null }, { advisories: 'x' }, null]) {
+      assert.equal(
+        evaluateAudit(bad, [], TODAY).ok,
+        false,
+        JSON.stringify(bad),
+      );
+    }
+  });
+
+  it('AC-07.9.1 an entry without an owner is rejected', () => {
+    const result = evaluateAudit(report('high'), [entry({ owner: '' })], TODAY);
+    assert.equal(result.ok, false);
+    assert.match(result.failures.join('\n'), /owner/);
+  });
+
+  it('AC-07.9.1 an entry expiring more than 90 days from today is rejected', () => {
+    const tooFar = evaluateAudit(
+      report('high'),
+      [entry({ expires: '2027-01-19' })],
+      TODAY,
+    );
+    assert.equal(tooFar.ok, false);
+    assert.match(tooFar.failures.join('\n'), /90 days/);
+    assert.equal(
+      evaluateAudit(report('high'), [entry({ expires: '2027-01-18' })], TODAY)
+        .ok,
+      true,
+    );
   });
 });
