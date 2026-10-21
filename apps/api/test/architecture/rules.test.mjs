@@ -21,7 +21,6 @@ const PACKAGES = [
   '@nestjs/cqrs',
   '@prisma/client',
   'class-validator',
-  'express',
 ];
 const DEV_PACKAGES = ['some-dev-tool'];
 
@@ -40,6 +39,15 @@ function project(files) {
   };
   const all = {
     'package.json': JSON.stringify(manifest),
+    'tsconfig.json': JSON.stringify({
+      compilerOptions: { module: 'commonjs' },
+    }),
+    // Type-only package, as installed by the real project (express itself is not a direct dependency).
+    'node_modules/@types/express/package.json': JSON.stringify({
+      name: '@types/express',
+      types: 'index.d.ts',
+    }),
+    'node_modules/@types/express/index.d.ts': 'export interface Request {}\n',
     ...Object.fromEntries(
       [...PACKAGES, ...DEV_PACKAGES].flatMap((name) => [
         [
@@ -61,11 +69,10 @@ function project(files) {
 /** Runs the real rule set over a project; returns the violations of severity "error". */
 async function violationsOf(root) {
   const result = await cruise(['src'], {
+    ...config.options,
     baseDir: root,
     validate: true,
     ruleSet: { forbidden: config.forbidden },
-    tsPreCompilationDeps: true,
-    doNotFollow: { path: 'node_modules|^src/generated/' },
   });
   return result.output.summary.violations.filter(
     (v) => v.rule.severity === 'error',
@@ -101,7 +108,7 @@ const VIOLATIONS = [
     ['src/modules/teams/domain/a.ts', 'fs'],
   ],
   [
-    'domain-no-third-party',
+    'domain-no-generated-client',
     'domain imports the generated persistence client',
     {
       'src/modules/teams/domain/a.ts': importOf(
@@ -197,7 +204,22 @@ const VIOLATIONS = [
     'application-not-to-adapters',
     'application imports express',
     { 'src/modules/teams/application/a.ts': importOf('express') },
-    ['src/modules/teams/application/a.ts', 'node_modules/express/index.js'],
+    [
+      'src/modules/teams/application/a.ts',
+      'node_modules/@types/express/index.d.ts',
+    ],
+  ],
+  [
+    'application-not-to-adapters',
+    'application imports express types with `import type`',
+    {
+      'src/modules/teams/application/a.ts':
+        "import type { Request } from 'express';\nexport type R = Request;\n",
+    },
+    [
+      'src/modules/teams/application/a.ts',
+      'node_modules/@types/express/index.d.ts',
+    ],
   ],
   [
     'infrastructure-not-to-presentation',
@@ -242,7 +264,7 @@ const VIOLATIONS = [
     ['src/modules/teams/contracts/a.ts', 'src/modules/teams/domain/team.ts'],
   ],
   [
-    'contracts-are-thin',
+    'contracts-no-libraries',
     'contracts import a library',
     { 'src/modules/teams/contracts/a.ts': importOf('class-validator') },
     [
@@ -287,6 +309,35 @@ const VIOLATIONS = [
       'src/shared/application/a.spec.ts': 'export {};\n',
     },
     ['src/shared/application/a.ts', 'src/shared/application/a.spec.ts'],
+  ],
+  [
+    'no-tests-in-production',
+    'production file imports a testing helper',
+    {
+      'src/modules/teams/application/a.ts': importOf(
+        '../../../config/testing/helper',
+      ),
+      'src/config/testing/helper.ts': 'export {};\n',
+    },
+    ['src/modules/teams/application/a.ts', 'src/config/testing/helper.ts'],
+  ],
+  [
+    'no-tests-in-production',
+    'production file imports from the test/ folder',
+    {
+      'src/shared/application/a.ts': importOf('../../../test/helper'),
+      'test/helper.ts': 'export {};\n',
+    },
+    ['src/shared/application/a.ts', 'test/helper.ts'],
+  ],
+  [
+    'contexts-isolated',
+    'tasks.module imports teams.module (DI cycle risk, ADR-0002)',
+    {
+      'src/modules/tasks/tasks.module.ts': importOf('../teams/teams.module'),
+      'src/modules/teams/teams.module.ts': 'export {};\n',
+    },
+    ['src/modules/tasks/tasks.module.ts', 'src/modules/teams/teams.module.ts'],
   ],
   [
     'not-to-dev-dep',
@@ -378,6 +429,11 @@ describe('architecture rules', () => {
     assert.deepEqual(await violationsOf(project(COMPLIANT)), []);
   });
 
+  it('AC-07.7.9 rule names are unique, so coverage per name is coverage per rule', () => {
+    const names = config.forbidden.map((rule) => rule.name);
+    assert.deepEqual(names, [...new Set(names)]);
+  });
+
   it('AC-07.7.9 every configured rule (except no-orphans) has a violating fixture', () => {
     const covered = new Set(VIOLATIONS.map(([rule]) => rule));
     const missing = [...new Set(config.forbidden.map((r) => r.name))].filter(
@@ -392,12 +448,11 @@ describe('architecture rules', () => {
 
   it('AC-07.7.2 the real src/ tree has no violations (same check as pnpm arch)', async () => {
     const result = await cruise(['src'], {
+      ...config.options,
       baseDir: apiDir,
       validate: true,
       ruleSet: { forbidden: config.forbidden },
       tsConfig: { fileName: join(apiDir, 'tsconfig.json') },
-      tsPreCompilationDeps: true,
-      doNotFollow: { path: 'node_modules|^src/generated/' },
     });
     const errors = result.output.summary.violations.filter(
       (v) => v.rule.severity === 'error',

@@ -38,7 +38,7 @@ module.exports = {
       to: { dependencyTypes: [...NPM, 'core'], pathNot: [] },
     },
     {
-      name: 'domain-no-third-party',
+      name: 'domain-no-generated-client',
       comment: 'A1 (generated persistence client).',
       severity: 'error',
       from: { path: `${LAYER}/domain/`, ...NON_SPEC },
@@ -50,7 +50,7 @@ module.exports = {
       severity: 'error',
       from: { path: `${LAYER}/application/`, ...NON_SPEC },
       to: {
-        path: `${LAYER}/(infrastructure|presentation)/|node_modules/(@prisma|express)/|${GENERATED}`,
+        path: `${LAYER}/(infrastructure|presentation)/|node_modules/(@prisma|express|@types/express(-serve-static-core)?)/|${GENERATED}`,
       },
     },
     {
@@ -96,7 +96,7 @@ module.exports = {
       },
     },
     {
-      name: 'contracts-are-thin',
+      name: 'contracts-no-libraries',
       comment: 'A6 (libraries): only the CQRS marker types are allowed.',
       severity: 'error',
       from: { path: '^src/modules/[^/]+/contracts/', ...NON_SPEC },
@@ -123,8 +123,8 @@ module.exports = {
       name: 'no-tests-in-production',
       comment: 'A9: production code never imports specs or test folders.',
       severity: 'error',
-      from: { path: '^src/', pathNot: ['\\.spec\\.ts$', '^src/testing/'] },
-      to: { path: '\\.spec\\.ts$|^test/' },
+      from: { path: '^src/', pathNot: ['\\.spec\\.ts$', '(^|/)testing/'] },
+      to: { path: '\\.spec\\.ts$|^test/|(^|/)testing/' },
     },
     {
       name: 'not-to-dev-dep',
