@@ -55,7 +55,7 @@ describe('.env.example parity with docker-compose.yml', () => {
         defaults.has(name),
         `${name} is not used by docker-compose.yml`,
       );
-      assert.notEqual(value, undefined);
+      assert.notEqual(value, '', `${name} has an empty default`);
     }
   });
 
