@@ -32,20 +32,22 @@ RUN pnpm --filter @hitss/api exec prisma generate \
  && pnpm --filter @hitss/api run build \
  && pnpm --filter @hitss/api deploy --prod --legacy /out
 
-# 4. Runtime: compiled code, production node_modules, the Prisma schema and migrations only.
+# 4. Runtime: compiled code, production node_modules, the Prisma schema and migrations only. Files
+#    stay root-owned and read-only for the unprivileged `node` user, so the process cannot rewrite
+#    its own code or dependencies.
 FROM ${NODE_IMAGE} AS runtime
 # The runtime needs neither npm nor corepack: removing them shrinks the image and its attack surface.
 RUN apk add --no-cache openssl \
  && rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-*
 ENV NODE_ENV=production
 WORKDIR /app
-COPY --from=build --chown=node:node /out/node_modules ./node_modules
-COPY --from=build --chown=node:node /out/package.json ./package.json
-COPY --from=build --chown=node:node /repo/apps/api/dist ./dist
-COPY --from=build --chown=node:node /repo/apps/api/prisma ./prisma
-COPY --chown=node:node apps/api/prisma.runtime.config.cjs ./prisma.runtime.config.cjs
-COPY --chown=node:node apps/api/database-url.cjs ./database-url.cjs
-COPY --chown=node:node --chmod=755 apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --from=build /out/node_modules ./node_modules
+COPY --from=build /out/package.json ./package.json
+COPY --from=build /repo/apps/api/dist ./dist
+COPY --from=build /repo/apps/api/prisma ./prisma
+COPY apps/api/prisma.runtime.config.cjs ./prisma.runtime.config.cjs
+COPY apps/api/database-url.cjs ./database-url.cjs
+COPY --chmod=755 apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
 USER node
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]
