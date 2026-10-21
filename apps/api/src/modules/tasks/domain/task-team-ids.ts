@@ -22,6 +22,10 @@ export class TaskTeamIds {
     return [...this.ids];
   }
 
+  without(id: string): TaskTeamIds {
+    return new TaskTeamIds(this.ids.filter((other) => other !== id));
+  }
+
   /** Order-insensitive: the ids are kept sorted. */
   equals(other: TaskTeamIds): boolean {
     return (

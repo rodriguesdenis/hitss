@@ -1,0 +1,16 @@
+import { DueDate } from './due-date';
+import { TaskStatus } from './task-status';
+
+/**
+ * A task is overdue when it has a due date before today (UTC) and is not
+ * Done (BR-03.9). Derived on every read, never stored.
+ */
+export function isOverdue(
+  status: TaskStatus,
+  dueDate: DueDate | null,
+  today: DueDate,
+): boolean {
+  return (
+    status !== TaskStatus.DONE && dueDate !== null && dueDate.isBefore(today)
+  );
+}
