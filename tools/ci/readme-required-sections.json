@@ -1,12 +1,21 @@
 [
-  { "title": "Architectural decisions" },
+  {
+    "title": "Architectural decisions",
+    "aliases": ["Architecture decisions", "Architecture and decisions"]
+  },
   { "title": "Data model" },
   {
     "title": "How to run",
+    "aliases": ["Getting started", "Running the project"],
     "subsections": [
       { "name": "backend", "pattern": "backend" },
       { "name": "mobile", "pattern": "mobile" }
     ]
+  },
+  {
+    "title": "Request examples",
+    "aliases": ["Example requests", "API examples"],
+    "topics": [{ "name": "curl", "pattern": "\\bcurl\\b" }]
   },
   {
     "title": "What I would do differently in production",

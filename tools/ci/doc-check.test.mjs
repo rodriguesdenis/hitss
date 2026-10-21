@@ -20,7 +20,16 @@ We chose PostgreSQL. See [the ADR](docs/adr.md).
 
 ## Data model
 
-Users own teams.
+\`\`\`mermaid
+erDiagram
+  users ||--o{ teams : owns
+\`\`\`
+
+## Request examples
+
+\`\`\`bash
+curl -s http://localhost:3000/api/v1/teams
+\`\`\`
 
 ## How to run
 
@@ -86,8 +95,55 @@ describe('README doc-check', () => {
   });
 
   it('AC-07.4.9 fails on an empty required section', () => {
-    const readme = GOOD.replace('Users own teams.\n', '');
+    const readme = GOOD.replace(/```mermaid[\s\S]*?```\n/, '');
     assert.match(check(readme).join('\n'), /"Data model".*empty/);
+  });
+
+  it('AC-07.4.9 a section made only of a fenced block (diagram, curl) is not empty', () => {
+    assert.deepEqual(check(GOOD), []);
+  });
+
+  it('AC-07.4.5 fails naming the missing "Request examples" section', () => {
+    const readme = GOOD.replace('## Request examples', '## Something');
+    assert.match(check(readme).join('\n'), /"Request examples"/);
+  });
+
+  it('AC-07.4.5 accepts "Example requests" and "API examples" as the title', () => {
+    for (const title of ['Example requests', 'API examples']) {
+      assert.deepEqual(
+        check(GOOD.replace('## Request examples', `## ${title}`)),
+        [],
+      );
+    }
+  });
+
+  it('AC-07.4.5 fails when the request examples contain no curl command', () => {
+    const readme = GOOD.replace('curl -s', 'wget -qO-');
+    assert.match(
+      check(readme).join('\n'),
+      /"Request examples" does not mention curl/,
+    );
+  });
+
+  it('AC-07.4.9 accepts the alternative section titles', () => {
+    const readme = GOOD.replace(
+      '## Architectural decisions',
+      '## Architecture decisions',
+    ).replace('## How to run', '## Getting started');
+    assert.deepEqual(check(readme), []);
+    assert.deepEqual(
+      check(GOOD.replace('## How to run', '## Running the project')),
+      [],
+    );
+    assert.deepEqual(
+      check(
+        GOOD.replace(
+          '## Architectural decisions',
+          '## Architecture and decisions',
+        ),
+      ),
+      [],
+    );
   });
 
   for (const sub of ['Backend', 'Mobile app']) {
@@ -136,6 +192,20 @@ describe('README doc-check', () => {
     const readme =
       GOOD +
       '\n[self](#data-model) [other](docs/adr.md#adr) [web](https://example.com/x) [mail](mailto:a@b.c)\n\n```md\n[ignored](nowhere.md)\n```\n\n`[inline](nowhere.md)`\n';
+    assert.deepEqual(check(readme), []);
+  });
+
+  it('AC-07.4.9 keeps underscores and strips only paired emphasis in slugs', () => {
+    assert.equal(githubSlug('snake_case_heading'), 'snake_case_heading');
+    assert.equal(
+      githubSlug('Use _emphasis_ and **bold** and `code`'),
+      'use-emphasis-and-bold-and-code',
+    );
+  });
+
+  it('AC-07.4.9 a leading emoji slugs to a leading hyphen, like GitHub', () => {
+    assert.equal(githubSlug('⚠️ Foo'), '-foo');
+    const readme = GOOD + '\n## ⚠️ Foo\n\ntext\n\n[x](#-foo)\n';
     assert.deepEqual(check(readme), []);
   });
 

@@ -7,11 +7,14 @@ const REQUIRED_SECTIONS = new URL(
   import.meta.url,
 );
 
-/** Heading text without Markdown decoration (links, code spans, emphasis). */
+/** Heading text without Markdown decoration (links, code spans, paired emphasis). */
 function plainText(heading) {
   return heading
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/[`*_~]/g, '')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/(\*\*|__)(.+?)\1/g, '$2')
+    .replace(/(^|\W)([*_])(.+?)\2(?=\W|$)/g, '$1$3')
+    .replace(/~~(.+?)~~/g, '$1')
     .trim();
 }
 
@@ -20,7 +23,6 @@ export function githubSlug(heading) {
   return plainText(heading)
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s_-]/gu, '')
-    .trim()
     .replace(/\s/g, '-');
 }
 
@@ -67,6 +69,7 @@ function anchorsOf(headings) {
 
 const normalize = (title) => title.toLowerCase().replace(/\s+/g, ' ').trim();
 
+/** `lines` are the raw lines (code blocks count as content); `headings` come from the blanked copy. */
 function checkSections(lines, headings, sections) {
   const problems = [];
   for (const spec of sections) {
@@ -150,11 +153,13 @@ function checkLinks(readmePath, lines, ownAnchors) {
 
 /** Problems found in the README: missing/empty required sections, missing topics, broken links. */
 export function checkReadme(readmePath, sections) {
-  const lines = proseLines(readFileSync(readmePath, 'utf8'));
-  const headings = headingsOf(lines);
+  const raw = readFileSync(readmePath, 'utf8').split(/\r?\n/);
+  // Blanked copy (fences removed) only for heading and link detection; same line numbers as `raw`.
+  const prose = proseLines(raw.join('\n'));
+  const headings = headingsOf(prose);
   return [
-    ...checkSections(lines, headings, sections),
-    ...checkLinks(readmePath, lines, anchorsOf(headings)),
+    ...checkSections(raw, headings, sections),
+    ...checkLinks(readmePath, prose, anchorsOf(headings)),
   ];
 }
 
