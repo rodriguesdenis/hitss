@@ -12,6 +12,7 @@ interface Running {
   child: ChildProcess;
   port: number;
   stderr: () => string;
+  stdout: () => string;
   exit: Promise<number | null>;
 }
 
@@ -42,11 +43,13 @@ function start(env: Record<string, string>): Running {
     },
   );
   let stderr = '';
+  let stdout = '';
+  child.stdout?.on('data', (d: Buffer) => (stdout += d.toString()));
   child.stderr?.on('data', (d: Buffer) => (stderr += d.toString()));
   const exit = new Promise<number | null>((resolve) =>
     child.on('exit', (code) => resolve(code)),
   );
-  return { child, port, stderr: () => stderr, exit };
+  return { child, port, stderr: () => stderr, stdout: () => stdout, exit };
 }
 
 async function ready(app: Running): Promise<void> {
@@ -179,6 +182,52 @@ describe('OpenTelemetry bootstrap', () => {
     ]) {
       expect(keys).not.toContain(key);
     }
+  }, 60_000);
+
+  it('AC-06.3.1 AC-06.3.3 AC-06.3.7 logs go to stdout only, correlated and free of secrets, and no OTLP log pipeline exists', async () => {
+    receiver.bodies.clear();
+    const app = await launch({
+      OTEL_EXPORTER_OTLP_ENDPOINT: endpoint,
+      LOG_LEVEL: 'trace',
+    });
+    const response = await get(
+      app,
+      {
+        traceparent: `00-${TRACE_ID}-00f067aa0ba902b7-01`,
+        authorization: 'Bearer token-value-abcdef',
+        cookie: 'session=cookie-value-abcdef',
+      },
+      '?token=secret-value&search=marina',
+    );
+    expect(response.status).toBe(200);
+    app.child.kill('SIGTERM');
+    expect(await app.exit).toBe(0);
+
+    expect(receiver.bodies.has('/v1/logs')).toBe(false);
+    const stdout = app.stdout();
+    for (const forbidden of [
+      'secret-value',
+      'marina',
+      'Bearer',
+      'token-value-abcdef',
+      'cookie-value-abcdef',
+    ]) {
+      expect(stdout).not.toContain(forbidden);
+    }
+    const entries = stdout
+      .split('\n')
+      .filter((line) => line.startsWith('{'))
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+    const completed = entries.filter((e) => e.msg === 'request completed');
+    expect(completed).toHaveLength(1);
+    expect(completed[0]).toMatchObject({
+      traceId: TRACE_ID,
+      route: '/ping',
+      req: { method: 'GET', url: '/ping' },
+      res: { statusCode: 200 },
+    });
+    expect(completed[0]?.spanId).toMatch(/^[0-9a-f]{16}$/);
+    expect(response.headers.get('x-request-id')).toBe(completed[0]?.reqId);
   }, 60_000);
 
   it('AC-06.5.1 starts and serves 2xx with no collector reachable', async () => {
