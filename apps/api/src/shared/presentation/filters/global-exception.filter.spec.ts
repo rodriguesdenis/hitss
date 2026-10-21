@@ -13,6 +13,9 @@ import { ApiException, RequestValidationException } from './api-exception';
 import { ErrorCode } from './error-codes';
 import {
   DomainErrorMapping,
+  DomainErrorMappings,
+} from './domain-error-mappings';
+import {
   ErrorEnvelope,
   GlobalExceptionFilter,
 } from './global-exception.filter';
@@ -85,8 +88,10 @@ function run(
     setAttribute: jest.fn(),
     recordException: jest.fn(),
   };
+  const mappings = new DomainErrorMappings();
+  mappings.register(MAPPINGS);
   const filter = new GlobalExceptionFilter({
-    mappings: MAPPINGS,
+    mappings,
     logger,
     activeSpan: () => span,
   });

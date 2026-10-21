@@ -23,7 +23,8 @@ export function setupApp<T extends INestApplication>(app: T): T {
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
   app.useGlobalPipes(new AppValidationPipe());
-  app.useGlobalInterceptors(new EnvelopeInterceptor(new Reflector()));
-  app.useGlobalFilters(new GlobalExceptionFilter());
+  app.useGlobalInterceptors(new EnvelopeInterceptor(app.get(Reflector)));
+  // From the container: built with the domain-error registry and the pino logger.
+  app.useGlobalFilters(app.get(GlobalExceptionFilter));
   return app;
 }

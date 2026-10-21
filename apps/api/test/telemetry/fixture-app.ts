@@ -8,6 +8,7 @@ import { AppConfigModule } from '../../src/config/config.module';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { PrismaModule } from '../../src/shared/infrastructure/prisma/prisma.module';
 import { ObservabilityModule } from '../../src/shared/observability/observability.module';
+import { HttpConventionsModule } from '../../src/shared/presentation/http-conventions.module';
 
 @Controller()
 class PingController {
@@ -21,7 +22,12 @@ class PingController {
 }
 
 @Module({
-  imports: [AppConfigModule.forRoot(), PrismaModule, ObservabilityModule],
+  imports: [
+    AppConfigModule.forRoot(),
+    PrismaModule,
+    HttpConventionsModule,
+    ObservabilityModule,
+  ],
   controllers: [PingController],
 })
 class FixtureModule {}
