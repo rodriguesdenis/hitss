@@ -13,6 +13,7 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e",
+    "test:tools": "node --test \"tools/**/*.test.mjs\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"
