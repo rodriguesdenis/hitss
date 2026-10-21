@@ -228,9 +228,9 @@ Full target layout of the API and the mobile app: [architecture overview §6](do
 
 ```bash
 pnpm install
-pnpm lint && pnpm typecheck && pnpm test      # fast gates
-pnpm --filter @hitss/api test:integration     # real PostgreSQL via Testcontainers
-pnpm --filter @hitss/api test:e2e             # supertest against the full Nest app
+pnpm lint && pnpm typecheck && pnpm test      # fast gates; `pnpm test` = unit tests only, no Docker
+pnpm test:integration                         # real PostgreSQL via Testcontainers (needs Docker)
+pnpm test:e2e                                 # supertest against the full Nest app (needs Docker)
 ```
 
 Strategy, pyramid proportions, mutation testing and test data: [test strategy](docs/quality/test-strategy.md) · [ADR-0014](docs/architecture/adr/0014-testing-strategy.md).

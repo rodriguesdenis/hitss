@@ -41,9 +41,23 @@ export const seedIsOff: ProductionRule = (config) =>
     ? [{ variable: 'SEED_ON_START', message: 'must be false in production' }]
     : [];
 
+/** Levels that log query statements and request details; diagnostics for local use only. */
+export const VERBOSE_LOG_LEVELS = ['debug', 'trace'];
+
+export const logLevelIsNotVerbose: ProductionRule = (config) =>
+  VERBOSE_LOG_LEVELS.includes(config.LOG_LEVEL)
+    ? [
+        {
+          variable: 'LOG_LEVEL',
+          message: `must not be ${VERBOSE_LOG_LEVELS.join(' or ')} in production`,
+        },
+      ]
+    : [];
+
 /** Applied only when APP_ENV=production. Add one entry per rule; validate() never changes. */
 export const productionRules: ProductionRule[] = [
   secretIsNotAPlaceholder,
   databaseIsNotTheLocalOne,
   seedIsOff,
+  logLevelIsNotVerbose,
 ];

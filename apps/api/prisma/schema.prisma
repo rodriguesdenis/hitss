@@ -1,0 +1,12 @@
+// Teams & Tasks — PostgreSQL schema (ADR-0004, docs/architecture/data-model.md).
+// The connection URL lives in prisma.config.ts (CLI) and AppConfig (runtime), never here.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
