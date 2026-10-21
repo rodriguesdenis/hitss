@@ -88,7 +88,28 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      - run: pnpm turbo run test
+      - name: Unit tests with the coverage gates (80 % overall, 90 % per domain layer)
+        run: pnpm turbo run test -- --coverage
+
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Pre-pull the test database image (the one docker-compose.yml pins)
+        run: docker compose pull postgres
+      - name: Integration and e2e tests (Testcontainers needs only Docker)
+        run: pnpm turbo run test:integration test:e2e
+      - name: Upload the JUnit reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-reports
+          path: apps/api/reports
+          if-no-files-found: ignore
 
   build:
     runs-on: ubuntu-24.04
@@ -102,7 +123,7 @@ jobs:
 
   ci-success:
     if: always()
-    needs: [commitlint, static, secrets, unit, build]
+    needs: [commitlint, static, secrets, unit, integration, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
