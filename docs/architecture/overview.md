@@ -119,32 +119,35 @@ flowchart LR
   subgraph application["application/"]
     cmd["Commands + handlers<br/>(write use cases)"]
     qry["Queries + handlers<br/>(read use cases)"]
-    ports["Ports<br/>abstract classes = DI tokens"]
+    ports["Ports<br/>read models, cross-context,<br/>clock, ids, metrics"]
   end
   subgraph domain["domain/ (framework-free)"]
     agg["Aggregates<br/>Team, Task"]
     vo["Value objects<br/>TeamName, ColorHex, TaskTitle…"]
     ev["Domain events + errors"]
+    rport["Repository port<br/>&lt;agg&gt;.repository.ts"]
   end
   subgraph infrastructure["infrastructure/"]
     repo["Prisma repositories<br/>+ mappers"]
-    adp["Adapters<br/>TeamDirectory, clock, ids"]
+    adp["Adapters<br/>read models, TeamDirectory,<br/>clock, ids"]
   end
 
   ctrl --> dto
   ctrl -- "CommandBus / QueryBus" --> cmd
   ctrl --> qry
   cmd --> agg
+  cmd --> rport
   cmd --> ports
   qry --> ports
   agg --> vo
   agg --> ev
-  repo -. "implements" .-> ports
+  rport --> agg
+  repo -. "implements" .-> rport
   adp -. "implements" .-> ports
   repo --> agg
 ```
 
-Arrows are compile-time imports. Everything points toward `domain/`. `infrastructure/` depends on `application/` (it implements the ports) and never the reverse. The `<module>.module.ts` file is the composition root that binds each port to its adapter (`{ provide: TaskRepository, useClass: PrismaTaskRepository }`).
+Arrows are compile-time imports. Everything points toward `domain/`. Ports are `abstract class`es, usable directly as Nest DI tokens. The **repository port** (`domain/<agg>.repository.ts`) belongs to the domain: it loads and saves whole aggregates and uses only domain and `shared/domain` types (aggregate, ids, `ExpectedVersion`). It never uses pagination, transaction or Prisma types. Every **other port** lives in `application/ports/`: read models (lists and views with `Page<T>`), cross-context ports (`TeamDirectory`, `TeamTaskCounts`), `Clock`, `IdGenerator` and `TaskMetrics`. `infrastructure/` implements both kinds and depends on `application/` and `domain/`, never the reverse. The `<module>.module.ts` file is the composition root that binds each port to its adapter (`{ provide: TeamRepository, useClass: PrismaTeamRepository }`).
 
 ## 4. Mobile components
 
@@ -301,13 +304,14 @@ apps/api/
 │       │   │   ├── team.ts              # aggregate root
 │       │   │   ├── team.errors.ts       # every error of the module
 │       │   │   ├── team.events.ts       # every event of the module (TeamDeleted)
+│       │   │   ├── team.repository.ts   # TeamRepository port (abstract class, domain types only)
 │       │   │   └── value-objects/       # team-name.ts, color-hex.ts, team-description.ts
 │       │   ├── application/
 │       │   │   ├── commands/            # one folder per use case: create-team/, replace-team/, delete-team/
 │       │   │   │   └── create-team/     # create-team.command.ts, create-team.handler.ts (+ .spec)
 │       │   │   ├── queries/             # one folder per use case: list-teams/, get-team/, get-team-summaries/
 │       │   │   │   └── list-teams/      # list-teams.query.ts, list-teams.handler.ts (+ .spec)
-│       │   │   └── ports/               # TeamRepository, TeamReadModel, TeamTaskCounts (abstract classes = DI tokens)
+│       │   │   └── ports/               # TeamReadModel, TeamTaskCounts (abstract classes = DI tokens)
 │       │   ├── infrastructure/
 │       │   │   ├── prisma-team.repository.ts  # write side: aggregate in/out
 │       │   │   ├── team.mapper.ts       # Prisma row ⇄ Team
@@ -323,12 +327,13 @@ apps/api/
 │           │   ├── task.errors.ts       # every error of the module
 │           │   ├── task.events.ts       # every event of the module
 │           │   ├── overdue.policy.ts    # isOverdue(status, dueDate, today), reused by the read side
+│           │   ├── task.repository.ts   # TaskRepository port (abstract class, domain types only)
 │           │   └── value-objects/       # task-title.ts, task-description.ts, task-status.ts, due-date.ts, task-team-ids.ts
 │           ├── application/
 │           │   ├── commands/            # create-task/, replace-task/, change-task-status/, delete-task/
 │           │   ├── queries/             # list-tasks/, get-task/, count-tasks-by-team/
 │           │   ├── events/              # on-team-deleted.handler.ts (unassign), record-task-metrics.handler.ts (after commit)
-│           │   └── ports/               # TaskRepository, TaskReadModel, TeamDirectory, task-metrics.ts (TaskMetrics)
+│           │   └── ports/               # TaskReadModel, TeamDirectory, task-metrics.ts (TaskMetrics)
 │           ├── infrastructure/          # prisma-task.repository.ts, task.mapper.ts, adapters/ (team-directory.adapter.ts, otel-task-metrics.adapter.ts)
 │           ├── presentation/            # tasks.controller.ts, dto/
 │           └── tasks.module.ts

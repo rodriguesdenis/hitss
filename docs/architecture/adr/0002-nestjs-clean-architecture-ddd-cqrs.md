@@ -44,16 +44,16 @@ The API is small (two aggregates, ~12 endpoints) but it is evaluated on architec
 
 **NestJS 11**, one Nest module per bounded context (`identity`, `teams`, `tasks`) plus `health`, each split into four layers:
 
-| Layer             | Contains                                                                                                                                          | May import                                             |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `domain/`         | Aggregates (`Team`, `Task`), value objects, domain events, domain errors. Pure TypeScript.                                                        | `shared/domain` only                                   |
-| `application/`    | Commands, queries and their handlers (= use cases); **ports** declared as `abstract class` (usable directly as Nest DI tokens, no string tokens). | `domain/`, `@nestjs/cqrs`, `@nestjs/common` decorators |
-| `infrastructure/` | Prisma repositories, mappers, adapters for cross-context ports, clock, id generator.                                                              | `application/`, `domain/`, `@prisma/*`                 |
-| `presentation/`   | Controllers, class-validator DTOs, Swagger decorators.                                                                                            | `application/` (via buses), shared presentation        |
+| Layer             | Contains                                                                                                                                                                                                                      | May import                                             |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `domain/`         | Aggregates (`Team`, `Task`), value objects, domain events, domain errors, and the aggregate's **repository port** (`<agg>.repository.ts`, an `abstract class` with only domain types). Pure TypeScript.                       | `shared/domain` only                                   |
+| `application/`    | Commands, queries and their handlers (= use cases); every **other port** (read models, cross-context ports, clock, id generator, metrics) declared as `abstract class` (usable directly as Nest DI tokens, no string tokens). | `domain/`, `@nestjs/cqrs`, `@nestjs/common` decorators |
+| `infrastructure/` | Prisma repositories (implementing the domain repository ports), mappers, adapters for application ports (read models, cross-context ports), clock, id generator.                                                              | `application/`, `domain/`, `@prisma/*`                 |
+| `presentation/`   | Controllers, class-validator DTOs, Swagger decorators.                                                                                                                                                                        | `application/` (via buses), shared presentation        |
 
 Rules:
 
-- **Writes** go through `CommandBus`; handlers load an aggregate from a repository port, call aggregate methods (no setters), save, then publish the aggregate's pulled domain events.
+- **Writes** go through `CommandBus`; handlers load an aggregate from its repository port (declared in the domain, implemented in infrastructure), call aggregate methods (no setters), save it when a method reported a change (persistence increments `version`, ADR-0015), then publish the aggregate's pulled domain events.
 - **Reads** go through `QueryBus`; query handlers use a read-model port that returns view DTOs directly (no aggregate hydration needed for lists). This is the "CQRS-lite" split: same database, separate code paths.
 - **Cross-context calls** use the buses and the target module's `contracts/` folder. Task Management's `TeamDirectory` port is implemented by an adapter that sends `GetTeamSummariesQuery`; Team Management's `taskCount` uses a `TeamTaskCounts` port whose adapter sends `CountTasksByTeamQuery`. Modules never import each other's providers, so there is no DI cycle.
 - **Errors**: the domain throws typed `DomainError`s; a global exception filter maps them to the error envelope ([ADR-0005](0005-rest-openapi-and-response-envelope.md)).
