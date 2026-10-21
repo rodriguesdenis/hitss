@@ -71,12 +71,69 @@ export const otlpEndpointIsSecure: ProductionRule = (config) => {
       ];
 };
 
+export const authUrlIsHttps: ProductionRule = (config) =>
+  config.BETTER_AUTH_URL.startsWith('https://')
+    ? []
+    : [{ variable: 'BETTER_AUTH_URL', message: 'must be https in production' }];
+
+const isLoopbackHost = (hostname: string): boolean =>
+  hostname === 'localhost' ||
+  hostname.endsWith('.localhost') ||
+  hostname.startsWith('127.') ||
+  hostname === '[::1]';
+
+/** The origin is already validated as `*` or an http(s) origin. */
+const isUnsafeOrigin = (origin: string): boolean =>
+  origin === '*' ||
+  origin.startsWith('http://') ||
+  isLoopbackHost(new URL(origin).hostname);
+
+export const corsOriginsAreSafe: ProductionRule = (config) =>
+  config.CORS_ORIGINS.some(isUnsafeOrigin)
+    ? [
+        {
+          variable: 'CORS_ORIGINS',
+          message:
+            'must not contain *, http:// origins or localhost in production',
+        },
+      ]
+    : [];
+
+export const authRateLimitIsOn: ProductionRule = (config) =>
+  config.AUTH_RATE_LIMIT_ENABLED
+    ? []
+    : [
+        {
+          variable: 'AUTH_RATE_LIMIT_ENABLED',
+          message: 'must be true in production',
+        },
+      ];
+
+export const appSchemeIsNotExpoGo: ProductionRule = (config) =>
+  config.APP_SCHEME === 'exp'
+    ? [
+        {
+          variable: 'APP_SCHEME',
+          message: 'must not be the Expo Go scheme in production',
+        },
+      ]
+    : [];
+
+export const demoSeedIsOff: ProductionRule = (config) =>
+  config.SEED_DEMO
+    ? [{ variable: 'SEED_DEMO', message: 'must be false in production' }]
+    : [];
+
 /** Applied only when APP_ENV=production. Add one entry per rule; validate() never changes. */
 export const productionRules: ProductionRule[] = [
   secretIsNotAPlaceholder,
   databaseIsNotTheLocalOne,
   seedIsOff,
   logLevelIsNotVerbose,
-
   otlpEndpointIsSecure,
+  authUrlIsHttps,
+  corsOriginsAreSafe,
+  authRateLimitIsOn,
+  appSchemeIsNotExpoGo,
+  demoSeedIsOff,
 ];

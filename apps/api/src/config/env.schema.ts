@@ -1,5 +1,4 @@
 import { Transform } from 'class-transformer';
-import { TelemetryEnv } from './telemetry.env';
 import { integer, isBoolean, oneOf, toBoolean, toNumber } from './transforms';
 import {
   IsIn,
@@ -10,6 +9,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { AuthEnvironmentVariables } from './auth.env';
 
 export const APP_ENVS = ['local', 'test', 'production'] as const;
 export type AppEnv = (typeof APP_ENVS)[number];
@@ -27,9 +27,10 @@ export const LOG_LEVELS = [
 /**
  * Every environment variable the API reads. Defaults are documented in `.env.example`
  * (a parity test keeps both in sync). Secret-bearing variables have no default in code:
- * they come from the gitignored `.env` or the process environment.
+ * they come from the gitignored `.env` or the process environment. The auth and security
+ * variables of spec 001 are inherited from `AuthEnvironmentVariables`.
  */
-export class EnvironmentVariables extends TelemetryEnv {
+export class EnvironmentVariables extends AuthEnvironmentVariables {
   /** Application environment; distinct from NODE_ENV (which is "production" in the image). */
   @IsIn(APP_ENVS, oneOf(APP_ENVS))
   APP_ENV: AppEnv = 'local';
