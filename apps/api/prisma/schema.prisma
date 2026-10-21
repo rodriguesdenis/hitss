@@ -98,6 +98,7 @@ model Verification {
 //   teams_owner_id_created_at_idx  (owner_id, created_at DESC, id DESC) WHERE deleted_at IS NULL
 //   teams_color_hex_format         CHECK (color_hex ~ '^#[0-9A-F]{6}$')
 //   teams_version_positive         CHECK (version >= 1)
+//   teams_updated_after_created    CHECK (updated_at >= created_at)
 // ---------------------------------------------------------------------------------------------
 
 model Team {

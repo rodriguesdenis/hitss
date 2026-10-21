@@ -31,3 +31,4 @@ CREATE INDEX "teams_owner_id_created_at_idx"
 -- Integrity backstops; the domain normalizes the color (ColorHex) and owns versioning.
 ALTER TABLE "teams" ADD CONSTRAINT "teams_color_hex_format" CHECK ("color_hex" ~ '^#[0-9A-F]{6}$');
 ALTER TABLE "teams" ADD CONSTRAINT "teams_version_positive" CHECK ("version" >= 1);
+ALTER TABLE "teams" ADD CONSTRAINT "teams_updated_after_created" CHECK ("updated_at" >= "created_at");
