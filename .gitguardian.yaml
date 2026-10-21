@@ -1,0 +1,12 @@
+# GitGuardian (ggshield and the GitHub check) configuration. Schema: version 2,
+# secret.ignored_paths (https://docs.gitguardian.com/ggshield-docs/configuration).
+version: 2
+
+secret:
+  ignored_paths:
+    # This file is the test suite of our own secret scanner (.gitleaks.toml): it has to contain
+    # secret-shaped data to prove the rules fire. Credentials and tokens in it are assembled at
+    # runtime from fragments, yet GitGuardian still flags the file. Only this one path is ignored;
+    # gitleaks keeps scanning it in CI (secrets job) and in the pre-commit hook, and every other
+    # file, including all other test fixtures, stays fully scanned.
+    - 'tools/ci/gitleaks-config.test.mjs'
