@@ -77,11 +77,16 @@ export const authUrlIsHttps: ProductionRule = (config) =>
     ? []
     : [{ variable: 'BETTER_AUTH_URL', message: 'must be https in production' }];
 
+/**
+ * Hosts that resolve to this machine (`URL.hostname` form): localhost names, 127/8, the IPv6
+ * loopback, the unspecified addresses and the IPv4-mapped loopback (WHATWG normalizes
+ * `[::ffff:127.0.0.1]` to `[::ffff:7f00:1]`).
+ */
 const isLoopbackHost = (hostname: string): boolean =>
   hostname === 'localhost' ||
   hostname.endsWith('.localhost') ||
   hostname.startsWith('127.') ||
-  hostname === '[::1]';
+  ['0.0.0.0', '[::1]', '[::]', '[::ffff:7f00:1]'].includes(hostname);
 
 /** Validated values always parse; an unparseable one is treated as unsafe, never thrown. */
 const hasLoopbackHost = (value: string): boolean => {

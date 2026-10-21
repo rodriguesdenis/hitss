@@ -205,6 +205,9 @@ describe('auth and security production rules (AC-01.8.5)', () => {
     ['a localhost subdomain', 'https://api.localhost'],
     ['an IPv4 loopback address', 'https://127.0.0.1'],
     ['the IPv6 loopback address', 'https://[::1]:3000'],
+    ['the unspecified IPv4 address', 'https://0.0.0.0:3000'],
+    ['the unspecified IPv6 address', 'https://[::]:3000'],
+    ['an IPv4-mapped loopback address', 'https://[::ffff:127.0.0.1]:3000'],
   ])('BETTER_AUTH_URL must not be %s', (_label, url) => {
     check({ ...production, BETTER_AUTH_URL: url }, 'BETTER_AUTH_URL');
   });
@@ -216,6 +219,9 @@ describe('auth and security production rules (AC-01.8.5)', () => {
     ['a localhost subdomain', 'https://app.localhost'],
     ['an IPv4 loopback address', 'https://127.0.0.1:8443'],
     ['the IPv6 loopback address', 'https://[::1]'],
+    ['the unspecified IPv4 address', 'https://0.0.0.0'],
+    ['the unspecified IPv6 address', 'https://[::]'],
+    ['an IPv4-mapped loopback address', 'https://[::ffff:7f00:1]'],
   ])('CORS_ORIGINS must not contain %s', (_label, origins) => {
     check({ ...production, CORS_ORIGINS: origins }, 'CORS_ORIGINS');
   });
