@@ -17,6 +17,28 @@ services:
       timeout: 3s
       retries: 20
 
+  # One-shot: applies the Prisma migrations and exits. The API starts only if it succeeded.
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: migrator
+    init: true
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-teams}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teams-local-only}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-teams_tasks}
+    restart: 'no'
+
   api:
     build:
       context: .
@@ -31,6 +53,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       # NODE_ENV stays "production" from the image; APP_ENV is the application environment.
       APP_ENV: ${APP_ENV:-local}
@@ -47,8 +71,8 @@ services:
     ports: ['${API_BIND:-0.0.0.0}:${API_PORT:-3000}:3000']
     healthcheck:
       # TODO(T-001-08 / T-006-03): switch to GET /api/v1/health/ready once the health routes exist.
-      # Interim: the API only listens after the config is valid, the database module is up and
-      # the migrations are applied, so an open TCP port means "started".
+      # Interim: the API only starts after the migrate service succeeded and listens only after the
+      # config is valid and the database module is up, so an open TCP port means "started".
       test:
         [
           'CMD',
