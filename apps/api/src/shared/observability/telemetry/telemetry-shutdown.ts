@@ -10,8 +10,10 @@ import { telemetryLifecycle } from './telemetry-lifecycle';
 export class TelemetryShutdown implements OnApplicationShutdown {
   async onApplicationShutdown(signal?: string): Promise<void> {
     await telemetryLifecycle.shutdown();
-    // Once every hook has run, Nest re-raises the signal to end the process, which would exit
-    // by signal (not code 0, AC-06.5.4). Turn that final re-raise into a clean exit.
+    // Relies on a Nest internal: after the hooks, NestApplicationContext.listenToShutdownSignals
+    // removes its listeners and calls process.kill(process.pid, signal), which would end the
+    // process by signal (not code 0, AC-06.5.4). This turns that re-raise into a clean exit; the
+    // e2e test in test/telemetry fails if a Nest upgrade changes the behaviour.
     if (signal === 'SIGTERM' || signal === 'SIGINT') {
       process.once(signal, () => process.exit(0));
     }
