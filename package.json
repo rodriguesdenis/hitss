@@ -18,7 +18,8 @@
     "format:check": "prettier --check .",
     "prepare": "husky",
     "guard:env": "node tools/ci/no-tracked-env.mjs",
-    "arch": "turbo run arch test:arch"
+    "arch": "turbo run arch test:arch",
+    "doc-check": "node tools/ci/doc-check.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
