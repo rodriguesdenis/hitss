@@ -60,7 +60,7 @@ flowchart LR
 | `name`                   | `TeamName`         | Trimmed, 2–50 chars, **unique per owner** (case-insensitive) among non-deleted teams.                                                 |
 | `color`                  | `ColorHex`         | `^#[0-9A-Fa-f]{6}$`, normalized to upper case.                                                                                        |
 | `description`            | `TeamDescription?` | ≤ 280 chars, trimmed; empty → `null`.                                                                                                 |
-| `version`                | int                | Starts at 1; incremented by **persistence** on every write that changes state (optimistic concurrency, see below).                   |
+| `version`                | int                | Starts at 1; incremented by **persistence** on every write that changes state (optimistic concurrency, see below).                    |
 | `createdAt`, `updatedAt` | timestamp          |                                                                                                                                       |
 | `deletedAt`              | timestamp?         | Soft delete marker.                                                                                                                   |
 
@@ -145,11 +145,11 @@ Two dispatch paths ([ADR-0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md#te
 
 Raised by the domain/application, mapped to HTTP by the presentation layer (see [API contracts](api-contracts.md#error-codes)).
 
-| Error                                                                      | When                                                           |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| Error                                                                                                | When                                                           |
+| ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `InvalidTeamName`, `InvalidColorHex`, `InvalidTeamDescription`, `InvalidTaskTitle`, `InvalidDueDate` | VO construction fails (normally pre-empted by DTO validation). |
-| `TeamNotFound`, `TaskNotFound`                                             | Id unknown **or owned by another user**.                       |
-| `TeamNameAlreadyExists`                                                    | Name collision for the owner.                                  |
-| `UnknownTeams { ids }`                                                     | Task assigned to team ids that don't exist for the owner.      |
-| `TooManyTeams`                                                             | More than 10 teams on one task.                                |
-| `ConcurrencyConflict`                                                      | `If-Match` version ≠ current version.                          |
+| `TeamNotFound`, `TaskNotFound`                                                                       | Id unknown **or owned by another user**.                       |
+| `TeamNameAlreadyExists`                                                                              | Name collision for the owner.                                  |
+| `UnknownTeams { ids }`                                                                               | Task assigned to team ids that don't exist for the owner.      |
+| `TooManyTeams`                                                                                       | More than 10 teams on one task.                                |
+| `ConcurrencyConflict`                                                                                | `If-Match` version ≠ current version.                          |
