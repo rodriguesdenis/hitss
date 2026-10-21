@@ -75,6 +75,9 @@ describe('auth and security variables', () => {
     ['TRUSTED_PROXIES', '10.0.0.0/'],
     ['TRUSTED_PROXIES', '10.0.0.0/8/1'],
     ['TRUSTED_PROXIES', '10.0.0.0/08x'],
+    ['TRUSTED_PROXIES', '0.0.0.0/0'],
+    ['TRUSTED_PROXIES', '::/0'],
+    ['TRUSTED_PROXIES', '10.0.0.0/8,0.0.0.0/0'],
     ['AUTH_RATE_LIMIT_ENABLED', 'yes'],
     ['RATE_LIMIT_IP_MAX', '0'],
     ['RATE_LIMIT_IP_MAX', '1.5'],
@@ -155,6 +158,23 @@ describe('auth and security production rules (AC-01.8.5)', () => {
     check({ ...production, SEED_DEMO: 'true' }, 'SEED_DEMO');
   });
 
+  it.each([
+    ['an IPv4 range wider than /8', '10.0.0.0/7'],
+    ['an IPv6 range wider than /16', 'fd00::/15'],
+    ['one wide range among narrow ones', '10.1.0.0/16,192.0.0.0/2'],
+  ])('TRUSTED_PROXIES must not contain %s', (_label, proxies) => {
+    check({ ...production, TRUSTED_PROXIES: proxies }, 'TRUSTED_PROXIES');
+  });
+
+  it('TRUSTED_PROXIES accepts /8 (IPv4), /16 (IPv6) and single addresses', () => {
+    expect(() =>
+      validate({
+        ...production,
+        TRUSTED_PROXIES: '10.0.0.0/8,fd00::/16,192.168.1.10,::1',
+      }),
+    ).not.toThrow();
+  });
+
   it('AC-01.8.6 DOCS_ENABLED resolves to false, whatever is configured', () => {
     expect(
       toAppConfig(validate({ ...production, DOCS_ENABLED: 'true' }))
@@ -172,6 +192,7 @@ describe('auth and security production rules (AC-01.8.5)', () => {
         AUTH_RATE_LIMIT_ENABLED: 'false',
         SEED_DEMO: 'true',
         DOCS_ENABLED: 'true',
+        TRUSTED_PROXIES: '10.0.0.0/7,fd00::/15',
       }),
     );
 

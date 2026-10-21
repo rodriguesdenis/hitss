@@ -17,17 +17,33 @@ const HTTP_ORIGIN = /^https?:\/\/[^\s/?#]+$/;
 const isCorsOrigin = (item: string): boolean =>
   item === '*' || HTTP_ORIGIN.test(item);
 
-/** An IPv4/IPv6 address, optionally with a CIDR prefix length (Express `trust proxy`). */
-const isAddressOrCidr = (item: string): boolean => {
+export interface ProxyRange {
+  family: 4 | 6;
+  /** CIDR prefix length; a single address is a full-length prefix. */
+  prefix: number;
+}
+
+/** Parses an IPv4/IPv6 address, optionally with a CIDR prefix length (Express `trust proxy`). */
+export function parseProxy(item: string): ProxyRange | null {
   const [address = '', prefix, ...rest] = item.split('/');
-  const maxPrefix = isIP(address, 4) ? 32 : isIP(address, 6) ? 128 : 0;
-  if (maxPrefix === 0 || rest.length > 0) {
-    return false;
+  const family = isIP(address, 4) ? 4 : isIP(address, 6) ? 6 : null;
+  if (family === null || rest.length > 0) {
+    return null;
   }
-  return (
-    prefix === undefined ||
-    (/^\d{1,3}$/.test(prefix) && Number(prefix) <= maxPrefix)
-  );
+  const maxPrefix = family === 4 ? 32 : 128;
+  if (prefix === undefined) {
+    return { family, prefix: maxPrefix };
+  }
+  if (!/^\d{1,3}$/.test(prefix) || Number(prefix) > maxPrefix) {
+    return null;
+  }
+  return { family, prefix: Number(prefix) };
+}
+
+/** A /0 range would trust X-Forwarded-For from anywhere, in every environment. */
+const isNarrowerThanEverything = (item: string): boolean => {
+  const range = parseProxy(item);
+  return range !== null && range.prefix > 0;
 };
 
 /**
@@ -123,8 +139,8 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   @Transform(toList)
   @EveryItem(
     'isAddressOrCidrList',
-    isAddressOrCidr,
-    'must be a comma-separated list of IP addresses or CIDR ranges',
+    isNarrowerThanEverything,
+    'must be a comma-separated list of IP addresses or CIDR ranges, none of them /0',
   )
   TRUSTED_PROXIES: string[] = [];
 
