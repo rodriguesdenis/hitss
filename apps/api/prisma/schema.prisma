@@ -32,6 +32,7 @@ model User {
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
   sessions      Session[]
   accounts      Account[]
+  teams         Team[]
 
   @@map("users")
 }
@@ -86,4 +87,30 @@ model Verification {
   // Better Auth looks verifications up by identifier.
   @@index([identifier])
   @@map("verifications")
+}
+
+// ---------------------------------------------------------------------------------------------
+// Team Management context (plan 002 § Data). Ids come from the domain's IdGenerator (no DB
+// default); created_at/updated_at are set by the domain clock, not by Prisma. Soft delete via
+// deleted_at (ADR-0016); version for optimistic concurrency (ADR-0015).
+// Raw SQL in migration create_teams (Prisma cannot express it):
+//   teams_owner_id_lower_name_key  UNIQUE (owner_id, lower(name)) WHERE deleted_at IS NULL
+//   teams_owner_id_created_at_idx  (owner_id, created_at DESC, id DESC) WHERE deleted_at IS NULL
+//   teams_color_hex_format         CHECK (color_hex ~ '^#[0-9A-F]{6}$')
+//   teams_version_positive         CHECK (version >= 1)
+// ---------------------------------------------------------------------------------------------
+
+model Team {
+  id          String    @id @db.Uuid
+  ownerId     String    @map("owner_id")
+  name        String    @db.VarChar(50)
+  colorHex    String    @map("color_hex") @db.Char(7)
+  description String?   @db.VarChar(280)
+  version     Int       @default(1)
+  createdAt   DateTime  @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @map("updated_at") @db.Timestamptz(3)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(3)
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("teams")
 }

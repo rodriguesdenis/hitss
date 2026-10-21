@@ -65,7 +65,8 @@ describe('Identity schema (integration, T-001-05)', () => {
   it('creates the Better Auth tables with snake_case names', async () => {
     const tables = await prisma.$queryRaw<{ table_name: string }[]>`
       SELECT table_name FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name <> '_prisma_migrations'
+      WHERE table_schema = 'public'
+        AND table_name IN ('users', 'sessions', 'accounts', 'verifications')
       ORDER BY table_name`;
 
     expect(tables.map((t) => t.table_name)).toEqual([
@@ -241,7 +242,9 @@ describe('Identity schema (integration, T-001-05)', () => {
       SELECT indexname, indexdef FROM pg_indexes WHERE schemaname = 'public'`;
     const fks = await prisma.$queryRaw<{ name: string; definition: string }[]>`
       SELECT conname AS name, pg_get_constraintdef(oid) AS definition
-      FROM pg_constraint WHERE contype = 'f' AND connamespace = 'public'::regnamespace`;
+      FROM pg_constraint
+      WHERE contype = 'f'
+        AND conrelid IN ('public.sessions'::regclass, 'public.accounts'::regclass)`;
     const def = (name: string) =>
       indexes.find((i) => i.indexname === name)?.indexdef;
 
