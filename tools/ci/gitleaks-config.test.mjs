@@ -57,5 +57,37 @@ describe(
         1,
       );
     });
+
+    // GitGuardian flagged a fixture like this once and the default rules missed it.
+    const fixtureSecret = [
+      'prod-like-secret-',
+      '9d2f61c07b4e',
+      '8a35f1c6d0e2b7a94831',
+    ].join('');
+
+    it('AC-07.9.1 detects a high-entropy secret assigned in a test fixture', () => {
+      assert.equal(scan([`  BETTER_AUTH_SECRET: '${fixtureSecret}',`]), 1);
+    });
+
+    it('AC-07.9.1 detects it in a double-quoted assignment too', () => {
+      assert.equal(scan([`const apiToken = "${fixtureSecret}";`]), 1);
+    });
+
+    it('AC-07.9.1 allows low-entropy fixtures built at runtime', () => {
+      assert.equal(
+        scan(["  BETTER_AUTH_SECRET: `prod-like-${'x'.repeat(40)}`,"]),
+        0,
+      );
+    });
+
+    it('AC-07.9.1 allows the documented placeholder prefixes', () => {
+      assert.equal(
+        scan([
+          "process.env.BETTER_AUTH_SECRET = 'unit-test-secret-0123456789abcdef0123456789';",
+          "  BETTER_AUTH_SECRET: 'local-dev-secret-change-me-0123456789abcdef',",
+        ]),
+        0,
+      );
+    });
   },
 );
