@@ -21,7 +21,7 @@ function composeDefaults(compose) {
 function envEntries(text) {
   const entries = new Map();
   let comment = '';
-  for (const line of text.split('\n')) {
+  for (const line of text.split(/\r?\n/)) {
     const match = /^([A-Z0-9_]+)=(.*)$/.exec(line);
     if (match) {
       entries.set(match[1], { value: match[2], comment });
