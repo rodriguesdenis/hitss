@@ -73,7 +73,7 @@ export const otlpEndpointIsSecure: ProductionRule = (config) => {
 };
 
 export const authUrlIsHttps: ProductionRule = (config) =>
-  config.BETTER_AUTH_URL.startsWith('https://')
+  parseUrl(config.BETTER_AUTH_URL)?.protocol === 'https:'
     ? []
     : [{ variable: 'BETTER_AUTH_URL', message: 'must be https in production' }];
 
