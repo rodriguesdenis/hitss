@@ -1,7 +1,7 @@
 {
   "name": "hitss",
   "private": true,
-  "description": "Teams & Tasks — fullstack monorepo (NestJS API + Expo mobile app)",
+  "description": "Teams & Tasks \u2014 fullstack monorepo (NestJS API + Expo mobile app)",
   "packageManager": "pnpm@10.34.7",
   "engines": {
     "node": ">=24"
@@ -12,6 +12,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
     "test:e2e": "turbo run test:e2e",
     "test:tools": "node --test \"tools/**/*.test.mjs\"",
     "format": "prettier --write .",
