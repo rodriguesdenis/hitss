@@ -20,6 +20,7 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 | T-007-14 | Bruno collection and `.http` files, wired into compose smoke                            | T-007-09, 001/002/003 endpoints        | M    | `docs/007-request-collection`     |
 | T-007-15 | README final: how to run, scripts, request examples, links                              | all above, T-006-08, T-007-16          | M    | `docs/007-readme-final`           |
 | T-007-16 | README doc-check: required sections and relative links, in CI                           | T-007-03                               | S    | `ci/007-readme-doc-check`         |
+| T-007-17 | Traceability `--require-tests`: every MUST AC of a done task has an automated test      | T-007-06                               | S    | `ci/007-require-tests`            |
 
 ## T-007-01 — Compose with PostgreSQL and `.env.example`
 
@@ -134,3 +135,10 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 - **Changes:** `tools/ci/doc-check.mjs` (+ unit tests with fixture READMEs): parses `README.md` headings and checks the required sections exist and are non-empty — "Architectural decisions", "Data model", "How to run" (with backend and mobile subsections), "What I would do differently in production" (must mention caching, logging, scalability, security) — via a `tools/ci/readme-required-sections.json` list; resolves every relative link and anchor in `README.md` and fails naming the file and link. Wired as `pnpm doc-check` and into the CI `static` job (same command locally and in CI). Until T-007-15 lands, the README skeleton (headings only) is committed so the check is green.
 - **Covers:** @AC-07.4.9
 - **Done when:** unit tests: a README without each required section fails naming it; a section missing one of the four production topics fails; a broken relative link fails naming the link; the committed README passes; a throwaway PR removing "Data model" turns `static` red.
+
+## T-007-17 — Traceability `--require-tests`
+
+- **Goal:** the strict form of the test ratchet: every `@must` AC covered by a **done** task has at least one automated test (T-007-06 only stops tests from being lost).
+- **Changes:** record task completion in `tasks.md` (a `- **Status:** done` line added by the PR that completes the task, or the merged-task list the traceability tool reads — decide in the task's plan), `tools/ci/traceability.mjs --require-tests` (fails on a MUST AC whose covering tasks are all done and that has no test; reports the rest in the job summary as today), waivers in `tools/ci/traceability-waivers.json`, unit tests with fixture specs, the `static` job runs the flag once the mobile tests exist.
+- **Covers:** @AC-07.6.5
+- **Done when:** unit tests: a done task whose MUST AC has no test fails naming the AC and the task; an open task does not; a waiver downgrades it to a warning; the current repo passes with the statuses set honestly.
