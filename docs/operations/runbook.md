@@ -111,6 +111,10 @@ docker compose logs api | jq -c 'select(.res.statusCode >= 500)'   # with jq
 LOG_LEVEL=debug make up                     # more detail (restart the api)
 ```
 
+The `route` field of the request completion line comes from `shared/observability/logging/route-template.ts`, which depends on Express 5 routing internals (`req.route` assignments). If an Express or Nest upgrade makes `route` show `{/*splat}` or the raw path, the `/api/v1/tasks/:id` test in `logger.config.spec.ts` fails; fix `route-template.ts` rather than loosening the test.
+
+`LOG_PRETTY=true` needs the dev-only `pino-pretty`; without it (the production image) the API logs JSON and prints one warning. `APP_ENV=production` refuses `LOG_PRETTY=true`.
+
 Logs never contain passwords, tokens or cookies; if you ever see one, treat it as a security bug ([threat model I-03](../security/threat-model.md#information-disclosure)).
 
 ## Inspect the database
