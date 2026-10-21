@@ -1,7 +1,7 @@
 {
   "name": "hitss",
   "private": true,
-  "description": "Teams & Tasks \u2014 fullstack monorepo (NestJS API + Expo mobile app)",
+  "description": "Teams & Tasks — fullstack monorepo (NestJS API + Expo mobile app)",
   "packageManager": "pnpm@10.34.7",
   "engines": {
     "node": ">=24"
