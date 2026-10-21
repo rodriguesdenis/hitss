@@ -95,7 +95,7 @@ As Marina, I want my offline changes to be kept even if I close the app, so that
 - **AC-05.6.2** Given pending changes, when the connection returns (in the same session or after a restart), then they are sent automatically in the order I made them, without any action from me.
 - **AC-05.6.3** Given a change is sent more than once (e.g. the connection dropped before the answer arrived), then it takes effect only once — no duplicated tasks or teams.
 - **AC-05.6.4** Given the server is temporarily failing, then pending changes are retried later, not discarded.
-- **AC-05.6.5** Given my session expired while I was offline, when I sign in again as the same user, then pending changes are sent; if a different user signs in, they are discarded.
+- **AC-05.6.5** Given queued changes belong to one user, then (a) they are never sent with another user's session: if a different user signs in, they are discarded before any request is made; (b) after my session has expired, nothing is sent until the same user signs in again, and then the pending changes are sent; (c) when a replayed request receives a `401`, the queue is kept intact (nothing is dropped) and replay resumes after the same user signs in again.
 - **AC-05.6.6** Given pending changes, when I sign out, then I am warned that they will be discarded and can cancel.
 
 ### US-05.7 — Conflicts are resolved safely and explained (`SHOULD`)

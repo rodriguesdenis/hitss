@@ -33,26 +33,30 @@ Give Marina a fast, clear phone app to see her tasks across teams, narrow them d
 
 ## User stories
 
-| ID       | Title                                            | Priority | Spec                                                                                                                |
-| -------- | ------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------- |
-| US-04.1  | Sign in, sign up and sign out                    | COULD    | [spec § US-04.1](../../specs/004-mobile-app/spec.md#us-041--sign-in-sign-up-and-sign-out-could)                     |
-| US-04.2  | Browse teams and open a team's tasks             | MUST     | [spec § US-04.2](../../specs/004-mobile-app/spec.md#us-042--browse-teams-and-open-a-teams-tasks-must)               |
-| US-04.3  | Create, edit and delete a team                   | COULD    | [spec § US-04.3](../../specs/004-mobile-app/spec.md#us-043--create-edit-and-delete-a-team-could)                    |
-| US-04.4  | Browse tasks globally and per team               | MUST     | [spec § US-04.4](../../specs/004-mobile-app/spec.md#us-044--browse-tasks-globally-and-per-team-must)                |
-| US-04.5  | Filter, search and sort tasks                    | COULD    | [spec § US-04.5](../../specs/004-mobile-app/spec.md#us-045--filter-search-and-sort-tasks-could)                     |
-| US-04.6  | Task detail with quick actions                   | MUST     | [spec § US-04.6](../../specs/004-mobile-app/spec.md#us-046--task-detail-with-quick-actions-must)                    |
-| US-04.7  | Create and edit a task with validation           | MUST     | [spec § US-04.7](../../specs/004-mobile-app/spec.md#us-047--create-and-edit-a-task-with-validation-must)            |
-| US-04.8  | Team color chips on tasks                        | MUST     | [spec § US-04.8](../../specs/004-mobile-app/spec.md#us-048--team-color-chips-on-tasks-must)                         |
-| US-04.9  | Clear loading, empty, error and success feedback | MUST     | [spec § US-04.9](../../specs/004-mobile-app/spec.md#us-049--clear-loading-empty-error-and-success-feedback-must)    |
-| US-04.10 | Choose light, dark or system theme               | COULD    | [spec § US-04.10](../../specs/004-mobile-app/spec.md#us-0410--choose-light-dark-or-system-theme-could)              |
-| US-04.11 | Use the app in English or Brazilian Portuguese   | COULD    | [spec § US-04.11](../../specs/004-mobile-app/spec.md#us-0411--use-the-app-in-english-or-brazilian-portuguese-could) |
-| US-04.12 | Accessible to assistive technologies             | COULD    | [spec § US-04.12](../../specs/004-mobile-app/spec.md#us-0412--accessible-to-assistive-technologies-could)           |
+| ID       | Title                                            | Priority | Spec                                                                                                                                                                       |
+| -------- | ------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| US-04.1  | Sign in and stay signed in                       | MUST     | [spec § US-04.1](../../specs/004-mobile-app/spec.md#us-041--sign-in-and-stay-signed-in-must-every-api-route-requires-authentication)                                       |
+| US-04.2  | Browse teams and open a team's tasks             | MUST     | [spec § US-04.2](../../specs/004-mobile-app/spec.md#us-042--browse-teams-and-open-a-teams-tasks-must)                                                                      |
+| US-04.3  | Create, edit and delete a team                   | MUST     | [spec § US-04.3](../../specs/004-mobile-app/spec.md#us-043--create-edit-and-delete-a-team-must-brief-crud-de-times--via-api-e-interface)                                   |
+| US-04.4  | Browse tasks globally and per team               | MUST     | [spec § US-04.4](../../specs/004-mobile-app/spec.md#us-044--browse-tasks-globally-and-per-team-must)                                                                       |
+| US-04.5  | Filter and search tasks                          | MUST     | [spec § US-04.5](../../specs/004-mobile-app/spec.md#us-045--filter-and-search-tasks-must-brief-listagem-suporta-filtros-teamid-e-status-search-e-paginação)                |
+| US-04.6  | Task detail with quick actions                   | MUST     | [spec § US-04.6](../../specs/004-mobile-app/spec.md#us-046--task-detail-with-quick-actions-must)                                                                           |
+| US-04.7  | Create and edit a task with validation           | MUST     | [spec § US-04.7](../../specs/004-mobile-app/spec.md#us-047--create-and-edit-a-task-with-validation-must)                                                                   |
+| US-04.8  | Team color chips on tasks                        | MUST     | [spec § US-04.8](../../specs/004-mobile-app/spec.md#us-048--team-color-chips-on-tasks-must)                                                                                |
+| US-04.9  | Clear loading, empty, error and success feedback | MUST     | [spec § US-04.9](../../specs/004-mobile-app/spec.md#us-049--clear-loading-empty-error-and-success-feedback-must)                                                           |
+| US-04.10 | Choose light, dark or system theme               | COULD    | [spec § US-04.10](../../specs/004-mobile-app/spec.md#us-0410--choose-light-dark-or-system-theme-could)                                                                     |
+| US-04.11 | Use the app in English or Brazilian Portuguese   | COULD    | [spec § US-04.11](../../specs/004-mobile-app/spec.md#us-0411--use-the-app-in-english-or-brazilian-portuguese-could)                                                        |
+| US-04.12 | Accessible to assistive technologies             | COULD    | [spec § US-04.12](../../specs/004-mobile-app/spec.md#us-0412--accessible-to-assistive-technologies-could)                                                                  |
+| US-04.13 | Sign up                                          | COULD    | [spec § US-04.13](../../specs/004-mobile-app/spec.md#us-0413--sign-up-could)                                                                                               |
+| US-04.14 | Sort tasks                                       | COULD    | [spec § US-04.14](../../specs/004-mobile-app/spec.md#us-0414--sort-tasks-could)                                                                                            |
+| US-04.15 | Mandated front-end stack (verifiable)            | MUST     | [spec § US-04.15](../../specs/004-mobile-app/spec.md#us-0415--mandated-front-end-stack-must-brief-formulários-com-validação-react-query-estilização-sem-styled-components) |
+| US-04.16 | Sign out                                         | MUST     | [spec § US-04.16](../../specs/004-mobile-app/spec.md#us-0416--sign-out-must-every-api-route-requires-authentication-005-depends-on-it)                                     |
 
-Priority notes: US-04.9 is tagged MUST because the brief evaluates "minimal UX" and a screen that hangs or fails silently does not meet it. US-04.5 exposes MUST API capabilities (EP-03 filters) but the mobile filter bar itself is not named by the brief, hence COULD. US-04.1 and US-04.3 depend on COULD/MUST API features respectively but the mobile screens for them are our extras.
+Priority notes: US-04.9 is tagged MUST because the brief evaluates "minimal UX" and a screen that hangs or fails silently does not meet it. The brief demands "CRUD de times e tarefas funcional via API e interface" and "listagem suporta filtros teamId e status, search e paginação", so in-app team CRUD (US-04.3) and the status filter + search (US-04.5) are MUST; sort (US-04.14) stays COULD. Sign-in (US-04.1) is MUST because every API route requires authentication; sign-out (US-04.16) is MUST, the sign-up screen (US-04.13) is COULD (the demo account covers evaluation).
 
 ## Success criteria
 
-- 100 % of MUST acceptance criteria of 004 covered by at least one automated test (component or E2E), tagged with the AC id.
+- 100 % of the MUST acceptance criteria of 004 (54 of 65; the other 11 are COULD) covered by at least one automated test (component or E2E), tagged with the AC id.
 - A first-time evaluator can, in Expo Go against the seeded API: sign in, open a team, see only its tasks, mark one Done, create a task with two teams and delete it — in under 2 minutes without guidance.
 - Every screen in the [design spec](../../design/design-spec.md#7-screen-state-matrix-checklist-for-component-tests) state matrix has a component test per state.
 - Automated accessibility checks show no missing labels on interactive elements; contrast of all token pairs ≥ 4.5:1.

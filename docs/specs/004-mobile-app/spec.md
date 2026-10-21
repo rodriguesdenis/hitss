@@ -1,6 +1,6 @@
 # 004 — Mobile app
 
-- **Epic:** [EP-04 Mobile Experience](../../product/epics/EP-04-mobile-experience.md) · **Status:** Draft · **Priority:** MUST (with COULD stories marked)
+- **Epic:** [EP-04 Mobile Experience](../../product/epics/EP-04-mobile-experience.md) · **Status:** Draft · **Priority:** MUST (US-04.1–04.9, 04.15, 04.16); COULD: sign-up UX (US-04.13), sort (US-04.14), theme, language, accessibility (US-04.10–04.12)
 - **Design:** [design-spec.md](../../design/design-spec.md) · **Behavior:** [mobile-app.feature](mobile-app.feature) · **Plan:** [plan.md](plan.md) · **Tasks:** [tasks.md](tasks.md)
 
 ## Problem
@@ -22,7 +22,7 @@ Marina coordinates work across a few small teams from her phone, between meeting
 
 ## User stories
 
-### US-04.1 — Sign in, sign up and sign out (`COULD`)
+### US-04.1 — Sign in and stay signed in (`MUST`, every API route requires authentication)
 
 As Marina, I want to sign in with my email and password, so that only I can see and change my teams and tasks.
 
@@ -31,9 +31,24 @@ As Marina, I want to sign in with my email and password, so that only I can see 
 - **AC-04.1.1** Given I am not signed in, when I open the app, then I see the sign-in screen and cannot reach any other screen.
 - **AC-04.1.2** Given valid credentials, when I sign in, then I land on the tasks list; when I reopen the app later, I am still signed in.
 - **AC-04.1.3** Given wrong credentials, when I sign in, then I stay on the sign-in screen and see "Incorrect email or password"; my password is not shown in clear text unless I choose to reveal it.
-- **AC-04.1.4** Given I fill name, a valid email and a password of 8–128 characters, when I sign up, then my account is created and I am signed in; an email already registered shows an error on the email field.
-- **AC-04.1.5** Given I am signed in, when I sign out, then my session and all locally kept data are removed and I see the sign-in screen.
 - **AC-04.1.6** Given my session has expired, when any action reaches the server, then I am taken to the sign-in screen with "Your session has expired. Please sign in again."
+- **AC-04.1.7** Given I am signed in, then every request to the API carries the session cookie read from the authentication client (`authClient.getCookie()`) — the app has no browser cookie jar and never uses the bearer token (that is for cURL and API collections only).
+
+### US-04.13 — Sign up (`COULD`)
+
+As Marina, I want to create my own account, so that I can use the app without the demo account.
+
+**Acceptance criteria**
+
+- **AC-04.13.1** Given I fill name, a valid email and a password of 8–128 characters, when I sign up, then my account is created and I am signed in; an email already registered shows an error on the email field. _(was AC-04.1.4)_
+
+### US-04.16 — Sign out (`MUST`, every API route requires authentication; 005 depends on it)
+
+As Marina, I want to sign out, so that nobody using my phone afterwards can see or change my data.
+
+**Acceptance criteria**
+
+- **AC-04.16.1** Given I am signed in, when I sign out, then my session and all locally kept data are removed and I see the sign-in screen. _(was AC-04.1.5, then AC-04.13.2)_
 
 ### US-04.2 — Browse teams and open a team's tasks (`MUST`)
 
@@ -46,7 +61,7 @@ As Marina, I want to see my teams and tap one to see its tasks, so that I can fo
 - **AC-04.2.3** Given I have more teams than fit in one page, when I scroll to the end, then more teams load until all are shown.
 - **AC-04.2.4** Given I search teams by a term, when I stop typing, then only teams whose name contains the term (case-insensitive) are shown.
 
-### US-04.3 — Create, edit and delete a team (`COULD`)
+### US-04.3 — Create, edit and delete a team (`MUST`, brief: "CRUD de times … via API e interface")
 
 As Marina, I want to manage my teams from the app, so that I can organize new work without another tool.
 
@@ -71,17 +86,24 @@ As Marina, I want a list of all my tasks and a list per team, so that I can see 
 - **AC-04.4.5** Given a task not Done whose due date is before today, then it is marked "Overdue" with text and icon, not color alone.
 - **AC-04.4.6** Given I tap a task, then its detail opens.
 
-### US-04.5 — Filter, search and sort tasks (`COULD`)
+### US-04.5 — Filter and search tasks (`MUST`, brief: "listagem suporta filtros teamId e status, search e paginação")
 
-As Marina, I want to narrow tasks by status and text and change their order, so that I find the right task in seconds.
+As Marina, I want to narrow tasks by status and text, so that I find the right task in seconds.
 
 **Acceptance criteria**
 
-- **AC-04.5.1** Given a tasks list (global or team), when I choose a status (Pending, In progress, Done) or All, then only tasks with that status are shown; combined with the team when in a team list.
+- **AC-04.5.1** Given a tasks list (global or team), when I choose one status from a single-select control (All, Pending, In progress, Done), then only tasks with that status are shown (All = no status filter); combined with the team when in a team list.
 - **AC-04.5.2** Given I type a search term, when I pause typing for a moment, then only tasks whose title or description contains the term are shown; clearing the term restores the list. Fast typing triggers a single search, not one per keystroke.
-- **AC-04.5.3** Given the sort options (newest, oldest, due date soonest with undated last, recently updated, title A–Z, status), when I choose one, then the list is reordered accordingly and the current sort is visible.
 - **AC-04.5.4** Given filters that match nothing, then I see "No tasks match your filters" with a "Clear filters" action that restores the unfiltered list.
 - **AC-04.5.5** Given I set filters on the global list and on a team list, then each list remembers its own filters while the app is running; after a restart or sign-out, lists start unfiltered.
+
+### US-04.14 — Sort tasks (`COULD`)
+
+As Marina, I want to change the order of my tasks, so that I see what matters first.
+
+**Acceptance criteria**
+
+- **AC-04.14.1** Given the sort options (newest, oldest, due date soonest with undated last, recently updated, title A–Z, status), when I choose one, then the list is reordered accordingly and the current sort is visible. _(was AC-04.5.3)_
 
 ### US-04.6 — Task detail with quick actions (`MUST`)
 
@@ -137,6 +159,16 @@ As Marina, I want to always know what the app is doing, so that I never wonder w
 - **AC-04.9.5** Given any error returned by the server, then the message shown is the user-friendly text for that error in my language, never a technical code.
 - **AC-04.9.6** Given I press a save button twice quickly, then the action happens once.
 
+### US-04.15 — Mandated front-end stack (`MUST`, brief: "Formulários com validação", "React Query", "Estilização sem styled-components")
+
+As the evaluator, I want the app's stack constraints to be verifiable, so that the brief's technical requirements are demonstrably met.
+
+**Acceptance criteria**
+
+- **AC-04.15.1** Given the mobile package, then a CI dependency check fails if `styled-components` (or `@emotion/*`-style CSS-in-JS runtime libraries equivalent to it) appears in its dependencies; styling uses NativeWind.
+- **AC-04.15.2** Given every form in the app (sign-in, team, task), then it is built with react-hook-form and validated by a zod schema; a test or lint rule fails if a form screen does not use them.
+- **AC-04.15.3** Given any data fetched from or sent to the API, then it goes through React Query (queries and mutations); a lint rule or test fails if a screen calls the API client directly, bypassing it.
+
 ### US-04.10 — Choose light, dark or system theme (`COULD`)
 
 As Marina, I want the app to follow my phone's appearance or a theme I choose, so that it is comfortable day and night.
@@ -153,7 +185,7 @@ As Marina, I want the app in my language, so that every label, message and date 
 **Acceptance criteria**
 
 - **AC-04.11.1** Given my phone is in Portuguese, when I first open the app, then it is in Brazilian Portuguese; any other language falls back to English.
-- **AC-04.11.2** Given I choose a language in Settings, then all text, including error messages and dates, switches immediately and the choice is kept after restart.
+- **AC-04.11.2** Given I choose a language in Settings among `system` (default, follows the phone), `en` and `pt-BR`, then all text, including error messages and dates, switches immediately and the choice is kept after restart.
 
 ### US-04.12 — Accessible to assistive technologies (`COULD`)
 

@@ -10,32 +10,36 @@
 
 The offline layer is **TanStack Query itself** — no custom sync engine:
 
-| Need                         | Mechanism                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Read offline / after restart | `PersistQueryClientProvider` + `createAsyncStoragePersister` over a `StorageAdapter`                                                                                                                                                                                                                                                                                                                                          |
-| Connectivity                 | `onlineManager.setEventListener` ↔ `@react-native-community/netinfo`; `focusManager` ↔ `AppState`                                                                                                                                                                                                                                                                                                                             |
-| Queue                        | Paused mutations (`networkMode: 'offlineFirst'`, ADR-0010/0012) are dehydrated with the cache and **resumed** after restore / on reconnect                                                                                                                                                                                                                                                                                    |
-| Durable mutation logic       | `queryClient.setMutationDefaults(mutationKey, { mutationFn, onMutate, onError, onSuccess, onSettled, retry })` registered **before** restore, so hydrated mutations (which lose closures) know how to run                                                                                                                                                                                                                     |
-| Ordering                     | every offline-capable mutation uses `scope: { id: 'sync' }` → TanStack Query v5 runs mutations of a scope serially, in creation order (BR-05.2). **Refines ADR-0012**, which proposes one scope per entity (`task:<id>`): a single lane is needed because a task may reference a team created offline (AC-05.5.6) and because the spec requires global order; throughput is irrelevant at this scale. Proposed ADR amendment. |
-| Optimistic UI                | `onMutate` writes caches, returns a serializable rollback context; `onError` restores it                                                                                                                                                                                                                                                                                                                                      |
-| Pending markers              | derived from the mutation cache (`useMutationState({ filters: { status: 'pending' } })`) — never copied into Zustand                                                                                                                                                                                                                                                                                                          |
-| Offline metadata             | Zustand + immer + persist `offline-store`: `idMap` (temp → real ids), `versionMap` (own version chain), `ownerId`, `lastSyncSummary`                                                                                                                                                                                                                                                                                          |
+| Need                         | Mechanism                                                                                                                                                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Read offline / after restart | `PersistQueryClientProvider` + `createAsyncStoragePersister` over a `StorageAdapter`                                                                                                                                                                          |
+| Connectivity                 | `onlineManager.setEventListener` ↔ `@react-native-community/netinfo`; `focusManager` ↔ `AppState`                                                                                                                                                             |
+| Queue                        | Paused mutations (`networkMode: 'offlineFirst'`, ADR-0010/0012) are dehydrated with the cache and **resumed** after restore / on reconnect                                                                                                                    |
+| Durable mutation logic       | `queryClient.setMutationDefaults(mutationKey, { mutationFn, onMutate, onError, onSuccess, onSettled, retry })` registered **before** restore, so hydrated mutations (which lose closures) know how to run                                                     |
+| Ordering                     | one ordered queue (ADR-0012, D30): every offline-capable mutation uses `scope: { id: 'sync' }` → TanStack Query v5 runs mutations of a scope serially, in the order the user made them (BR-05.2), so a task can reference a team created offline (AC-05.5.6). |
+| Optimistic UI                | `onMutate` writes caches, returns a serializable rollback context; `onError` restores it                                                                                                                                                                      |
+| Pending markers              | derived from the mutation cache (`useMutationState({ filters: { status: 'pending' } })`) — never copied into Zustand                                                                                                                                          |
+| Offline metadata             | Zustand + immer + persist `sync.store` (ADR-0010): `idMap` (temp → real ids), `versionMap` (own version chain), `ownerId`, `lastSyncSummary`                                                                                                                  |
 
 ### Components
 
 ```
-apps/mobile/src/lib/storage/          # only place importing storage libraries (ADR-0012 "shared/storage")
-├── storage-adapter.ts       # interface StorageAdapter + asyncStorageAdapter (+ memoryAdapter for tests)
-apps/mobile/src/lib/offline/
+apps/mobile/src/shared/storage/       # only place importing storage libraries (ADR-0012, rule M5)
+├── storage-adapter.ts       # interface StorageAdapter (from 004)
+├── async-storage.adapter.ts # default (from 004) · memory.adapter.ts (tests) · mmkv.adapter.ts (COULD, T-005-12)
+apps/mobile/src/shared/query/         # overview §6.3; leaf (rule M1): imports only api-client, storage, stores
 ├── persister.ts             # createAsyncStoragePersister({ storage, key: `rq:${ownerId}`, throttleTime: 1000 })
-├── connectivity.ts          # onlineManager ↔ NetInfo, focusManager ↔ AppState, useIsOnline()
-├── mutation-defaults.ts     # registerMutationDefaults(queryClient): one entry per mutation key
-├── optimistic/              # pure cache transforms: tasks.ts, teams.ts (applyStatus, removeTask, insertTask, replaceId…)
-├── resolve.ts               # resolveId(tmpOrReal), resolveVersion(id, baseVersion)
-├── conflicts.ts             # handleReplayError(err, variables, ctx) → 'success' | 'conflict' | 'gone' | 'rejected' | 'retry'
-├── offline-store.ts         # Zustand + immer + persist (idMap, versionMap, ownerId, summary)
+├── online-manager.ts        # onlineManager ↔ NetInfo, focusManager ↔ AppState, useIsOnline(), forced offline until the session gate passes
+├── session-gate.ts          # createSessionGate({ getSessionUserId }) → whenVerified(): user id === sync.store ownerId → resume, else discard (T1); source injected
+├── mutation-defaults.ts     # registry only: defineDurableMutation(key, spec) applies common options (scope 'sync', retry…) via setMutationDefaults
+├── optimistic/              # generic cache helpers: updateInListPages, removeFromListPages, insertIntoLists, replaceId, snapshot/restore
+├── resolve.ts               # resolveId(tmpOrReal), resolveVersion(id, baseVersion) — id/version strings only
+├── conflicts.ts             # handleReplayError(err, ctx, { refetch, isApplied }) → 'success' | 'conflict' | 'gone' | 'rejected' | 'retry'
+apps/mobile/src/features/tasks/mutations/   # registerTaskMutationDefaults(queryClient): tasks.* mutationFn/onMutate/rollback, task cache transforms
+apps/mobile/src/features/teams/mutations/   # registerTeamMutationDefaults(queryClient): teams.* (incl. chips embedded in cached tasks)
 └── usePendingSync.ts        # pending ids set, count; drives badges, tab dot, Settings count
-apps/mobile/src/components/ui/OfflineBanner.tsx   # from 004 T-004-09; now wired to connectivity + sync summary
+apps/mobile/src/shared/stores/sync.store.ts   # Zustand + immer + persist (idMap, versionMap, ownerId, summary)
+apps/mobile/src/shared/ui/OfflineBanner.tsx   # from 004 T-004-08; now wired to connectivity + sync summary
 ```
 
 ### StorageAdapter
@@ -66,12 +70,14 @@ export const asyncStorageAdapter: StorageAdapter = AsyncStorage; // @react-nativ
       shouldDehydrateMutation: (m) => m.state.isPaused || m.state.status === 'pending',
     },
   }}
-  onSuccess={() => queryClient.resumePausedMutations().then(() => queryClient.invalidateQueries())}
+  onSuccess={() => sessionGate.whenVerified().then(() => queryClient.resumePausedMutations()).then(() => queryClient.invalidateQueries())}
 >
 ```
 
 - `gcTime` 24 h (ADR-0010; must be ≥ `maxAge`); infinite lists keep `maxPages: 10`. `API_CONTRACT_HASH` is the hash of `packages/api-client/openapi.json`, emitted at generation time.
-- Persisted cache key includes the `ownerId`; on sign-out: `persister.removeClient()`, `queryClient.clear()`, `mutationCache.clear()`, `offlineStore.reset()`. On sign-in of a **different** user than `offlineStore.ownerId`: discard queue + cache before rendering (AC-05.1.5, AC-05.6.5).
+- Persisted cache key includes the `ownerId`; on sign-out: **await** `persister.removeClient()` and the SecureStore session deletion, then `queryClient.clear()`, `mutationCache.clear()`, `syncStore.reset()`, then navigate (security T7).
+- **Session gate before replay (security T1, MUST):** `createSessionGate({ getSessionUserId })` lives in `shared/query/session-gate.ts`; the session source (`authClient.getSession()` from `features/auth`) is injected by `app/_layout.tsx`, the same way `setupApiClient` receives `getAuthHeaders`/`onUnauthenticated`. At startup `onlineManager.setOnline(false)` is forced (NetInfo events are ignored) until `GET /api/auth/get-session` confirms a user **and** `session.user.id === syncStore.ownerId`. Only then is the online state handed back to NetInfo and paused mutations resumed (`sessionGate.whenVerified()`). If there is no session, or it belongs to another user, the queue (`mutationCache.clear()`) and the cache (`persister.removeClient()`, `queryClient.clear()`) are discarded **before** anything is rendered or sent, and `ownerId` is set to the new user (AC-05.1.5, AC-05.6.5). Invariant: a queued change of user A is never sent with user B's session.
+- **401 (security T2):** `onUnauthenticated` clears **queries only** and forces `onlineManager` offline again; paused mutations stay persisted under `rq:<ownerId>`; the session gate runs again at the next sign-in and resumes (same user) or discards (different user).
 - The session itself stays in SecureStore (004); it is never part of the persisted cache.
 
 ### Connectivity
@@ -89,7 +95,9 @@ onlineManager.setEventListener((setOnline) =>
 
 ### Mutation defaults (durable mutations)
 
-Every offline-capable mutation is called with **variables only** (no inline callbacks for cache logic), e.g. `useMutation({ mutationKey: mk.tasks.changeStatus })` and `mutate({ taskId, status, baseVersion, idempotencyKey: randomUUID(), title })`. The variables are serializable and include what conflict messages need (`title`).
+**Registry, not a feature module (rule M1, `shared` is a leaf):** `src/shared/query/mutation-defaults.ts` only exposes `defineDurableMutation(queryClient, mutationKey, spec)`, which adds the common options below and calls `setMutationDefaults`. Each feature exports its own registration — `registerTaskMutationDefaults(queryClient)` from `features/tasks/index.ts`, `registerTeamMutationDefaults(queryClient)` from `features/teams/index.ts` — holding its `mutationFn`, `onMutate`, rollback and success logic with the `Task`/`Team` cache transforms. `app/_layout.tsx` calls both right after creating the `QueryClient` and **before** the persisted cache is restored. `shared/query` never imports `features`; `optimistic/`, `resolve.ts` and `conflicts.ts` stay generic (list-page/id/version helpers and decision logic with injected `refetch`/`isApplied`; no types beyond `@hitss/api-client`).
+
+Every offline-capable mutation is called with **variables only** (no inline callbacks for cache logic), e.g. `useMutation({ mutationKey: mk.tasks.changeStatus })` and `mutate({ taskId, status, baseVersion, title })`; creations add `idempotencyKey: randomUUID()` (the only mutations that carry one, D31). The variables are serializable and include what conflict messages need (`title`).
 
 | Key                  | mutationFn (ids/versions resolved at execution time)                                  | onMutate (optimistic)                                                                                                                  | Success                                                                                                                                                             | Replay error handling                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
@@ -101,19 +109,21 @@ Every offline-capable mutation is called with **variables only** (no inline call
 | `teams.update`       | `PUT /teams/:id` with `If-Match`                                                      | patch team lists + embedded chips in cached tasks                                                                                      | `versionMap`                                                                                                                                                        | as tasks.update                                                                                                      |
 | `teams.delete`       | `DELETE /teams/:id` with `If-Match`                                                   | remove team, strip its chip from cached tasks, remove its team-task lists                                                              | —                                                                                                                                                                   | 404 → success; 412 → refetch + toast                                                                                 |
 
-Common options: `scope: { id: 'sync' }`, `networkMode: 'offlineFirst'`, `retry: (n, e) => isTransient(e) && n < 5` (network, timeout, 5xx, `409 IDEMPOTENCY_REQUEST_IN_PROGRESS`), `retryDelay: (n, e) => e.retryAfter ?? Math.min(1000 * 2 ** n, 30_000)` (BR-05.7; `RATE_LIMITED` and `IDEMPOTENCY_REQUEST_IN_PROGRESS` honor `Retry-After`). `onSettled` invalidates per the [004 invalidation table](../004-mobile-app/plan.md#server-state-rules) **only when the sync scope is idle** (otherwise invalidation is deferred to queue drain — avoids overwriting optimistic state with server data that doesn't yet include later queued changes).
+Common options: `scope: { id: 'sync' }`, `networkMode: 'offlineFirst'`, `retry: (n, e) => isTransient(e) && n < 5` (transient per ADR-0012: network, timeout, 5xx, `409 IDEMPOTENCY_REQUEST_IN_PROGRESS`, `429`; any other 4xx is permanent → rollback + toast, the queue continues), `retryDelay: (n, e) => e.retryAfter ?? Math.min(1000 * 2 ** n, 30_000)` (BR-05.7; `RATE_LIMITED` and `IDEMPOTENCY_REQUEST_IN_PROGRESS` honor `Retry-After`). `onSettled` invalidates per the [004 invalidation table](../004-mobile-app/plan.md#server-state-rules) **only when the sync scope is idle** (otherwise invalidation is deferred to queue drain — avoids overwriting optimistic state with server data that doesn't yet include later queued changes).
 
 ### Temp ids and the version chain (`resolve.ts`)
 
-- `resolveId(id)`: `id.startsWith('tmp-') ? offlineStore.idMap[id] ?? throw NotYetCreated : id`. Because the scope is serial, a creation always finishes (or fails) before dependent mutations run; if it **failed**, dependents of that temp id are cancelled (rollback + no toast spam: one toast for the failed creation).
+- `resolveId(id)`: `id.startsWith('tmp-') ? syncStore.idMap[id] ?? throw DependencyFailed(id) : id`. Because the scope is serial, a creation always finishes (or fails permanently) before dependent mutations run, so a missing entry means the creation failed. Per ADR-0012, a permanently failed creation is rolled back and surfaced, `syncStore.failedTmpIds` records its temp id, and every later mutation whose variables reference it (its own id or a `teamIds` entry) is **marked failed without being sent**: `mutationFn` throws `DependencyFailed` before any request, `onError` rolls it back, and no extra toast is shown (one toast for the failed creation). The queue then continues with unrelated mutations.
 - `resolveVersion(id, base)`: follows `versionMap[id]` (`base → newVersion` recorded after each own success) to the latest version produced **by this device**. So an offline edit followed by an offline deletion of the same task (base v3) send `If-Match: 3` then `If-Match: 4` — no self-conflict (AC-05.7.4) — while a change made elsewhere (server v4 not produced by us) still yields `412` (AC-05.7.1). Status changes send no `If-Match` but still extend the chain (table above).
 - Temp ids are never sent to the server; `teamIds` of a task are resolved the same way (AC-05.5.6).
 - Maps are pruned when the queue is empty and on sign-out.
 
 ### Idempotency
 
-- `idempotencyKey` is created with `expo-crypto` `randomUUID()` when the user acts and stored in the mutation variables, so it survives persistence and every retry/replay of that change reuses it (BR-05.3).
-- Sent as `Idempotency-Key` on **every** mutation request. The API honors it on `POST` (creation replay returns the original `201` body with `Idempotent-Replayed: true` → no duplicate, AC-05.6.3; a concurrent duplicate gets `409 IDEMPOTENCY_REQUEST_IN_PROGRESS` + `Retry-After: 1` and is retried, ADR-0019). For `PUT`/`DELETE` safety comes from `If-Match` + the effect-already-present check (BR-05.6); the status `PATCH` is naturally idempotent (same status → no-op) — see open question OQ-05.1.
+- Creations only (`tasks.create`, `teams.create`): `idempotencyKey` is created with `expo-crypto` `randomUUID()` when the user acts and stored in the mutation variables, so it survives persistence and every retry/replay of that creation reuses it (BR-05.3).
+- Sent as `Idempotency-Key` on **`POST` only** (ADR-0012, ADR-0019, D31). A creation replay returns the original `201` body with `Idempotent-Replayed: true` → no duplicate (AC-05.6.3); a concurrent duplicate gets `409 IDEMPOTENCY_REQUEST_IN_PROGRESS` + `Retry-After: 1` and is retried after `Retry-After`.
+- `PUT`, `PATCH` and `DELETE` carry no key: they are idempotent by HTTP semantics. `PUT`/`DELETE` are protected by `If-Match` plus the effect-already-present check on `412` (BR-05.6); the status `PATCH` is a no-op when repeated; a replayed `DELETE` answered `404` counts as success.
+- Temp ids (`tmp-<uuid>`) live only in the cache; the client never sends ids it generated (resources are created by `POST` and the server assigns the id).
 
 ### Sequence — offline status change, restart, reconnect
 
@@ -127,7 +137,7 @@ sequenceDiagram
   participant API as API
   N-->>QC: offline
   M->>UI: change status → Done
-  UI->>QC: mutate(tasks.changeStatus, vars{id, DONE, base v3, key K})
+  UI->>QC: mutate(tasks.changeStatus, vars{id, DONE, base v3})
   QC->>QC: onMutate → optimistic cache + context
   QC-->>UI: Done + "Pending sync" (same frame)
   Note over QC: offlineFirst: first attempt fails offline → mutation paused
@@ -137,7 +147,7 @@ sequenceDiagram
   UI-->>M: Done + "Pending sync"
   N-->>QC: online
   Note over QC,API: edits/deletes in the same lane send If-Match and may get 412 → refetch, compare, success or server wins + toast
-  QC->>API: PATCH /tasks/:id/status (no If-Match) Idempotency-Key K
+  QC->>API: PATCH /tasks/:id/status (no If-Match, no Idempotency-Key)
   alt 200
     API-->>QC: Task v4
     QC->>QC: detail ← server, versionMap[id][3]=4
@@ -158,17 +168,17 @@ sequenceDiagram
 
 ## Contract
 
-No API changes required. Relies on `Idempotency-Key` (POST), `If-Match`/`412` with `details.currentVersion`, `404` for deleted/foreign ids, `Retry-After` on `429`. Proposed (non-blocking) improvements are recorded in spec open questions OQ-05.1/OQ-05.2.
+No API changes required. Relies on `Idempotency-Key` (POST only), `If-Match`/`412` with `details.currentVersion`, `404` for deleted/foreign ids, `Retry-After` on `429` and `409 IDEMPOTENCY_REQUEST_IN_PROGRESS`. Server-side idempotency for `PUT`/`PATCH`/`DELETE` (spec OQ-05.1) is not pursued (D31); OQ-05.2 remains a non-blocking proposal.
 
 ## Data
 
 Device storage only:
 
-| Key             | Content                                                                            | Engine                                |
-| --------------- | ---------------------------------------------------------------------------------- | ------------------------------------- |
-| `rq:<ownerId>`  | dehydrated queries (success) + paused/pending mutations, `buster`, timestamp       | StorageAdapter (AsyncStorage)         |
-| `offline-store` | `ownerId`, `idMap`, `versionMap`, `lastSyncSummary` (ADR-0010's `sync.store` role) | Zustand persist over the same adapter |
-| `preferences`   | from 004 (filters are session-only)                                                | same                                  |
+| Key            | Content                                                                        | Engine                                |
+| -------------- | ------------------------------------------------------------------------------ | ------------------------------------- |
+| `rq:<ownerId>` | dehydrated queries (success) + paused/pending mutations, `buster`, timestamp   | StorageAdapter (AsyncStorage)         |
+| `sync.store`   | `ownerId`, `idMap`, `failedTmpIds`, `versionMap`, `lastSyncSummary` (ADR-0010) | Zustand persist over the same adapter |
+| `preferences`  | from 004 (filters are session-only)                                            | same                                  |
 
 `CACHE_SCHEMA_VERSION` is bumped whenever the shape of cached data or mutation variables changes (part of the PR checklist for API-client regeneration).
 
@@ -176,35 +186,36 @@ Device storage only:
 
 - Persisted data is user data in the app sandbox (not encrypted at rest by AsyncStorage); no credentials or tokens are ever stored there — session remains in SecureStore. Encrypting the cache (e.g. MMKV with encryption key in SecureStore, dev build) is a documented production improvement.
 - Strict per-user isolation: cache key per `ownerId`, purge on sign-out / user switch, queue discarded for a different user (AC-05.1.5, AC-05.6.5).
-- A `401` during replay pauses the queue (not discarded): `onUnauthenticated` keeps the persisted mutations, sends the user to sign in; after sign-in, `ownerId` is compared before resuming.
+- A `401` during replay pauses the queue (not discarded): `onUnauthenticated` clears queries only, keeps the persisted mutations and sends the user to sign in; after sign-in the session gate compares `session.user.id` with `ownerId` before resuming (T1/T2).
 - Replays cannot escalate: every request is still authorized and owner-scoped by the API.
 
 ## Observability
 
-- Each replayed request carries the same `Idempotency-Key` and a new `X-Request-Id`, so server logs show retries of one logical change.
+- Each replayed creation carries the same `Idempotency-Key` and every attempt a new `X-Request-Id`, so server logs show retries of one logical creation; other replays are correlated by entity id and `If-Match` version.
 - Dev-only logger events: `sync.paused`, `sync.resumed {count}`, `sync.conflict {kind, entity}`, `sync.rejected {code}`, `sync.drained {durationMs}`.
 - Out of scope: shipping client telemetry (production improvement).
 
 ## Testing approach
 
-| Level                   | Tool                                                                                                                                                                                    | What                                                                                                                                                                                                                                                                                                                              | Scenarios                                                            |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Unit                    | Jest                                                                                                                                                                                    | optimistic cache transforms (`applyStatus`, `removeTask`, `insertTask`, `replaceId` across list pages and filters), `resolveId`, `resolveVersion` chains, `handleReplayError` decision table (200/412-applied/412-diff/404/400/422/429/5xx/network), offline-store reducers, banner state machine                                 | @AC-05.3.4/5, @AC-05.4.3, @AC-05.5.3, @AC-05.7.1–4                   |
-| Integration (app logic) | Jest + real `QueryClient` + `memoryAdapter` + MSW + controllable `onlineManager.setOnline`                                                                                              | offline mutate → paused → persist → **new QueryClient** hydrates from the same adapter with defaults registered → go online → assert MSW received requests in order, once each; idempotent creation replay (MSW returns stored response on same key); conflicts (MSW state changed between); 401 during replay; user switch purge | @AC-05.1.1, @AC-05.1.5, @AC-05.6.1–5, @AC-05.7.*                     |
-| Component               | RNTL                                                                                                                                                                                    | status appears before MSW responds (delayed handler), rollback on 500, pending badges, tab dot, Settings count, sign-out warning, banner texts                                                                                                                                                                                    | @AC-05.2.*, @AC-05.3.1–3, @AC-05.4.1/2/4, @AC-05.5.1/2/5, @AC-05.6.6 |
-| E2E                     | Maestro (`.maestro/offline.yaml`) on Android emulator/iOS simulator with airplane-mode toggling (`setAirplaneMode` on Android; network link conditioner/manual step documented for iOS) | create + status change + delete offline → `stopApp`/`launchApp` → online → verify via API (seeded DB reset before)                                                                                                                                                                                                                | @AC-05.6.1, @AC-05.6.2, @AC-05.2.3                                   |
+| Level                   | Tool                                                                                                                                                                                       | What                                                                                                                                                                                                                                                                                                                                                                                                                                | Scenarios                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Unit                    | Jest                                                                                                                                                                                       | optimistic cache transforms (`applyStatus`, `removeTask`, `insertTask`, `replaceId` across list pages and filters), `resolveId` (incl. `DependencyFailed`), `resolveVersion` chains, `handleReplayError` decision table (200/412-applied/412-diff/404/400/409-in-progress/422/429/5xx/network), sync-store reducers, banner state machine                                                                                           | @AC-05.3.4/5, @AC-05.4.3, @AC-05.5.3, @AC-05.7.1–4                   |
+| Integration (app logic) | Jest + real `QueryClient` + `memoryAdapter` + MSW + controllable `onlineManager.setOnline`                                                                                                 | offline mutate → paused → persist → **new QueryClient** hydrates from the same adapter with defaults registered → go online → assert MSW received requests in order, once each; idempotent creation replay (MSW returns stored response on same key, `POST` only); conflicts (MSW state changed between); 401 during replay keeps the queue; user switch purge — a queued change of user A is never sent with user B's session (T1) | @AC-05.1.1, @AC-05.1.5, @AC-05.6.1–5, @AC-05.7.*                     |
+| Component               | RNTL                                                                                                                                                                                       | status appears before MSW responds (delayed handler), rollback on 500, pending badges, tab dot, Settings count, sign-out warning, banner texts                                                                                                                                                                                                                                                                                      | @AC-05.2.*, @AC-05.3.1–3, @AC-05.4.1/2/4, @AC-05.5.1/2/5, @AC-05.6.6 |
+| E2E                     | Maestro (`e2e/maestro/offline.yaml`) on Android emulator/iOS simulator with airplane-mode toggling (`setAirplaneMode` on Android; network link conditioner/manual step documented for iOS) | create + status change + delete offline → `stopApp`/`launchApp` → online → verify via API (seeded DB reset before)                                                                                                                                                                                                                                                                                                                  | @AC-05.6.1, @AC-05.6.2, @AC-05.2.3                                   |
 
 - Fake timers for retries/backoff; no real sleeps. Tests named with AC ids.
 
 ## Risks & mitigations
 
-| Risk                                                         | Mitigation                                                                                                                                                       |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hydrated mutations need defaults registered before restore   | `registerMutationDefaults(queryClient)` executed at module init of `query-client.ts`; integration test restarts with a new client                                |
-| Serial scope means one stuck mutation blocks the queue       | Bounded retries for transient errors then mark as failed (rollback + toast) only for non-network causes; network errors keep pausing (expected offline behavior) |
-| Refetch on reconnect overwrites optimistic state             | `refetchOnReconnect: false` + invalidate after drain (BR-05.10); invalidation deferred while scope busy                                                          |
-| Replayed PUT/PATCH whose first attempt succeeded returns 412 | Effect-already-present comparison (BR-05.6); OQ-05.1 proposes server-side idempotency for all mutations                                                          |
-| AsyncStorage size / speed on large caches                    | Persist only successful queries, `maxPages: 10`, throttled writes; MMKV adapter for dev builds                                                                   |
-| Temp-id navigation (detail open while creation confirms)     | `router.setParams` swap + detail query seeded under the real id before removing the temp key                                                                     |
-| Clock skew affecting `maxAge`                                | Uses device clock only for local expiry; data freshness from server on reconnect                                                                                 |
-| NetInfo `isInternetReachable` null at startup                | Treat `null` as online (requests decide); banner only on definite offline                                                                                        |
+| Risk                                                         | Mitigation                                                                                                                                                                                                                   |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Queue replayed under another user's session                  | Session gate (T1): `onlineManager` forced offline until `get-session` user id equals `ownerId`; otherwise discard queue + cache first                                                                                        |
+| Hydrated mutations need defaults registered before restore   | `app/_layout.tsx` calls `registerTaskMutationDefaults` / `registerTeamMutationDefaults` right after creating the `QueryClient` and before mounting `PersistQueryClientProvider`; integration test restarts with a new client |
+| Serial scope means one stuck mutation blocks the queue       | Bounded retries for transient errors (ADR-0012); permanent 4xx → rollback + toast and the queue continues, dependants marked failed unsent; network errors keep pausing (expected offline behavior)                          |
+| Refetch on reconnect overwrites optimistic state             | `refetchOnReconnect: false` + invalidate after drain (BR-05.10); invalidation deferred while scope busy                                                                                                                      |
+| Replayed PUT/PATCH whose first attempt succeeded returns 412 | Effect-already-present comparison (BR-05.6); server-side keys for non-`POST` methods rejected (D31)                                                                                                                          |
+| AsyncStorage size / speed on large caches                    | Persist only successful queries, `maxPages: 10`, throttled writes; MMKV adapter for dev builds                                                                                                                               |
+| Temp-id navigation (detail open while creation confirms)     | `router.setParams` swap + detail query seeded under the real id before removing the temp key                                                                                                                                 |
+| Clock skew affecting `maxAge`                                | Uses device clock only for local expiry; data freshness from server on reconnect                                                                                                                                             |
+| NetInfo `isInternetReachable` null at startup                | Treat `null` as online (requests decide); banner only on definite offline                                                                                                                                                    |

@@ -231,6 +231,15 @@ Feature: Offline sync
       Then the server has exactly one task "Write release notes"
       And my list shows exactly one "Write release notes"
 
+    @US-05.6 @AC-05.6.3 @should
+    Scenario: A creation answered as still in progress is retried, not failed
+      Given I am offline and created the task "Write release notes"
+      And the server answers its first send with "IDEMPOTENCY_REQUEST_IN_PROGRESS" and a "Retry-After" of 1 second
+      When the connection returns
+      Then the creation is sent again after the indicated delay with the same idempotency key
+      And the server has exactly one task "Write release notes"
+      And I see no error or conflict message
+
     @US-05.6 @AC-05.6.4 @should
     Scenario: Temporary server failures are retried, not discarded
       Given I am offline
@@ -253,6 +262,35 @@ Feature: Offline sync
         | user               | outcome                                       |
         | marina@example.com | sent and the server has the status "Done"     |
         | ana@example.com    | discarded and never sent                      |
+
+    @US-05.6 @AC-05.6.5 @should @security
+    Scenario: A queued change of one user is never sent with another user's session
+      Given I am offline
+      And "marina@example.com" queued a status change of "Fix crash on Android" to "Done"
+      And the app is restarted and the stored session now belongs to "ana@example.com"
+      When the app restores the pending changes and the connection returns
+      Then the queued change is discarded before any request is made
+      And the server receives no change for "Fix crash on Android"
+
+    @US-05.6 @AC-05.6.5 @should @security
+    Scenario: After a restart with an expired session nothing is sent until sign-in
+      Given "marina@example.com" queued a status change of "Fix crash on Android" to "Done" while offline
+      And my session has expired
+      When the app is restarted and the connection returns
+      Then no request carrying the queued change is made
+      And the change still shows "Pending sync"
+      When "marina@example.com" signs in again
+      Then the queued change is sent and the server has "Fix crash on Android" as "Done"
+
+    @US-05.6 @AC-05.6.5 @should @security
+    Scenario: A rejected session during replay clears cached data but keeps the queue
+      Given "marina@example.com" has 2 queued changes
+      When the server answers the replay with "UNAUTHENTICATED"
+      Then the cached teams and tasks are cleared
+      And the 2 queued changes are kept
+      And I see the sign-in screen
+      When "marina@example.com" signs in again
+      Then the 2 queued changes are sent in the order I made them
 
     @US-05.6 @AC-05.6.6 @should
     Scenario: Signing out with pending changes asks for confirmation

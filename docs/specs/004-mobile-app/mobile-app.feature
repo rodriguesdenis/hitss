@@ -22,14 +22,14 @@ Feature: Mobile app
   # ---------------------------------------------------------------- US-04.1
   Rule: Only a signed-in user can reach the app's content
 
-    @US-04.1 @AC-04.1.1 @could
+    @US-04.1 @AC-04.1.1 @must
     Scenario: A visitor is kept on the sign-in screen
       Given I am not signed in
       When I open the app
       Then I see the sign-in screen
       And I cannot open the tasks list, the teams list or any task
 
-    @US-04.1 @AC-04.1.2 @could
+    @US-04.1 @AC-04.1.2 @must
     Scenario: Signing in with valid credentials keeps me signed in
       Given I am not signed in
       When I sign in with "marina@example.com" and the correct password
@@ -37,14 +37,14 @@ Feature: Mobile app
       When I close and reopen the app
       Then I still see the tasks list without signing in again
 
-    @US-04.1 @AC-04.1.3 @could
+    @US-04.1 @AC-04.1.3 @must
     Scenario: Wrong credentials are rejected without revealing which one is wrong
       Given I am not signed in
       When I sign in with "marina@example.com" and a wrong password
       Then I stay on the sign-in screen
       And I see the message "Incorrect email or password"
 
-    @US-04.1 @AC-04.1.4 @could
+    @US-04.13 @AC-04.13.1 @could
     Scenario Outline: Sign-up password length
       Given I am not signed in
       When I sign up as "Ana" with email "ana@example.com" and a password of <length> characters
@@ -57,19 +57,26 @@ Feature: Mobile app
         | 128    | succeeds and I see the tasks list                         |
         | 129    | is refused with "Password must be 8 to 128 characters"    |
 
-    @US-04.1 @AC-04.1.4 @could
+    @US-04.13 @AC-04.13.1 @could
     Scenario: Signing up with an email already registered
       Given I am not signed in
       When I sign up with email "marina@example.com"
       Then I see "An account with this email already exists" on the email field
 
-    @US-04.1 @AC-04.1.5 @could
+    @US-04.1 @AC-04.1.7 @must @security
+    Scenario: Every API request carries the session cookie from the authentication client
+      Given I am signed in as "marina@example.com"
+      When the app requests my tasks, creates a task and changes a status
+      Then each request carries the session cookie read from the authentication client
+      And no request carries a bearer authorization header
+
+    @US-04.16 @AC-04.16.1 @must
     Scenario: Signing out removes my session and local data
       When I sign out
       Then I see the sign-in screen
       And no team or task of mine is kept on the device
 
-    @US-04.1 @AC-04.1.6 @could
+    @US-04.1 @AC-04.1.6 @must
     Scenario: An expired session sends me back to sign in
       Given my session has expired
       When I refresh the tasks list
@@ -109,7 +116,7 @@ Feature: Mobile app
   # ---------------------------------------------------------------- US-04.3
   Rule: Team names are 2 to 50 characters and unique per user
 
-    @US-04.3 @AC-04.3.1 @could
+    @US-04.3 @AC-04.3.1 @must
     Scenario Outline: Team name length boundaries
       When I create a team named "<name>" with color "#10B981"
       Then the team <outcome>
@@ -121,26 +128,26 @@ Feature: Mobile app
         | ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWX  | appears in the teams list                                |
         | ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXY | is not saved and I see "Name must be 2 to 50 characters" |
 
-    @US-04.3 @AC-04.3.2 @could
+    @US-04.3 @AC-04.3.2 @must
     Scenario: A duplicate team name is rejected ignoring case
       When I create a team named "mobile" with color "#10B981"
       Then I see "You already have a team with this name." on the name field
       And I still have 3 teams
 
-    @US-04.3 @AC-04.3.3 @could
+    @US-04.3 @AC-04.3.3 @must
     Scenario: Renaming and recoloring a team updates its chips everywhere
       When I change the team "Mobile" to name "iOS" and color "#F59E0B"
       Then the teams list shows "iOS" with color "#F59E0B"
       And the task "Implement login screen" shows the chips "iOS" and "Backend"
 
-    @US-04.3 @AC-04.3.4 @could
+    @US-04.3 @AC-04.3.4 @must
     Scenario: Deleting a team keeps its tasks
       When I delete the team "Mobile" and confirm
       Then the team "Mobile" is no longer in the teams list
       And the task "Fix crash on Android" still exists without team chips
       And the task "Implement login screen" shows only the chip "Backend"
 
-    @US-04.3 @AC-04.3.5 @could
+    @US-04.3 @AC-04.3.5 @must
     Scenario Outline: Choosing a team color
       When I enter the color "<value>" in the team form
       Then <result>
@@ -206,7 +213,7 @@ Feature: Mobile app
   # ---------------------------------------------------------------- US-04.5
   Rule: Status, search and sort narrow a list, and each list remembers its own filters
 
-    @US-04.5 @AC-04.5.1 @could
+    @US-04.5 @AC-04.5.1 @must
     Scenario Outline: Filtering by status in the global list and in a team list
       When I view the tasks of "<scope>" with status "<status>"
       Then I see exactly the tasks <tasks>
@@ -219,7 +226,17 @@ Feature: Mobile app
         | Mobile     | Pending     | "Fix crash on Android"                             |
         | Mobile     | All         | "Implement login screen", "Fix crash on Android"   |
 
-    @US-04.5 @AC-04.5.2 @could
+    @US-04.5 @AC-04.5.1 @must
+    Scenario: The status filter is single-select
+      Given I view the tasks of "all teams" with status "Pending"
+      When I choose the status "Done"
+      Then only "Done" is selected
+      And I see exactly the tasks "Define color palette"
+      And the app asks the server for the single status "DONE"
+      When I choose "All"
+      Then the app asks the server for tasks without a status filter
+
+    @US-04.5 @AC-04.5.2 @must
     Scenario: Searching matches title or description and waits for a pause
       Given the task "Implement login screen" has the description "Email + password, error states"
       When I type "password" quickly in the search
@@ -228,7 +245,7 @@ Feature: Mobile app
       When I clear the search
       Then I see 4 tasks
 
-    @US-04.5 @AC-04.5.3 @could
+    @US-04.14 @AC-04.14.1 @could
     Scenario Outline: Sorting tasks
       When I sort the tasks by "<sort>"
       Then the first task is "<first>"
@@ -239,19 +256,19 @@ Feature: Mobile app
         | Due date (soonest) | Fix crash on Android   |
         | Title A–Z          | Define color palette   |
 
-    @US-04.5 @AC-04.5.3 @could
+    @US-04.14 @AC-04.14.1 @could
     Scenario: Tasks without a due date come last when sorting by due date
       When I sort the tasks by "Due date (soonest)"
       Then "Define color palette" and "Update dependencies" are the last tasks
 
-    @US-04.5 @AC-04.5.4 @could
+    @US-04.5 @AC-04.5.4 @must
     Scenario: No task matches the filters
       When I search the tasks for "nonexistent"
       Then I see "No tasks match your filters"
       When I clear the filters
       Then I see 4 tasks
 
-    @US-04.5 @AC-04.5.5 @could
+    @US-04.5 @AC-04.5.5 @must
     Scenario: Each list keeps its own filters during the session
       Given I filter the global list by "Done"
       And I filter the tasks of "Mobile" by "Pending"
@@ -552,6 +569,56 @@ Feature: Mobile app
       Then exactly one task "Plan sprint" exists
 
   # ---------------------------------------------------------------- US-04.10 / US-04.11
+  # ---------------------------------------------------------------- US-04.15
+  Rule: The mandated front-end stack is enforced by automated checks
+
+    @US-04.15 @AC-04.15.1 @must @docs
+    Scenario Outline: CSS-in-JS runtime libraries are rejected
+      Given the mobile package declares the dependency "<dependency>"
+      When the dependency check runs
+      Then it fails naming "<dependency>"
+
+      Examples:
+        | dependency        |
+        | styled-components |
+        | @emotion/native   |
+
+    @US-04.15 @AC-04.15.1 @must @docs
+    Scenario: The shipped app is styled with NativeWind
+      When the dependency check runs on the repository state
+      Then it passes
+      And the styling dependency is NativeWind
+
+    @US-04.15 @AC-04.15.2 @must @docs
+    Scenario Outline: Every form uses react-hook-form and a zod schema
+      Given the <form> screen
+      When the form-stack check runs
+      Then the screen uses react-hook-form with a zod resolver
+
+      Examples:
+        | form    |
+        | sign-in |
+        | sign-up |
+        | team    |
+        | task    |
+
+    @US-04.15 @AC-04.15.2 @must @docs
+    Scenario: A form screen without react-hook-form and zod fails the check
+      Given a form screen that keeps its fields in plain component state
+      When the form-stack check runs
+      Then it fails naming the screen
+
+    @US-04.15 @AC-04.15.3 @must @docs
+    Scenario: Screens reach the API only through React Query
+      Given a screen that calls the generated API client directly
+      When the data-access check runs
+      Then it fails naming the screen
+
+    @US-04.15 @AC-04.15.3 @must @docs
+    Scenario: The shipped screens pass the data-access check
+      When the data-access check runs on the repository state
+      Then it passes
+
   Rule: Appearance and language follow the phone unless I choose otherwise
 
     @US-04.10 @AC-04.10.1 @could
@@ -588,6 +655,19 @@ Feature: Mobile app
       Then the task "Implement login screen" shows the status "Em andamento"
       And its due date reads "31 de out."
       And server errors are shown in Portuguese
+
+    @US-04.11 @AC-04.11.2 @could
+    Scenario Outline: The language setting offers system, English and Brazilian Portuguese
+      Given the phone language is "pt-BR"
+      When I choose the language "<value>" in Settings
+      And I close and reopen the app
+      Then the tasks tab is labeled "<label>"
+
+      Examples:
+        | value  | label   |
+        | system | Tarefas |
+        | en     | Tasks   |
+        | pt-BR  | Tarefas |
 
   # ---------------------------------------------------------------- US-04.12
   Rule: The app works with assistive technologies and accessibility settings
