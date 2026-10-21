@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
+import { Prisma } from '../../src/generated/prisma/client';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { TeamNameAlreadyExists } from '../../src/modules/teams/domain/team.errors';
 import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name';
@@ -94,14 +95,20 @@ describe('PrismaTeamRepository (integration, T-002-03)', () => {
     const ownerId = await newOwner();
     const team = aTeam(ownerId, 'Original');
     await repository.insert(team);
-    const clone = aTeam(ownerId, 'Another name');
-    Object.defineProperty(clone, 'id', { value: team.id });
+    const clone = aTeam(ownerId, 'Another name', { id: team.id });
 
     const error: unknown = await repository
       .insert(clone)
       .catch((e: unknown) => e);
 
-    expect(error).toBeInstanceOf(Error);
+    // The primary-key violation passes through untranslated...
     expect(error).not.toBeInstanceOf(TeamNameAlreadyExists);
+    expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
+    const known = error as Prisma.PrismaClientKnownRequestError;
+    expect(known.code).toBe('P2002');
+    expect(JSON.stringify(known.meta)).toContain('teams_pkey');
+    // ...and nothing was written.
+    const rows = await prisma.team.findMany({ where: { id: team.id } });
+    expect(rows.map((r) => r.name)).toEqual(['Original']);
   });
 });
