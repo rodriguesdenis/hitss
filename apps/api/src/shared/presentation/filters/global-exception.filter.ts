@@ -15,15 +15,8 @@ import {
 import { DomainError } from '../../domain/domain-error';
 import { sanitizeUrl } from '../../observability/sanitize-url';
 import { ApiException } from './api-exception';
+import { DomainErrorMappings } from './domain-error-mappings';
 import { CodeAndMessage, describeClientError, UNEXPECTED } from './error-codes';
-
-/** How a module's domain error becomes an HTTP error (registered by the module, e.g. teams). */
-export interface DomainErrorMapping {
-  error: abstract new (...args: never[]) => DomainError;
-  status: number;
-  code: string;
-  details?: (error: DomainError) => unknown;
-}
 
 export interface ErrorEnvelope {
   error: CodeAndMessage & { details?: unknown; traceId: string };
@@ -61,18 +54,18 @@ interface Described {
  */
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly mappings: readonly DomainErrorMapping[];
+  private readonly mappings: DomainErrorMappings;
   private readonly logger: ErrorLogger;
   private readonly activeSpan: ActiveSpan;
 
   constructor(
     options: {
-      mappings?: readonly DomainErrorMapping[];
+      mappings?: DomainErrorMappings;
       logger?: ErrorLogger;
       activeSpan?: ActiveSpan;
     } = {},
   ) {
-    this.mappings = options.mappings ?? [];
+    this.mappings = options.mappings ?? new DomainErrorMappings();
     this.logger = options.logger ?? new Logger(GlobalExceptionFilter.name);
     this.activeSpan = options.activeSpan ?? (() => trace.getActiveSpan());
   }
@@ -101,13 +94,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ),
       };
     }
-    const mapping = this.mappings.find((m) => exception instanceof m.error);
-    if (mapping && exception instanceof DomainError) {
+    const mapping = this.mappings.find(exception);
+    if (mapping) {
       return {
         status: mapping.status,
         error: withDetails(
-          { code: mapping.code, message: exception.message },
-          mapping.details?.(exception),
+          { code: mapping.code, message: (exception as Error).message },
+          mapping.details?.(exception as DomainError),
         ),
       };
     }
