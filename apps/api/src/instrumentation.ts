@@ -85,6 +85,7 @@ function startTelemetry(): void {
     traceExporter: new SanitizingSpanExporter(
       new TraceExporter({ url: `${base}/v1/traces` }),
     ),
+    logRecordProcessors: [],
     metricReaders: [
       new PeriodicExportingMetricReader({
         exporter: new MetricExporter({ url: `${base}/v1/metrics` }),
@@ -98,7 +99,8 @@ function startTelemetry(): void {
       new NestInstrumentation(),
       // No parameter values in DB spans (AC-06.2.5).
       new PgInstrumentation({ enhancedDatabaseReporting: false }),
-      new PinoInstrumentation(),
+      // Log sending is off: no OTLP log pipeline until it is designed with its own sanitizing.
+      new PinoInstrumentation({ disableLogSending: true }),
       new UndiciInstrumentation(),
       new PrismaInstrumentation(),
     ],

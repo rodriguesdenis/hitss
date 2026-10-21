@@ -51,6 +51,15 @@ export class TelemetryEnv {
   @IsEmpty(unsupported('OTEL_SDK_DISABLED'))
   OTEL_METRICS_EXPORTER?: string;
 
+  @IsEmpty(unsupported('OTEL_SDK_DISABLED'))
+  OTEL_LOGS_EXPORTER?: string;
+
+  @IsEmpty(unsupported('OTEL_EXPORTER_OTLP_ENDPOINT'))
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT?: string;
+
+  @IsEmpty(unsupported('OTEL_EXPORTER_OTLP_PROTOCOL'))
+  OTEL_EXPORTER_OTLP_LOGS_PROTOCOL?: string;
+
   @Transform(toBoolean)
   @IsIn([true, false], isBoolean)
   OTEL_SDK_DISABLED: boolean = false;

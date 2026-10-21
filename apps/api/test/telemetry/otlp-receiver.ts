@@ -26,6 +26,8 @@ export class OtlpReceiver {
   readonly spans: ReceivedSpan[] = [];
   readonly resources: ReceivedResource[] = [];
   requests = 0;
+  /** Request path -> raw bodies, for signals other than traces (metrics, logs). */
+  readonly bodies = new Map<string, string[]>();
   private server!: Server;
 
   async start(): Promise<string> {
@@ -48,6 +50,11 @@ export class OtlpReceiver {
     this.requests += 1;
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(chunk as Buffer);
+    const path = req.url ?? '';
+    this.bodies.set(path, [
+      ...(this.bodies.get(path) ?? []),
+      Buffer.concat(chunks).toString(),
+    ]);
     if (req.url === '/v1/traces') {
       const body = JSON.parse(Buffer.concat(chunks).toString()) as TracePayload;
       for (const rs of body.resourceSpans ?? []) {

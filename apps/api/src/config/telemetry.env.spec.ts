@@ -45,6 +45,9 @@ describe('TelemetryEnv', () => {
     'OTEL_EXPORTER_OTLP_METRICS_PROTOCOL',
     'OTEL_TRACES_EXPORTER',
     'OTEL_METRICS_EXPORTER',
+    'OTEL_LOGS_EXPORTER',
+    'OTEL_EXPORTER_OTLP_LOGS_ENDPOINT',
+    'OTEL_EXPORTER_OTLP_LOGS_PROTOCOL',
   ])('AC-06.5.5 the unvalidated override %s is rejected', (variable) => {
     expectInvalid(validate, { [variable]: 'http://elsewhere.test' }, variable);
     expect(() => validateTelemetryEnv({ [variable]: 'x' })).toThrow(variable);

@@ -140,6 +140,7 @@ describe('OpenTelemetry bootstrap', () => {
 
   it('AC-06.2.5 exports no query string in any span attribute', async () => {
     receiver.spans.length = 0;
+    receiver.bodies.clear();
     const app = await launch({ OTEL_EXPORTER_OTLP_ENDPOINT: endpoint });
     expect(
       (await get(app, {}, '?token=secret-value&search=marina')).status,
@@ -151,6 +152,11 @@ describe('OpenTelemetry bootstrap', () => {
     expect(exported).toContain('/ping');
     expect(exported).not.toContain('secret-value');
     expect(exported).not.toContain('marina');
+    // Metrics are flushed on shutdown; no log pipeline exists at all (T-006-02 decides on one).
+    const metrics = (receiver.bodies.get('/v1/metrics') ?? []).join('');
+    expect(metrics).not.toContain('secret-value');
+    expect(metrics).not.toContain('marina');
+    expect(receiver.bodies.has('/v1/logs')).toBe(false);
   }, 60_000);
 
   it('AC-06.2.5 the resource carries no process command line, owner or host id', async () => {
