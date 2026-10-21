@@ -64,6 +64,18 @@ describe('request logging', () => {
     expect(out.raw).not.toContain(password);
   });
 
+  it('T-001-04 a request body never appears in a log line, even with plain values at trace level', async () => {
+    const marker = 'Body-Marker-7f3c';
+    await call('/api/v1/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: marker, notes: [{ text: marker }] }),
+    });
+
+    await out.waitFor(completed('/api/v1/tasks'));
+    expect(out.raw).not.toContain(marker);
+  });
+
   it('AC-06.3.7 strips the query string of /api/auth/* URLs', async () => {
     await call(`/api/auth/verify?token=${token}`);
 
