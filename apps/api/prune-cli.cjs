@@ -1,17 +1,21 @@
-// Removes a CLI package (and everything only it needs) from a pnpm virtual store.
-//   node prune-cli.cjs <node_modules dir> <package name>
-// `pnpm deploy --prod` keeps the Prisma CLI because @prisma/client lists it as an optional peer:
-// the lockfile snapshot links it even though the API only declares it as a dev dependency. This
-// walks the dependency graph from the real direct dependencies, never following an edge named
-// <package name>, and deletes every virtual-store entry that stays unreachable.
+// Removes development-only packages (and everything only they need) from a pnpm virtual store.
+//   node prune-cli.cjs <node_modules dir> <package name>[,<package name>...]
+// `pnpm deploy --prod` keeps the Prisma CLI and typescript because @prisma/client lists them as
+// optional peers: the lockfile snapshot links them even though the API only declares them as dev
+// dependencies. This walks the dependency graph from the real direct dependencies, never following
+// an edge named like one of the given packages, and deletes every virtual-store entry that stays
+// unreachable.
 const fs = require('node:fs');
 const path = require('node:path');
 
-const [, , nodeModules, cli] = process.argv;
-if (!nodeModules || !cli) {
-  console.error('usage: node prune-cli.cjs <node_modules dir> <package name>');
+const [, , nodeModules, names] = process.argv;
+if (!nodeModules || !names) {
+  console.error(
+    'usage: node prune-cli.cjs <node_modules dir> <package name>[,<package name>...]',
+  );
   process.exit(2);
 }
+const skip = new Set(names.split(',').filter(Boolean));
 const store = path.join(nodeModules, '.pnpm');
 
 /** Names (including @scope/name) of the entries of a node_modules directory. */
@@ -32,9 +36,11 @@ function idOf(realPath) {
 }
 
 const direct = entries(nodeModules);
-if (direct.includes(cli)) {
-  console.error(`${cli} is a direct dependency; refusing to prune it`);
-  process.exit(1);
+for (const name of skip) {
+  if (direct.includes(name)) {
+    console.error(`${name} is a direct dependency; refusing to prune it`);
+    process.exit(1);
+  }
 }
 
 const reachable = new Set();
@@ -44,7 +50,7 @@ function visit(id) {
   const container = path.join(store, id, 'node_modules');
   for (const name of entries(container)) {
     const link = path.join(container, name);
-    if (!fs.lstatSync(link).isSymbolicLink() || name === cli) continue;
+    if (!fs.lstatSync(link).isSymbolicLink() || skip.has(name)) continue;
     const next = idOf(fs.realpathSync(link));
     if (next) visit(next);
   }
@@ -75,5 +81,5 @@ for (const container of [
   }
 }
 console.log(
-  `pruned ${removed} virtual-store entries not needed without ${cli}`,
+  `pruned ${removed} virtual-store entries not needed without ${[...skip].join(', ')}`,
 );
