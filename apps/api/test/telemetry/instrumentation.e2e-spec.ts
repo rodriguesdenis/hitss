@@ -1,8 +1,11 @@
-import { ChildProcess, spawn } from 'node:child_process';
+import { ChildProcess, execFileSync, spawn } from 'node:child_process';
 import { join } from 'node:path';
-import { OtlpReceiver } from './otlp-receiver';
+import { useTestDatabase } from '../support/postgres';
+import { OtlpReceiver, ReceivedSpan } from './otlp-receiver';
 
 const API_DIR = join(__dirname, '../..');
+/** The fixture is compiled once: the generated Prisma client cannot run through ts-node. */
+const BUILD_DIR = join(API_DIR, 'node_modules/.cache/telemetry-e2e');
 const TRACE_ID = '4bf92f3577b34da6a3ce929d0e0e4736';
 
 interface Running {
@@ -12,24 +15,26 @@ interface Running {
   exit: Promise<number | null>;
 }
 
+let currentDatabaseUrl: () => string;
 let nextPort = 39100 + Math.floor(Math.random() * 400);
 
 function start(env: Record<string, string>): Running {
+  const databaseUrl = currentDatabaseUrl();
   const port = nextPort++;
   const child = spawn(
     process.execPath,
     [
       '-r',
-      'ts-node/register/transpile-only',
-      '-r',
-      './src/instrumentation.ts',
-      './test/telemetry/fixture-app.ts',
+      join(BUILD_DIR, 'src/instrumentation.js'),
+      join(BUILD_DIR, 'test/telemetry/fixture-app.js'),
     ],
     {
       cwd: API_DIR,
       env: {
         PATH: process.env.PATH,
         APP_ENV: 'test',
+        DATABASE_URL: databaseUrl,
+        BETTER_AUTH_SECRET: `unit-test-secret-${'x'.repeat(30)}`,
         PORT: String(port),
         OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
         ...env,
@@ -55,10 +60,25 @@ async function ready(app: Running): Promise<void> {
   });
 }
 
+/** Spans with a db.system attribute that descend from the given span. */
+function dbSpansBelow(spans: ReceivedSpan[], rootId: string | undefined) {
+  const below = (span: ReceivedSpan): boolean => {
+    const parent = spans.find((s) => s.spanId === span.parentSpanId);
+    return parent ? parent.spanId === rootId || below(parent) : false;
+  };
+  const isDb = (s: ReceivedSpan) =>
+    s.attributes.some(
+      (a) => a.key === 'db.system' || a.key === 'db.system.name',
+    );
+  return spans.filter((s) => isDb(s) && below(s));
+}
+
 const get = (app: Running, headers: Record<string, string> = {}, query = '') =>
   fetch(`http://127.0.0.1:${app.port}/ping${query}`, { headers });
 
 describe('OpenTelemetry bootstrap', () => {
+  const db = useTestDatabase();
+  currentDatabaseUrl = () => db.url;
   const receiver = new OtlpReceiver();
   const running: Running[] = [];
   let endpoint: string;
@@ -71,6 +91,15 @@ describe('OpenTelemetry bootstrap', () => {
   };
 
   beforeAll(async () => {
+    execFileSync(
+      process.execPath,
+      [
+        require.resolve('typescript/bin/tsc'),
+        '-p',
+        join(__dirname, 'tsconfig.json'),
+      ],
+      { cwd: API_DIR },
+    );
     endpoint = await receiver.start();
   });
   afterAll(async () => {
@@ -93,9 +122,9 @@ describe('OpenTelemetry bootstrap', () => {
     expect(Date.now() - started).toBeLessThan(10_000);
 
     const server = receiver.spans.find((s) => s.kind === 2);
-    const child = receiver.spans.find((s) => s.name === 'fixture.db');
     expect(server?.traceId).toBe(TRACE_ID);
-    expect(child?.traceId).toBe(TRACE_ID);
+    expect(server?.parentSpanId).toBe('00f067aa0ba902b7');
+    expect(dbSpansBelow(receiver.spans, server?.spanId)).not.toHaveLength(0);
     const attributes = Object.fromEntries(
       (receiver.resources[0]?.attributes ?? []).map((a) => [
         a.key,

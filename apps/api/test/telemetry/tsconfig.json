@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../node_modules/.cache/telemetry-e2e",
+    "rootDir": "../..",
+    "incremental": false,
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["fixture-app.ts", "../../src/instrumentation.ts"],
+  "exclude": ["../../**/*.spec.ts", "../../**/testing/**"]
+}
