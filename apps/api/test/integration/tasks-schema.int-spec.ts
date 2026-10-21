@@ -170,6 +170,21 @@ describe('Tasks schema (integration, T-003-01)', () => {
       },
     );
 
+    it('counts characters, not bytes: 3 and 120 emoji are accepted, 121 is too long', async () => {
+      const ownerId = await aUser();
+
+      await expect(insertTask(ownerId, { title: '🚀🚀🚀' })).resolves.toEqual(
+        expect.any(String),
+      );
+      await expect(
+        insertTask(ownerId, { title: '🚀'.repeat(120) }),
+      ).resolves.toEqual(expect.any(String));
+      const error = await sqlError(() =>
+        insertTask(ownerId, { title: '🚀'.repeat(121) }),
+      );
+      expect(error.code).toBe(STRING_TOO_LONG);
+    });
+
     it('accepts titles of 3 and 120 characters', async () => {
       const ownerId = await aUser();
 
@@ -327,7 +342,7 @@ describe('Tasks schema (integration, T-003-01)', () => {
         [
           { task_id: task, team_id: keptTeam },
           { task_id: goneTask, team_id: keptTeam },
-        ].sort((a, b) => a.task_id.localeCompare(b.task_id)),
+        ].sort((a, b) => (a.task_id < b.task_id ? -1 : 1)),
       );
 
       await sql.query('DELETE FROM tasks WHERE id = $1', [goneTask]);
@@ -420,11 +435,17 @@ describe('Tasks schema (integration, T-003-01)', () => {
     async function plan(
       query: string,
       params: unknown[],
-      without: string[] = [],
+      {
+        without = [],
+        settings = [],
+      }: { without?: string[]; settings?: string[] } = {},
     ): Promise<string> {
       await sql.query('BEGIN');
       try {
         await sql.query('SET LOCAL enable_seqscan = off');
+        for (const setting of settings) {
+          await sql.query(`SET LOCAL ${setting}`);
+        }
         for (const index of without) {
           await sql.query(`DROP INDEX "${index}"`);
         }
@@ -456,13 +477,15 @@ describe('Tasks schema (integration, T-003-01)', () => {
 
     // Only an equality on status lets this index return rows already in created_at order:
     // `status = ANY($2::task_status[])` never uses it, even with a single element (verified on
-    // the compose image), so the read model must emit `status = $n` for one status.
+    // the compose image), so the read model emits `status = $n` for one status (plan 003).
+    // tasks_owner_created_idx is dropped so the plan cannot fall back to it with a filter.
     it('one status (equality) + default sort reads tasks_owner_status_created_idx in order', async () => {
       const p = await plan(
         `SELECT id FROM tasks WHERE owner_id = $1 AND deleted_at IS NULL
            AND status = $2::task_status
          ORDER BY created_at DESC, id DESC LIMIT 20 OFFSET 0`,
         [ownerId, 'PENDING'],
+        { without: ['tasks_owner_created_idx'] },
       );
 
       expect(p).toContain('"Index Name":"tasks_owner_status_created_idx"');
@@ -488,23 +511,29 @@ describe('Tasks schema (integration, T-003-01)', () => {
            AND (title ILIKE $2 ESCAPE '\\' OR description ILIKE $2 ESCAPE '\\')
          ORDER BY created_at DESC, id DESC LIMIT 20 OFFSET 0`,
         [ownerId, '%login%'],
-        [
-          'tasks_owner_created_idx',
-          'tasks_owner_status_created_idx',
-          'tasks_owner_due_idx',
-        ],
+        {
+          without: [
+            'tasks_owner_created_idx',
+            'tasks_owner_status_created_idx',
+            'tasks_owner_due_idx',
+          ],
+        },
       );
 
       expect(p).toContain('"Index Name":"tasks_search_trgm_idx"');
       expect(p).toContain('"Node Type":"BitmapOr"');
     });
 
+    // With nested loops off, the EXISTS becomes a hash/merge semi-join that must look the team's
+    // links up by team_id = $2 alone: only task_teams_team_id_task_id_idx can serve that (the
+    // primary key leads with task_id).
     it('teamId filter uses task_teams_team_id_task_id_idx', async () => {
       const p = await plan(
         `SELECT t.id FROM tasks t WHERE t.owner_id = $1 AND t.deleted_at IS NULL
            AND EXISTS (SELECT 1 FROM task_teams f WHERE f.task_id = t.id AND f.team_id = $2::uuid)
          ORDER BY t.created_at DESC, t.id DESC LIMIT 20 OFFSET 0`,
         [ownerId, teamId],
+        { settings: ['enable_nestloop = off'] },
       );
 
       expect(p).toContain('"Index Name":"task_teams_team_id_task_id_idx"');
