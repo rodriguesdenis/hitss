@@ -63,7 +63,9 @@ $ pnpm test:cov
 Integration and e2e runs start one PostgreSQL container (the `docker-compose.yml` image) per run
 and migrate a template database once. Each test file gets its own clone through
 `useTestDatabase()` / `createTestDatabase()` from `test/support/postgres.ts`, and builds the app
-with `createTestApp(url)` from `test/support/app.ts`.
+with `createTestApp(url)` from `test/support/app.ts`. Every database a file creates is dropped
+automatically after the file's own `afterAll` hooks (`test/support/after-env.ts`), so close apps
+and clients in `afterAll` as usual.
 
 ## Deployment
 
