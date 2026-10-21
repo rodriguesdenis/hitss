@@ -1,9 +1,7 @@
+import type { Violation } from './config-validation-error';
 import type { EnvironmentVariables } from './env.schema';
 
-export interface Violation {
-  variable: string;
-  message: string;
-}
+export type { Violation };
 
 /** A production rule inspects the already type-valid configuration. Names variables, never values. */
 export type ProductionRule = (config: EnvironmentVariables) => Violation[];
@@ -54,10 +52,31 @@ export const logLevelIsNotVerbose: ProductionRule = (config) =>
       ]
     : [];
 
+/** Collector inside the compose network, reached over plain HTTP by design. */
+export const COMPOSE_COLLECTOR_HOST = 'signoz-otel-collector';
+
+export const otlpEndpointIsSecure: ProductionRule = (config) => {
+  if (config.OTEL_SDK_DISABLED) return [];
+  const url = URL.canParse(config.OTEL_EXPORTER_OTLP_ENDPOINT)
+    ? new URL(config.OTEL_EXPORTER_OTLP_ENDPOINT)
+    : undefined;
+  return url &&
+    (url.protocol === 'https:' || url.hostname === COMPOSE_COLLECTOR_HOST)
+    ? []
+    : [
+        {
+          variable: 'OTEL_EXPORTER_OTLP_ENDPOINT',
+          message: 'must use https in production',
+        },
+      ];
+};
+
 /** Applied only when APP_ENV=production. Add one entry per rule; validate() never changes. */
 export const productionRules: ProductionRule[] = [
   secretIsNotAPlaceholder,
   databaseIsNotTheLocalOne,
   seedIsOff,
   logLevelIsNotVerbose,
+
+  otlpEndpointIsSecure,
 ];

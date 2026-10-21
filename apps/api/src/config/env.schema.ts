@@ -1,10 +1,10 @@
 import { Transform } from 'class-transformer';
+import { TelemetryEnv } from './telemetry.env';
+import { integer, isBoolean, oneOf, toBoolean, toNumber } from './transforms';
 import {
   IsIn,
   IsInt,
-  IsNotEmpty,
   IsString,
-  IsUrl,
   Matches,
   Max,
   Min,
@@ -24,36 +24,12 @@ export const LOG_LEVELS = [
   'silent',
 ] as const;
 
-const toBoolean = ({ value }: { value: unknown }): unknown => {
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return value;
-};
-
-const toNumber = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
-
-const isBoolean = { message: 'must be "true" or "false"' };
-const oneOf = (values: readonly string[]) => ({
-  message: `must be one of: ${values.join(', ')}`,
-});
-const SAMPLERS = [
-  'always_on',
-  'always_off',
-  'traceidratio',
-  'parentbased_always_on',
-  'parentbased_always_off',
-  'parentbased_traceidratio',
-] as const;
-const OTLP_PROTOCOLS = ['http/protobuf', 'http/json'] as const;
-const integer = { message: 'must be an integer' };
-
 /**
  * Every environment variable the API reads. Defaults are documented in `.env.example`
  * (a parity test keeps both in sync). Secret-bearing variables have no default in code:
  * they come from the gitignored `.env` or the process environment.
  */
-export class EnvironmentVariables {
+export class EnvironmentVariables extends TelemetryEnv {
   /** Application environment; distinct from NODE_ENV (which is "production" in the image). */
   @IsIn(APP_ENVS, oneOf(APP_ENVS))
   APP_ENV: AppEnv = 'local';
@@ -75,29 +51,6 @@ export class EnvironmentVariables {
   @Transform(toBoolean)
   @IsIn([true, false], isBoolean)
   LOG_PRETTY: boolean = false;
-
-  @Transform(toBoolean)
-  @IsIn([true, false], isBoolean)
-  OTEL_SDK_DISABLED: boolean = false;
-
-  @IsString({ message: 'must be a string' })
-  @IsNotEmpty({ message: 'must not be empty' })
-  OTEL_SERVICE_NAME: string = 'teams-tasks-api';
-
-  @IsUrl(
-    { require_tld: false, protocols: ['http', 'https'] },
-    { message: 'must be an http(s) URL' },
-  )
-  OTEL_EXPORTER_OTLP_ENDPOINT: string = 'http://localhost:4318';
-
-  @IsIn(OTLP_PROTOCOLS, oneOf(OTLP_PROTOCOLS))
-  OTEL_EXPORTER_OTLP_PROTOCOL: string = 'http/protobuf';
-
-  @IsString({ message: 'must be a string' })
-  OTEL_RESOURCE_ATTRIBUTES: string = 'deployment.environment.name=local';
-
-  @IsIn(SAMPLERS, oneOf(SAMPLERS))
-  OTEL_TRACES_SAMPLER: string = 'parentbased_always_on';
 
   @Transform(toNumber)
   @IsInt(integer)

@@ -14,6 +14,7 @@ export const PRODUCTION_ENV: Record<string, string> = {
   // Built at runtime with low entropy so scanners never mistake the fixture for a real secret.
   BETTER_AUTH_SECRET: `prod-like-${'x'.repeat(40)}`,
   SEED_ON_START: 'false',
+  OTEL_EXPORTER_OTLP_ENDPOINT: 'https://collector.example.test:4318',
 };
 
 type Validate = (config: Record<string, unknown>) => unknown;

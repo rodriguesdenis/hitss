@@ -270,7 +270,9 @@ apps/api/
 │   ├── app.module.ts
 │   ├── generated/                       # Prisma client from `prisma generate` (gitignored, persistence library: infrastructure only)
 │   ├── config/                          # env schema as a class-validator class, validated via ConfigModule `validate()` (fail fast) + typed config
-│   │   └── telemetry.env.ts             # OTel/logging env, composed into the same ConfigModule `validate()`
+│   │   ├── telemetry.env.ts             # TelemetryEnv (OTEL_*), composed into the same `validate()` and called directly by instrumentation.ts
+│   │   ├── transforms.ts                # class-transformer/validator helpers shared by the env classes
+│   │   └── config-validation-error.ts   # ConfigValidationError + Violation (names variables, never values)
 │   ├── shared/
 │   │   ├── domain/                      # AggregateRoot, DomainEvent, DomainError + ConcurrencyConflict, expected-version.ts (pure TS)
 │   │   ├── application/                 # Clock, IdGenerator ports, Page<T>, PageRequest
@@ -284,8 +286,11 @@ apps/api/
 │   │   │   ├── dto/                     # PaginationQueryDto, ErrorResponseDto, envelope helpers
 │   │   │   └── decorators/              # @ApiEnvelopedResponse, @IfMatch()
 │   │   └── observability/
-│   │       ├── observability.module.ts  # ObservabilityModule (global): meter provider, logging, tracing
+│   │       ├── observability.module.ts  # ObservabilityModule: logging, telemetry shutdown (last in AppModule.imports)
+│   │       ├── is-probe.ts              # probe requests (/api/v1/health/*) are never logged or traced
+│   │       ├── sanitize-url.ts          # strips query strings; shared by logging and the span exporter
 │   │       ├── logging/                 # nestjs-pino config, redaction, request id, trace mixin
+│   │       ├── telemetry/               # diag-logger, resource-attributes, sanitizing-span-exporter, telemetry-lifecycle, telemetry-shutdown
 │   │       └── tracing/                 # use-case spans around command/query handlers
 │   └── modules/
 │       ├── identity/                    # Identity context: betterAuth instance, IdentityModule (wraps nestjs-better-auth AuthModule), @CurrentOwner()
