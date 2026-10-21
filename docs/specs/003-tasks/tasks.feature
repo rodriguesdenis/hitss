@@ -23,7 +23,7 @@ Feature: Task management
     Scenario: Create a task with only a title
       When I create a task titled "Write release notes"
       Then the task is created
-      And I receive its location
+      And I receive its location and its version tag (ETag) for version 1
       And the task has:
         | status      | PENDING |
         | description | none    |
@@ -51,6 +51,19 @@ Feature: Task management
     Scenario: Title is stored trimmed
       When I create a task titled "   Plan sprint   "
       Then the task's title is "Plan sprint"
+
+    @US-03.1 @AC-03.1.8 @must @security
+    Scenario Outline: Titles reject control characters
+      When I create a task whose title contains <characters>
+      Then the request is rejected with "VALIDATION_FAILED" on "title"
+      And I still have 0 tasks
+
+      Examples:
+        | characters                   |
+        | a newline between two words  |
+        | a tab between two words      |
+        | a NUL character              |
+        | an escape character          |
 
     @US-03.1 @AC-03.1.2 @must
     Scenario: Title is required
@@ -120,9 +133,24 @@ Feature: Task management
         | field       |
         | id          |
         | ownerId     |
+        | owner_id    |
+        | userId      |
+        | owner       |
         | version     |
         | completedAt |
+        | isOverdue   |
+        | createdAt   |
+        | updatedAt   |
+        | deletedAt   |
         | priority    |
+        | __proto__   |
+        | constructor |
+
+    @US-03.1 @AC-03.1.7 @must @security
+    Scenario: An owner given as an object is rejected, not merged
+      When I create a task titled "Sneaky" that also sets "owner" to an object holding Joao's id
+      Then the request is rejected with "VALIDATION_FAILED" on "owner"
+      And I still have 0 tasks
 
   # ---------------------------------------------------------------------------
   Rule: A task belongs to 0 to 10 distinct teams of its owner
@@ -167,6 +195,16 @@ Feature: Task management
       Then the request is rejected with "UNKNOWN_TEAMS"
       And the error lists exactly the ids of "X" and "Design"
       And I still have 0 tasks
+
+    @US-03.1 @AC-03.1.6 @must @security
+    Scenario: A foreign team and a never-existing team are indistinguishable
+      Given "joao@example.com" owns the team "Ops"
+      And a well-formed team id "X" that does not exist
+      When I create a task assigned to the team "Ops" of "joao@example.com"
+      And I create a task assigned to the team id "X"
+      Then both requests are rejected with status 422 and code "UNKNOWN_TEAMS"
+      And each error lists exactly the id that was sent
+      And the two response bodies are identical apart from that id and the trace id
 
     @US-03.1 @AC-03.1.6 @must
     Scenario: Team count is checked before team existence
@@ -463,7 +501,7 @@ Feature: Task management
         | isOverdue   | false       |
         | version     | 1           |
       And it shows the team "Mobile" with color "#7C3AED"
-      And I receive its version tag for version 1
+      And I receive its version tag (ETag) for version 1
 
     @US-03.8 @AC-03.8.2 @must
     Scenario Outline: Viewing a missing task
@@ -535,6 +573,14 @@ Feature: Task management
         | 11 teams                                 | TOO_MANY_TEAMS    |
         | a team that does not exist               | UNKNOWN_TEAMS     |
         | the extra field "ownerId"                | VALIDATION_FAILED |
+        | the extra field "owner_id"               | VALIDATION_FAILED |
+        | the extra field "userId"                 | VALIDATION_FAILED |
+        | the extra field "owner" holding an object | VALIDATION_FAILED |
+        | the extra field "updatedAt"              | VALIDATION_FAILED |
+        | the extra field "deletedAt"              | VALIDATION_FAILED |
+        | the extra field "__proto__"              | VALIDATION_FAILED |
+        | the extra field "constructor"            | VALIDATION_FAILED |
+        | a title containing a control character   | VALIDATION_FAILED |
 
     @US-03.9 @AC-03.9.4 @must
     Scenario: Editing into Done records completion; editing out of Done clears it
@@ -598,6 +644,13 @@ Feature: Task management
         | from    | to      | updatedAt            |
         | PENDING | DONE    | 2026-10-20T13:00:00Z |
         | PENDING | PENDING | 2026-10-19T08:00:00Z |
+
+    @US-03.10 @AC-03.10.1 @must
+    Scenario: A no-op status change keeps the version tag
+      Given I have a task "Ship it" with status "DONE" at version 3
+      When I change the status of "Ship it" to "DONE"
+      Then the response is 200 with the task
+      And the response carries the version tag (ETag) for version 3
 
     @US-03.10 @AC-03.10.5 @must
     Scenario: A status change touches nothing else
@@ -664,7 +717,7 @@ Feature: Task management
     Background:
       Given "joao@example.com" owns the team "Ops" and the task "Joao's secret" assigned to it
 
-    @US-03.12 @AC-03.12.1 @could
+    @US-03.12 @AC-03.12.1 @must
     Scenario Outline: Another user's task behaves as non-existent
       When I <operation> the task "Joao's secret"
       Then the request is rejected with "TASK_NOT_FOUND"
@@ -677,7 +730,13 @@ Feature: Task management
         | change the status to "DONE" of  |
         | delete                          |
 
-    @US-03.12 @AC-03.12.2 @could
+    @US-03.12 @AC-03.12.6 @must @security
+    Scenario: The owner of a new task is always the signed-in user
+      When I create a task titled "Mine"
+      Then the task belongs to "marina@example.com"
+      And it does not appear in the list of "joao@example.com"
+
+    @US-03.12 @AC-03.12.2 @must
     Scenario: Another user's tasks never appear in my lists
       Given I have the task "Mine"
       When I list my tasks searching for "secret"
@@ -685,7 +744,7 @@ Feature: Task management
       When I list my tasks
       Then I receive exactly the task "Mine"
 
-    @US-03.12 @AC-03.12.3 @could
+    @US-03.12 @AC-03.12.3 @must
     Scenario Outline: Another user's team cannot be assigned
       When I <operation> assigned to "Mobile" and the team "Ops" of "joao@example.com"
       Then the request is rejected with "UNKNOWN_TEAMS"
@@ -696,13 +755,13 @@ Feature: Task management
         | create a task "Mine"      |
         | edit my task "Mine"       |
 
-    @US-03.12 @AC-03.12.4 @could
+    @US-03.12 @AC-03.12.4 @must
     Scenario: Filtering by another user's team returns nothing
       When I list tasks of the team "Ops" of "joao@example.com"
       Then I receive no tasks
       And the total is 0
 
-    @US-03.12 @AC-03.12.5 @could
+    @US-03.12 @AC-03.12.5 @must
     Scenario Outline: Task operations require a session
       Given I am not signed in
       When I <operation>
@@ -795,6 +854,7 @@ Feature: Task management
       Examples:
         | operation                         | version |
         | view                              | 3       |
+        | create (response of the POST)     | 1       |
         | change the status to "DONE" of    | 4       |
         | edit with a new title             | 4       |
 
@@ -821,6 +881,43 @@ Feature: Task management
       Then the request is rejected with "PRECONDITION_FAILED"
       And the error reports the current version 3
 
+    @US-03.15 @AC-03.15.3 @could
+    Scenario Outline: Validation runs before the version check
+      When I <operation> the task "Contended" with <change> expecting version 1
+      Then the request is rejected with "VALIDATION_FAILED"
+      And it is not rejected with "PRECONDITION_FAILED"
+      And the task "Contended" is unchanged at version 3
+
+      Examples:
+        | operation                         | change                 |
+        | edit                              | a title of 2 characters |
+        | edit                              | the extra field "ownerId" |
+        | change the status of              | the status "FINISHED"  |
+
+    @US-03.15 @AC-03.15.3 @could
+    Scenario: A malformed version tag together with an invalid body is a validation error
+      When I edit the task "Contended" with a title of 2 characters expecting version "garbage"
+      Then the request is rejected with "VALIDATION_FAILED"
+
+    @US-03.15 @AC-03.15.3 @could
+    Scenario: The version check comes before the no-op shortcut
+      When I change the status of "Contended" to "PENDING" expecting version 1
+      Then the request is rejected with "PRECONDITION_FAILED"
+      And the error reports the current version 3
+
+    @US-03.15 @AC-03.15.5 @could @security
+    Scenario Outline: Not found takes precedence over the version check
+      Given "joao@example.com" owns the task "Joao's secret"
+      When I <operation> the task "Joao's secret" expecting version 1
+      Then the request is rejected with "TASK_NOT_FOUND"
+      And "Joao's secret" is unchanged for "joao@example.com"
+
+      Examples:
+        | operation                       |
+        | edit with a new title           |
+        | change the status to "DONE" of  |
+        | delete                          |
+
     @US-03.15 @AC-03.15.4 @could
     Scenario: Without an expected version the last write wins
       When I edit the task "Contended" with a new title without an expected version
@@ -842,8 +939,24 @@ Feature: Task management
     Scenario: A retried create replays the original response
       Given I created the task "Buy milk" with idempotency key "K1"
       When I create the task "Buy milk" again with idempotency key "K1" 10 minutes later
-      Then I receive the original response, with the same task id
+      Then I receive the original response, with the same status, body, location and version tag
+      And the response carries the header "Idempotent-Replayed: true"
       And I have exactly 1 task titled "Buy milk"
+
+    @US-03.16 @AC-03.16.1 @AC-03.16.6 @could @concurrency
+    Scenario: Concurrent identical creations with the same key
+      When I send the same creation of the task "Buy milk" twice at the same time with idempotency key "K1"
+      Then exactly 1 task titled "Buy milk" is created
+      And one request receives the 201 creation
+      And the other receives either the 201 replay or status 409 with code "IDEMPOTENCY_REQUEST_IN_PROGRESS"
+
+    @US-03.16 @AC-03.16.6 @could @concurrency
+    Scenario: A request arriving while the first is still processing is not queued
+      Given a creation of the task "Buy milk" with idempotency key "K1" is still being processed
+      When I create the task "Buy milk" again with idempotency key "K1"
+      Then the request is rejected immediately with "IDEMPOTENCY_REQUEST_IN_PROGRESS"
+      And the response carries a "Retry-After" value of 1
+      And I have no more than 1 task titled "Buy milk"
 
     @US-03.16 @AC-03.16.2 @could
     Scenario: Reusing a key with different content is rejected
@@ -857,6 +970,27 @@ Feature: Task management
       Given I created the task "Buy milk" with idempotency key "K1"
       When "joao@example.com" creates the task "Buy milk" with idempotency key "K1"
       Then "joao@example.com" receives a new task with a different id
+
+    @US-03.16 @AC-03.16.7 @could @concurrency @security
+    Scenario: Another user's identical key is never blocked by an in-flight request
+      Given a creation by "joao@example.com" with idempotency key "K1" is still being processed
+      When I create the task "Buy milk" with idempotency key "K1"
+      Then the task is created
+      And I do not receive "IDEMPOTENCY_REQUEST_IN_PROGRESS"
+
+    @US-03.16 @AC-03.16.8 @could
+    Scenario: A key used for a task cannot be reused for a team
+      Given I created the task "Buy milk" with idempotency key "K1"
+      When I create a team named "Platform" with idempotency key "K1"
+      Then the request is rejected with "IDEMPOTENCY_KEY_REUSED"
+      And no team named "Platform" exists
+
+    @US-03.16 @AC-03.16.2 @could @security
+    Scenario: The request fingerprint ignores prototype keys
+      Given two request bodies that differ only by a "__proto__" or "constructor" key
+      When the idempotency fingerprint of each is computed
+      Then both fingerprints are identical
+      And no prototype pollution occurs
 
     @US-03.16 @AC-03.16.4 @could
     Scenario: A malformed idempotency key is rejected

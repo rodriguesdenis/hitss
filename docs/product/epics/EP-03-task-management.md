@@ -36,26 +36,26 @@ Let a user capture, find and move their work forward: create tasks, assign each 
 
 ## User stories
 
-| ID       | Title                             | Priority | Spec                                                                                  |
-| -------- | --------------------------------- | -------- | ------------------------------------------------------------------------------------- |
-| US-03.1  | Create a task                     | MUST     | [spec](../../specs/003-tasks/spec.md#us-031--create-a-task-must)                      |
-| US-03.2  | List my tasks                     | MUST     | [spec](../../specs/003-tasks/spec.md#us-032--list-my-tasks-must)                      |
-| US-03.3  | Filter tasks by team              | MUST     | [spec](../../specs/003-tasks/spec.md#us-033--filter-tasks-by-team-must)               |
-| US-03.4  | Filter tasks by status            | MUST     | [spec](../../specs/003-tasks/spec.md#us-034--filter-tasks-by-status-must)             |
-| US-03.5  | Search tasks by text              | MUST     | [spec](../../specs/003-tasks/spec.md#us-035--search-tasks-by-text-must)               |
-| US-03.6  | Sort tasks                        | MUST     | [spec](../../specs/003-tasks/spec.md#us-036--sort-tasks-must)                         |
-| US-03.7  | Paginate tasks                    | MUST     | [spec](../../specs/003-tasks/spec.md#us-037--paginate-tasks-must)                     |
-| US-03.8  | View a task                       | MUST     | [spec](../../specs/003-tasks/spec.md#us-038--view-a-task-must)                        |
-| US-03.9  | Edit a task (including its teams) | MUST     | [spec](../../specs/003-tasks/spec.md#us-039--edit-a-task-must)                        |
-| US-03.10 | Change a task's status quickly    | MUST     | [spec](../../specs/003-tasks/spec.md#us-0310--change-a-tasks-status-quickly-must)     |
-| US-03.11 | Delete a task                     | MUST     | [spec](../../specs/003-tasks/spec.md#us-0311--delete-a-task-must)                     |
-| US-03.12 | Keep my tasks private             | COULD ¹  | [spec](../../specs/003-tasks/spec.md#us-0312--keep-my-tasks-private-could)            |
-| US-03.13 | Keep tasks when a team is deleted | MUST     | [spec](../../specs/003-tasks/spec.md#us-0313--keep-tasks-when-a-team-is-deleted-must) |
-| US-03.14 | See which tasks are overdue       | COULD    | [spec](../../specs/003-tasks/spec.md#us-0314--see-which-tasks-are-overdue-could)      |
-| US-03.15 | Avoid overwriting a newer change  | COULD    | [spec](../../specs/003-tasks/spec.md#us-0315--avoid-overwriting-a-newer-change-could) |
-| US-03.16 | Retry task creation safely        | COULD    | [spec](../../specs/003-tasks/spec.md#us-0316--retry-task-creation-safely-could)       |
+| ID       | Title                             | Priority | Spec                                                                                      |
+| -------- | --------------------------------- | -------- | ----------------------------------------------------------------------------------------- |
+| US-03.1  | Create a task                     | MUST     | [spec](../../specs/003-tasks/spec.md#us-031--create-a-task-must)                          |
+| US-03.2  | List my tasks                     | MUST     | [spec](../../specs/003-tasks/spec.md#us-032--list-my-tasks-must)                          |
+| US-03.3  | Filter tasks by team              | MUST     | [spec](../../specs/003-tasks/spec.md#us-033--filter-tasks-by-team-must)                   |
+| US-03.4  | Filter tasks by status            | MUST     | [spec](../../specs/003-tasks/spec.md#us-034--filter-tasks-by-status-must)                 |
+| US-03.5  | Search tasks by text              | MUST     | [spec](../../specs/003-tasks/spec.md#us-035--search-tasks-by-text-must)                   |
+| US-03.6  | Sort tasks                        | MUST     | [spec](../../specs/003-tasks/spec.md#us-036--sort-tasks-must)                             |
+| US-03.7  | Paginate tasks                    | MUST     | [spec](../../specs/003-tasks/spec.md#us-037--paginate-tasks-must)                         |
+| US-03.8  | View a task                       | MUST     | [spec](../../specs/003-tasks/spec.md#us-038--view-a-task-must)                            |
+| US-03.9  | Edit a task (including its teams) | MUST     | [spec](../../specs/003-tasks/spec.md#us-039--edit-a-task-must)                            |
+| US-03.10 | Change a task's status quickly    | MUST     | [spec](../../specs/003-tasks/spec.md#us-0310--change-a-tasks-status-quickly-must)         |
+| US-03.11 | Delete a task                     | MUST     | [spec](../../specs/003-tasks/spec.md#us-0311--delete-a-task-must)                         |
+| US-03.12 | Keep my tasks private             | MUST ¹   | [spec](../../specs/003-tasks/spec.md#us-0312--keep-my-tasks-private-must-constitution-vi) |
+| US-03.13 | Keep tasks when a team is deleted | MUST     | [spec](../../specs/003-tasks/spec.md#us-0313--keep-tasks-when-a-team-is-deleted-must)     |
+| US-03.14 | See which tasks are overdue       | COULD    | [spec](../../specs/003-tasks/spec.md#us-0314--see-which-tasks-are-overdue-could)          |
+| US-03.15 | Avoid overwriting a newer change  | COULD    | [spec](../../specs/003-tasks/spec.md#us-0315--avoid-overwriting-a-newer-change-could)     |
+| US-03.16 | Retry task creation safely        | COULD    | [spec](../../specs/003-tasks/spec.md#us-0316--retry-task-creation-safely-could)           |
 
-¹ Ownership comes with authentication (EP-01, a COULD). Once EP-01 ships it is non-negotiable ([constitution VI.2](../../constitution.md#vi-security-by-default)), so every story is implemented owner-scoped from day one.
+¹ Ownership comes with authentication (EP-01 access-control core, MUST). It is non-negotiable ([constitution VI.2](../../constitution.md#vi-security-by-default)), so every story is implemented owner-scoped from day one.
 
 ## Traceability to the brief
 
@@ -71,7 +71,7 @@ Let a user capture, find and move their work forward: create tasks, assign each 
 
 ## Success criteria
 
-- 100 % of MUST acceptance criteria covered by ≥ 1 BDD scenario and ≥ 1 automated test.
+- 100 % of the 62 MUST acceptance criteria (of 78 in 003; 16 are COULD) covered by ≥ 1 BDD scenario and ≥ 1 automated test.
 - Task listing p95 < 100 ms locally on seeded data (and on a 10k-task synthetic owner in the k6 run, EP-06).
 - Listing a page issues a **constant** number of database round-trips, independent of page size (no N+1).
 - Status change round-trip leaves `completedAt` consistent with status in 100 % of transition-matrix tests.

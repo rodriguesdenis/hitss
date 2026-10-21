@@ -42,7 +42,8 @@ As Marina, I want to capture a task with a title and, optionally, a description,
 - **AC-03.1.4** The status is optional; `PENDING`, `IN_PROGRESS` and `DONE` are accepted; any other value (including lower case) → validation error. Creating directly as **Done** sets the completion time to now.
 - **AC-03.1.5** The due date is optional; it must be a real calendar date in `YYYY-MM-DD` form; past dates are accepted; anything else (impossible date, other format, date-time) → validation error on `dueDate`.
 - **AC-03.1.6** Teams are given as a list of 0–10 distinct team ids; the task view embeds each assigned team's id, name and color. Duplicate or malformed ids → validation error; more than 10 → `TOO_MANY_TEAMS`; any id that is not one of my existing teams → `UNKNOWN_TEAMS` listing exactly the offending ids. In every error case nothing is created.
-- **AC-03.1.7** Fields outside the contract (e.g. `id`, `ownerId`, `version`, `completedAt`) → validation error; nothing is created.
+- **AC-03.1.7** Fields outside the contract (e.g. `id`, `ownerId`, `owner_id`, `userId`, `owner` as an object, `version`, `completedAt`, `updatedAt`, `deletedAt`, `__proto__`, `constructor`) → validation error naming the field; nothing is created. The same applies on edit (AC-03.9.3).
+- **AC-03.1.8** A title or description containing a control character (Unicode category `Cc`, other than a line break in the description) → validation error on that field; nothing is created.
 
 ### US-03.2 — List my tasks (`MUST`)
 
@@ -114,7 +115,7 @@ As Marina, I want to change a task's title, description, status, due date and te
 
 - **AC-03.9.1** Given a full replacement (title, status, teams required; description and due date optional), the task is updated, its version increases by 1, its updated time becomes now and I receive the new task view.
 - **AC-03.9.2** An omitted description or due date is cleared; an empty team list unassigns the task from all teams; the new team list fully replaces the old one.
-- **AC-03.9.3** All create rules apply (AC-03.1.2 – AC-03.1.7); a missing `title`, `status` or `teamIds` → validation error; nothing is changed on any error.
+- **AC-03.9.3** All create rules apply (AC-03.1.2 – AC-03.1.8); a missing `title`, `status` or `teamIds` → validation error; nothing is changed on any error.
 - **AC-03.9.4** A status change made through an edit follows the completion rules of US-03.10.
 - **AC-03.9.5** A replacement identical to the current state (team order ignored) changes nothing: same version, same updated time.
 - **AC-03.9.6** Id, owner and created time never change; an unknown or deleted task → not found.
@@ -138,7 +139,7 @@ As Marina, I want to delete a task I no longer need, so that my lists stay relev
 - **AC-03.11.2** Deleting an unknown or already deleted task → not found.
 - **AC-03.11.3** A deleted task no longer counts towards its teams' task counts.
 
-### US-03.12 — Keep my tasks private (`COULD`)
+### US-03.12 — Keep my tasks private (`MUST`, [constitution VI](../../constitution.md))
 
 As Marina, I want my tasks to be invisible to anyone else, so that my work stays private.
 
@@ -147,6 +148,7 @@ As Marina, I want my tasks to be invisible to anyone else, so that my work stays
 - **AC-03.12.3** Assigning another user's team to my task (create or edit) → `UNKNOWN_TEAMS` with that id.
 - **AC-03.12.4** Filtering by another user's team → empty list.
 - **AC-03.12.5** Any task operation without a valid session → `UNAUTHENTICATED` ([001-auth](../001-auth/spec.md)).
+- **AC-03.12.6** A task's owner is always the signed-in user; no request field can set it (AC-03.1.7).
 
 ### US-03.13 — Keep tasks when a team is deleted (`MUST`)
 
@@ -173,6 +175,7 @@ As Marina, using the app on two devices, I want a stale edit to be rejected, so 
 - **AC-03.15.2** Edit, status change and delete accept an optional expected version tag; when it matches, the operation proceeds.
 - **AC-03.15.3** When it does not match (or is malformed), the operation fails with `PRECONDITION_FAILED` including the current version, and nothing changes.
 - **AC-03.15.4** Without an expected version tag, the operation proceeds (last write wins).
+- **AC-03.15.5** Another user's task (or an unknown or deleted one) with any expected version tag on edit, status change or delete → not found (not found wins over the precondition).
 
 ### US-03.16 — Retry task creation safely (`COULD`)
 
@@ -183,12 +186,15 @@ As Marina, on a flaky network, I want retrying a create not to produce duplicate
 - **AC-03.16.3** Keys are per user: another user sending the same key creates their own task.
 - **AC-03.16.4** A malformed key (not a UUID) → validation error.
 - **AC-03.16.5** After 24 hours the key is forgotten; reusing it creates a new task.
+- **AC-03.16.6** Two requests with the same key and body at the same time → exactly one task is created; the other gets the `201` replay or an immediate `409 IDEMPOTENCY_REQUEST_IN_PROGRESS` with `Retry-After: 1`.
+- **AC-03.16.7** Another user's in-flight request with the same key never blocks or rejects mine.
+- **AC-03.16.8** A key first used to create a team (`POST /teams`) and then sent to create a task → `422 IDEMPOTENCY_KEY_REUSED`; nothing is created.
 
 ## Business rules
 
 | ID       | Rule                                                                                                                                                                             |
 | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| BR-03.1  | Title: trimmed, 3–120 characters.                                                                                                                                                |
+| BR-03.1  | Title: trimmed, 3–120 characters; control characters (`\p{Cc}`) rejected.                                                                                                        |
 | BR-03.2  | Description: optional, trimmed, ≤ 2000 characters; blank is stored as "none".                                                                                                    |
 | BR-03.3  | Status ∈ {Pending, In progress, Done}; default Pending.                                                                                                                          |
 | BR-03.4  | Transitions are free: any status → any other status. Same status → no-op (no new version, no event).                                                                             |
@@ -225,10 +231,10 @@ People assignment, collaboration, notifications, comments, attachments, sub-task
 
 ## Open questions
 
-| #   | Question                                                                          | Current decision                                                              |
-| --- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| Q1  | Which time zone defines "today" for overdue?                                      | UTC for v1; per-user time zone is a production improvement.                   |
-| Q2  | Should a blank `search` be ignored instead of rejected?                           | Rejected (contract says 1–100 chars); the app omits the parameter when blank. |
-| Q3  | What happens when two requests with the same idempotency key arrive concurrently? | Second one waits for/replays the first (plan detail); confirm with ADR-0019.  |
-| Q4  | Should team unassignment on team deletion bump the task version (AC-03.13.4)?     | Yes — the task view changed; needed for correct offline sync.                 |
-| Q5  | Malformed task id in the path: validation error (400) or not found (404)?         | Validation error, field `id`.                                                 |
+| #   | Question                                                                          | Current decision                                                                                                       |
+| --- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Q1  | Which time zone defines "today" for overdue?                                      | UTC for v1; per-user time zone is a production improvement.                                                            |
+| Q2  | Should a blank `search` be ignored instead of rejected?                           | Rejected (contract says 1–100 chars); the app omits the parameter when blank.                                          |
+| Q3  | What happens when two requests with the same idempotency key arrive concurrently? | Resolved (ADR-0019): replay `201` or immediate `409 IDEMPOTENCY_REQUEST_IN_PROGRESS` + `Retry-After: 1`; never blocks. |
+| Q4  | Should team unassignment on team deletion bump the task version (AC-03.13.4)?     | Yes — the task view changed; needed for correct offline sync.                                                          |
+| Q5  | Malformed task id in the path: validation error (400) or not found (404)?         | Validation error, field `id`.                                                                                          |

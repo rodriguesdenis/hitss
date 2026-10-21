@@ -22,8 +22,11 @@
 
 ### Module layout — `apps/api/src/modules/tasks`
 
+Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi) (authoritative; dependency-cruiser keys on them).
+
 ```text
 tasks/
+├── contracts/                      # PUBLIC: count-tasks-by-team.query.ts (CountTasksByTeamQuery) + result type
 ├── domain/                         # framework-free TypeScript
 │   ├── task.ts                     # aggregate root
 │   ├── task-title.ts · task-description.ts · task-status.ts · due-date.ts · task-team-ids.ts   # VOs
@@ -33,24 +36,24 @@ tasks/
 │                unknown-teams.error.ts · too-many-teams.error.ts · concurrency-conflict.error.ts
 ├── application/
 │   ├── ports/   task.repository.ts · task.read-model.ts · team-directory.ts   (abstract classes = DI tokens)
-│   ├── commands/ create-task · update-task · change-task-status · delete-task   (*.command.ts + *.handler.ts)
-│   ├── queries/  list-tasks · get-task · count-tasks-per-team                   (*.query.ts + *.handler.ts)
-│   ├── events/   team-deleted.handler.ts · task-metrics.handler.ts
+│   ├── commands/ create-task · replace-task · change-task-status · delete-task   (*.command.ts + *.handler.ts)
+│   ├── queries/  list-tasks · get-task · count-tasks-by-team                    (*.query.ts + *.handler.ts)
+│   ├── events/   on-team-deleted.handler.ts (in-transaction) · task-metrics.handler.ts (after commit)
 │   └── views/    task.view.ts · task-view.assembler.ts     # row + team summaries + today → TaskView
 ├── infrastructure/
 │   ├── prisma-task.repository.ts        # write side: aggregate ⇄ tasks + task_teams
 │   ├── prisma-task.read-model.ts        # read side: parameterized SQL for list/get/count
-│   ├── team-directory.adapter.ts        # binds our port to the Teams module's public API
+│   ├── team-directory.adapter.ts        # sends GetTeamSummariesQuery (teams/contracts) on the QueryBus
 │   └── task.mapper.ts
 ├── presentation/
 │   ├── tasks.controller.ts
 │   ├── dto/  create-task.dto.ts · replace-task.dto.ts · change-task-status.dto.ts
 │   │         list-tasks.query.dto.ts · task.response.dto.ts · team-chip.dto.ts
 │   └── task-error.mapper.ts             # domain error → { status, code }
-└── tasks.module.ts
+└── tasks.module.ts                      # composition root; imports no other context module, exports no providers
 ```
 
-Shared ports from `apps/api/src/common` (owned by the platform/teams work, reused here): `Clock`, `IdGenerator`, `TransactionHost` (ambient transaction), envelope interceptor, global exception filter, `IfMatch` decorator, `@Idempotent()` interceptor.
+Shared building blocks from `apps/api/src/shared` (delivered by 001/002, reused here): `Clock`, `IdGenerator` (`shared/application`), transaction host and `UnitOfWork` (`shared/infrastructure/prisma`), the in-transaction `DomainEventPublisher`, envelope / ETag / idempotency interceptors (`shared/presentation/interceptors`), global exception filter (`shared/presentation/filters`), `@IfMatch()` (`shared/presentation/decorators`).
 
 ### Domain
 
@@ -77,29 +80,29 @@ changeStatus(to: TaskStatus, now: Date): void {
 
 ### Application (CQRS)
 
-| Use case               | Type          | Handler steps                                                                                                                                                                                         |
-| ---------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CreateTask`           | command       | build VOs (`TaskTeamIds` count check first, BR-03.8) → `TeamDirectory.findMissing(ownerId, ids)` → `UNKNOWN_TEAMS` if any → `Task.create` → `repo.save` → publish events → `GetTask` view             |
-| `UpdateTask`           | command       | `repo.findById(ownerId, id)` → `TASK_NOT_FOUND` → expected version check (If-Match) → same team checks → `edit` / `assignTo` / `changeStatus` → `repo.save` (optimistic) unless no-op → events → view |
-| `ChangeTaskStatus`     | command       | load → expected version check → `changeStatus` → save unless no-op → events → view                                                                                                                    |
-| `DeleteTask`           | command       | load → expected version check → `delete(now)` → save → `TaskDeleted`                                                                                                                                  |
-| `GetTask`              | query         | `readModel.findById` → `TeamDirectory.summaries` → assemble                                                                                                                                           |
-| `ListTasks`            | query         | `teamId` given and not live-owned → empty page (AC-03.3.2) · `readModel.list(criteria)` → one batched `TeamDirectory.summaries(allTeamIdsOfPage)` → assemble                                          |
-| `CountTasksPerTeam`    | query         | `readModel.countByTeams(ownerId, teamIds)` — consumed by 002 through the `QueryBus` (no module import cycle)                                                                                          |
-| `TeamDeleted` reaction | event handler | `repo.findByTeam(ownerId, teamId)` → `task.unassignTeam(teamId, now)` each → `repo.saveAll` in one transaction; idempotent (no tasks → no-op)                                                         |
+| Use case           | Type                         | Handler steps                                                                                                                                                                                                                |
+| ------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CreateTask`       | command                      | build VOs (`TaskTeamIds` count check first, BR-03.8) → `TeamDirectory.findMissing(ownerId, ids)` → `UNKNOWN_TEAMS` if any → `Task.create` → `repo.save` → publish events → `GetTask` view                                    |
+| `ReplaceTask`      | command                      | `repo.findById(ownerId, id)` → `TASK_NOT_FOUND` → expected version check (If-Match) → same team checks → `edit` / `assignTo` / `changeStatus` → `repo.save` (optimistic) unless no-op → events → view                        |
+| `ChangeTaskStatus` | command                      | load → expected version check → `changeStatus` → save unless no-op → events → view                                                                                                                                           |
+| `DeleteTask`       | command                      | load → expected version check → `delete(now)` → save → `TaskDeleted`                                                                                                                                                         |
+| `GetTask`          | query                        | `readModel.findById` → `TeamDirectory.summaries` → assemble                                                                                                                                                                  |
+| `ListTasks`        | query                        | `teamId` given and not live-owned → empty page (AC-03.3.2) · `readModel.list(criteria)` → one batched `TeamDirectory.summaries(allTeamIdsOfPage)` → assemble                                                                 |
+| `CountTasksByTeam` | query                        | `readModel.countByTeams(ownerId, teamIds)` (live tasks only). Public in `tasks/contracts/`; sent by 002's `TeamTaskCounts` adapter through the `QueryBus` (no module import, no cycle)                                       |
+| `OnTeamDeleted`    | in-transaction event handler | `repo.findByTeam(ownerId, teamId)` → `task.unassignTeam(teamId, now)` each (bumps `version` and `updatedAt`) → `repo.saveAll` (deletes the `task_teams` rows) inside 002's delete transaction; idempotent (no tasks → no-op) |
 
 **Why a separate read side.** Commands load and save the `Task` aggregate through `TaskRepository` (invariants, version, events). Queries never hydrate aggregates: `TaskReadModel` returns flat rows straight from SQL, and the handler maps them to `TaskView` DTOs. This keeps listing cheap (no domain object per row), lets us hand-tune the hot SQL (ordering expressions, `NULLS LAST`, `ILIKE … ESCAPE`) and is the textbook CQRS split of ADR-0002. Domain rules still apply on reads through pure functions (`isOverdue`).
 
 **Context boundary.** Team names/colors come from the `TeamDirectory` port, never from SQL joins on `teams` (constitution II.2). One batched call per page keeps round-trips constant:
 
-| Port (declared by Tasks, in its language)                                                           | Implemented by                                                                                                                                                             |
-| --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `findMissing(ownerId, ids): Promise<string[]>` — ids not live-owned by the owner                    | `TeamDirectoryAdapter` delegating to the Teams module's exported `TeamDirectory` (002). If 002's exported port has the same shape, the adapter is a `useExisting` binding. |
-| `summaries(ownerId, ids): Promise<TeamSummary[]>` — `{ id, name, colorHex }` of **live** teams only | same                                                                                                                                                                       |
+| Port (declared by Tasks, in its language)                                                           | Implemented by                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `summaries(ownerId, ids): Promise<TeamSummary[]>` — `{ id, name, colorHex }` of **live** teams only | `TeamDirectoryAdapter` (`tasks/infrastructure`) sends `GetTeamSummariesQuery` from `teams/contracts/` on the `QueryBus`. No Teams provider is imported. |
+| `findMissing(ownerId, ids): Promise<string[]>` — ids not live-owned by the owner                    | same adapter: `ids` minus the ids returned by `GetTeamSummariesQuery` (one query)                                                                       |
 
-Because `summaries` drops deleted teams, a deleted team is invisible immediately, even before the `TeamDeleted` reaction has run (AC-03.2.5, AC-03.13.1 hold regardless of timing).
+`summaries` drops deleted teams, so the read side never embeds a deleted team even as defense in depth (AC-03.2.5, AC-03.13.1). Foreign and never-existing team ids take the same path and produce byte-identical `422 UNKNOWN_TEAMS` bodies (apart from `traceId`), so existence does not leak.
 
-**Team deletion transaction.** The domain model asks for the unassignment to run in the same DB transaction as the team deletion. The handler is transaction-agnostic: repositories use the ambient `TransactionHost` (e.g. `@nestjs-cls/transactional` with the Prisma adapter), so when 002's `DeleteTeamHandler` opens a transaction and dispatches `TeamDeleted` awaited inside it, our writes join it. If 002 instead publishes after commit, the read-side guarantees above still hold and the handler retries on `ConcurrencyConflict` (3 attempts), logging and counting failures. `task_teams` rows are deleted **only** by Tasks, never by the Teams repository.
+**Team deletion transaction** ([ADR-0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md#teamdeleted-consistency), decided). `OnTeamDeletedHandler` is registered with 002's `@InTransactionHandler(TeamDeleted)` (not an `@EventsHandler`), importing `TeamDeleted` from `teams/contracts/`. 002's `DeleteTeamHandler` opens the unit of work and the publisher awaits our handler before commit; our repositories use the ambient transaction (`@nestjs-cls/transactional` with the Prisma adapter), so the soft delete and the unassignment commit or roll back together. A failure in our handler fails the whole delete; there is no after-commit retry path. Each affected task gets `version + 1` and a new `updatedAt`. `task_teams` rows are deleted **only** by Tasks, never by the Teams repository.
 
 ### Sequence — create a task with teams
 
@@ -110,7 +113,7 @@ sequenceDiagram
   participant C as TasksController
   participant V as ValidationPipe (DTO)
   participant H as CreateTaskHandler
-  participant D as TeamDirectory (port → Teams)
+  participant D as TeamDirectory (port → QueryBus → Teams)
   participant R as TaskRepository (Prisma)
   participant DB as PostgreSQL
   participant E as EventBus
@@ -165,13 +168,15 @@ sequenceDiagram
 - Path `:id` → `ParseUUIDPipe` whose `exceptionFactory` yields `VALIDATION_FAILED` on field `id` (spec Q5).
 - DTO highlights (global `ValidationPipe({ whitelist, forbidNonWhitelisted, transform })`):
 
-| DTO                   | Notes                                                                                                                                                                                                                                                                                                                                                                                                            |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CreateTaskDto`       | `title`: `@Transform(trim) @IsString @Length(3,120)` · `description?`: trim, `@MaxLength(2000)` · `status?`: `@IsEnum(TaskStatus)` · `dueDate?`: `@Matches(/^\d{4}-\d{2}-\d{2}$/)` + `@IsCalendarDate()` (delegates to `DueDate`) · `teamIds?`: `@IsArray @IsUUID('all',{each:true}) @ArrayUnique` — **no** `@ArrayMaxSize`: the domain returns `422 TOO_MANY_TEAMS` per contract (body-size limit bounds abuse) |
-| `ReplaceTaskDto`      | same, `title`, `status`, `teamIds` required; omitted `description`/`dueDate` → `null`                                                                                                                                                                                                                                                                                                                            |
-| `ChangeTaskStatusDto` | `status` required, nothing else                                                                                                                                                                                                                                                                                                                                                                                  |
-| `ListTasksQueryDto`   | see below                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `TaskResponseDto`     | contract shape incl. `isOverdue`, `teams: TeamChipDto[]`, `version`                                                                                                                                                                                                                                                                                                                                              |
+| DTO                   | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CreateTaskDto`       | `title`: `@Transform(trim) @IsString @Length(3,120)` + no control characters (`/^\P{Cc}*$/u`) · `description?`: trim, `@MaxLength(2000)`, no control characters other than `\n` / `\r` · `status?`: `@IsEnum(TaskStatus)` · `dueDate?`: `@Matches(/^\d{4}-\d{2}-\d{2}$/)` + `@IsCalendarDate()` (delegates to `DueDate`) · `teamIds?`: `@IsArray @ArrayMaxSize(100) @IsUUID('all',{each:true}) @ArrayUnique` — more than 100 → `400 VALIDATION_FAILED` (hard cap); 11–100 distinct ids pass the DTO and the domain returns `422 TOO_MANY_TEAMS` per contract |
+| `ReplaceTaskDto`      | same, `title`, `status`, `teamIds` required; omitted `description`/`dueDate` → `null`                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `ChangeTaskStatusDto` | `status` required, nothing else (`version`, `completedAt` etc. → 400)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `ListTasksQueryDto`   | see below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `TaskResponseDto`     | contract shape incl. `isOverdue`, `teams: TeamChipDto[]`, `version`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+
+Mass assignment (AC-03.1.7, AC-03.12.6, security review S-L1): `forbidNonWhitelisted` rejects `id`, `ownerId`, `owner_id`, `userId`, `owner` (object), `version`, `completedAt`, `createdAt`, `updatedAt`, `deletedAt`, `teams`, `isOverdue`, `__proto__` and `constructor` on `CreateTaskDto`, `ReplaceTaskDto` **and** `ChangeTaskStatusDto`. Check order ([ADR-0015](../../architecture/adr/0015-optimistic-concurrency.md)): validation `400` → not found `404` (wins over any `If-Match`, AC-03.15.5) → `412` (mismatch or malformed `If-Match`) → no-op detection.
 
 ```ts
 // presentation/dto/list-tasks.query.dto.ts — illustrative
@@ -210,15 +215,16 @@ export class ListTasksQueryDto extends PaginationQueryDto {
 
 ### Error mapping (`task-error.mapper.ts` + global filter)
 
-| Domain / application error                                                  | HTTP | `code`                   | `details`               |
-| --------------------------------------------------------------------------- | ---- | ------------------------ | ----------------------- |
-| DTO / pipe failure                                                          | 400  | `VALIDATION_FAILED`      | `[{ field, message }]`  |
-| `InvalidTaskTitle`, `InvalidDueDate` (defensive; DTO pre-empts)             | 400  | `VALIDATION_FAILED`      | field                   |
-| `TaskNotFound` (unknown, deleted, foreign)                                  | 404  | `TASK_NOT_FOUND`         | —                       |
-| `ConcurrencyConflict` (If-Match mismatch / malformed, or lost race on save) | 412  | `PRECONDITION_FAILED`    | `{ currentVersion }`    |
-| `TooManyTeams`                                                              | 422  | `TOO_MANY_TEAMS`         | `{ max: 10, received }` |
-| `UnknownTeams`                                                              | 422  | `UNKNOWN_TEAMS`          | `{ teamIds }`           |
-| idempotency reuse (shared interceptor)                                      | 422  | `IDEMPOTENCY_KEY_REUSED` | —                       |
+| Domain / application error                                                     | HTTP | `code`                            | `details`               |
+| ------------------------------------------------------------------------------ | ---- | --------------------------------- | ----------------------- |
+| DTO / pipe failure                                                             | 400  | `VALIDATION_FAILED`               | `[{ field, message }]`  |
+| `InvalidTaskTitle`, `InvalidDueDate` (defensive; DTO pre-empts)                | 400  | `VALIDATION_FAILED`               | field                   |
+| `TaskNotFound` (unknown, deleted, foreign)                                     | 404  | `TASK_NOT_FOUND`                  | —                       |
+| `ConcurrencyConflict` (If-Match mismatch / malformed, or lost race on save)    | 412  | `PRECONDITION_FAILED`             | `{ currentVersion }`    |
+| `TooManyTeams` (11–100 distinct ids; > 100 is a DTO 400)                       | 422  | `TOO_MANY_TEAMS`                  | `{ max: 10, received }` |
+| `UnknownTeams`                                                                 | 422  | `UNKNOWN_TEAMS`                   | `{ teamIds }`           |
+| idempotency key in flight (shared interceptor, advisory lock not acquired)     | 409  | `IDEMPOTENCY_REQUEST_IN_PROGRESS` | — (`Retry-After: 1`)    |
+| idempotency reuse (shared interceptor; also a key first used on another route) | 422  | `IDEMPOTENCY_KEY_REUSED`          | —                       |
 
 A lost race on save **without** `If-Match` is retried once by the handler (reload + reapply) — the client asked for last-write-wins (AC-03.15.4); with `If-Match` it surfaces as 412.
 
@@ -229,7 +235,8 @@ As in [api-contracts.md § Tasks](../../architecture/api-contracts.md#tasks--api
 - `teams` ordered by name (case-insensitive); `title` sort is case-insensitive; `status` sort follows lifecycle order; ties by `id` in the sort direction.
 - `search` escapes `%`, `_`, `\`; `status` also accepts repeated params (`status=A&status=B`).
 - Same-status `PATCH` → `200` with the unchanged resource and unchanged `ETag`.
-- `ETag` on `GET /tasks/:id`, `POST`, `PUT`, `PATCH`; `If-Match` accepts `W/"n"` and `"n"`.
+- `ETag` on `GET /tasks/:id` 200, `POST` 201, `PUT` 200, `PATCH` 200 (including idempotent replays, which also carry `Idempotent-Replayed: true`); `If-Match` accepts `W/"n"` and `"n"`, anything else → 412.
+- `Idempotency-Key` is honored on `POST /tasks` only ([ADR-0019](../../architecture/adr/0019-idempotency-keys.md)).
 
 ## Data
 
@@ -339,7 +346,7 @@ Round-trips per list request: `findMissing` (only with `teamId`) + page + count 
 
 No `Seq Scan on tasks` in any of them.
 
-### Seed (part of `prisma/seed.ts`, deterministic ids)
+### Seed (`prisma/seed/tasks.seed.ts`, called by the `prisma/seed.ts` orchestrator of T-007-07)
 
 | #   | Title                    | Status      | Teams                   | Due date      | Purpose                           |
 | --- | ------------------------ | ----------- | ----------------------- | ------------- | --------------------------------- |
@@ -354,50 +361,53 @@ No `Seq Scan on tasks` in any of them.
 | 9   | API error catalogue      | DONE        | Backend                 | seed day − 10 |                                   |
 | 10  | Accessibility audit      | IN_PROGRESS | Design                  | seed day + 3  |                                   |
 
-Statuses 4 / 3 / 3; due dates relative to the seed date so the demo always shows overdue and due-soon tasks; upsert by fixed UUIDs keeps reruns idempotent.
+Fixed literal fixtures (no faker). Statuses 4 / 3 / 3; due dates relative to the seed day so the demo always shows overdue and due-soon tasks; tasks upserted by fixed UUIDs (`deleted_at` reset, `task_teams` rewritten) keep reruns idempotent. Skipped with the demo user (`SEED_DEMO=false` or `APP_ENV=production`).
 
 ## Security considerations
 
 - Every repository and read-model statement includes `owner_id = $owner` and `deleted_at IS NULL`; there is no method without `ownerId` (enforced by port signatures). Foreign/deleted → `TASK_NOT_FOUND`, foreign teams → `UNKNOWN_TEAMS` (no existence leak beyond what the caller sent).
-- SQL is parameterized via `Prisma.sql`; the only raw fragments are constant ORDER BY strings selected from a whitelist map. `search` wildcards are escaped.
-- `forbidNonWhitelisted` rejects `ownerId`, `version`, `completedAt`, `id` in bodies.
-- Rate limit (contract) applies; bodies limited by the global size limit; `teamIds` length bounded by the domain (10).
+- SQL is parameterized via `Prisma.sql`; the only raw fragments are constant ORDER BY strings selected from a whitelist map, and the direction comes only from the `-` prefix of a whitelisted `sort` value. A unit test asserts every generated ORDER BY is one of the constant fragments (F6). `search` wildcards are escaped.
+- `forbidNonWhitelisted` rejects the mass-assignment fields listed under Presentation on create, replace and status change.
+- Rate limit (contract) applies; bodies limited by the global size limit; `teamIds` hard-capped at 100 by the DTO and at 10 by the domain.
 - Logs/spans never contain title, description or search terms (user content).
 
 ## Observability
 
-| Kind                                       | Name                                                                                                                                                                                          | Details                                                      |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Span attributes (on the HTTP/handler span) | `task.id`, `task.status`, `task.status.from`, `task.status.to`, `task.team_count`, `task.noop`                                                                                                | command handlers                                             |
-|                                            | `tasks.query.sort`, `tasks.query.status`, `tasks.query.has_team_filter`, `tasks.query.has_search`, `tasks.query.limit`, `tasks.query.offset`, `tasks.query.result_count`, `tasks.query.total` | `ListTasks`                                                  |
-| Child spans                                | `TaskRepository.save`, `TaskReadModel.list`, `TeamDirectory.summaries`                                                                                                                        | + Prisma auto-instrumentation                                |
-| Counter                                    | `tasks_created_total{status}`                                                                                                                                                                 | `TaskCreated` handler                                        |
-| Counter                                    | `tasks_completed_total`                                                                                                                                                                       | `TaskStatusChanged` to `DONE`, and `TaskCreated` with `DONE` |
-| Counter                                    | `task_status_transitions_total{from,to}` · `tasks_deleted_total`                                                                                                                              | events                                                       |
-| Counter                                    | `task_team_unassign_failures_total`                                                                                                                                                           | `TeamDeleted` reaction failures                              |
-| Logs (pino, trace-correlated)              | `info task.status_changed {taskId, from, to}` · `warn task.concurrency_conflict {taskId, expected, current}` · `error task.team_unassign_failed {teamId}`                                     | no user content                                              |
+| Kind                                       | Name                                                                                                                                                                                          | Details                                                                   |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Span attributes (on the HTTP/handler span) | `task.id`, `task.status`, `task.status.from`, `task.status.to`, `task.team_count`, `task.noop`                                                                                                | command handlers                                                          |
+|                                            | `tasks.query.sort`, `tasks.query.status`, `tasks.query.has_team_filter`, `tasks.query.has_search`, `tasks.query.limit`, `tasks.query.offset`, `tasks.query.result_count`, `tasks.query.total` | `ListTasks`                                                               |
+| Child spans                                | `TaskRepository.save`, `TaskReadModel.list`, `TeamDirectory.summaries`                                                                                                                        | + Prisma auto-instrumentation                                             |
+| Counter                                    | `tasks_created_total`                                                                                                                                                                         | `TaskCreated` handler                                                     |
+| Counter                                    | `tasks_completed_total`                                                                                                                                                                       | `TaskStatusChanged` to `DONE`, and `TaskCreated` whose `status` is `DONE` |
+| Counter                                    | `tasks_deleted_total`                                                                                                                                                                         | `TaskDeleted` handler                                                     |
+| Logs (pino, trace-correlated)              | `info task.status_changed {taskId, from, to}` · `warn task.concurrency_conflict {taskId, expected, current}`                                                                                  | no user content                                                           |
 
-Metrics are emitted from event handlers (`task-metrics.handler.ts`), keeping the domain free of I/O.
+These three are the only domain metrics (Maestro decision X3); everything else is HTTP RED metrics from 006.
+
+Metrics are emitted from after-commit event handlers (`task-metrics.handler.ts`), keeping the domain free of I/O.
 
 ## Testing approach
 
-| Scenario group (Rule in `tasks.feature`)                                  | Domain unit               | Handler unit (fakes)              | Integration (Testcontainers PG)           | API e2e (supertest)            |
-| ------------------------------------------------------------------------- | ------------------------- | --------------------------------- | ----------------------------------------- | ------------------------------ |
-| Create defaults & field boundaries (title, description, status, due date) | ✔ VOs                     | ✔                                 | —                                         | ✔ outline rows (contract 400s) |
-| Team count / duplicates / unknown teams                                   | ✔ `TaskTeamIds`           | ✔ fake `TeamDirectory`            | —                                         | ✔                              |
-| Listing, filters, combined filters                                        | —                         | ✔ empty page for foreign `teamId` | ✔ read model (all outline rows)           | ✔ smoke per filter             |
-| Search literal characters                                                 | —                         | —                                 | ✔                                         | ✔ `100%`                       |
-| Sort + tie-break + page walk                                              | —                         | —                                 | ✔ (deterministic ids)                     | ✔ default sort                 |
-| Pagination meta & invalid params                                          | —                         | ✔ meta math                       | ✔                                         | ✔ 400 rows                     |
-| View / not found / malformed id                                           | —                         | ✔                                 | —                                         | ✔                              |
-| Edit, no-op, required fields                                              | ✔ `edit`/no-op            | ✔                                 | ✔ `task_teams` replace                    | ✔                              |
-| Status transition matrix (9) + updatedAt                                  | ✔ all 9                   | ✔ no save on no-op                | —                                         | ✔ all 9                        |
-| Delete                                                                    | ✔                         | ✔                                 | ✔ invisible to read model                 | ✔                              |
-| Ownership (all operations)                                                | —                         | —                                 | ✔ queries scoped                          | ✔ two users                    |
-| Team deletion effect                                                      | ✔ `unassignTeam`          | ✔ idempotent                      | ✔ handler + versions                      | ✔ via `DELETE /teams/:id`      |
-| Overdue                                                                   | ✔ policy with fixed today | —                                 | —                                         | ✔ fixed `Clock`                |
-| Concurrency (If-Match, race)                                              | —                         | ✔                                 | ✔ two concurrent saves → one 0-row update | ✔                              |
-| Idempotency                                                               | —                         | —                                 | ✔ key store                               | ✔                              |
+| Scenario group (Rule in `tasks.feature`)                                  | Domain unit               | Handler unit (fakes)                                            | Integration (Testcontainers PG)                                         | API e2e (supertest)                                                                                  |
+| ------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Create defaults & field boundaries (title, description, status, due date) | ✔ VOs                     | ✔                                                               | —                                                                       | ✔ outline rows (contract 400s)                                                                       |
+| Team count / duplicates / unknown teams                                   | ✔ `TaskTeamIds`           | ✔ fake `TeamDirectory`                                          | ✔ adapter via `QueryBus`                                                | ✔ incl. 101 ids → 400, 11 → 422; foreign vs never-existing id → identical `422 UNKNOWN_TEAMS` bodies |
+| Listing, filters, combined filters                                        | —                         | ✔ empty page for foreign `teamId`                               | ✔ read model (all outline rows)                                         | ✔ smoke per filter                                                                                   |
+| Search literal characters                                                 | —                         | —                                                               | ✔                                                                       | ✔ `100%`                                                                                             |
+| Sort + tie-break + page walk                                              | —                         | —                                                               | ✔ (deterministic ids)                                                   | ✔ default sort                                                                                       |
+| Pagination meta & invalid params                                          | —                         | ✔ meta math                                                     | ✔                                                                       | ✔ 400 rows                                                                                           |
+| View / not found / malformed id                                           | —                         | ✔                                                               | —                                                                       | ✔                                                                                                    |
+| Edit, no-op, required fields                                              | ✔ `edit`/no-op            | ✔                                                               | ✔ `task_teams` replace                                                  | ✔                                                                                                    |
+| Status transition matrix (9) + updatedAt                                  | ✔ all 9                   | ✔ no save on no-op                                              | —                                                                       | ✔ all 9                                                                                              |
+| Delete                                                                    | ✔                         | ✔                                                               | ✔ invisible to read model                                               | ✔                                                                                                    |
+| Ownership (all operations)                                                | —                         | —                                                               | ✔ queries scoped                                                        | ✔ two users                                                                                          |
+| Team deletion effect                                                      | ✔ `unassignTeam`          | ✔ idempotent                                                    | ✔ in-transaction handler + versions; failure rolls back the team delete | ✔ via `DELETE /teams/:id`                                                                            |
+| Overdue                                                                   | ✔ policy with fixed today | —                                                               | —                                                                       | ✔ fixed `Clock`                                                                                      |
+| Concurrency (If-Match, race)                                              | —                         | ✔                                                               | ✔ two concurrent saves → one 0-row update                               | ✔                                                                                                    |
+| Idempotency                                                               | —                         | —                                                               | ✔ key store, concurrent pair, other owner                               | ✔ incl. team key reused on `POST /tasks` → 422                                                       |
+| Mass assignment / control characters                                      | ✔ `TaskTitle`             | —                                                               | —                                                                       | ✔ every field on create, replace and status change                                                   |
+| ORDER BY whitelist                                                        | —                         | ✔ unit: only constant fragments, direction from `-` prefix only | —                                                                       | —                                                                                                    |
 
 - Time is controlled through the `Clock` port (`FixedClock` in tests; e2e overrides the provider) — no sleeps.
 - **N+1 guard:** integration test counts Prisma queries (`$on('query')`) for a 100-task page with 3 teams each → ≤ 4.
@@ -406,14 +416,15 @@ Metrics are emitted from event handlers (`task-metrics.handler.ts`), keeping the
 
 ## Risks & mitigations
 
-| Risk                                                                           | Mitigation                                                                                                                                                            |
-| ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **N+1** when embedding teams                                                   | Team ids aggregated in the page query; one batched `summaries` call; query-count test.                                                                                |
-| **Search performance** (`%term%` cannot use B-tree)                            | `pg_trgm` GIN, 100-char cap, owner-scoped recheck; EXPLAIN captured; k6 scenario (EP-06). Full-text search is a documented production improvement.                    |
-| **Offset pagination drift** (inserts/deletes between pages → duplicates/skips) | Accepted for a personal list (ADR-0006); deterministic `id` tie-break; app refetches from page 1 after mutations; cursor pagination listed as production improvement. |
-| count + page not snapshot-consistent under READ COMMITTED                      | Accepted (cosmetic); can switch the batch to `REPEATABLE READ` if observed.                                                                                           |
-| Prisma migration drift drops raw-SQL indexes/CHECKs                            | Review generated SQL; `migrate diff` in CI; data-model.md is the checklist.                                                                                           |
-| Cross-context timing of `TeamDeleted`                                          | Read side hides deleted teams; transaction-agnostic idempotent handler; failure metric. Outbox is the production improvement.                                         |
-| Lost updates between load and save                                             | `UPDATE … WHERE version = $loaded`; retry once without If-Match, 412 with If-Match.                                                                                   |
-| `taskCount` on teams needs task data (002)                                     | `CountTasksPerTeam` query via `QueryBus` — no import cycle, no cross-context table access.                                                                            |
-| `lower(title)` sort unindexed                                                  | Bounded per owner; revisit with an expression index only if EXPLAIN shows a need.                                                                                     |
+| Risk                                                                                                                            | Mitigation                                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **N+1** when embedding teams                                                                                                    | Team ids aggregated in the page query; one batched `summaries` call; query-count test.                                                                                                   |
+| **Search performance** (`%term%` cannot use B-tree)                                                                             | `pg_trgm` GIN, 100-char cap, owner-scoped recheck; EXPLAIN captured; k6 scenario (EP-06). Full-text search is a documented production improvement.                                       |
+| **Offset pagination drift** (inserts/deletes between pages → duplicates/skips)                                                  | Accepted for a personal list (ADR-0006); deterministic `id` tie-break; app refetches from page 1 after mutations; cursor pagination listed as production improvement.                    |
+| count + page not snapshot-consistent under READ COMMITTED                                                                       | Accepted (cosmetic); can switch the batch to `REPEATABLE READ` if observed.                                                                                                              |
+| Prisma migration drift drops raw-SQL indexes/CHECKs                                                                             | Review generated SQL; `migrate diff` in CI; data-model.md is the checklist.                                                                                                              |
+| Unassignment diverges from the team delete                                                                                      | `OnTeamDeletedHandler` runs in the same transaction (ADR-0002); a failure rolls back both. Read side also hides deleted teams. Outbox is the production evolution if contexts are split. |
+| Lost updates between load and save                                                                                              | `UPDATE … WHERE version = $loaded`; retry once without If-Match, 412 with If-Match.                                                                                                      |
+| `taskCount` on teams needs task data (002)                                                                                      | `CountTasksByTeamQuery` (`tasks/contracts/`) via `QueryBus` behind 002's `TeamTaskCounts` port — no import cycle, no cross-context table access.                                         |
+| Trigram GIN index is not owner-scoped (noisy neighbour: another owner's many rows matching a common trigram inflate the bitmap) | Acceptable at demo scale; EXPLAIN captured. Production fix: `btree_gin` composite index including `owner_id`, or a per-statement `statement_timeout` on search queries.                  |
+| `lower(title)` sort unindexed                                                                                                   | Bounded per owner; revisit with an expression index only if EXPLAIN shows a need.                                                                                                        |
