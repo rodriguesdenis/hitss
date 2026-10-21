@@ -144,11 +144,60 @@ Feature: Quality gates, CI and developer experience
     Scenario: Plain-text request files mirror the collection
       Then every request in the collection has an equivalent in the plain-text request files
 
-    @US-07.4 @AC-07.4.4 @could
+    @US-07.4 @AC-07.4.4 @must
     Scenario: The collection passes against a freshly seeded stack
       Given the pipeline started a freshly seeded stack
       When the request collection runs headlessly
       Then every request assertion passes
+
+  Rule: The README answers the brief's documentation requirements
+
+    @US-07.4 @AC-07.4.5 @must @docs
+    Scenario: The README explains the architectural decisions
+      When the evaluator reads the "Architectural decisions" section
+      Then it explains why the database was chosen and that persistence was proposed and justified, not prescribed
+      And it explains how entities and relationships are modeled
+      And it explains how the backend layers are organized
+      And it explains why React Query and Zustand were chosen for server and local state
+
+    @US-07.4 @AC-07.4.6 @must @docs
+    Scenario: The README documents the data model and reproducibility
+      When the evaluator reads the "Data model" section
+      Then it shows the entities and relationships as a diagram or clear text
+      And it explains how migrations and seeding work
+      And it explains how local reproducibility is guaranteed
+
+    @US-07.4 @AC-07.4.7 @must @docs
+    Scenario: The README explains how to run and the API contract
+      When the evaluator reads the "How to run" section
+      Then it gives step-by-step instructions for the backend and for the mobile app
+      And it summarizes the endpoints with payload and response-envelope examples
+
+    @US-07.4 @AC-07.4.8 @must @docs
+    Scenario Outline: The README has production notes
+      When the evaluator reads the "What I would do differently in production" section
+      Then it covers <topic>
+
+      Examples:
+        | topic       |
+        | caching     |
+        | logging     |
+        | scalability |
+        | security    |
+
+    @US-07.4 @AC-07.4.9 @must @docs
+    Scenario Outline: The documentation check protects the README
+      Given the README <defect>
+      When the documentation check runs
+      Then it fails naming the problem
+
+      Examples:
+        | defect                                         |
+        | lacks the "Architectural decisions" section    |
+        | lacks the "Data model" section                 |
+        | lacks the "How to run" section                 |
+        | lacks the production section                   |
+        | contains a broken relative link                |
 
   Rule: The mobile development server is available on demand
 
@@ -259,23 +308,78 @@ Feature: Quality gates, CI and developer experience
   Rule: Architecture rules are enforced by tooling
 
     @US-07.7 @AC-07.7.1 @could
-    Scenario Outline: Breaking a layering rule fails the check
+    Scenario Outline: CI fails when a layering rule is broken
       Given <offending dependency>
       When the architecture check runs
       Then it fails naming the rule "<rule>", the offending file and the import
 
       Examples:
-        | offending dependency                                            | rule                          |
-        | a domain file imports the persistence library                   | domain-is-pure                |
-        | a domain file imports the web framework                         | domain-is-pure                |
-        | a domain file imports an infrastructure file                    | domain-is-pure                |
-        | a domain file imports an application file                       | domain-is-pure                |
-        | an application file imports an infrastructure file              | application-not-to-infra      |
-        | an application file imports a presentation file                 | application-not-to-presentation |
-        | a presentation file imports an infrastructure file directly     | presentation-not-to-infra     |
-        | the task context imports the team context's infrastructure      | contexts-via-ports            |
-        | the mobile app imports a file from the API                      | mobile-not-to-api             |
-        | two modules import each other                                   | no-circular                   |
+        | offending dependency                                                   | rule                               |
+        | a domain file imports the persistence library                          | domain-no-third-party              |
+        | a domain file imports the web framework                                | domain-no-third-party              |
+        | a domain file imports the validation library                           | domain-no-third-party              |
+        | a domain file imports an infrastructure file                           | domain-is-pure                     |
+        | a domain file imports an application file                              | domain-is-pure                     |
+        | an application file imports an infrastructure file                     | application-not-to-adapters        |
+        | an application file imports a presentation file                        | application-not-to-adapters        |
+        | an infrastructure file imports a presentation file                     | infrastructure-not-to-presentation |
+        | a presentation file imports an infrastructure file directly            | presentation-not-to-infra          |
+        | two modules import each other                                          | no-circular                        |
+
+    @US-07.7 @AC-07.7.4 @could
+    Scenario Outline: CI fails when a bounded context reaches into another context
+      Given a <layer> file of the task context imports a file of the team context that is <target>
+      When the architecture check runs
+      Then the outcome is "<outcome>"
+
+      Examples:
+        | layer          | target                      | outcome                                         |
+        | domain         | in its domain               | fails naming contexts-isolated                  |
+        | application    | in its application          | fails naming contexts-isolated                  |
+        | infrastructure | in its infrastructure       | fails naming contexts-isolated                  |
+        | presentation   | in its presentation         | fails naming contexts-isolated                  |
+        | application    | in its public contracts     | passes                                          |
+
+    @US-07.7 @AC-07.7.5 @could
+    Scenario: CI fails when a contracts file imports module internals
+      Given a contracts file imports a domain aggregate of its own context
+      When the architecture check runs
+      Then it fails naming the rule "contracts-are-thin"
+
+    @US-07.7 @AC-07.7.6 @could
+    Scenario: CI fails when shared code depends on a context
+      Given a file in the shared kernel imports a context module
+      When the architecture check runs
+      Then it fails naming the rule "shared-not-to-features"
+
+    @US-07.7 @AC-07.7.7 @could
+    Scenario: CI fails when production code imports tests
+      Given a production file imports a spec file
+      When the architecture check runs
+      Then it fails naming the rule "no-tests-in-production"
+
+    @US-07.7 @AC-07.7.1 @AC-07.7.8 @could
+    Scenario Outline: CI fails when a mobile rule is broken
+      Given <offending dependency>
+      When the architecture check runs
+      Then it fails naming the rule "<rule>", the offending file and the import
+
+      Examples:
+        | offending dependency                                                   | rule                    |
+        | the mobile app imports a file from the API                             | mobile-not-to-api       |
+        | shared code imports a feature                                          | shared-is-leaf          |
+        | a feature imports another feature's internal file                      | features-isolated       |
+        | a shared file imports a route file                                     | routes-not-imported     |
+        | a feature imports an HTTP library                                      | http-via-api-client     |
+        | a feature imports the local storage library outside the storage adapter | storage-behind-adapter  |
+        | two mobile modules import each other                                   | no-circular             |
+
+    @US-07.7 @AC-07.7.9 @could
+    Scenario: Every architecture rule has a fixture proving it fires
+      Given the set of configured architecture rules
+      When the architecture meta-test runs
+      Then each rule has at least one violating fixture
+      And a rule without a fixture fails the suite
 
     @US-07.7 @AC-07.7.2 @AC-07.7.3 @could
     Scenario: Compliant code passes locally and in the pipeline with the same command

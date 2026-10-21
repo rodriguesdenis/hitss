@@ -19,6 +19,7 @@ Makefile
 apps/api/Dockerfile                # multi-stage, turbo prune
 apps/api/docker-entrypoint.sh      # migrate deploy → seed → exec node
 apps/api/.dependency-cruiser.cjs
+apps/mobile/.dependency-cruiser.cjs
 apps/api/stryker.config.mjs
 apps/mobile/Dockerfile.dev         # Metro for Expo Go (profile mobile)
 .github/workflows/ci.yml
@@ -82,11 +83,18 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-teams}:${POSTGRES_PASSWORD:-teams}@postgres:5432/${POSTGRES_DB:-teams_tasks}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-dev-secret-change-me-0123456789abcdef}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
-      SEED_ON_START: ${SEED_ON_START:-true}
+      SEED_ON_START: ${SEED_ON_START:-true} # run the seed step at all
+      SEED_DEMO: ${SEED_DEMO:-true} # create the demo account + data (refused when APP_ENV=production)
+      DOCS_ENABLED: ${DOCS_ENABLED:-true} # forced off when APP_ENV=production
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8081}
+      APP_SCHEME: ${APP_SCHEME:-teamstasks}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      AUTH_RATE_LIMIT_ENABLED: ${AUTH_RATE_LIMIT_ENABLED:-true}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-false}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://signoz-otel-collector:4318}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+      RATE_LIMIT_IP_MAX: ${RATE_LIMIT_IP_MAX:-300}
     ports: ['${API_PORT:-3000}:3000']
     healthcheck:
       test:
@@ -120,7 +128,7 @@ volumes: { pgdata: {} }
 ```
 
 - Compose interpolation `${VAR:-default}` means **no `.env` is needed** (AC-07.1.4); if a `.env` exists, compose reads it automatically. `.env.example` lists the same variables with the same defaults and a comment each; a unit test (`tools/ci/env-example.test.mjs`) asserts that every `${VAR:-…}` in `docker-compose.yml` and every key of the API config schema appears in `.env.example` with the same default.
-- `BETTER_AUTH_SECRET` default is obviously local; the API config schema **rejects that value when `APP_ENV=production`** (BR-07.2, threat model).
+- `BETTER_AUTH_SECRET` default is obviously local; the API config schema **rejects that value when `APP_ENV=production`** (BR-07.2, threat model). The full production rule set lives in [Configuration validation](#configuration-validation-t-007-02) below.
 - Postgres port is published for developer tooling; bind can be restricted with `POSTGRES_PORT=127.0.0.1:5432`.
 - Images are multi-arch (amd64/arm64) — `postgres:17-alpine`, `node:24-bookworm-slim`, SigNoz and k6 images all publish both.
 
@@ -174,10 +182,54 @@ exec node --import ./dist/instrumentation.js dist/main.js
 - `.dockerignore`: `**/node_modules`, `**/dist`, `**/.turbo`, `**/coverage`, `.git`, `.env*` (except `.env.example`), `apps/mobile/.expo`, `docs/brief`.
 - `NODE_ENV` in the runtime image is `production` for the Node runtime; the _application_ environment used for the secret check is `APP_ENV` (default `local`) so the compose run with the default secret is valid. Naming confirmed in T-007-02.
 
+### Configuration validation (T-007-02)
+
+Decision X2: validation uses **class-validator** (a `ConfigModule.forRoot({ validate })` function that runs `plainToInstance` + `validateSync` on an env class), not zod — one validation idiom across DTOs and config ([ADR-0008](../../architecture/adr/0008-class-validator-dtos-and-generated-client.md)). Layout (overview §6.2): `apps/api/src/config/{env.validation.ts, env.schema.ts, app-config.ts, config.module.ts, production-rules.ts}`.
+
+- `env.schema.ts` — one `EnvironmentVariables` class; decorators per variable (`@IsIn`, `@IsInt @Min`, `@IsUrl({ require_tld: false })`, `@IsBoolean` with an explicit string→boolean `@Transform`, `@Matches`). Defaults are applied before validation so a missing optional variable yields the documented local default.
+- `production-rules.ts` — a list of small, individually tested rules `(config) => Violation[]`, applied **only when `APP_ENV=production`** and **after** the decorator pass. `validate()` collects every violation and throws one error that names each variable and the rule broken, **never the value** (secrets). Adding a variable later (spec 001) means adding one decorated property plus, if needed, one rule — no change to `validate()`.
+- `app-config.ts` — typed `AppConfig` built from the validated class (camelCase, `string[]` for CSV values); the rest of the code injects it and never reads `process.env` (enforced by ESLint `no-restricted-properties` on `process.env` outside `src/config/` and `src/instrumentation.ts`).
+- `APP_ENV` (`local` | `test` | `production`, default `local`) is the application environment used by every rule; `NODE_ENV` only describes the Node runtime (`production` in the image, `test` under Jest). Rules never key on `NODE_ENV`. Documented in `.env.example`, because ADR-0007/threat model wording mentions `NODE_ENV`: a rule keyed on `NODE_ENV=production` would misfire in the compose image, where `NODE_ENV` is always `production` and `APP_ENV=local`.
+
+Variables owned by T-007-02 and by 001 (T-001-xx adds its own rows to the same schema; the table is the single list `env-example.test.mjs` checks against):
+
+| Variable                   | Owner   | Rule                                          | Local default (`.env.example`) | Extra rule when `APP_ENV=production`      |
+| -------------------------- | ------- | --------------------------------------------- | ------------------------------ | ----------------------------------------- |
+| `APP_ENV`                  | 007     | `local \| test \| production`                 | `local`                        | —                                         |
+| `PORT`                     | 007     | int 1–65535                                   | `3000`                         | —                                         |
+| `DATABASE_URL`             | 007     | `postgresql://…`                              | compose-provided               | —                                         |
+| `LOG_LEVEL` / `LOG_PRETTY` | 007/006 | enum / boolean                                | `info` / `false`               | —                                         |
+| `OTEL_*`                   | 007/006 | per 006                                       | per 006                        | —                                         |
+| `SEED_ON_START`            | 007     | boolean; run the seed step                    | `true`                         | —                                         |
+| `SEED_DEMO`                | 001     | boolean; create demo account and data         | `true` (compose)               | `true` rejected (never in production)     |
+| `DOCS_ENABLED`             | 001     | boolean                                       | `true`                         | forced `false` (documentation not served) |
+| `BETTER_AUTH_SECRET`       | 001     | string ≥ 32                                   | obviously-local value          | the example value is rejected             |
+| `BETTER_AUTH_URL`          | 001     | absolute URL                                  | `http://localhost:3000`        | must be `https://`                        |
+| `CORS_ORIGINS`             | 001     | CSV of origins                                | `http://localhost:8081`        | no `*`, no `http://`, no `localhost`      |
+| `APP_SCHEME`               | 001     | `[a-z][a-z0-9+.-]*`                           | `teamstasks`                   | must not be `exp`                         |
+| `TRUSTED_PROXIES`          | 001     | CSV of CIDRs                                  | empty (socket address only)    | —                                         |
+| `AUTH_RATE_LIMIT_ENABLED`  | 001     | boolean                                       | `true`                         | `false` is rejected                       |
+| `RATE_LIMIT_MAX`           | 007     | positive int, req/min per user                | `100`                          | —                                         |
+| `RATE_LIMIT_IP_MAX`        | 001     | positive int, req/min per client IP, pre-auth | `300`                          | —                                         |
+
+007 ships the schema with its own rows **and the extension seam** (rule list + the production rule for the secret); 001's task adds its rows and rules and the unit test per rule. A unit test fails if a property exists in the class without a row in `.env.example` (env parity, above).
+
+### Rate limits behind Docker Desktop / WSL2 NAT
+
+Docker Desktop (macOS, Windows, WSL2) publishes ports through a userland proxy/NAT, so the API often sees **one client IP for every request from the host** (the gateway address, e.g. `172.x.0.1` or `192.168.65.1`), including a phone on the LAN that hits the published port. Consequences, all local-only:
+
+- The per-IP limits (`RATE_LIMIT_IP_MAX`, the 10 req/min credential limit) behave as a **single shared bucket for the whole host**: Bruno, the app and a `curl` loop compete for the same quota, and a burst from one tool can produce `429` for the others.
+- `x-tt-client-ip` is derived from the socket address (`TRUSTED_PROXIES` empty), so the gateway IP is the tracker; this is correct and secure, just coarse.
+- Not an issue on native Linux Docker (the real client address is visible) nor behind a real proxy with `TRUSTED_PROXIES` set.
+
+Mitigations: `make load` raises `RATE_LIMIT_MAX` and `RATE_LIMIT_IP_MAX` for the run; Bruno requests keep their volume under the limits and sign in once; the compose smoke runs on a Linux runner. Never "fix" this by trusting `X-Forwarded-For` from clients. Documented in the [runbook](../../operations/runbook.md#requests-return-429).
+
 ### Seed design (`apps/api/prisma/seed.ts`)
 
 - Fixed UUIDs for 3 teams and 10 tasks, `upsert` by id with full seeded values (AC-07.2.3/2.4); `deletedAt` reset to `null`; `task_teams` for seeded tasks rewritten.
-- Demo user: looked up by email; if absent, created through Better Auth's server API (`auth.api.signUpEmail`) so the password hash format is always the library's own. Never recreated if present.
+- The seed runs only when `SEED_ON_START=true`; inside it, the demo account and all demo data are created only when `SEED_DEMO=true` (config rejects `SEED_DEMO=true` with `APP_ENV=production`).
+- Demo user: owned by 001's `prisma/seed/identity.seed.ts` (the 007 orchestrator `prisma/seed.ts` calls it first). Fixed id `DEMO_USER_ID` (`00000000-0000-4000-8000-000000000001`); created through Better Auth's server API (`auth.api.signUpEmail`) so the password hash is the library's own, with the seed's auth instance setting the fixed id via `databaseHooks.user.create.before` (demo email only). It is **not** found by email alone: the seed checks for the user by `DEMO_USER_ID`; if present nothing is touched (no row changes, password unchanged), if absent it signs up with the fixed id. Team and task seeds reference `DEMO_USER_ID` and upsert by their own fixed UUIDs.
+- **Gate (ADR-0004):** when `SEED_DEMO=false` **or** `APP_ENV=production`, the orchestrator skips _all_ demo data — user, teams, tasks, `task_teams` — and the seed exits 0 having written nothing. The check is in the seed itself as well as in config validation (defence in depth).
 - Teams: **Mobile** `#7C3AED`, **Backend** `#0EA5E9`, **Design** `#F59E0B`.
 - Tasks: statuses 4 Pending / 3 In progress / 3 Done; 2 tasks in two teams, 1 in three, 1 without team; one due 7 days **before** the seeding day (overdue), others relative (+1…+21 days) or none (BR-07.6). Faker not needed (fixed English titles) — keeps the seed readable and deterministic.
 - Reset: `prisma migrate reset --force` (drops, migrates, runs seed) — `make reset` does `docker compose down -v && docker compose up -d --build --wait` (Docker only).
@@ -209,7 +261,7 @@ observability: ; docker compose --profile observability up -d --build --wait
 observability-down: ; docker compose --profile observability down -v
 mobile:        ; docker compose --profile mobile up mobile
 smoke:         ; docker compose --profile load run --rm k6 run /scripts/smoke.js
-load:          ; RATE_LIMIT_MAX=100000 docker compose up -d --wait api && docker compose --profile load run --rm k6 run /scripts/load.js
+load:          ; RATE_LIMIT_MAX=100000 RATE_LIMIT_IP_MAX=100000 docker compose up -d --wait api && docker compose --profile load run --rm k6 run /scripts/load.js
 ```
 
 `test-docker` (best effort, OQ-07.1): `docker run --rm -v "$PWD":/repo -w /repo -v /var/run/docker.sock:/var/run/docker.sock -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal --add-host host.docker.internal:host-gateway node:24 sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm test"`.
@@ -267,7 +319,7 @@ jobs:
     steps:
       - run: pnpm format:check
       - run: pnpm turbo run lint typecheck arch
-      - run: node tools/ci/traceability.mjs
+      - run: node tools/ci/traceability.mjs # regenerates the matrix; fails on gaps or drift
   unit:
     steps:
       - run: pnpm turbo run test -- --coverage
@@ -318,6 +370,8 @@ jobs:
 
 - Actions pinned by commit SHA (Dependabot updates them). `timeout-minutes` on every job (15; compose-smoke 20).
 - `tools/ci/compose-smoke.sh`: asserts `/api/v1/health/ready` 200, `/docs` 200, signs in as the demo user, checks `meta.total` = 3 teams and 10 tasks (AC-07.6.8, AC-07.2.1/2.2). A second step runs the built image with an unreachable `DATABASE_URL` and expects a non-zero exit within 60 s (AC-07.1.7). A third checks `docker compose exec api id -u` ≠ 0 and the image has no `src/`, `test/`, `.env`, `.git` (AC-07.1.6).
+- `tools/ci/doc-check.mjs` (T-007-16) runs in `static` (`pnpm doc-check`): required README sections from `tools/ci/readme-required-sections.json` (AC-07.4.5–4.8) and relative-link check (AC-07.4.9).
+- `tools/ci/traceability.mjs` (T-007-06) runs in `static`: regenerates `docs/quality/traceability-matrix.md` and fails on a MUST AC without scenario or task, or on a stale matrix (BR-07.3: `pnpm traceability` locally).
 - Coverage gates in `apps/api/jest.config.ts`: `coverageThreshold: { global: { lines: 80 }, './src/modules/*/domain/': { lines: 90 } }` (AC-07.6.5). Integration coverage merged with unit via `nyc merge` only for reporting; gates run on unit for domain, on merged for overall.
 - Mobile in CI: lint, typecheck and jest-expo component tests via the same turbo tasks; Maestro is local-only.
 
@@ -326,51 +380,216 @@ jobs:
 - Triggers: `schedule: cron '0 3 * * *'`, `workflow_dispatch`, `pull_request: types [labeled, synchronize]` with `if: contains(github.event.pull_request.labels.*.name, 'mutation')`.
 - `apps/api/stryker.config.mjs`: `mutate: ['src/modules/*/domain/**/*.ts', '!**/*.spec.ts']`, `testRunner: 'jest'`, `coverageAnalysis: 'perTest'`, `thresholds: { high: 90, low: 80, break: 80 }`, `incremental: true` (incremental file cached with `actions/cache`). HTML report uploaded as artifact.
 
-### Architecture rules (`apps/api/.dependency-cruiser.cjs`)
+### Architecture rules (dependency-cruiser)
 
-Layout assumed from [domain model](../../architecture/domain-model.md) / ADR-0002: `apps/api/src/modules/<context>/{domain,application,infrastructure,presentation}`, shared kernel `src/shared/{domain,application,infrastructure}`.
+Single source: [overview §6 (folders) and §7 (rules A1–A9, M1–M6)](../../architecture/overview.md). Every rule below uses the **exact planned paths**; the rules key on them, so a folder rename is an architecture change (amend overview §6 first). API paths: `src/modules/{identity,health,teams,tasks}/{contracts,domain,application,infrastructure,presentation}`, `src/shared/{domain,application,infrastructure,presentation,observability}`, `src/config`. Mobile paths: `app/**`, `src/features/<f>/{…,index.ts}`, `src/shared/**`.
+
+Rule ↔ overview mapping (the rule `name` is what the check prints and what the meta-tests assert):
+
+| Overview | dependency-cruiser rule name            | Fails when …                                                                                                                                                                  |
+| -------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1       | `domain-is-pure`                        | a `domain/` file imports `application/`, `infrastructure/` or `presentation/` (own module or shared)                                                                          |
+| A1       | `domain-no-third-party`                 | a `domain/` file imports any npm package (`@nestjs/*`, `@prisma/*`, `better-auth`, `class-validator`, `class-transformer`, …) or a Node core module (I/O); allowlist is empty |
+| A2       | `application-not-to-adapters`           | an `application/` file imports `infrastructure/`, `presentation/`, `@prisma/*` or `express` (`@nestjs/cqrs` and `@nestjs/common` stay allowed)                                |
+| A3       | `infrastructure-not-to-presentation`    | an `infrastructure/` file imports `presentation/`                                                                                                                             |
+| A4       | `presentation-not-to-infra`             | a `presentation/` file imports `infrastructure/` or `@prisma/*` (no exceptions: controllers use buses)                                                                        |
+| A5       | `contexts-isolated`                     | **any** file (every layer, including `application/` and `presentation/`) of `modules/<a>` imports `modules/<b>/**` unless the target is under `modules/<b>/contracts/`        |
+| A6       | `contracts-are-thin`                    | a `contracts/` file imports anything but another `contracts/`, its own `domain/events/`, `shared/domain/` or `@nestjs/cqrs` (query/event marker types)                        |
+| A7       | `shared-not-to-features`                | `src/shared/**` or `src/config/**` imports `src/modules/**`                                                                                                                   |
+| A8       | `no-circular`                           | any import cycle                                                                                                                                                              |
+| A9       | `no-tests-in-production`                | a non-spec `src/**` file imports `*.spec.ts` or anything under `test/`                                                                                                        |
+| —        | `not-to-dev-dep`, `not-to-unresolvable` | production code imports a dev dependency / an unresolvable module                                                                                                             |
+| —        | `no-orphans` (warn)                     | unreferenced module (reported, never fails)                                                                                                                                   |
+| M1       | `shared-is-leaf`                        | `src/shared/**` imports `src/features/**` or `app/**`                                                                                                                         |
+| M2       | `features-isolated`                     | `src/features/<a>/**` imports `src/features/<b>/**` other than `src/features/<b>/index.ts`                                                                                    |
+| M3       | `routes-not-imported`                   | anything outside `app/` imports `app/**`                                                                                                                                      |
+| M4       | `http-via-api-client` (+ ESLint, below) | `app/**` or `src/**` imports an HTTP library (`axios`, `ky`, `got`, `node-fetch`, `cross-fetch`, `superagent`)                                                                |
+| M5       | `storage-behind-adapter`                | anything outside `src/shared/storage/**` imports `@react-native-async-storage/*` or `react-native-mmkv`                                                                       |
+| M6       | `no-circular`                           | any import cycle                                                                                                                                                              |
+| monorepo | `mobile-not-to-api`                     | the mobile app imports `apps/api/**` or `@hitss/api` (`@hitss/api-client` is allowed)                                                                                         |
+
+`apps/api/.dependency-cruiser.cjs` (invoked from `apps/api` as `depcruise src --config .dependency-cruiser.cjs`):
 
 ```js
-// sketch
-const ctx = '^src/modules/([^/]+)/';
+// sketch — paths are the planned overview §6.2 paths
+const NON_SPEC = { pathNot: '\\.spec\\.ts$' }; // layer rules apply to production files only
+const LAYER = '^src/(modules/[^/]+|shared)'; // a module or the shared kernel
+const NPM = [
+  'npm',
+  'npm-dev',
+  'npm-peer',
+  'npm-optional',
+  'npm-bundled',
+  'npm-no-pkg',
+  'npm-unknown',
+];
+
 module.exports = {
   forbidden: [
     {
       name: 'domain-is-pure',
-      severity: 'error',
-      from: { path: `${ctx}domain/|^src/shared/domain/` },
+      severity: 'error', // A1
+      from: { path: `${LAYER}/domain/`, ...NON_SPEC },
+      to: { path: `${LAYER}/(application|infrastructure|presentation)/` },
+    },
+    {
+      name: 'domain-no-third-party',
+      severity: 'error', // A1
+      from: { path: `${LAYER}/domain/`, ...NON_SPEC },
       to: {
-        path: '^(@nestjs|@prisma|better-auth|@opentelemetry|pino|nestjs-pino|express)|/(application|infrastructure|presentation)/|node_modules/(?!(uuid)/)',
+        dependencyTypes: [...NPM, 'core'],
+        pathNot: [] /* allowlist, empty; additions need an ADR */,
       },
     },
     {
-      name: 'application-not-to-infra',
-      severity: 'error',
-      from: { path: `${ctx}application/` },
-      to: { path: '/infrastructure/|^@prisma|node_modules/@prisma' },
+      name: 'application-not-to-adapters',
+      severity: 'error', // A2
+      from: { path: `${LAYER}/application/`, ...NON_SPEC },
+      to: {
+        path: `${LAYER}/(infrastructure|presentation)/|node_modules/(@prisma|express)/`,
+      },
     },
     {
-      name: 'application-not-to-presentation',
-      severity: 'error',
-      from: { path: `${ctx}application/` },
-      to: { path: '/presentation/' },
+      name: 'infrastructure-not-to-presentation',
+      severity: 'error', // A3
+      from: { path: `${LAYER}/infrastructure/`, ...NON_SPEC },
+      to: { path: `${LAYER}/presentation/` },
     },
     {
       name: 'presentation-not-to-infra',
-      severity: 'error',
-      from: { path: `${ctx}presentation/` },
+      severity: 'error', // A4
+      from: { path: `${LAYER}/presentation/`, ...NON_SPEC },
+      to: { path: `${LAYER}/infrastructure/|node_modules/@prisma/` },
+    },
+    {
+      name: 'contexts-isolated',
+      severity: 'error', // A5 — every layer
+      from: { path: '^src/modules/([^/]+)/', ...NON_SPEC },
       to: {
-        path: '/infrastructure/',
-        pathNot: '^src/shared/infrastructure/(auth|http)/',
+        path: '^src/modules/[^/]+/',
+        pathNot: ['^src/modules/$1/', '^src/modules/[^/]+/contracts/'],
       },
     },
     {
-      name: 'contexts-via-ports',
-      severity: 'error',
-      from: { path: `${ctx}` },
+      name: 'contracts-are-thin',
+      severity: 'error', // A6
+      from: { path: '^src/modules/([^/]+)/contracts/', ...NON_SPEC },
       to: {
-        path: '^src/modules/([^/]+)/(domain|infrastructure)/',
-        pathNot: '^src/modules/$1/',
+        path: '^src/',
+        pathNot: [
+          '^src/modules/[^/]+/contracts/',
+          '^src/modules/$1/domain/events/',
+          '^src/shared/domain/',
+        ],
+      },
+    },
+    {
+      name: 'contracts-are-thin',
+      severity: 'error', // A6 (libraries)
+      from: { path: '^src/modules/[^/]+/contracts/', ...NON_SPEC },
+      to: {
+        dependencyTypes: [...NPM, 'core'],
+        pathNot: 'node_modules/@nestjs/cqrs/',
+      },
+    },
+    {
+      name: 'shared-not-to-features',
+      severity: 'error', // A7
+      from: { path: '^src/(shared|config)/', ...NON_SPEC },
+      to: { path: '^src/modules/' },
+    },
+    {
+      name: 'no-circular',
+      severity: 'error',
+      from: {},
+      to: { circular: true },
+    }, // A8
+    {
+      name: 'no-tests-in-production',
+      severity: 'error', // A9
+      from: { path: '^src/', pathNot: ['\\.spec\\.ts$', '^src/testing/'] },
+      to: { path: '\\.spec\\.ts$|^test/' },
+    },
+    {
+      name: 'not-to-dev-dep',
+      severity: 'error',
+      from: { path: '^src/', ...NON_SPEC },
+      to: { dependencyTypes: ['npm-dev'] },
+    },
+    {
+      name: 'not-to-unresolvable',
+      severity: 'error',
+      from: {},
+      to: { couldNotResolve: true },
+    },
+    {
+      name: 'no-orphans',
+      severity: 'warn',
+      from: {
+        orphan: true,
+        pathNot: '\\.(spec|d)\\.ts$|(^|/)main\\.ts$|(^|/)instrumentation\\.ts$',
+      },
+      to: {},
+    },
+  ],
+  options: {
+    tsConfig: { fileName: 'tsconfig.json' },
+    tsPreCompilationDeps: true, // `import type` counts: type-only imports also break the architecture
+    doNotFollow: { path: 'node_modules' },
+    // spec files are NOT excluded from the graph: A9 and no-circular need them; layer rules skip them via NON_SPEC
+  },
+};
+```
+
+Notes:
+
+- **Why "any file of a module" for A5.** The old sketch only forbade a sibling's `domain`/`infrastructure`, so `modules/tasks/application` importing `modules/teams/application/...` passed. A5 now forbids every import into another module except its `contracts/`; a test fixture exists for the application and presentation layers explicitly. Composition roots (`*.module.ts`) sit at the module root, import only their own module, and wire collaborators through `QueryBus` + ports — no DI provider is exported or imported between context modules.
+- `$1` in `pathNot` refers to the capture group of `from.path` (dependency-cruiser group matching), so `modules/teams/**` → `modules/teams/**` is allowed and `modules/teams/**` → `modules/tasks/contracts/**` is the only cross-module edge.
+- The `domain-no-third-party` allowlist is empty (domain value objects and aggregates are plain TypeScript); adding a pure library (e.g. `uuid`) requires an ADR and one `pathNot` entry.
+- Specs may import their subject, fakes and `src/testing/` helpers; production files may not import specs or `test/` (A9). `src/testing/` is an optional test-support folder excluded from A9's `from`.
+- `apps/api/src/shared/application` (ports like `Clock`, `IdGenerator`) is plain TypeScript and falls under A2 as a normal `application/` folder.
+
+`apps/mobile/.dependency-cruiser.cjs` (invoked from `apps/mobile` as `depcruise app src --config .dependency-cruiser.cjs`):
+
+```js
+// sketch — overview §6.3 paths
+module.exports = {
+  forbidden: [
+    {
+      name: 'shared-is-leaf',
+      severity: 'error', // M1
+      from: { path: '^src/shared/' },
+      to: { path: '^(src/features|app)/' },
+    },
+    {
+      name: 'features-isolated',
+      severity: 'error', // M2
+      from: { path: '^src/features/([^/]+)/' },
+      to: {
+        path: '^src/features/[^/]+/',
+        pathNot: ['^src/features/$1/', '^src/features/[^/]+/index\\.tsx?$'],
+      },
+    },
+    {
+      name: 'routes-not-imported',
+      severity: 'error', // M3
+      from: { pathNot: '^app/' },
+      to: { path: '^app/' },
+    },
+    {
+      name: 'http-via-api-client',
+      severity: 'error', // M4 (libraries)
+      from: { path: '^(app|src)/' },
+      to: {
+        path: 'node_modules/(axios|ky|got|node-fetch|cross-fetch|superagent)/',
+      },
+    },
+    {
+      name: 'storage-behind-adapter',
+      severity: 'error', // M5
+      from: { path: '^(app|src)/', pathNot: '^src/shared/storage/' },
+      to: {
+        path: 'node_modules/(@react-native-async-storage|react-native-mmkv)/',
       },
     },
     {
@@ -378,34 +597,38 @@ module.exports = {
       severity: 'error',
       from: {},
       to: { circular: true },
+    }, // M6
+    {
+      name: 'mobile-not-to-api',
+      severity: 'error', // monorepo rule
+      from: {},
+      to: { path: '^(\\.\\./)+api/|node_modules/@hitss/api(/|$)' },
     },
     {
-      name: 'not-to-dev-dep',
+      name: 'not-to-unresolvable',
       severity: 'error',
-      from: { path: '^src/', pathNot: '\\.spec\\.ts$' },
-      to: { dependencyTypes: ['npm-dev'] },
-    },
-    {
-      name: 'no-orphans',
-      severity: 'warn',
-      from: {
-        orphan: true,
-        pathNot: '\\.(spec|d)\\.ts$|main\\.ts$|instrumentation\\.ts$',
-      },
-      to: {},
+      from: {},
+      to: { couldNotResolve: true },
     },
   ],
   options: {
     tsConfig: { fileName: 'tsconfig.json' },
+    tsPreCompilationDeps: true,
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '\\.spec\\.ts$' },
   },
 };
 ```
 
-- Domain may use a tiny allowlist of pure libraries (none planned; `uuid` shown as example) — anything else requires an ADR.
-- `apps/mobile/.dependency-cruiser.cjs`: rule `mobile-not-to-api` (no import resolving into `apps/api/`), `no-circular`, and "API types only from `@hitss/api-client`".
-- **Meta-test** (AC-07.7.1): `apps/api/test/architecture/rules.spec.ts` runs dependency-cruiser's API (`cruise()`) against fixture folders in `test/architecture/fixtures/<rule>/` (one violating file per Examples row) and asserts the reported rule name — so the rules themselves are tested.
+- **M4 has two enforcement layers** because the global `fetch` is not an import: (1) the depcruise rule above for HTTP libraries; (2) ESLint in `apps/mobile/eslint.config.mjs`: `no-restricted-imports` (same libraries) and `no-restricted-globals: ['fetch']` for `app/**` and `src/**`. The single allowed HTTP path is the generated client's mutator in `packages/api-client` (not under `app`/`src`, so it is out of scope of the rule), plus Better Auth's own client (`src/features/auth/auth-client.ts`, which uses the library's fetch internally and is not a direct `fetch` call).
+- Both configs are invoked by the same command locally and in CI: root `pnpm arch` → `turbo run arch` → per-app `depcruise …` (BR-07.3, AC-07.7.3). Output uses `--output-type err` so each violation prints rule name, file and import.
+
+**Meta-tests (AC-07.7.1, 7.7.4–7.7.9).** `apps/api/test/architecture/rules.spec.ts` and `apps/mobile/test/architecture/rules.spec.ts` run dependency-cruiser's `cruise()` API with `baseDir` set to a fixture project under `test/architecture/fixtures/<rule-name>/<case>/` (each case is a miniature tree with the real folder names and one violating file, plus a `ok/` case with a compliant file, including the allowed `contracts/` edge) and assert the reported rule name, file and import. Three structural tests keep the rules honest:
+
+1. **Coverage of the rules:** every `forbidden[].name` of the config (except `no-orphans`) has at least one fixture directory — adding a rule without a fixture fails the suite.
+2. **Real tree:** `cruise()` over the actual `src/` reports zero errors (same as `pnpm arch`).
+3. **Layer matrix:** a parameterised test generates, for A5, one violating import per source layer (`domain`, `application`, `infrastructure`, `presentation`) into another module's `application/`, and asserts the compliant `contracts/` edge passes.
+
+The ESLint half of M4 is covered by `ESLint.lintText()` in the mobile meta-test (a file calling `fetch(` and one importing `axios` both fail).
 
 ### Contract drift
 
@@ -502,6 +725,7 @@ No schema change. Seed design above; reset via `prisma migrate reset --force`.
 | AC-07.1.4, 1.5                     | `env-example.test.mjs` (parity) + compose-smoke variant with `API_PORT=3100`                                                                                                         |
 | AC-07.1.6, 1.7                     | compose-smoke steps (uid ≠ 0, file absence; unreachable DB → non-zero exit)                                                                                                          |
 | AC-07.3.x                          | README review (DoD) + `make -n` dry-run step in CI                                                                                                                                   |
+| AC-07.4.5–4.9                      | `doc-check.mjs` unit tests (fixture READMEs) + the check itself in `static`                                                                                                          |
 | AC-07.4.1–4.4                      | Bruno CLI run in compose-smoke; `.http` parity script; README review                                                                                                                 |
 | AC-07.5.x                          | Manual check documented in PR of T-007-13 (Expo Go on a device)                                                                                                                      |
 | AC-07.6.1–6.7                      | The workflow itself; verified once per gate with a throwaway "red" PR per Examples row (evidence in T-007-03/05/06/09/10/11 PRs)                                                     |

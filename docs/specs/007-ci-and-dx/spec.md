@@ -73,6 +73,11 @@ As an evaluator, I want runnable request examples, so that I can exercise the AP
 - **AC-07.4.2** A request collection with a local environment is provided; after running its sign-in request once, every other request is authorized automatically.
 - **AC-07.4.3** Plain-text request files usable from common code editors cover the same requests.
 - **AC-07.4.4** The collection runs headlessly against the freshly seeded stack in the pipeline and all its assertions pass.
+- **AC-07.4.5** The README contains an "Architectural decisions" section that explains: why the database was chosen (and that persistence was proposed and justified, not prescribed), how entities and relationships are modeled, how the backend layers are organized, and why the key patterns were chosen (e.g. React Query for server state, Zustand for local state).
+- **AC-07.4.6** The README contains a "Data model" section with a diagram or clear textual description of the entities and relationships, and explains how migrations and seeding work and how local reproducibility is guaranteed.
+- **AC-07.4.7** The README contains "How to run" step-by-step instructions for the backend and for the mobile app, and a documented API contract summary (endpoints, payload and response-envelope examples).
+- **AC-07.4.8** The README contains a "What I would do differently in production" section covering at least caching, logging, scalability and security.
+- **AC-07.4.9** A documentation check in CI fails when any of these README sections is missing, or when a relative link in it is broken.
 
 ### US-07.5 — Mobile dev server in a container (`COULD`)
 
@@ -106,6 +111,12 @@ As a maintainer, I want layer dependency rules enforced automatically, so that t
 **Acceptance criteria**
 
 - **AC-07.7.1** Given code that breaks a layering rule — domain depending on a framework, the persistence library, the application layer or infrastructure; application depending on infrastructure or presentation; presentation depending on infrastructure; one bounded context depending on another context's domain or infrastructure internals; the mobile app depending on server code; any circular dependency — then the check fails, naming the rule and the offending file and import.
+- **AC-07.7.4** Given any file of one bounded context (in any layer, including application and presentation) imports another context's files other than its public `contracts/` folder, then the check fails naming the rule; importing the other context's `contracts/` passes.
+- **AC-07.7.5** Given a `contracts/` file imports anything but other contracts, its own domain events, the shared domain or the CQRS marker types, then the check fails.
+- **AC-07.7.6** Given shared code or configuration imports a context module, then the check fails.
+- **AC-07.7.7** Given production code imports a test file or a test-only folder, then the check fails.
+- **AC-07.7.8** Given the mobile app breaks a mobile rule — shared code importing features or routes, a feature importing another feature's internals, anything importing a route file, an HTTP library or global `fetch` outside the generated client, or a storage library outside the storage adapter — then the check fails naming the rule.
+- **AC-07.7.9** Every architecture rule has at least one test fixture that proves it fires; adding a rule without one fails the suite.
 - **AC-07.7.2** Given code that follows every rule, then the check passes.
 - **AC-07.7.3** The check runs locally with one command and in the pipeline with the same command.
 
@@ -160,6 +171,7 @@ As a maintainer, I want commit and pull-request conventions enforced, so that hi
 - ARM laptops → all images available for both common CPU architectures.
 - Repository cloned on an OS that converts line endings → start-up scripts still run (line endings pinned).
 - A stale local settings file with an invalid value → API fails fast naming the setting (see AC-06.5.5).
+- Docker Desktop / WSL2 NAT → the API may see one client address for all host traffic, so per-address rate limits are shared by every local client (documented in the runbook; raised for load tests).
 - Re-running the start command while the stack is up → no-op, no duplicate data.
 - Pipeline run from a fork → no secrets needed; all gates still run.
 - Dependency update proposal that breaks the build → it fails the same gates and cannot merge.

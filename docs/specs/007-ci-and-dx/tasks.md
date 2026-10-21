@@ -18,7 +18,8 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 | T-007-12 | Mutation testing workflow (Stryker on domain)                                           | T-007-03, domain code (002/003)        | S    | `ci/007-mutation-testing`         |
 | T-007-13 | Optional mobile Metro service (profile `mobile`)                                        | T-007-01, 004 app scaffold             | S    | `build/007-mobile-dev-service`    |
 | T-007-14 | Bruno collection and `.http` files, wired into compose smoke                            | T-007-09, 001/002/003 endpoints        | M    | `docs/007-request-collection`     |
-| T-007-15 | README final: how to run, scripts, request examples, links                              | all above, T-006-08                    | M    | `docs/007-readme-final`           |
+| T-007-15 | README final: how to run, scripts, request examples, links                              | all above, T-006-08, T-007-16          | M    | `docs/007-readme-final`           |
+| T-007-16 | README doc-check: required sections and relative links, in CI                           | T-007-03                               | S    | `ci/007-readme-doc-check`         |
 
 ## T-007-01 — Compose with PostgreSQL and `.env.example`
 
@@ -29,17 +30,19 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 
 ## T-007-02 — Validated API configuration
 
-- **Goal:** one typed config, validated at start-up, failing fast with the variable name; safe local defaults; production refuses the default auth secret.
-- **Changes:** `apps/api/src/infrastructure/config/` (schema, `ConfigModule.forRoot({ validate })`), `APP_ENV`, `PORT`, `DATABASE_URL`, `BETTER_AUTH_*`, `LOG_*`, `OTEL_*`, `RATE_LIMIT_MAX`, `SEED_ON_START`; `.env.example` sync.
+- **Goal:** one typed config, validated at start-up with **class-validator** (decision X2), failing fast with the variable name; safe local defaults; an extension seam so spec 001 adds its variables and production rules without touching the validator.
+- **Changes:** `apps/api/src/config/` (`env.schema.ts` — decorated `EnvironmentVariables` class; `env.validation.ts` — `validate()` = `plainToInstance` + `validateSync` + production rules, aggregating all violations into one error that names variables, never values; `production-rules.ts` — list of `(config) => Violation[]` rules applied only when `APP_ENV=production`; `app-config.ts` — typed `AppConfig`; `config.module.ts` — `ConfigModule.forRoot({ isGlobal: true, validate })`), ESLint `no-restricted-properties` for `process.env` outside `src/config/` and `src/instrumentation.ts`. Variables delivered here: `APP_ENV` (`local|test|production`, distinct from `NODE_ENV`), `PORT`, `DATABASE_URL`, `LOG_LEVEL`, `LOG_PRETTY`, `OTEL_*`, `RATE_LIMIT_MAX`, `SEED_ON_START`, `BETTER_AUTH_SECRET` (+ its production rule) — the **only** auth variable delivered here. `BETTER_AUTH_URL` and every other auth variable below are added by 001 (T-001-01) to this schema. `.env.example` sync (parity test).
+- **Seam for 001 (rows and rules added there, listed in plan § Configuration validation):** `BETTER_AUTH_URL` (https in production), `CORS_ORIGINS` (no `*`, no `http://`, no `localhost` in production), `APP_SCHEME` (`!= exp` in production), `AUTH_RATE_LIMIT_ENABLED` (`false` rejected in production), `SEED_DEMO` (never `true` in production), `DOCS_ENABLED` (forced `false` in production), `RATE_LIMIT_IP_MAX`, `TRUSTED_PROXIES`. 007 provides the rule-list mechanism and a test helper `expectInvalid(env, 'VAR')` so each added rule is a one-line registration plus one unit test.
 - **Covers:** @AC-07.1.4, @AC-06.5.5
-- **Done when:** unit tests: each invalid value → error naming it; `APP_ENV=production` + default secret → start refused; defaults yield a valid config.
+- **Done when:** unit tests: each invalid value → error naming the variable and not echoing the value; several invalid variables → one error listing all; `APP_ENV=production` + the default secret → start refused while `APP_ENV=local` with `NODE_ENV=production` (the image) is accepted; defaults yield a valid config; registering an extra rule in a test requires no change to `validate()`.
 
 ## T-007-03 — CI skeleton
 
 - **Goal:** every PR and push to main runs install (frozen lockfile, pnpm store cache, Turborepo cache), commitlint on the PR range, format check, lint, typecheck, unit tests, build; one aggregate `ci-success`.
 - **Changes:** `.github/workflows/ci.yml`, `.github/actions/setup/action.yml`, `turbo.json` (cache dir, `arch`, `test:integration`, `generate` placeholders), concurrency group with cancel-in-progress for PRs, `permissions: contents: read`, actions pinned by SHA, job timeouts.
-- **Covers:** @AC-07.6.1 (initial gates), @AC-07.6.2, @AC-07.6.3, @AC-07.6.4, @AC-07.6.7, @AC-07.9.2, @AC-07.10.1
-- **Done when:** a green PR on the scaffold; a PR with commit `added stuff` fails `commitlint` and `ci-success`; a second push cancels the first run; a re-run with no changes shows Turborepo cache hits. Branch-protection recommendations shared with the repo owner.
+- **Toolchain pins (scaffold fix):** the Nest scaffold currently resolves `jest@^30` with `ts-jest@^29.2.5`; `ts-jest` supports Jest 30 only from **29.4.0**. Pin a compatible set in the root/`apps/api` manifests: `jest ~30.x`, `@types/jest ~30.x`, `ts-jest ~29.4.x` (peer range `jest ^29 || ^30`), and align `jest-environment-*`/`jest-junit` to the same Jest major; `jest-expo` in `apps/mobile` keeps its own Jest per its SDK (not shared). Add `.npmrc` `strict-peer-dependencies=true` for CI (`pnpm install --frozen-lockfile` then fails on a peer mismatch) and a `pnpm.overrides` entry only if a transitive duplicate remains. Evidence: `pnpm install` prints no peer warnings; `pnpm test` runs.
+- **Covers:** @AC-07.6.1 (initial gates), @AC-07.6.2, @AC-07.6.3, @AC-07.6.4, @AC-07.6.7, @AC-07.9.2, @AC-07.10.1, @AC-07.10.2, @AC-07.10.3
+- **Done when:** a green PR on the scaffold; no peer-dependency warning on a clean install; the existing husky hooks and PR template are verified (invalid local commit rejected, staged files formatted, template links task/ADRs and has the checklist — AC-07.10.2/10.3); a PR with commit `added stuff` fails `commitlint` and `ci-success`; a second push cancels the first run; a re-run with no changes shows Turborepo cache hits. Branch-protection recommendations shared with the repo owner.
 
 ## T-007-04 — API Dockerfile and compose `api` service
 
@@ -50,24 +53,24 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 
 ## T-007-05 — Architecture rules
 
-- **Goal:** layering enforced by dependency-cruiser in API and mobile, with tests proving each rule fires.
-- **Changes:** `apps/api/.dependency-cruiser.cjs`, `apps/mobile/.dependency-cruiser.cjs`, `arch` scripts + turbo task, `apps/api/test/architecture/{rules.spec.ts,fixtures/**}`, CI `static` job runs `turbo run arch`.
-- **Covers:** @AC-07.7.1, @AC-07.7.2, @AC-07.7.3
-- **Done when:** meta-test passes for every Examples row (rule name asserted); current code passes; `pnpm arch` locally = CI command.
+- **Goal:** the full overview §7 rule set (A1–A9, M1–M6 plus `mobile-not-to-api`) enforced by dependency-cruiser in API and mobile, with tests proving each rule fires and the real tree passes.
+- **Changes:** `apps/api/.dependency-cruiser.cjs` (A1 `domain-is-pure` + `domain-no-third-party`, A2, A3, A4, A5 `contexts-isolated` for every layer with only `modules/<b>/contracts/` allowed, A6 `contracts-are-thin`, A7, A8, A9, `not-to-dev-dep`, `not-to-unresolvable`, `no-orphans` warn; `tsPreCompilationDeps: true`), `apps/mobile/.dependency-cruiser.cjs` (M1, M2, M3, M4 libraries, M5, M6, `mobile-not-to-api`), ESLint M4 block in `apps/mobile/eslint.config.mjs` (`no-restricted-imports` + `no-restricted-globals: ['fetch']`), `arch` scripts + turbo task, `apps/{api,mobile}/test/architecture/{rules.spec.ts,fixtures/**}`, CI `static` job runs `turbo run arch`. All paths are the overview §6.2/§6.3 paths (`modules/identity`, `modules/teams`, `modules/tasks`, `modules/health`, `src/config`, `src/shared/**`); the task is blocked until overview is amended for `modules/auth → modules/identity`.
+- **Covers:** @AC-07.7.1, @AC-07.7.2, @AC-07.7.3, @AC-07.7.4, @AC-07.7.5, @AC-07.7.6, @AC-07.7.7, @AC-07.7.8, @AC-07.7.9
+- **Done when:** meta-test passes for every Examples row (rule name, file and import asserted); every `forbidden[].name` has a fixture (the suite fails otherwise); the A5 layer matrix (domain/application/infrastructure/presentation → another module's non-contract file) fails and the `contracts/` edge passes; the real `src/` tree passes; `pnpm arch` locally = CI command.
 
 ## T-007-06 — Integration tests job, coverage gates and traceability check
 
 - **Goal:** Testcontainers integration + supertest e2e in CI; coverage thresholds enforced; every `@must` AC has a test.
-- **Changes:** CI `integration` job, `apps/api/jest.config.ts` + `jest.integration.config.ts` (`coverageThreshold` global 80 / domain 90), `jest-junit` reporters, artifact upload on failure; `tools/ci/traceability.mjs` (feature `@AC-` tags vs AC ids in test names) in the `static` job.
-- **Covers:** @AC-07.6.1 (integration gate), @AC-07.6.5
-- **Done when:** a PR lowering domain coverage under 90 % fails with the shortfall printed; integration suite green on `ubuntu-24.04`; removing the only test of a `@must` AC fails the traceability check.
+- **Changes:** CI `integration` job, `apps/api/jest.config.ts` + `jest.integration.config.ts` (`coverageThreshold` global 80 / domain 90), `jest-junit` reporters, artifact upload on failure; `tools/ci/traceability.mjs` (+ unit tests with fixture specs) in the `static` job. It parses `docs/specs/*/spec.md` (AC ids and priority), `*.feature` (`@AC-` tags), `tasks.md` (`Covers:` lines) and test names (AC ids in `describe`/`it` titles), **regenerates `docs/quality/traceability-matrix.md`** (AC → scenario → task → test), and fails when (a) a MUST AC has no scenario, (b) a MUST AC is in no task's `Covers:`, (c) a `@must` AC has no test once its task is done, or (d) the committed matrix differs from the regenerated one (`git diff --exit-code`; `pnpm traceability` rewrites it locally).
+- **Covers:** @AC-07.6.1 (integration gate), @AC-07.6.5 (the traceability gate is part of the static gate)
+- **Done when:** a PR lowering domain coverage under 90 % fails with the shortfall printed; integration suite green on `ubuntu-24.04`; removing the only test of a `@must` AC, deleting the scenario of a MUST AC, or dropping an AC from every `Covers:` line each fails the traceability check; a stale matrix fails it with the diff.
 
 ## T-007-07 — Deterministic, idempotent seed
 
 - **Goal:** demo user + 3 teams + 10 tasks with fixed ids; re-seed restores seeded rows, keeps others; reset works.
-- **Changes:** `apps/api/prisma/seed.ts`, `apps/api/package.json` (`db:seed`, `db:reset`, `prisma.seed`), seed integration test.
+- **Changes:** `apps/api/prisma/seed.ts` (orchestrator: gate, then calls `identity.seed.ts` from 001 → `teams.seed.ts` from 002 → tasks seed from 003; the demo user is created via `auth.api.signUpEmail` with the fixed `DEMO_USER_ID` set by `databaseHooks.user.create.before`, checked by id, never looked up by email alone), `apps/api/package.json` (`db:seed`, `db:reset`, `prisma.seed`), seed integration test. Team colors as in 002: Mobile `#7C3AED`, Backend `#0EA5E9`, Design `#F59E0B`.
 - **Covers:** @AC-07.2.1, @AC-07.2.2, @AC-07.2.3, @AC-07.2.4, @AC-07.2.5, @AC-07.2.6, @AC-07.1.3
-- **Done when:** integration test: seed ×2 → identical snapshot; rename "Mobile" + own task → re-seed restores "Mobile", keeps own task; reset → exactly 3/10; `SEED_ON_START=false` → no demo data.
+- **Done when:** integration test: seed ×2 → identical snapshot; rename "Mobile" + own task → re-seed restores "Mobile", keeps own task; reset → exactly 3/10; the demo user's id equals `DEMO_USER_ID` and sign-in works; `SEED_ON_START=false` → seed step not run; `SEED_DEMO=false` or `APP_ENV=production` → no user, team or task written and exit code 0.
 
 ## T-007-08 — Root scripts and Makefile
 
@@ -121,6 +124,13 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 ## T-007-15 — README final
 
 - **Goal:** the README answers every brief requirement and matches reality.
-- **Changes:** root `README.md`: overview, quick start (Docker only; with/without make), demo credentials, scripts/aliases table, request examples (cURL from api-contracts), architecture decisions (links to ADRs), data model (link), testing (link to test strategy), observability (link), production readiness (link), contributing (conventions, branch protection), troubleshooting (link to runbook).
-- **Covers:** @AC-07.3.3, @AC-07.4.1, @AC-07.10.4, @AC-06.8.3
+- **Changes:** root `README.md` with the sections the doc-check (T-007-16) requires — "Architectural decisions" (database choice and that persistence was proposed and justified, entity/relationship modelling, backend layering, key patterns such as React Query vs Zustand), "Data model" (diagram or textual description, migrations, seeding, local reproducibility), "How to run" (backend and mobile, step by step, plus API contract summary with payload/envelope examples), "What I would do differently in production" (at least caching, logging, scalability, security): overview, quick start (Docker only; with/without make), demo credentials, scripts/aliases table, request examples (cURL from api-contracts), architecture decisions (links to ADRs), data model (link), testing (link to test strategy), observability (link), production readiness (link), contributing (conventions, branch protection), troubleshooting (link to runbook).
+- **Covers:** @AC-07.3.3, @AC-07.4.1, @AC-07.4.5, @AC-07.4.6, @AC-07.4.7, @AC-07.4.8, @AC-07.10.4, @AC-06.8.3
 - **Done when:** a reviewer follows the README on a clean machine with only Docker and reaches the seeded API and Swagger without deviation; markdown link check passes.
+
+## T-007-16 — README doc-check
+
+- **Goal:** CI fails when a required README section is missing or a relative link in it is broken.
+- **Changes:** `tools/ci/doc-check.mjs` (+ unit tests with fixture READMEs): parses `README.md` headings and checks the required sections exist and are non-empty — "Architectural decisions", "Data model", "How to run" (with backend and mobile subsections), "What I would do differently in production" (must mention caching, logging, scalability, security) — via a `tools/ci/readme-required-sections.json` list; resolves every relative link and anchor in `README.md` and fails naming the file and link. Wired as `pnpm doc-check` and into the CI `static` job (same command locally and in CI). Until T-007-15 lands, the README skeleton (headings only) is committed so the check is green.
+- **Covers:** @AC-07.4.9
+- **Done when:** unit tests: a README without each required section fails naming it; a section missing one of the four production topics fails; a broken relative link fails naming the link; the committed README passes; a throwaway PR removing "Data model" turns `static` red.
