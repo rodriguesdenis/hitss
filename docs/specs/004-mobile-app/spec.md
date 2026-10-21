@@ -40,7 +40,7 @@ As Marina, I want to create my own account, so that I can use the app without th
 
 **Acceptance criteria**
 
-- **AC-04.13.1** Given I fill name, a valid email and a password of 8–128 characters, when I sign up, then my account is created and I am signed in; an email already registered shows an error on the email field. _(was AC-04.1.4)_
+- **AC-04.13.1** Given I fill name, a valid email and a password of 8–128 characters, when I sign up, then my account is created and I am signed in; an email already registered shows an error on the email field.
 
 ### US-04.16 — Sign out (`MUST`, every API route requires authentication; 005 depends on it)
 
@@ -48,7 +48,7 @@ As Marina, I want to sign out, so that nobody using my phone afterwards can see 
 
 **Acceptance criteria**
 
-- **AC-04.16.1** Given I am signed in, when I sign out, then my session and all locally kept data are removed and I see the sign-in screen. _(was AC-04.1.5, then AC-04.13.2)_
+- **AC-04.16.1** Given I am signed in, when I sign out, then my session and all locally kept data are removed and I see the sign-in screen.
 
 ### US-04.2 — Browse teams and open a team's tasks (`MUST`)
 
@@ -103,7 +103,7 @@ As Marina, I want to change the order of my tasks, so that I see what matters fi
 
 **Acceptance criteria**
 
-- **AC-04.14.1** Given the sort options (newest, oldest, due date soonest with undated last, recently updated, title A–Z, status), when I choose one, then the list is reordered accordingly and the current sort is visible. _(was AC-04.5.3)_
+- **AC-04.14.1** Given the sort options (newest, oldest, due date soonest with undated last, recently updated, title A–Z, status), when I choose one, then the list is reordered accordingly and the current sort is visible.
 
 ### US-04.6 — Task detail with quick actions (`MUST`)
 
