@@ -4,7 +4,7 @@ import 'reflect-metadata';
 import { Controller, Get, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { trace } from '@opentelemetry/api';
-import { registerGracefulShutdown } from '../../src/shared/observability/telemetry/graceful-shutdown';
+import { ObservabilityModule } from '../../src/shared/observability/observability.module';
 
 @Controller()
 class PingController {
@@ -17,12 +17,12 @@ class PingController {
   }
 }
 
-@Module({ controllers: [PingController] })
+@Module({ imports: [ObservabilityModule], controllers: [PingController] })
 class FixtureModule {}
 
 async function main() {
   const app = await NestFactory.create(FixtureModule, { logger: false });
-  registerGracefulShutdown(app);
+  app.enableShutdownHooks();
   await app.listen(Number(process.env.PORT), '127.0.0.1');
   process.stdout.write('READY\n');
 }
