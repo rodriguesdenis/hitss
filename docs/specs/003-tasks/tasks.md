@@ -48,9 +48,9 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 ## T-003-03 — Implement `Task` aggregate, events, errors, overdue policy (TDD)
 
 - **Goal:** lifecycle rules live in the aggregate.
-- **Changes:** `domain/task.ts`, `domain/overdue.policy.ts`, `domain/events/*`, `domain/errors/{task-not-found,unknown-teams,concurrency-conflict}.error.ts` + specs.
+- **Changes:** `domain/task.ts`, `domain/overdue.policy.ts`, `domain/events/*`, `domain/errors/{task-not-found,unknown-teams}.error.ts` + specs (`ConcurrencyConflict` is reused from `shared/domain`).
 - **Covers:** @AC-03.1.1 @AC-03.1.4 @AC-03.9.4 @AC-03.9.5 @AC-03.10.1 @AC-03.10.2 @AC-03.10.3 @AC-03.10.5 @AC-03.13.2 @AC-03.13.4 @AC-03.14.1 @AC-03.14.2 @AC-03.14.3 (unit level).
-- **Done when:** the 9-row transition matrix passes (status, version, `completedAt`, event emitted or not); edit no-op leaves version/`updatedAt`; `unassignTeam` bumps version only when the team was assigned; overdue table passes with fixed today; Stryker ≥ 80 % on `domain/`.
+- **Done when:** the 9-row transition matrix passes (status, `changed` — which is what makes persistence write version + 1 —, `completedAt`, `updatedAt`, event emitted or not; the aggregate's `version` itself never changes); edit no-op returns `false` and leaves `updatedAt`; `unassignTeam` reports a change (and touches `updatedAt`) only when the team was assigned; overdue table passes with fixed today; Stryker ≥ 80 % on `domain/`.
 
 ## T-003-04 — Add `TaskRepository` port + Prisma adapter
 

@@ -54,7 +54,7 @@ describe('Team', () => {
     });
 
     it('raises no event', () => {
-      expect(backend().pullEvents()).toEqual([]);
+      expect(backend().pullEvents()).toStrictEqual([]);
     });
   });
 
@@ -80,7 +80,7 @@ describe('Team', () => {
       expect(team.createdAt).toEqual(CREATED_AT);
       expect(team.updatedAt).toEqual(LATER);
       expect(team.deletedAt).toEqual(deletedAt);
-      expect(team.pullEvents()).toEqual([]);
+      expect(team.pullEvents()).toStrictEqual([]);
     });
   });
 
@@ -93,7 +93,7 @@ describe('Team', () => {
       expect(changed).toBe(false);
       expect(team.version).toBe(1);
       expect(team.updatedAt).toEqual(CREATED_AT);
-      expect(team.pullEvents()).toEqual([]);
+      expect(team.pullEvents()).toStrictEqual([]);
     });
 
     it.each([
@@ -153,7 +153,9 @@ describe('Team', () => {
       const events = team.pullEvents();
       expect(events).toHaveLength(1);
       expect(events[0]).toBeInstanceOf(TeamDeleted);
-      expect(events[0]).toEqual(new TeamDeleted(TEAM_ID, OWNER_ID, LATER));
+      expect(events[0]).toStrictEqual(
+        new TeamDeleted(TEAM_ID, OWNER_ID, LATER),
+      );
     });
 
     it('deleting twice is a no-op: no second event, first deletion time kept', () => {
@@ -164,7 +166,7 @@ describe('Team', () => {
       team.delete(new Date('2026-10-22T00:00:00.000Z'));
 
       expect(team.deletedAt).toEqual(LATER);
-      expect(team.pullEvents()).toEqual([]);
+      expect(team.pullEvents()).toStrictEqual([]);
     });
   });
 
