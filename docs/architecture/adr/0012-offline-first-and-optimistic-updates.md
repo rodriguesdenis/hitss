@@ -30,7 +30,7 @@ The persona works on unreliable mobile networks; status changes must feel instan
 
 | Option                                                                                    | Pros                                                                                                               | Cons                                                                  |
 | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
-| **React Query persistence + paused mutations** (chosen)                                   | Built into TanStack Query (`persistQueryClient`, `onlineManager`, `resumePausedMutations`); no custom sync engine. | Last-write-wins semantics; ordering per mutation scope only.          |
+| **React Query persistence + paused mutations** (chosen)                                   | Built into TanStack Query (`persistQueryClient`, `onlineManager`, `resumePausedMutations`); no custom sync engine. | Last-write-wins semantics; ordering only within a mutation scope.     |
 | **Local database as source of truth + sync engine** (WatermelonDB, PowerSync, Replicache) | Full offline CRUD with conflict resolution.                                                                        | Native modules or hosted services; backend changes; far beyond scope. |
 
 ## Decision outcome
@@ -59,7 +59,8 @@ interface StorageAdapter {
 - `onlineManager.setEventListener` wired to `@react-native-community/netinfo`; `focusManager` wired to `AppState`.
 - Mutations use `networkMode: "offlineFirst"`; when offline they are **paused** and dehydrated with the cache.
 - Because functions cannot be persisted, every mutation is registered with `queryClient.setMutationDefaults(mutationKey, { mutationFn, onMutate, onError, onSettled })`, so rehydrated mutations know how to run. `onSuccess` of the persister calls `queryClient.resumePausedMutations()`.
-- Mutations on the same entity share a `scope: { id: "task:<id>" }`, so they run serially in creation order.
+- **One ordered queue (amended):** every offline-capable mutation shares a single `scope: { id: "sync" }`, so all mutations run serially in the order the user made them. Per-entity scopes (`task:<id>`) were rejected: a task created offline may reference a team also created offline, and edits across entities must replay in user order.
+- **Temporary ids:** offline creates use `tmp-<uuid>` only in the cache; the client never sends ids it generated itself. When a create succeeds, the server id is recorded in an id map, and later queued mutations resolve `tmp-` ids through it before sending (e.g. a task's `teamIds`).
 
 **Optimistic updates** (status change, delete, create)
 
@@ -67,7 +68,7 @@ interface StorageAdapter {
 2. `onError`: restore the snapshot and show a toast mapped from `ApiError.code` (e.g. `PRECONDITION_FAILED` → "This task changed elsewhere; refreshed").
 3. `onSettled`: invalidate the affected keys so the server state wins.
 
-**Duplicate safety:** the `Idempotency-Key` is generated **when the mutation is created** and stored in its variables, so a replay after reconnect or restart reuses the same key and the server returns the original response ([ADR-0019](0019-idempotency-keys.md)).
+**Duplicate safety:** creates (`POST`) carry an `Idempotency-Key` generated **when the mutation is created** and stored in its variables, so a replay after reconnect or restart reuses the same key and the server returns the original response ([ADR-0019](0019-idempotency-keys.md)). The key is sent on **`POST` only**: `PUT`, `PATCH` and `DELETE` are idempotent by HTTP semantics and protected by `If-Match`. A replayed `DELETE` that gets `404` (already deleted by an earlier attempt) is treated as **success** by the client.
 
 **Conflicts:** offline edits send `If-Match` with the version they were based on; a `412` rolls back and refetches ([ADR-0015](0015-optimistic-concurrency.md)). Quick status changes omit `If-Match` (last write wins is the desired behavior for a toggle).
 
@@ -83,6 +84,7 @@ interface StorageAdapter {
 
 - AsyncStorage is slower than MMKV for large caches; acceptable for per-user volumes, measured in Spec 005.
 - Offline creation shows temporary ids until sync; navigating to a temporary task's detail is limited to cached data.
+- **Head-of-line blocking:** with one queue, a mutation waiting on network or retries holds everything behind it. Transient errors (network, 5xx, `409 IDEMPOTENCY_REQUEST_IN_PROGRESS`, `429`) are retried with bounded backoff. A permanently failed mutation (4xx) is rolled back and surfaced to the user, and the queue **continues**; mutations depending on it (e.g. referencing its `tmp-` id) are marked failed too, instead of being sent.
 - `setMutationDefaults` registration must happen before cache restoration (done in `shared/query/mutation-defaults.ts` at startup).
 
 **Neutral**

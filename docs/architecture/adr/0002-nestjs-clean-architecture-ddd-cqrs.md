@@ -42,7 +42,7 @@ The API is small (two aggregates, ~12 endpoints) but it is evaluated on architec
 
 ## Decision outcome
 
-**NestJS 11**, one Nest module per bounded context (`auth`, `teams`, `tasks`) plus `health`, each split into four layers:
+**NestJS 11**, one Nest module per bounded context (`identity`, `teams`, `tasks`) plus `health`, each split into four layers:
 
 | Layer             | Contains                                                                                                                                          | May import                                             |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |

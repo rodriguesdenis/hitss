@@ -44,7 +44,8 @@ The brief forbids styled-components. The UI needs light/dark themes, a small des
 ## Decision outcome
 
 - **NativeWind v4** + **Tailwind CSS v3** (`tailwind.config.js` with the `nativewind/preset`), `global.css` imported once in `app/_layout.tsx`.
-- **Tokens** as CSS variables in `global.css` (`:root` and `.dark` / `@media (prefers-color-scheme: dark)`), mapped in `tailwind.config.js` (`colors.surface: "rgb(var(--color-surface) / <alpha-value>)"`). Theme preference from `preferences.store` drives NativeWind's `colorScheme.set()`.
+- **Theming = CSS variables (decided).** Tokens are CSS variables in `global.css`, defined in `:root` (light) and overridden in `.dark`, mapped in `tailwind.config.js` (`colors.surface: "rgb(var(--color-surface) / <alpha-value>)"`). Theme preference from `preferences.store` drives NativeWind's `colorScheme.set()` (`system` follows the device). Components use semantic token classes (`bg-surface`, `text-fg`), which switch automatically.
+- **`dark:` variant for exceptions only** — e.g. an image or shadow that has no token equivalent. It is never the primary theming mechanism, so a look is not defined twice.
 - **Semantic classes** with `@apply` in `@layer components`:
   - `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-danger`
   - `.card`, `.chip`, `.input`, `.input-error`, `.label`, `.screen`

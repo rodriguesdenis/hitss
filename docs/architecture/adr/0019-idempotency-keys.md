@@ -42,10 +42,10 @@
 
 - **Header:** `Idempotency-Key: <uuid>` optional on `POST /api/v1/teams` and `POST /api/v1/tasks`. Invalid format → `400 VALIDATION_FAILED`.
 - **Storage:** table `idempotency_keys (key, owner_id) PK, request_hash, response_status, response_body jsonb, expires_at` ([data model](../data-model.md)). Keys are **scoped per owner**, so users cannot collide or probe each other's keys.
-- **Request hash:** SHA-256 of method + path + canonical JSON body.
+- **Request hash:** SHA-256 of method + path + canonical JSON body. Because the path is part of the hash, reusing a key on a **different route** (e.g. a key first used on `POST /teams`, then on `POST /tasks`) is a different request → **`422 IDEMPOTENCY_KEY_REUSED`**.
 - **Flow** (an `IdempotencyInterceptor` in shared presentation, backed by an `IdempotencyStore` port):
   1. No header → normal processing.
-  2. Inside the transaction, take `pg_try_advisory_xact_lock` on a hash of `(owner_id, key)`. Not acquired → another request with this key is in flight → **`409 IDEMPOTENCY_REQUEST_IN_PROGRESS`** with `Retry-After: 1`; nothing is executed.
+  2. Inside the transaction, take the **owner-scoped two-int** advisory lock `pg_try_advisory_xact_lock(hashtext(owner_id), hashtext(key))`; the two-int form keeps different owners' keys in separate lock spaces (no cross-user contention on a single 64-bit hash). Not acquired → another request with this key is in flight → **`409 IDEMPOTENCY_REQUEST_IN_PROGRESS`** with `Retry-After: 1`; nothing is executed.
   3. Key found, not expired, same hash → **replay** stored status and body with `Location` and `ETag` rebuilt from the stored body, plus the header **`Idempotent-Replayed: true`**; the handler is not executed.
   4. Key found with a different hash → **`422 IDEMPOTENCY_KEY_REUSED`**.
   5. Key not found → execute the command and, in the **same transaction** as the create, insert the key row with the response. The advisory lock is released on commit/rollback, so a retry after `Retry-After` sees the committed key and gets rule 3 or 4.

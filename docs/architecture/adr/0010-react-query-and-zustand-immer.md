@@ -6,7 +6,7 @@
 
 ## Context
 
-The brief requires React Query for server state. The app also has **client-only** state: the active task filters (team, statuses, search, sort), user preferences (theme, language), and sync metadata (last successful sync, whether the offline banner was dismissed). Mixing these into one store — or copying server data into a client store — is the most common source of stale-data bugs in React apps.
+The brief requires React Query for server state. The app also has **client-only** state: the active task filters (team, status, search, sort), user preferences (theme, language), and sync metadata (last successful sync, whether the offline banner was dismissed). Mixing these into one store — or copying server data into a client store — is the most common source of stale-data bugs in React apps.
 
 ## Decision drivers
 
@@ -49,11 +49,11 @@ The brief requires React Query for server state. The app also has **client-only*
 
 **Local UI state = Zustand + immer.**
 
-| Store               | Contents                                                                                                                       | Persisted                     |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
-| `filters.store`     | `statuses`, `search` (debounced), `sort`. `teamId` comes from the route (URL state, [ADR-0009](0009-expo-and-expo-router.md)). | No (session only)             |
-| `preferences.store` | `theme: system \| light \| dark`, `language: pt \| en`                                                                         | Yes, through `StorageAdapter` |
-| `sync.store`        | `lastSyncedAt`, `offlineBannerDismissed`                                                                                       | Yes                           |
+| Store               | Contents                                                                                                                                                                              | Persisted                     |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| `filters.store`     | `status: TaskStatus \| 'ALL'` (single-select UI, default `'ALL'`), `search` (debounced), `sort`. `teamId` comes from the route (URL state, [ADR-0009](0009-expo-and-expo-router.md)). | No (session only)             |
+| `preferences.store` | `theme: system \| light \| dark`, `language: system \| en \| pt-BR` (`system` follows the device locale)                                                                              | Yes, through `StorageAdapter` |
+| `sync.store`        | `lastSyncedAt`, `offlineBannerDismissed`                                                                                                                                              | Yes                           |
 
 **Hard rule:** server data (tasks, teams, session user) is **never** mirrored into Zustand. Derived values (pending mutation count, online status) are read from React Query (`useIsMutating`, `onlineManager`) instead of duplicated.
 
