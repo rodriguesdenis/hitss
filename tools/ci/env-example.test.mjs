@@ -33,6 +33,17 @@ function envEntries(text) {
   return entries;
 }
 
+/** Properties of the API's `EnvironmentVariables` class (apps/api/src/config/env.schema.ts). */
+function schemaVariables(schema) {
+  const body = schema.slice(
+    schema.indexOf('export class EnvironmentVariables'),
+  );
+  return [...body.matchAll(/^ {2}([A-Z][A-Z0-9_]*)[!?]?:/gm)].map(
+    (match) => match[1],
+  );
+}
+
+const schema = schemaVariables(read('apps/api/src/config/env.schema.ts'));
 const defaults = composeDefaults(read('docker-compose.yml'));
 const example = envEntries(read('.env.example'));
 
@@ -52,10 +63,17 @@ describe('.env.example parity with docker-compose.yml', () => {
     for (const [name, { value, comment }] of example) {
       assert.ok(comment, `${name} has no comment above it`);
       assert.ok(
-        defaults.has(name),
-        `${name} is not used by docker-compose.yml`,
+        defaults.has(name) || schema.includes(name),
+        `${name} is used by neither docker-compose.yml nor the API config schema`,
       );
       assert.notEqual(value, '', `${name} has an empty default`);
+    }
+  });
+
+  it('AC-07.1.4 every API config variable appears in .env.example', () => {
+    assert.ok(schema.length > 0);
+    for (const name of schema) {
+      assert.ok(example.has(name), `${name} is missing from .env.example`);
     }
   });
 
