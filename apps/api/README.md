@@ -47,15 +47,23 @@ $ npm run start:prod
 ## Run tests
 
 ```bash
-# unit tests
-$ npm run test
+# unit tests only (src/**/*.spec.ts): the `pnpm test` entry point, no Docker needed
+$ pnpm test
 
-# e2e tests
-$ npm run test:e2e
+# integration tests (test/**/*.int-spec.ts) against a real PostgreSQL; needs Docker
+$ pnpm test:integration
 
-# test coverage
-$ npm run test:cov
+# e2e tests (test/**/*.e2e-spec.ts) against the full Nest app; needs Docker
+$ pnpm test:e2e
+
+# unit test coverage
+$ pnpm test:cov
 ```
+
+Integration and e2e runs start one PostgreSQL container (the `docker-compose.yml` image) per run
+and migrate a template database once. Each test file gets its own clone through
+`useTestDatabase()` / `createTestDatabase()` from `test/support/postgres.ts`, and builds the app
+with `createTestApp(url)` from `test/support/app.ts`.
 
 ## Deployment
 
