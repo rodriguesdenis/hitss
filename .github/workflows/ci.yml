@@ -62,6 +62,8 @@ jobs:
           echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check
           tar -xzf gitleaks.tar.gz gitleaks
           sudo install gitleaks /usr/local/bin/gitleaks
+      - name: Prove the allowlist does not hide real keys
+        run: node --test tools/ci/gitleaks-config.test.mjs
       - name: Scan the PR commits for secrets
         if: github.event_name == 'pull_request'
         env:

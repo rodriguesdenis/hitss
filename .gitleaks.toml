@@ -1,9 +1,10 @@
 # gitleaks configuration (T-007-03). Extends the default ruleset; allowlist entries must stay
-# narrow (one rule + one file) and say why.
+# as narrow as the false positive they cover and say why.
 [extend]
 useDefault = true
 
 [[allowlists]]
-description = "Nest boilerplate README badge URL (false positive) in the API README"
+description = "Nest boilerplate README badge URL with its public placeholder token (false positive)"
 targetRules = ["generic-api-key"]
-paths = ['''^(server|apps/api)/README\.md$''']
+regexTarget = "line"
+regexes = ['''img\.shields\.io/circleci/build/github/nestjs/nest/master\?token=abc123def456''']
