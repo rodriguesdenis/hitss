@@ -5,7 +5,6 @@ import {
   IsInt,
   isIP,
   IsUrl,
-  Matches,
   Min,
   ValidateBy,
 } from 'class-validator';
@@ -30,6 +29,44 @@ const isAddressOrCidr = (item: string): boolean => {
     (/^\d{1,3}$/.test(prefix) && Number(prefix) <= maxPrefix)
   );
 };
+
+/**
+ * Schemes that must never be trusted as the app's deep-link scheme: Better Auth matches trusted
+ * origins by prefix, so `http` would trust every http:// origin. `exp`/`exps` are Expo Go's,
+ * added by the auth module only for local development, never through APP_SCHEME.
+ */
+export const RESERVED_SCHEMES: ReadonlySet<string> = new Set([
+  'http',
+  'https',
+  'ws',
+  'wss',
+  'file',
+  'ftp',
+  'data',
+  'javascript',
+  'blob',
+  'about',
+  'exp',
+  'exps',
+]);
+
+const isAppScheme = (value: string): boolean =>
+  /^[a-z][a-z0-9+.-]*$/.test(value) && !RESERVED_SCHEMES.has(value);
+
+/** The value is a string that passes `check`. The message never contains the value. */
+function Satisfies(
+  name: string,
+  check: (value: string) => boolean,
+  message: string,
+): PropertyDecorator {
+  return ValidateBy({
+    name,
+    validator: {
+      validate: (value: unknown) => typeof value === 'string' && check(value),
+      defaultMessage: buildMessage(() => message),
+    },
+  });
+}
 
 /** Every item of a parsed list passes `check`. The message never contains a value. */
 function EveryItem(
@@ -75,9 +112,11 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   CORS_ORIGINS: string[] = ['http://localhost:8081'];
 
   /** Deep-link scheme of the mobile app, trusted as an origin by Better Auth. */
-  @Matches(/^[a-z][a-z0-9+.-]*$/, {
-    message: 'must be a lower-case URL scheme like teamstasks',
-  })
+  @Satisfies(
+    'isAppScheme',
+    isAppScheme,
+    'must be a lower-case custom URL scheme like teamstasks; web, file and Expo Go schemes are reserved',
+  )
   APP_SCHEME: string = 'teamstasks';
 
   /** Reverse proxies whose X-Forwarded-For is trusted (comma-separated IPs or CIDRs). */

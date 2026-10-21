@@ -109,16 +109,6 @@ export const authRateLimitIsOn: ProductionRule = (config) =>
         },
       ];
 
-export const appSchemeIsNotExpoGo: ProductionRule = (config) =>
-  config.APP_SCHEME === 'exp'
-    ? [
-        {
-          variable: 'APP_SCHEME',
-          message: 'must not be the Expo Go scheme in production',
-        },
-      ]
-    : [];
-
 export const demoSeedIsOff: ProductionRule = (config) =>
   config.SEED_DEMO
     ? [{ variable: 'SEED_DEMO', message: 'must be false in production' }]
@@ -134,6 +124,5 @@ export const productionRules: ProductionRule[] = [
   authUrlIsHttps,
   corsOriginsAreSafe,
   authRateLimitIsOn,
-  appSchemeIsNotExpoGo,
   demoSeedIsOff,
 ];
