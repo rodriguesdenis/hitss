@@ -1,7 +1,7 @@
 import { ArgumentMetadata } from '@nestjs/common';
 import { Type } from 'class-transformer';
 import { IsOptional, IsString, Length, ValidateNested } from 'class-validator';
-import { RequestValidationException } from './filters/api-exception';
+import { RequestValidationException } from '../filters/api-exception';
 import { AppValidationPipe } from './validation.pipe';
 
 class ProbeChildDto {

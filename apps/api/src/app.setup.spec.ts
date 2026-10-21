@@ -4,7 +4,7 @@ import { setupApp } from './app.setup';
 import { requestIdMiddleware } from './shared/observability/logging/request-id';
 import { GlobalExceptionFilter } from './shared/presentation/filters/global-exception.filter';
 import { EnvelopeInterceptor } from './shared/presentation/interceptors/envelope.interceptor';
-import { AppValidationPipe } from './shared/presentation/validation.pipe';
+import { AppValidationPipe } from './shared/presentation/pipes/validation.pipe';
 
 describe('setupApp', () => {
   const logger = {};
