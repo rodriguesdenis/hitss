@@ -10,16 +10,46 @@ regexTarget = "line"
 regexes = ['''img\.shields\.io/circleci/build/github/nestjs/nest/master\?token=abc123def456''']
 
 # The default generic-api-key rule missed a quoted fixture secret that GitGuardian caught.
-# This rule flags any quoted, high-entropy literal assigned to a secret-like name. Fixtures must
-# build such values at runtime with low entropy (e.g. 'prod-like-' + 'x'.repeat(40)).
+# Fixtures must build such values at runtime with low entropy (e.g. 'prod-like-' + 'x'.repeat(40));
+# see tools/ci/gitleaks-config.test.mjs. Secret-like names: secret, token, password, passwd,
+# api key, private key, credential, auth.
+
+# Quoted or backticked literals in any file. `${...}` interpolation never matches the value class.
 [[rules]]
 id = "secret-assignment-high-entropy"
 description = "High-entropy string literal assigned to a secret-like name"
-regex = '''(?i)[a-z0-9_.-]*(?:secret|token|password|passwd|api[_-]?key|private[_-]?key)[a-z0-9_]*["']?\s*[:=]\s*["']([A-Za-z0-9_+/=.-]{24,})["']'''
+regex = '''(?i)[a-z0-9_.-]*(?:secret|token|password|passwd|api[_-]?key|private[_-]?key|credential|auth)[a-z0-9_]*["'`]?\s*[:=]\s*["'`]([A-Za-z0-9_+/=.-]{24,})["'`]'''
 secretGroup = 1
 entropy = 3.5
-keywords = ["secret", "token", "password", "passwd", "api_key", "api-key", "apikey", "private"]
+keywords = ["secret", "token", "password", "passwd", "api_key", "api-key", "apikey", "private", "credential", "auth"]
 
   [[rules.allowlists]]
   description = "Documented, obviously fake placeholder prefixes (see .env.example and the test setup)"
   regexes = ['''^(unit-test-secret-|local-dev-)''']
+
+# Unquoted values in .env, YAML, TOML, compose and shell files (`KEY=value`, `KEY: value`).
+[[rules]]
+id = "secret-assignment-unquoted-high-entropy"
+description = "High-entropy unquoted value assigned to a secret-like name in a config file"
+regex = '''(?i)(?:^|[\s,;{-])[a-z0-9_.-]*(?:secret|token|password|passwd|api[_-]?key|private[_-]?key|credential|auth)[a-z0-9_]*\s*[:=]\s*([A-Za-z0-9_+/=.-]{24,})(?:["'`\s]|$)'''
+secretGroup = 1
+entropy = 3.5
+path = '''(?i)((^|/)\.env[^/]*|\.ya?ml|\.toml|\.ini|\.conf|\.properties|\.sh|(^|/)docker-compose[^/]*|(^|/)Dockerfile[^/]*)$'''
+keywords = ["secret", "token", "password", "passwd", "api_key", "api-key", "apikey", "private", "credential", "auth"]
+
+  [[rules.allowlists]]
+  description = "Documented, obviously fake placeholder prefixes"
+  regexes = ['''^(unit-test-secret-|local-dev-)''']
+
+# Connection URLs carrying a literal password: scheme://user:password@host. Templated URLs
+# (`${VAR:-default}`) never match because `$` is excluded from the user and password classes.
+[[rules]]
+id = "url-with-inline-password"
+description = "Database or broker URL with an inline password"
+regex = '''(?i)\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss|amqps?)://[^\s:/@"'`$]+:([^\s@/"'`$]{6,})@'''
+secretGroup = 1
+keywords = ["://"]
+
+  [[rules.allowlists]]
+  description = "The documented local placeholder password"
+  regexes = ['''^teams-local-only$''']
