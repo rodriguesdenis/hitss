@@ -298,11 +298,18 @@ apps/api/
 │       │   │   ├── team.events.ts       # every event of the module (TeamDeleted)
 │       │   │   └── value-objects/       # team-name.ts, color-hex.ts, team-description.ts
 │       │   ├── application/
-│       │   │   ├── commands/            # create-team/, replace-team/, delete-team/ (command + handler + spec)
-│       │   │   ├── queries/             # list-teams/, get-team/, get-team-summaries/
-│       │   │   └── ports/               # TeamRepository, TeamReadModel, TeamTaskCounts
-│       │   ├── infrastructure/          # prisma-team.repository.ts, team.mapper.ts, team-task-counts.adapter.ts
-│       │   ├── presentation/            # teams.controller.ts, dto/
+│       │   │   ├── commands/            # one folder per use case: create-team/, replace-team/, delete-team/
+│       │   │   │   └── create-team/     # create-team.command.ts, create-team.handler.ts (+ .spec)
+│       │   │   ├── queries/             # one folder per use case: list-teams/, get-team/, get-team-summaries/
+│       │   │   │   └── list-teams/      # list-teams.query.ts, list-teams.handler.ts (+ .spec)
+│       │   │   └── ports/               # TeamRepository, TeamReadModel, TeamTaskCounts (abstract classes = DI tokens)
+│       │   ├── infrastructure/
+│       │   │   ├── prisma-team.repository.ts  # write side: aggregate in/out
+│       │   │   ├── team.mapper.ts       # Prisma row ⇄ Team
+│       │   │   └── adapters/            # cross-context ports, e.g. team-task-counts.adapter.ts
+│       │   ├── presentation/
+│       │   │   ├── teams.controller.ts
+│       │   │   └── dto/                 # create-team.dto.ts, replace-team.dto.ts, list-teams.query.dto.ts
 │       │   └── teams.module.ts          # composition root: binds ports → adapters
 │       └── tasks/
 │           ├── contracts/               # PUBLIC: CountTasksByTeamQuery + result types
@@ -330,7 +337,7 @@ apps/api/
 
 Unit tests (`*.spec.ts`) sit next to the file they test.
 
-**Module layout.** Every bounded-context module uses the same shape: `domain/` holds `<agg>.ts`, `<agg>.errors.ts` (all of the module's errors), `<agg>.events.ts` (all of its events), `value-objects/` and any pure policy; `application/commands/<use-case>/` and `application/queries/<use-case>/` (message + handler + spec), `application/ports/`; `infrastructure/prisma-<agg>.repository.ts` + `<agg>.mapper.ts` (plus adapters for cross-context ports); `presentation/<ctx>.controller.ts` + `dto/`; `contracts/` (the module's only public surface); and the `<ctx>.module.ts` composition root.
+**Module layout.** Every bounded-context module uses the same shape: `domain/` holds `<agg>.ts`, `<agg>.errors.ts` (all of the module's errors), `<agg>.events.ts` (all of its events), `value-objects/` and any pure policy; `application/commands/<use-case>/` and `application/queries/<use-case>/` (message + handler + spec), `application/ports/`; `infrastructure/prisma-<agg>.repository.ts` + `<agg>.mapper.ts` and `infrastructure/adapters/` for cross-context ports; `presentation/<ctx>.controller.ts` + `dto/`; `contracts/` (the module's only public surface); and the `<ctx>.module.ts` composition root.
 
 ### 6.3 Mobile (`apps/mobile`)
 
