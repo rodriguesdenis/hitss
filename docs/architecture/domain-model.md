@@ -13,7 +13,7 @@
 | **Assign / unassign** | Link or unlink a task and a team. A task may be assigned to zero or more teams.                   | `task.assignTo(teamIds)`                       |
 | **Complete**          | Move a task to **Done**; records the completion time.                                             | `completedAt`                                  |
 | **Reopen**            | Move a **Done** task back to Pending or In progress; clears completion time.                      | —                                              |
-| **Overdue**           | A task not Done whose due date is before today. Derived, never stored.                            | `isOverdue(now)`                               |
+| **Overdue**           | A task not Done whose due date is before today. Derived, never stored.                            | policy `isOverdue(status, dueDate, today)`     |
 | **Archive (delete)**  | Removing a team or task. Implemented as soft delete; deleted items are invisible through the API. | `deletedAt`                                    |
 
 ## Bounded contexts
@@ -93,11 +93,13 @@ Invariant enforced outside the aggregate: name uniqueness per owner (checked by 
 Behavior:
 
 - `Task.create(...)` → `TaskCreated { status }` (a task may be created directly as `DONE`, which sets `completedAt`)
-- `changeStatus(status, now)` → `TaskStatusChanged { from, to }`. **Any status → any other status is allowed** (free transitions). Same status → no-op (no event, no write, so the version is unchanged).
-- `edit({ title, description, dueDate })`
-- `assignTo(teamIds)` (replaces the set) — validated by the application via `TeamDirectory`.
-- `unassignTeam(teamId, now)` (reaction to `TeamDeleted`) — removes the id from `teamIds` and, if it was present, sets `updatedAt` and reports a change, so persistence bumps `version` (the task's representation changed), so a stale `PUT` with `If-Match` gets `412` ([ADR-0015](adr/0015-optimistic-concurrency.md)). No-op if the team was not assigned.
+- `changeStatus(status, now)` → `changed: boolean`; on a change raises `TaskStatusChanged { from, to }`. **Any status → any other status is allowed** (free transitions). Same status → no-op (no event, no write, so the version is unchanged).
+- `edit({ title, description, dueDate }, now)` → `changed: boolean`
+- `assignTo(teamIds, now)` → `changed: boolean` (replaces the set; same ids in any order is a no-op) — validated by the application via `TeamDirectory`.
+- `unassignTeam(teamId, now)` → `changed: boolean` (reaction to `TeamDeleted`) — removes the id from `teamIds` and, if it was present, sets `updatedAt` and reports a change, so persistence bumps `version` (the task's representation changed), so a stale `PUT` with `If-Match` gets `412` ([ADR-0015](adr/0015-optimistic-concurrency.md)). No-op if the team was not assigned.
 - `delete(now)` → `TaskDeleted`
+
+Every change method sets only `updatedAt`; when it returns `true` the repository persists the task with `version + 1` under the expected-version guard ([ADR-0015](adr/0015-optimistic-concurrency.md)). `isOverdue(status, dueDate, today)` is a pure policy used by the read side, with today as the UTC date.
 
 ### Status lifecycle
 
