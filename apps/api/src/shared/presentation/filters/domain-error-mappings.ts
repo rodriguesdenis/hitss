@@ -6,6 +6,11 @@ export interface DomainErrorMapping {
   error: abstract new (...args: never[]) => DomainError;
   status: number;
   code: string;
+  /**
+   * Fixed text sent to the client. The exception's own message is never used: domain messages
+   * are for logs and may one day carry values (Lynx S2).
+   */
+  message: string;
   details?: (error: DomainError) => unknown;
 }
 
@@ -17,9 +22,15 @@ export interface DomainErrorMapping {
 export class DomainErrorMappings {
   private readonly byError = new Map<object, DomainErrorMapping>();
 
-  /** Fails at boot when a class is mapped twice: two modules must not disagree on one error. */
+  /**
+   * Fails at boot when a class is mapped twice (two modules must not disagree on one error) or
+   * when a mapping has no fixed code or message.
+   */
   register(mappings: readonly DomainErrorMapping[]): void {
     for (const mapping of mappings) {
+      if (mapping.code.trim() === '' || mapping.message.trim() === '') {
+        throw new Error(`${mapping.error.name} needs a fixed code and message`);
+      }
       if (this.byError.has(mapping.error)) {
         throw new Error(`${mapping.error.name} is already mapped`);
       }

@@ -39,11 +39,17 @@ class UnmappedDomainError extends DomainError {
 }
 
 const MAPPINGS: DomainErrorMapping[] = [
-  { error: SampleNotFound, status: 404, code: 'SAMPLE_NOT_FOUND' },
+  {
+    error: SampleNotFound,
+    status: 404,
+    code: 'SAMPLE_NOT_FOUND',
+    message: 'The sample does not exist.',
+  },
   {
     error: SampleConflict,
     status: 412,
     code: 'PRECONDITION_FAILED',
+    message: 'The sample was changed by someone else.',
     details: (e) => ({ currentVersion: (e as SampleConflict).currentVersion }),
   },
 ];
@@ -238,17 +244,36 @@ describe('GlobalExceptionFilter', () => {
       body: {
         error: {
           code: 'SAMPLE_NOT_FOUND',
-          message: 'Sample not found.',
+          message: 'The sample does not exist.',
           traceId: REQUEST_ID,
         },
       },
     });
     expect(run(new SampleConflict(4)).sent.body?.error).toEqual({
       code: 'PRECONDITION_FAILED',
-      message: 'Sample changed.',
+      message: 'The sample was changed by someone else.',
       details: { currentVersion: 4 },
       traceId: REQUEST_ID,
     });
+  });
+
+  it('Lynx S2: every registered mapping answers with its fixed message, never the exception message', () => {
+    const registry = new DomainErrorMappings();
+    registry.register(MAPPINGS);
+
+    for (const mapping of registry.all()) {
+      const exception = Object.assign(
+        Object.create(mapping.error.prototype as object) as DomainError,
+        { message: 'row (email)=(marina@example.test) secret-value' },
+      );
+      const { sent } = run(exception);
+
+      expect(sent.status).toBe(mapping.status);
+      expect(sent.body?.error.code).toBe(mapping.code);
+      expect(sent.body?.error.message).toBe(mapping.message);
+      expect(JSON.stringify(sent.body)).not.toContain('secret-value');
+      expect(JSON.stringify(sent.body)).not.toContain('marina');
+    }
   });
 
   describe('unexpected errors', () => {
