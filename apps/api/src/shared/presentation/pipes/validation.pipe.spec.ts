@@ -172,6 +172,20 @@ describe('AppValidationPipe', () => {
     });
   });
 
+  it('reports at most 50 details, each field capped to 100 characters', async () => {
+    const body: Record<string, string> = { name: 'ok' };
+    for (let i = 0; i < 60; i++) body[`extra${i}`] = 'x';
+    body['y'.repeat(300)] = 'x';
+
+    const reported = await details(body);
+
+    expect(reported).toHaveLength(50);
+    for (const detail of reported) {
+      expect(detail.field.length).toBeLessThanOrEqual(100);
+      expect(detail.message.length).toBeLessThanOrEqual(100);
+    }
+  });
+
   it('leaves parameters without a DTO class untouched', async () => {
     expect(
       await pipe.transform('42', {

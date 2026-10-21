@@ -18,14 +18,30 @@ export interface ValidationDetail {
   message: string;
 }
 
-/** Request validation failed (ValidationPipe): 400 VALIDATION_FAILED with one detail per rule. */
+const MAX_DETAILS = 50;
+const MAX_DETAIL_LENGTH = 100;
+
+/** At most MAX_DETAIL_LENGTH characters (code points: an emoji is never split). */
+const cap = (text: string): string =>
+  [...text].slice(0, MAX_DETAIL_LENGTH).join('');
+
+/**
+ * Request validation failed (ValidationPipe, ParseUuidPipe): 400 VALIDATION_FAILED with one
+ * detail per rule. At most 50 details, each field and message capped to 100 characters, so a
+ * hostile body cannot inflate the error response.
+ */
 export class RequestValidationException extends ApiException {
+  declare readonly details: ValidationDetail[];
+
   constructor(details: ValidationDetail[]) {
     super(
       400,
       ErrorCode.VALIDATION_FAILED,
       'Request validation failed.',
-      details,
+      details.slice(0, MAX_DETAILS).map(({ field, message }) => ({
+        field: cap(field),
+        message: cap(message),
+      })),
     );
   }
 }
