@@ -1,4 +1,4 @@
-import { InvalidTaskTitle } from './errors/invalid-task-title.error';
+import { InvalidTaskTitle } from '../task.errors';
 import { TaskTitle } from './task-title';
 
 const EMOJI = '\u{1F680}'; // rocket emoji, one code point, two UTF-16 units

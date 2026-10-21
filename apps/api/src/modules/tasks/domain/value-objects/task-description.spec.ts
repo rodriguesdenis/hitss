@@ -1,4 +1,4 @@
-import { InvalidTaskDescription } from './errors/invalid-task-description.error';
+import { InvalidTaskDescription } from '../task.errors';
 import { TaskDescription } from './task-description';
 
 const EMOJI = '\u{1F680}';

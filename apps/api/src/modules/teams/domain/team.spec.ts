@@ -1,10 +1,10 @@
 import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
 import { ExpectedVersion } from '../../../shared/domain/expected-version';
-import { ColorHex } from './color-hex';
-import { TeamDeleted } from './events/team-deleted.event';
+import { ColorHex } from './value-objects/color-hex';
+import { TeamDeleted } from './team.events';
 import { Team } from './team';
-import { TeamDescription } from './team-description';
-import { TeamName } from './team-name';
+import { TeamDescription } from './value-objects/team-description';
+import { TeamName } from './value-objects/team-name';
 
 const CREATED_ISO = '2026-10-20T10:00:00.000Z';
 const LATER_ISO = '2026-10-20T11:00:00.000Z';

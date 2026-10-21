@@ -1,4 +1,4 @@
-import { InvalidDueDate } from './errors/invalid-due-date.error';
+import { InvalidDueDate } from '../task.errors';
 
 const PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 

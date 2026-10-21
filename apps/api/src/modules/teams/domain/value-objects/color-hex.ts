@@ -1,4 +1,4 @@
-import { InvalidColorHex } from './errors/invalid-color-hex.error';
+import { InvalidColorHex } from '../team.errors';
 
 const PATTERN = /^#[0-9A-Fa-f]{6}$/;
 const BLACK = '#000000';

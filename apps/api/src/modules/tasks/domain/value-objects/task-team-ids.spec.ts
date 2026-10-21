@@ -1,4 +1,4 @@
-import { TooManyTeams } from './errors/too-many-teams.error';
+import { TooManyTeams } from '../task.errors';
 import { TaskTeamIds } from './task-team-ids';
 
 const ids = (count: number): string[] =>

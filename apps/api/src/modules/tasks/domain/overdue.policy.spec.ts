@@ -1,6 +1,6 @@
-import { DueDate } from './due-date';
+import { DueDate } from './value-objects/due-date';
 import { isOverdue } from './overdue.policy';
-import { TaskStatus } from './task-status';
+import { TaskStatus } from './value-objects/task-status';
 
 describe('isOverdue', () => {
   const today = DueDate.create('2026-10-20');

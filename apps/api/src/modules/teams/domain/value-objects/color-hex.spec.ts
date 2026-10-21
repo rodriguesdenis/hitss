@@ -1,5 +1,5 @@
 import { ColorHex } from './color-hex';
-import { InvalidColorHex } from './errors/invalid-color-hex.error';
+import { InvalidColorHex } from '../team.errors';
 
 describe('ColorHex', () => {
   describe('AC-02.1.3 valid colors are normalized to upper case', () => {

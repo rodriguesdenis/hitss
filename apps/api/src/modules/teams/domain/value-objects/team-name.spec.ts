@@ -1,4 +1,4 @@
-import { InvalidTeamName } from './errors/invalid-team-name.error';
+import { InvalidTeamName } from '../team.errors';
 import { TeamName } from './team-name';
 
 const ACCENTED = '\u00e9'; // e acute, one code point

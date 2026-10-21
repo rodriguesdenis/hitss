@@ -1,4 +1,4 @@
-import { InvalidTeamDescription } from './errors/invalid-team-description.error';
+import { InvalidTeamDescription } from '../team.errors';
 
 const MAX_LENGTH = 280;
 const CONTROL_CHARACTER_EXCEPT_LINE_BREAK = /(?![\n\r])\p{Cc}/u;

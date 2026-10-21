@@ -1,5 +1,5 @@
-import { DueDate } from './due-date';
-import { TaskStatus } from './task-status';
+import { DueDate } from './value-objects/due-date';
+import { TaskStatus } from './value-objects/task-status';
 
 /**
  * A task is overdue when it has a due date before today (UTC) and is not

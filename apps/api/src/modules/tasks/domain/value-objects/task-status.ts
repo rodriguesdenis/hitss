@@ -1,4 +1,4 @@
-import { InvalidTaskStatus } from './errors/invalid-task-status.error';
+import { InvalidTaskStatus } from '../task.errors';
 
 /** Lifecycle position of a task; any status may change to any other (BR-03.4). */
 export const TaskStatus = {
