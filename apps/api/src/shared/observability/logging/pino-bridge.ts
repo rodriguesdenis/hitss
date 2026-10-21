@@ -11,10 +11,33 @@ export interface AuthLogger {
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+/** The only fields forwarded from object arguments: identifiers of the failure, no payload. */
+const DETAIL_FIELDS = ['code', 'status', 'statusCode', 'name'] as const;
+
+/** Strips query strings and fragments from URLs and masks email addresses. */
+export function sanitizeLogText(text: string): string {
+  return text
+    .replace(/(https?:\/\/[^\s?#]+)[?#]\S*/g, '$1')
+    .replace(/[^\s@]+@[^\s@]+/g, '[email]');
+}
+
+function pickDetails(args: unknown[]): Record<string, string | number>[] {
+  return args.filter(isPlainObject).map((arg) => {
+    const picked: Record<string, string | number> = {};
+    for (const field of DETAIL_FIELDS) {
+      const value = arg[field];
+      if (typeof value === 'number') picked[field] = value;
+      if (typeof value === 'string') picked[field] = sanitizeLogText(value);
+    }
+    return picked;
+  });
+}
+
 /**
- * Routes Better Auth output into pino at `warn` or above (S-M8). Only object arguments are
- * forwarded, nested under `details` so the logger's redaction paths apply at any depth;
- * strings and numbers could carry tokens and are dropped (AC-06.3.8).
+ * Routes Better Auth output into pino with the same level (S-M8). The message is sanitized
+ * (URL queries stripped, emails masked) and only a shallow allowlist of object fields is
+ * forwarded as `details`; strings, numbers and other fields could carry tokens or personal data
+ * and are dropped (AC-06.3.8).
  */
 export function createAuthLogger(
   logger: Pick<Logger, 'warn' | 'error' | 'info' | 'debug'>,
@@ -23,10 +46,10 @@ export function createAuthLogger(
   return {
     level,
     log(entryLevel, message, ...args) {
-      const details = args.filter(isPlainObject);
-      const target =
-        entryLevel === 'info' || entryLevel === 'debug' ? 'warn' : entryLevel;
-      logger[target]({ source: 'better-auth', details }, message);
+      logger[entryLevel](
+        { source: 'better-auth', details: pickDetails(args) },
+        sanitizeLogText(message),
+      );
     },
   };
 }

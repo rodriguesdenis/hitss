@@ -31,17 +31,52 @@ describe('Better Auth pino bridge', () => {
     expect(out.lines[0]).toMatchObject({ level: 50 });
   });
 
-  it('AC-06.3.8 redacts nested secrets and drops primitive arguments', () => {
+  it.each([
+    ['info', 30],
+    ['debug', 20],
+  ] as const)(
+    'AC-06.3.8 maps %s to the same pino level',
+    (level, pinoLevel) => {
+      const out = new LogCapture();
+      const auth = createAuthLogger(pino({ level: 'debug' }, out));
+      auth.log(level, 'note');
+      expect(out.lines[0]).toMatchObject({ level: pinoLevel });
+    },
+  );
+
+  it('AC-06.3.8 strips URL query strings and masks emails in the message', () => {
+    const { out, auth } = bridge();
+    auth.log(
+      'warn',
+      'Invalid callbackURL https://x.example/cb?token=secret-value for someone@example.test',
+    );
+    expect(out.raw).not.toContain('secret-value');
+    expect(out.raw).not.toContain('someone@example.test');
+    expect(out.lines[0]?.msg).toBe(
+      'Invalid callbackURL https://x.example/cb for [email]',
+    );
+  });
+
+  it('AC-06.3.8 forwards only the allowlisted shallow fields of object arguments', () => {
     const { out, auth } = bridge();
     auth.log(
       'warn',
       'failed',
-      { user: { password: value } },
-      [{ a: { token: value } }],
+      {
+        code: 'INVALID_TOKEN',
+        status: 401,
+        name: 'APIError',
+        body: { password: value },
+        headers: { authorization: value },
+        user: { email: 'someone@example.test' },
+      },
       value,
       42,
     );
+    expect(out.lines[0]?.details).toEqual([
+      { code: 'INVALID_TOKEN', status: 401, name: 'APIError' },
+    ]);
     expect(out.raw).not.toContain(value);
-    expect(out.raw).toContain(REDACTED);
+    expect(out.raw).not.toContain('someone@example.test');
   });
 });
