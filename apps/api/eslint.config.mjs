@@ -48,6 +48,7 @@ export default tseslint.config(
     // API process, which gets DATABASE_URL through AppConfig.
     files: [
       'prisma.config.ts',
+      'jest.config.ts',
       'src/config/**/*.ts',
       'src/instrumentation.ts',
       'test/**/*.ts',

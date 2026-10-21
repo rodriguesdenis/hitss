@@ -28,3 +28,6 @@ web-build/
 
 # local tooling
 .maestri/
+
+# test reports
+reports/
