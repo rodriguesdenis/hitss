@@ -30,7 +30,7 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 ## T-002-02 — Team domain
 
 - **Goal:** Framework-free domain where invalid teams cannot be constructed.
-- **Changes:** `modules/teams/domain/**`, `shared/domain/{aggregate-root.ts,domain-error.ts,domain-event.ts}`, `shared/application/expected-version.ts`, plus unit tests alongside each file.
+- **Changes:** `modules/teams/domain/**`, `shared/domain/{aggregate-root.ts,domain-error.ts,domain-event.ts,expected-version.ts}` (`ExpectedVersion` lives in the domain because `Team.assertVersion` uses it and rule A1 forbids `domain → application`), plus unit tests alongside each file.
 - **Covers:** `@AC-02.1.2 @AC-02.1.3 @AC-02.1.4 @AC-02.1.10 @AC-02.6.7 @AC-02.9.2 @AC-02.9.6` (domain level)
 - **Done when:** Unit tests cover every row of the name, color and description outlines in `teams.feature`, plus accents, Greek case-folding, emoji length (code points), control characters (`\n`, NUL → `InvalidTeamName`) and `contrastingTextColor`. `replace` with equal values returns `false`. `delete` raises exactly one `TeamDeleted`. Line coverage ≥ 90 %. Stryker mutation score ≥ 80 % for `modules/teams/domain`. `depcruise` confirms there are no framework imports.
 
@@ -39,7 +39,7 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 - **Goal:** Persist and load the aggregate, scoped by owner, with an optimistic version guard.
 - **Changes:** `application/ports/team.repository.ts` (`findById(ownerId, id)`, `existsActiveByName(ownerId, name, excludingId?)`, `insert(team)`, `update(team, expectedVersion)`), `infrastructure/prisma-team.repository.ts`, `team.persistence-mapper.ts`, `test/support/in-memory-team.repository.ts` (fake shared by handler tests), and a contract test suite run against **both** the fake and the Prisma adapter.
 - **Covers:** `@AC-02.1.9 @AC-02.9.5` (persistence level), BR-02.8.
-- **Done when:** The integration suite (Testcontainers) passes for both owners: foreign and deleted rows are never returned, a unique violation maps to `TeamNameAlreadyExists`, a version mismatch maps to `ConcurrencyConflict { currentVersion }`, a missing row maps to `TeamNotFound`, and two concurrent `update`s at the same version produce exactly one success. The contract suite is green for the in-memory fake.
+- **Done when:** The integration suite (Testcontainers) passes for both owners: foreign and deleted rows are never returned, a unique violation maps to `TeamNameAlreadyExists`, a version mismatch maps to `ConcurrencyConflict { currentVersion }`, a missing row maps to `TeamNotFound`, and two concurrent `update`s at the same version produce exactly one success. The contract suite is green for the in-memory fake. The fake's `existsActiveByName` uses `TeamName.equals`, and the contract suite includes name-collision cases where the two must agree with the `lower(name)` index: `ΟΔΟΣ` collides with `οδοσ` but not with `οδος` (PostgreSQL lowers each code point on its own, without the final-sigma rule), `İstanbul` collides with `istanbul`, `Équipe` does not collide with `Equipe`. Known residual difference, not tested and documented in the PR: on `postgres:17-alpine` (libc provider, musl) `lower()` leaves 124 code points unchanged that JavaScript lowercases (circled letters U+24B6–U+24CF and scripts added in Unicode 14+); there the domain is more lenient than the index, and the index stays authoritative.
 
 ## T-002-04 — Create team
 
