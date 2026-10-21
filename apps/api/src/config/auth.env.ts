@@ -53,7 +53,7 @@ const isCorsOrigin = (item: string): boolean => {
 
 export interface ProxyRange {
   family: 4 | 6;
-  /** CIDR prefix length; a single address is a full-length prefix. */
+  /** CIDR prefix length; a single address is a full-length prefix. IPv4-mapped IPv6 is IPv4. */
   prefix: number;
 }
 
@@ -66,12 +66,24 @@ export function parseProxy(item: string): ProxyRange | null {
   }
   const maxPrefix = family === 4 ? 32 : 128;
   if (prefix === undefined) {
-    return { family, prefix: maxPrefix };
+    return asIpv4IfMapped(address, { family, prefix: maxPrefix });
   }
   if (!/^\d{1,3}$/.test(prefix) || Number(prefix) > maxPrefix) {
     return null;
   }
-  return { family, prefix: Number(prefix) };
+  return asIpv4IfMapped(address, { family, prefix: Number(prefix) });
+}
+
+const IPV4_MAPPED = /^::ffff:\d{1,3}(\.\d{1,3}){3}$/i;
+
+/**
+ * `::ffff:a.b.c.d/N` covers IPv4 addresses only: report it as IPv4 /N-96, so `/96` (all of
+ * IPv4) counts as a catch-all and production applies the IPv4 minimum. N-96 may be ≤ 0.
+ */
+function asIpv4IfMapped(address: string, range: ProxyRange): ProxyRange {
+  return range.family === 6 && IPV4_MAPPED.test(address)
+    ? { family: 4, prefix: range.prefix - 96 }
+    : range;
 }
 
 /** A /0 range would trust X-Forwarded-For from anywhere, in every environment. */
