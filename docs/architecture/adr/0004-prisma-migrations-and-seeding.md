@@ -48,7 +48,7 @@ Use **Prisma** (current major, PostgreSQL driver adapter) with:
 - **Schema** in `apps/api/prisma/schema.prisma`; Better Auth tables generated with the Better Auth CLI (the `auth` package: `auth generate --adapter prisma`, then mapped to snake_case) into the same schema.
 - **Explicit** `TaskTeam` join model (not implicit m-n) — see [data model](../data-model.md#relationships).
 - **Migrations** created with `prisma migrate dev --create-only` when raw SQL must be appended (partial unique index on `lower(name)`, partial list indexes, `CREATE EXTENSION pg_trgm` + GIN index). Every migration is committed and reviewed as SQL.
-- **Apply** with `prisma migrate deploy` in the container entrypoint ([ADR-0018](0018-docker-compose-one-command-run.md)) and in integration tests against Testcontainers.
+- **Apply** with `prisma migrate deploy` in the one-shot `migrate` compose service ([ADR-0018](0018-docker-compose-one-command-run.md)) and in integration tests against Testcontainers.
 - **Mappers** in `infrastructure/` translate rows ↔ aggregates; Prisma types never cross into `application/` or `domain/` (dependency-cruiser rule A2).
 - **Seed** `prisma/seed.ts`:
   - deterministic: **fixed literal fixtures** (no faker or random data) — a fixed UUID for the demo user (stored in Better Auth's `text` id column) and fixed UUIDs, titles and descriptions for teams and tasks; due dates of overdue/upcoming tasks are computed **relative to the seeding day** (e.g. today − 3 days, today + 7 days), so the "overdue" task is always overdue;
