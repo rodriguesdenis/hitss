@@ -3,11 +3,16 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { diag, DiagLogLevel } from '@opentelemetry/api';
-import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPMetricExporter as OTLPMetricExporterJson } from '@opentelemetry/exporter-metrics-otlp-http';
 import { OTLPMetricExporter as OTLPMetricExporterProto } from '@opentelemetry/exporter-metrics-otlp-proto';
 import { OTLPTraceExporter as OTLPTraceExporterJson } from '@opentelemetry/exporter-trace-otlp-http';
 import { OTLPTraceExporter as OTLPTraceExporterProto } from '@opentelemetry/exporter-trace-otlp-proto';
+import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express';
+import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
+import { NestInstrumentation } from '@opentelemetry/instrumentation-nestjs-core';
+import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
+import { PinoInstrumentation } from '@opentelemetry/instrumentation-pino';
+import { UndiciInstrumentation } from '@opentelemetry/instrumentation-undici';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
@@ -18,6 +23,8 @@ import {
 import { PrismaInstrumentation } from '@prisma/instrumentation';
 import { envFilePaths, ignoreEnvFiles } from './config/env-files';
 import { validateTelemetryEnv } from './config/telemetry.env';
+import { isProbe } from './shared/observability/is-probe';
+import { SanitizingSpanExporter } from './shared/observability/telemetry/sanitizing-span-exporter';
 import { createDedupDiagLogger } from './shared/observability/telemetry/diag-logger';
 import { parseResourceAttributes } from './shared/observability/telemetry/resource-attributes';
 import { telemetryLifecycle } from './shared/observability/telemetry/telemetry-lifecycle';
@@ -73,7 +80,11 @@ function startTelemetry(): void {
       [ATTR_SERVICE_NAME]: env.OTEL_SERVICE_NAME,
       [ATTR_SERVICE_VERSION]: packageVersion(),
     }),
-    traceExporter: new TraceExporter({ url: `${base}/v1/traces` }),
+    // Only the resource below: no process command line, owner or host id (AC-06.2.5).
+    autoDetectResources: false,
+    traceExporter: new SanitizingSpanExporter(
+      new TraceExporter({ url: `${base}/v1/traces` }),
+    ),
     metricReaders: [
       new PeriodicExportingMetricReader({
         exporter: new MetricExporter({ url: `${base}/v1/metrics` }),
@@ -81,20 +92,14 @@ function startTelemetry(): void {
       }),
     ],
     instrumentations: [
-      getNodeAutoInstrumentations({
-        // Orchestrator probes stay out of traces (AC-06.1.5): /api/v1/health/*.
-        '@opentelemetry/instrumentation-http': {
-          ignoreIncomingRequestHook: (request) =>
-            (request.url ?? '').startsWith('/api/v1/health/'),
-        },
-        // No parameter values in DB spans (AC-06.2.5).
-        '@opentelemetry/instrumentation-pg': {
-          enhancedDatabaseReporting: false,
-        },
-        '@opentelemetry/instrumentation-fs': { enabled: false },
-        '@opentelemetry/instrumentation-dns': { enabled: false },
-        '@opentelemetry/instrumentation-net': { enabled: false },
-      }),
+      // Probes stay out of traces (AC-06.1.5).
+      new HttpInstrumentation({ ignoreIncomingRequestHook: isProbe }),
+      new ExpressInstrumentation(),
+      new NestInstrumentation(),
+      // No parameter values in DB spans (AC-06.2.5).
+      new PgInstrumentation({ enhancedDatabaseReporting: false }),
+      new PinoInstrumentation(),
+      new UndiciInstrumentation(),
       new PrismaInstrumentation(),
     ],
   });

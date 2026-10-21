@@ -55,8 +55,8 @@ async function ready(app: Running): Promise<void> {
   });
 }
 
-const get = (app: Running, headers: Record<string, string> = {}) =>
-  fetch(`http://127.0.0.1:${app.port}/ping`, { headers });
+const get = (app: Running, headers: Record<string, string> = {}, query = '') =>
+  fetch(`http://127.0.0.1:${app.port}/ping${query}`, { headers });
 
 describe('OpenTelemetry bootstrap', () => {
   const receiver = new OtlpReceiver();
@@ -107,6 +107,43 @@ describe('OpenTelemetry bootstrap', () => {
       'deployment.environment.name': 'test',
     });
     expect(attributes['service.version']).toBeDefined();
+  }, 60_000);
+
+  it('AC-06.2.5 exports no query string in any span attribute', async () => {
+    receiver.spans.length = 0;
+    const app = await launch({ OTEL_EXPORTER_OTLP_ENDPOINT: endpoint });
+    expect(
+      (await get(app, {}, '?token=secret-value&search=marina')).status,
+    ).toBe(200);
+    app.child.kill('SIGTERM');
+    await app.exit;
+
+    const exported = JSON.stringify(receiver.spans);
+    expect(exported).toContain('/ping');
+    expect(exported).not.toContain('secret-value');
+    expect(exported).not.toContain('marina');
+  }, 60_000);
+
+  it('AC-06.2.5 the resource carries no process command line, owner or host id', async () => {
+    receiver.resources.length = 0;
+    const app = await launch({ OTEL_EXPORTER_OTLP_ENDPOINT: endpoint });
+    await get(app);
+    app.child.kill('SIGTERM');
+    await app.exit;
+
+    const keys = receiver.resources.flatMap((r) =>
+      r.attributes.map((a) => a.key),
+    );
+    for (const key of [
+      'process.command_args',
+      'process.command',
+      'process.executable.path',
+      'process.owner',
+      'host.id',
+      'host.name',
+    ]) {
+      expect(keys).not.toContain(key);
+    }
   }, 60_000);
 
   it('AC-06.5.1 starts and serves 2xx with no collector reachable', async () => {
