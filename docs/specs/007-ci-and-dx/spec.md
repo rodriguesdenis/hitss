@@ -37,7 +37,7 @@ As an evaluator, I want one command to start the database and the API, migrated 
 - **AC-07.1.4** Every setting has a working local default; an optional local settings file overrides defaults; a committed template documents every setting with its default.
 - **AC-07.1.5** Given a default host port is already in use, when the evaluator sets the documented port setting, then the stack starts on the chosen port without editing any committed file.
 - **AC-07.1.6** The API image runs as a non-privileged user and contains no development dependencies, test files, local settings files or version-control data.
-- **AC-07.1.7** Given a migration fails, then the API exits with a non-zero code, logs the migration error, never reports ready and never serves requests.
+- **AC-07.1.7** Given a migration fails, then the migrate container exits with a non-zero code and logs the migration error, and the API container never starts (it is never ready and serves no requests).
 - **AC-07.1.8** On a typical laptop with broadband, a cold start (images not cached) reaches "ready" in under 5 minutes.
 
 ### US-07.2 — Deterministic demo data (`MUST`)
