@@ -1,5 +1,5 @@
 import { strict as assert } from 'node:assert';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -33,17 +33,28 @@ function envEntries(text) {
   return entries;
 }
 
-/** Properties of the API's `EnvironmentVariables` class (apps/api/src/config/env.schema.ts). */
-function schemaVariables(schema) {
-  const body = schema.slice(
-    schema.indexOf('export class EnvironmentVariables'),
-  );
-  return [...body.matchAll(/^ {2}([A-Z][A-Z0-9_]*)[!?]?:/gm)].map(
+/**
+ * Supported variables: the properties of the classes in apps/api/src/config/env.schema.ts and
+ * every `*.env.ts` composed into it. Optional properties (`NAME?:`) are variables the API only
+ * rejects (unsupported overrides) and are not documented in .env.example.
+ */
+function schemaVariables(source) {
+  const body = source.slice(source.indexOf('export class'));
+  return [...body.matchAll(/^ {2}([A-Z][A-Z0-9_]*)!?:/gm)].map(
     (match) => match[1],
   );
 }
 
-const schema = schemaVariables(read('apps/api/src/config/env.schema.ts'));
+const configDir = 'apps/api/src/config/';
+const schemaFiles = [
+  'env.schema.ts',
+  ...readdirSync(fileURLToPath(new URL(configDir, root))).filter((name) =>
+    name.endsWith('.env.ts'),
+  ),
+];
+const schema = schemaFiles.flatMap((name) =>
+  schemaVariables(read(configDir + name)),
+);
 const defaults = composeDefaults(read('docker-compose.yml'));
 const example = envEntries(read('.env.example'));
 
