@@ -88,6 +88,19 @@ jobs:
         if: github.event_name != 'pull_request'
         run: gitleaks git --redact --verbose --no-banner --exit-code 1
 
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          turbo-cache: 'false'
+      - name: High/critical advisories fail unless allowlisted with an expiry
+        run: pnpm audit:deps
+
   unit:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
@@ -131,7 +144,7 @@ jobs:
 
   ci-success:
     if: always()
-    needs: [commitlint, static, secrets, unit, integration, build]
+    needs: [commitlint, static, secrets, audit, unit, integration, build]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

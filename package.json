@@ -25,7 +25,8 @@
     "arch": "turbo run arch test:arch",
     "doc-check": "node tools/ci/doc-check.mjs",
     "traceability": "node tools/ci/traceability.mjs --write",
-    "traceability:check": "node tools/ci/traceability.mjs --require-tests"
+    "traceability:check": "node tools/ci/traceability.mjs --require-tests",
+    "audit:deps": "node tools/ci/audit.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
