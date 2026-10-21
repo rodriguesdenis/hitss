@@ -12,12 +12,15 @@
 ### Repository layout added by this spec
 
 ```text
-docker-compose.yml                 # postgres + api (default), mobile (profile), signoz (include, profile), k6 (profile)
+docker-compose.yml                 # postgres + migrate (one-shot) + api (default), mobile (profile), signoz (include, profile), k6 (profile)
 .env.example                       # every setting, local defaults, comments
 .dockerignore  .gitattributes      # *.sh eol=lf
 Makefile
-apps/api/Dockerfile                # multi-stage, turbo prune
-apps/api/docker-entrypoint.sh      # migrate deploy → seed → exec node
+apps/api/Dockerfile                # multi-stage, turbo prune; targets: migrator, runtime
+apps/api/docker-migrate.sh         # migrator entrypoint: migrate deploy, then exit
+apps/api/docker-entrypoint.sh      # API entrypoint: seed → exec node (migrations ran in the migrate service)
+apps/api/database-url.cjs          # builds DATABASE_URL from POSTGRES_* (no password inside a URL in compose)
+apps/api/prune-cli.cjs             # removes the Prisma CLI and typescript from the runtime node_modules
 apps/api/.dependency-cruiser.cjs
 apps/mobile/.dependency-cruiser.cjs
 apps/api/stryker.config.mjs
@@ -63,24 +66,45 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-teams}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teams}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teams-local-only}
       POSTGRES_DB: ${POSTGRES_DB:-teams_tasks}
-    ports: ['${POSTGRES_PORT:-5432}:5432']
+    ports: ['${POSTGRES_BIND:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432']
     volumes: [pgdata:/var/lib/postgresql/data]
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 3s
       timeout: 3s
       retries: 20
+  migrate: # one-shot: applies the Prisma migrations and exits; the API waits for it
+    build: { context: ., dockerfile: apps/api/Dockerfile, target: migrator }
+    init: true
+    depends_on: { postgres: { condition: service_healthy } }
+    environment: # the entrypoint builds DATABASE_URL from these parts
+      POSTGRES_USER: ${POSTGRES_USER:-teams}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teams-local-only}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-teams_tasks}
+    restart: 'no'
   api:
     build: { context: ., dockerfile: apps/api/Dockerfile }
     init: true
     stop_grace_period: 15s
-    depends_on: { postgres: { condition: service_healthy } }
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
     environment:
       APP_ENV: ${APP_ENV:-local} # local | test | production (NODE_ENV stays 'production' from the image)
       PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-teams}:${POSTGRES_PASSWORD:-teams}@postgres:5432/${POSTGRES_DB:-teams_tasks}
+      POSTGRES_USER: ${POSTGRES_USER:-teams} # DATABASE_URL is built by the entrypoint from the POSTGRES_* parts
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teams-local-only}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-teams_tasks}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-dev-secret-change-me-0123456789abcdef}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
       SEED_ON_START: ${SEED_ON_START:-true} # run the seed step at all
@@ -95,7 +119,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://signoz-otel-collector:4318}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
       RATE_LIMIT_IP_MAX: ${RATE_LIMIT_IP_MAX:-300}
-    ports: ['${API_PORT:-3000}:3000']
+    ports: ['${API_BIND:-0.0.0.0}:${API_PORT:-3000}:3000']
     healthcheck:
       test:
         [
@@ -136,7 +160,7 @@ volumes: { pgdata: {} }
 
 ```dockerfile
 # syntax=docker/dockerfile:1.7
-FROM node:24-alpine AS base
+FROM node:24-alpine AS base # pinned minor + digest in the real file
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN apk add --no-cache openssl && corepack enable
 WORKDIR /repo
@@ -149,20 +173,35 @@ FROM base AS deps
 COPY --from=pruner /repo/out/json/ .
 COPY --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch --frozen-lockfile
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline --ignore-scripts
 
 FROM deps AS build
 COPY --from=pruner /repo/out/full/ .
 RUN pnpm --filter @hitss/api exec prisma generate \
- && pnpm turbo run build --filter=@hitss/api \
- && pnpm --filter @hitss/api deploy --prod --legacy /out   # pnpm 10: --legacy unless inject-workspace-packages
+ && pnpm --filter @hitss/api run build
 
-FROM node:24-alpine AS runtime
-RUN apk add --no-cache openssl
+FROM build AS migrator # compose service `migrate`: Prisma CLI, applies migrations, exits
+COPY apps/api/prisma.runtime.config.cjs apps/api/database-url.cjs /repo/apps/api/
+COPY --chmod=755 apps/api/docker-migrate.sh /repo/apps/api/docker-migrate.sh
+USER node
+WORKDIR /repo/apps/api
+ENTRYPOINT ["./docker-migrate.sh"]
+
+FROM build AS prod-deps # @prisma/client links prisma and typescript as optional peers
+COPY apps/api/prune-cli.cjs /tmp/prune-cli.cjs
+RUN pnpm --filter @hitss/api deploy --prod --legacy /out \
+ && node /tmp/prune-cli.cjs /out/node_modules prisma,typescript \
+ && ! ls /out/node_modules/.pnpm | grep -qE '^(prisma|typescript)@'
+
+FROM node:24-alpine AS runtime # pinned minor + digest in the real file
+RUN apk add --no-cache openssl && rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 ENV NODE_ENV=production
 WORKDIR /app
-COPY --from=build --chown=node:node /out ./
-COPY --chown=node:node apps/api/docker-entrypoint.sh ./
+COPY --from=prod-deps /out/node_modules ./node_modules
+COPY --from=prod-deps /out/package.json ./package.json
+COPY --from=build /repo/apps/api/dist ./dist
+COPY apps/api/database-url.cjs ./database-url.cjs
+COPY --chmod=755 apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
 USER node
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]
@@ -170,14 +209,22 @@ ENTRYPOINT ["./docker-entrypoint.sh"]
 
 ```sh
 #!/bin/sh
-# apps/api/docker-entrypoint.sh
+# apps/api/docker-migrate.sh (migrator): a non-zero exit stops the API from starting (AC-07.1.7)
 set -eu
-./node_modules/.bin/prisma migrate deploy            # non-zero exit stops the container (AC-07.1.7)
+[ -n "${DATABASE_URL:-}" ] || export DATABASE_URL="$(node database-url.cjs)"
+exec node_modules/.bin/prisma migrate deploy --config prisma.runtime.config.cjs
+```
+
+```sh
+#!/bin/sh
+# apps/api/docker-entrypoint.sh (API): migrations already ran in the migrate service
+set -eu
+[ -n "${DATABASE_URL:-}" ] || export DATABASE_URL="$(node database-url.cjs)"
 if [ "${SEED_ON_START:-true}" = "true" ]; then node dist/prisma/seed.js; fi
 exec node --import ./dist/instrumentation.js dist/main.js
 ```
 
-- `prisma` CLI must be a **production dependency** of `@hitss/api` (needed for `migrate deploy` in the runtime image). Trade-off accepted (~15 MB) over copying the CLI ad hoc.
+- The `prisma` CLI stays a **dev dependency**: only the `migrator` image carries it. Prisma 7's CLI and dependencies are ~380 MB, so the API image runs without it and migrations are applied by the one-shot `migrate` service (ADR-0018, amended 2026-10-21). Image size target: **< 500 MB** (measured about 470 MB: `node:24-alpine` base 244 MB + `@prisma/client` 71 MB + the rest of the production dependencies).
 - The seed is compiled to `dist/prisma/seed.js` (separate `tsconfig.seed.json` or included in `tsconfig.build.json`), so the runtime image needs no `tsx`/`ts-node`.
 - `.dockerignore`: `**/node_modules`, `**/dist`, `**/.turbo`, `**/coverage`, `.git`, `.env*` (except `.env.example`), `apps/mobile/.expo`, `docs/brief`.
 - `NODE_ENV` in the runtime image is `production` for the Node runtime; the _application_ environment used for the secret check is `APP_ENV` (default `local`) so the compose run with the default secret is valid. Naming confirmed in T-007-02.
