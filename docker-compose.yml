@@ -23,6 +23,11 @@ services:
       dockerfile: apps/api/Dockerfile
     init: true
     stop_grace_period: 15s
+    # Hardening: no privilege escalation, no capabilities, immutable root filesystem.
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp]
     depends_on:
       postgres:
         condition: service_healthy
