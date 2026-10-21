@@ -111,4 +111,38 @@ describe('prune the Prisma CLI from the production node_modules', () => {
     assert.notEqual(run.status, 0);
     assert.match(run.stderr, /prisma/);
   });
+
+  it('AC-07.1.6 prunes several named packages in one run (comma-separated)', () => {
+    const s = store(
+      {
+        '@prisma/client': ['prisma', 'typescript', '@prisma/runtime'],
+        '@prisma/runtime': [],
+        prisma: ['effect'],
+        effect: [],
+        typescript: [],
+      },
+      ['@prisma/client'],
+    );
+    const run = spawnSync(
+      process.execPath,
+      [script, s.nm, 'prisma,typescript'],
+      { encoding: 'utf8' },
+    );
+    assert.equal(run.status, 0, run.stderr);
+    assert.ok(s.has('@prisma/client') && s.has('@prisma/runtime'));
+    for (const gone of ['prisma', 'effect', 'typescript']) {
+      assert.ok(!s.has(gone), `${gone} must be removed`);
+    }
+  });
+
+  it('AC-07.1.6 refuses when any named package is a direct dependency', () => {
+    const s = store({ app: [], typescript: [] }, ['app', 'typescript']);
+    const run = spawnSync(
+      process.execPath,
+      [script, s.nm, 'prisma,typescript'],
+      { encoding: 'utf8' },
+    );
+    assert.notEqual(run.status, 0);
+    assert.match(run.stderr, /typescript/);
+  });
 });
