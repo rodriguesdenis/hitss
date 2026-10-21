@@ -45,6 +45,8 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm format:check
       - run: pnpm turbo run lint typecheck
+      - name: Architecture rules and their meta-tests
+        run: pnpm arch
       - name: CI tooling tests
         run: pnpm test:tools
       - name: No tracked .env files

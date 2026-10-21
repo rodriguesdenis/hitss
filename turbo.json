@@ -24,6 +24,22 @@
     "test:e2e": {
       "dependsOn": ["^build"],
       "cache": false
+    },
+    "arch": {
+      "inputs": [
+        "src/**",
+        ".dependency-cruiser.cjs",
+        "tsconfig*.json",
+        "package.json"
+      ]
+    },
+    "test:arch": {
+      "inputs": [
+        "src/**",
+        "test/architecture/**",
+        ".dependency-cruiser.cjs",
+        "package.json"
+      ]
     }
   }
 }
