@@ -18,9 +18,7 @@ export class ConfigValidationError extends Error {
 
 function toViolations(errors: ValidationError[]): Violation[] {
   return errors.flatMap((error) => {
-    const messages = Object.values(error.constraints ?? {}).map((message) =>
-      message.replace(error.property, '').trim(),
-    );
+    const messages = Object.values(error.constraints ?? {});
     return [
       {
         variable: error.property,
