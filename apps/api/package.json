@@ -16,7 +16,7 @@
     "test:cov": "jest --selectProjects unit --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:integration": "jest --selectProjects integration --runInBand",
-    "test:e2e": "jest --selectProjects e2e --runInBand --passWithNoTests",
+    "test:e2e": "jest --selectProjects e2e --runInBand",
     "dev": "nest start --watch --exec \"node --import ./dist/instrumentation.js\"",
     "typecheck": "tsc --noEmit",
     "arch": "depcruise src --config .dependency-cruiser.cjs --output-type err",
