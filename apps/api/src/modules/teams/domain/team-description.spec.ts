@@ -35,6 +35,21 @@ describe('TeamDescription', () => {
       expect(TeamDescription.create(`   ${text}   `).value).toBe(text);
     });
 
+    it('rejects 281 characters surrounded by spaces (trimming never forgives length)', () => {
+      expect(() => TeamDescription.create(`   ${'d'.repeat(281)}   `)).toThrow(
+        InvalidTeamDescription,
+      );
+    });
+
+    it.each([
+      ['NBSP', '\u00a0'],
+      ['LINE SEPARATOR', '\u2028'],
+    ])('trims %s at the edges before measuring', (_label, edge) => {
+      const text = 'd'.repeat(280);
+
+      expect(TeamDescription.create(`${edge}${text}${edge}`).value).toBe(text);
+    });
+
     it('reports the "description" field', () => {
       let error: unknown;
       try {
@@ -52,9 +67,12 @@ describe('TeamDescription', () => {
   });
 
   describe('AC-02.1.4 blank descriptions become no description', () => {
-    it.each([undefined, null, '', '    ', '\n\t '])('%j → null', (raw) => {
-      expect(TeamDescription.create(raw).value).toBeNull();
-    });
+    it.each([undefined, null, '', '    ', '\n\t ', '\u00a0\u2028'])(
+      '%j → null',
+      (raw) => {
+        expect(TeamDescription.create(raw).value).toBeNull();
+      },
+    );
   });
 
   it('keeps inner line breaks', () => {

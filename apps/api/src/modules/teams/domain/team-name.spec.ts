@@ -33,6 +33,33 @@ describe('TeamName', () => {
       expect(TeamName.create(' Mobile  Team ').value).toBe('Mobile  Team');
     });
 
+    it('rejects 51 characters surrounded by spaces (trimming never forgives length)', () => {
+      expect(() => TeamName.create(`  ${'a'.repeat(51)}  `)).toThrow(
+        InvalidTeamName,
+      );
+    });
+
+    // NBSP (U+00A0) and LINE SEPARATOR (U+2028) are whitespace but not Cc:
+    // trim() removes them at the edges, inside the name they are kept.
+    it.each([
+      ['NBSP at the edges', '\u00a0Mobile\u00a0', 'Mobile'],
+      ['NBSP inside', 'Mobile\u00a0Team', 'Mobile\u00a0Team'],
+      ['LINE SEPARATOR at the edges', '\u2028Mobile\u2028', 'Mobile'],
+      ['LINE SEPARATOR inside', 'Mobile\u2028Team', 'Mobile\u2028Team'],
+    ])('%s: accepted as %j', (_label, raw, stored) => {
+      expect(TeamName.create(raw).value).toBe(stored);
+    });
+
+    it.each([
+      ['NBSP', '\u00a0a\u00a0'],
+      ['LINE SEPARATOR', '\u2028a\u2028'],
+    ])(
+      '%s around a single character is trimmed, then too short',
+      (_label, raw) => {
+        expect(() => TeamName.create(raw)).toThrow(InvalidTeamName);
+      },
+    );
+
     it('accepts 50 characters made of accented letters and emoji', () => {
       const raw = ACCENTED.repeat(25) + EMOJI.repeat(25);
       expect(raw.length).toBe(75); // UTF-16 units
