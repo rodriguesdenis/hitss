@@ -47,6 +47,12 @@ jobs:
       - run: pnpm turbo run lint typecheck
       - name: Architecture rules and their meta-tests
         run: pnpm arch
+      - name: Requirement traceability (gaps, stale matrix, tests lost since the base)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then git fetch --no-tags --depth=1 origin "$BASE_SHA"; fi
+          pnpm traceability:check
       - name: README sections and relative links
         run: pnpm doc-check
       - name: CI tooling tests
