@@ -237,6 +237,20 @@ describe('Tasks schema (integration, T-003-01)', () => {
       );
     });
 
+    it('has no database default for created_at or updated_at (the domain clock owns them)', async () => {
+      const ownerId = await aUser();
+
+      const error = await sqlError(() =>
+        sql.query(
+          `INSERT INTO tasks (id, owner_id, title) VALUES ($1, $2, 'No clock')`,
+          [randomUUID(), ownerId],
+        ),
+      );
+
+      expect(error.code).toBe('23502');
+      expect(error.column).toBe('created_at');
+    });
+
     it('rejects updated_at before created_at (tasks_updated_after_created)', async () => {
       const ownerId = await aUser();
       const createdAt = new Date('2026-10-21T09:00:00.000Z');
