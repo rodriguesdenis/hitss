@@ -169,6 +169,24 @@ describe('HTTP conventions (e2e)', () => {
       expect(response.headers['x-request-id']).toMatch(UUID);
     });
 
+    it('Lynx S1: a deeply nested ~100 kB body → 400 VALIDATION_FAILED on body, never a 500', async () => {
+      const levels = 16_000;
+      const json = '{"a":'.repeat(levels) + '1' + '}'.repeat(levels);
+      expect(json.length).toBeGreaterThan(90_000);
+      expect(json.length).toBeLessThan(100_000);
+
+      const response = await http()
+        .post('/api/v1/probe')
+        .set('Content-Type', 'application/json')
+        .send(json);
+
+      expect(response.status).toBe(400);
+      expect(errorOf(response)).toMatchObject({
+        code: 'VALIDATION_FAILED',
+        details: [{ field: 'body', message: 'body is nested too deeply' }],
+      });
+    });
+
     it('a body over the JSON limit → 413 PAYLOAD_TOO_LARGE', async () => {
       const response = await http()
         .post('/api/v1/probe')

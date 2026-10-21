@@ -130,6 +130,48 @@ describe('AppValidationPipe', () => {
     },
   );
 
+  describe('Lynx S1: nesting depth', () => {
+    const untyped: ArgumentMetadata = { type: 'body' };
+    /** { a: { a: … { a: 1 } } } with `levels` objects, built without recursion. */
+    const nested = (levels: number, leaf: unknown = 1): unknown => {
+      let value = leaf;
+      for (let i = 0; i < levels; i++) value = { a: value };
+      return value;
+    };
+
+    it('accepts 32 levels', async () => {
+      const value = nested(32);
+
+      expect(await pipe.transform(value, untyped)).toBe(value);
+    });
+
+    it.each([33, 100_000])(
+      'refuses %i levels as 400 VALIDATION_FAILED on body, without a RangeError',
+      async (levels) => {
+        expect(await details(nested(levels), untyped)).toEqual([
+          { field: 'body', message: 'body is nested too deeply' },
+        ]);
+      },
+    );
+
+    it('names the query when the query string is too deep', async () => {
+      expect(await details(nested(40), { type: 'query' })).toEqual([
+        { field: 'query', message: 'query is nested too deeply' },
+      ]);
+    });
+
+    it('still finds a prototype key deep inside an allowed depth', async () => {
+      expect(
+        await details(nested(20, JSON.parse('{"__proto__":{}}')), untyped),
+      ).toEqual([
+        {
+          field: `${'a.'.repeat(20)}__proto__`,
+          message: 'property __proto__ should not exist',
+        },
+      ]);
+    });
+  });
+
   it('leaves parameters without a DTO class untouched', async () => {
     expect(
       await pipe.transform('42', {
