@@ -43,8 +43,11 @@ export default tseslint.config(
     },
   },
   {
-    // Allowed readers of process.env: the config module, instrumentation and tests.
+    // Allowed readers of process.env: the config module, instrumentation, tests, and
+    // prisma.config.ts, which only the Prisma CLI loads (generate/migrate). It never runs in the
+    // API process, which gets DATABASE_URL through AppConfig.
     files: [
+      'prisma.config.ts',
       'src/config/**/*.ts',
       'src/instrumentation.ts',
       'test/**/*.ts',

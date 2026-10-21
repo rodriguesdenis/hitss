@@ -10,7 +10,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,test}/**/*.ts\"",
+    "lint": "eslint \"{src,test}/**/*.ts\" prisma.config.ts jest.config.ts",
     "test": "jest --selectProjects unit",
     "test:watch": "jest --selectProjects unit --watch",
     "test:cov": "jest --selectProjects unit --coverage",
