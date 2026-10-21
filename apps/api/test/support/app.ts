@@ -1,9 +1,19 @@
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { PARAMS_PROVIDER_TOKEN } from 'nestjs-pino';
 import { AppModule } from '../../src/app.module';
 import { setupApp } from '../../src/app.setup';
 import { APP_CONFIG, toAppConfig } from '../../src/config/app-config';
 import { validate } from '../../src/config/env.validation';
+import { createLoggerParams } from '../../src/shared/observability/logging/logger.config';
+import { LogCapture } from './logging/capture';
+
+export interface TestAppOptions {
+  /** Test-only modules mounted next to AppModule (e.g. probe controllers). */
+  imports?: Type[];
+  /** Receives every pino log line of the app as JSON (e.g. for leak scans). */
+  logs?: LogCapture;
+}
 
 /**
  * Builds the full Nest app against the given database, configured like `main.ts`.
@@ -12,14 +22,27 @@ import { validate } from '../../src/config/env.validation';
  */
 export async function createTestApp(
   databaseUrl: string,
+  options: TestAppOptions = {},
 ): Promise<INestApplication> {
   const config = { ...toAppConfig(validate({ ...process.env })), databaseUrl };
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  let builder = Test.createTestingModule({
+    imports: [AppModule, ...(options.imports ?? [])],
+  })
     .overrideProvider(APP_CONFIG)
-    .useValue(config)
-    .compile();
+    .useValue(config);
+  if (options.logs) {
+    builder = builder
+      .overrideProvider(PARAMS_PROVIDER_TOKEN)
+      .useValue(
+        createLoggerParams(
+          { level: config.logLevel, pretty: false },
+          options.logs,
+        ),
+      );
+  }
+  const moduleRef = await builder.compile();
 
-  const app = setupApp(moduleRef.createNestApplication());
+  const app = setupApp(moduleRef.createNestApplication({ bufferLogs: true }));
   await app.init();
   return app;
 }
