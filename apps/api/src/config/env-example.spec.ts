@@ -5,12 +5,14 @@ import { validate } from './env.validation';
 import { expectInvalid } from './testing/expect-invalid';
 
 function parseEnvFile(path: string): Record<string, string> {
-  const entries = readFileSync(path, 'utf8')
-    .split(/\r?\n/)
-    .map((line) => /^([A-Z0-9_]+)=(.*)$/.exec(line))
-    .filter((match): match is RegExpExecArray => match !== null)
-    .map((match) => [match[1], match[2]] as const);
-  return Object.fromEntries(entries);
+  const env: Record<string, string> = {};
+  for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
+    const match = /^([A-Z0-9_]+)=(.*)$/.exec(line);
+    if (match?.[1] !== undefined && match[2] !== undefined) {
+      env[match[1]] = match[2];
+    }
+  }
+  return env;
 }
 
 const example = parseEnvFile(join(__dirname, '../../../../.env.example'));
