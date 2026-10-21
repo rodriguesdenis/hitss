@@ -112,7 +112,7 @@ git clone <repository-url> && cd hitss
 docker compose up --build
 ```
 
-This starts PostgreSQL, waits until it is healthy, applies the migrations and starts the API on port 3000 (⚠️ seeding the demo data arrives with the seed task). No `.env` is required; to override settings copy `.env.example` to `.env` (for example `API_PORT=3100` when port 3000 is taken).
+This starts PostgreSQL, waits until it is healthy, applies the migrations and starts the API on port 3000 (⚠️ seeding the demo data arrives with the seed task). The API container builds its database URL from the `POSTGRES_*` settings (set `DATABASE_URL` to override it). No `.env` is required; to override settings copy `.env.example` to `.env` (for example `API_PORT=3100` when port 3000 is taken).
 
 | What            | Where                                     |
 | --------------- | ----------------------------------------- |
