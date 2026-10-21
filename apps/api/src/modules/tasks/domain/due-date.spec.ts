@@ -2,7 +2,7 @@ import { DueDate } from './due-date';
 import { InvalidDueDate } from './errors/invalid-due-date.error';
 
 describe('DueDate', () => {
-  describe('AC-03.1.5 must be a real calendar date in YYYY-MM-DD form', () => {
+  describe('AC-03.1.5 AC-03.9.3 must be a real calendar date in YYYY-MM-DD form', () => {
     it.each(['2026-10-31', '2020-01-15', '2028-02-29', '2000-02-29'])(
       'accepts %s',
       (raw) => {
@@ -12,6 +12,7 @@ describe('DueDate', () => {
 
     it.each([
       '2026-02-29', // not a leap year
+      '2026-02-30', // AC-03.9.3 edit row
       '1900-02-29', // century, not a leap year
       '2026-13-01',
       '2026-00-10',
