@@ -129,13 +129,15 @@ describe('Tasks list filters (US-03.4)', () => {
 
 ## Coverage gates
 
-| Scope                                  | Metric           | Gate                                              | Enforced by                                          |
-| -------------------------------------- | ---------------- | ------------------------------------------------- | ---------------------------------------------------- |
-| API domain (`src/modules/*/domain/**`) | lines            | **≥ 90 %**                                        | Jest `coverageThreshold` (unit run)                  |
-| API overall                            | lines            | **≥ 80 %**                                        | Jest `coverageThreshold` (unit + integration merged) |
-| API domain                             | mutation score   | **≥ 80 %**                                        | Stryker `break: 80`                                  |
-| Mobile                                 | lines            | ≥ 70 % (target, reported, non-blocking initially) | jest-expo coverage                                   |
-| MUST acceptance criteria               | AC with ≥ 1 test | **100 %**                                         | traceability check                                   |
+| Scope                                  | Metric           | Gate                                                  | Enforced by                         |
+| -------------------------------------- | ---------------- | ----------------------------------------------------- | ----------------------------------- |
+| API domain (`src/modules/*/domain/**`) | lines            | **≥ 90 %**                                            | Jest `coverageThreshold` (unit run) |
+| API overall                            | lines            | **≥ 80 %**                                            | Jest `coverageThreshold` (unit run) |
+| API domain                             | mutation score   | **≥ 80 %**                                            | Stryker `break: 80`                 |
+| Mobile                                 | lines            | ≥ 70 % (target, reported, non-blocking initially)     | jest-expo coverage                  |
+| MUST acceptance criteria               | AC with ≥ 1 test | **100 %** (ratchet today, `--require-tests` T-007-17) | traceability check                  |
+
+The coverage gates run on the unit project and measure domain, application and shared code only (`infrastructure/`, `presentation/`, the generated Prisma client, `main.ts` and `instrumentation.ts` are excluded), because those excluded layers are proven by the integration and e2e projects against a real database and HTTP stack, where line coverage from unit tests would be meaningless.
 
 Coverage is a floor, not a goal: reviewers reject tests without meaningful assertions even if they raise coverage.
 
