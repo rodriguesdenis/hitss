@@ -16,7 +16,8 @@ Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi), wh
 
 ```
 apps/api/src/
-├── main.ts                         # bootstrap (bodyParser: false, prefix, versioning, helmet, CORS, swagger)
+├── main.ts                         # bootstrap: NestFactory.create (bodyParser: false) + setupApp() + listen
+├── app.setup.ts                    # setupApp(): prefix, versioning, request id, pipe, envelope, filter, helmet, CORS, swagger
 ├── app.module.ts                   # composition root; ordered global guards
 ├── config/                         # owned by T-007-02: class-validator env class + ConfigModule validate(), typed config
 │   └── auth.env.ts                 # 001 adds: auth/security variables + production rules (class-validator)
@@ -54,7 +55,7 @@ Identity is a **generic subdomain**. It has no `domain/` layer of its own, becau
 ### Bootstrap
 
 ```ts
-// main.ts (illustrative)
+// main.ts + app.setup.ts setupApp() (illustrative; app-level wiring lives in setupApp)
 const app = await NestFactory.create(AppModule, {
   bodyParser: false,
   bufferLogs: true,
