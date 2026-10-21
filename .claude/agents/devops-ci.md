@@ -1,6 +1,7 @@
 ---
 name: devops-ci
 description: DevOps / CI engineer. Use for the monorepo tooling (pnpm, Turborepo), Dockerfiles, docker compose (postgres, api with auto migrate+seed, optional mobile metro, SigNoz profile), Makefile, GitHub Actions CI (lint, typecheck, test, build, commitlint, audit, architecture rules, api-client drift) and Dependabot.
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

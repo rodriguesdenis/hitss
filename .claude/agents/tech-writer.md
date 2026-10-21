@@ -1,6 +1,7 @@
 ---
 name: tech-writer
 description: Technical writer. Use to write and polish the root README (decisions, data model, how to run, request examples, production notes), API usage docs, Bruno/.http request collections docs, and to review all docs for consistency, broken links and accuracy against the code.
+model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

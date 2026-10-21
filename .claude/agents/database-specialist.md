@@ -1,6 +1,7 @@
 ---
 name: database-specialist
 description: PostgreSQL + Prisma specialist. Use for the Prisma schema, migrations, indexes, constraints, seed scripts, query performance (EXPLAIN), soft delete and optimistic-locking columns, and for reviewing any change touching persistence.
+model: opus
 tools: Read, Write, Edit, Glob, Grep, Bash
 ---
 

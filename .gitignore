@@ -25,3 +25,6 @@ coverage/
 # expo
 .expo/
 web-build/
+
+# local tooling
+.maestri/
