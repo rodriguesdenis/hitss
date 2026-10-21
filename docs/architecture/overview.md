@@ -88,7 +88,7 @@ flowchart TB
       cqrs["CqrsModule<br/>CommandBus · QueryBus · EventBus"]
       http["Shared presentation<br/>ExceptionFilter · Envelope/ETag/Idempotency interceptors · ValidationPipe"]
     end
-    auth["<b>AuthModule</b> (Identity)<br/>Better Auth at /api/auth/*<br/>global AuthGuard, @Session()"]
+    auth["<b>IdentityModule</b> (Identity)<br/>Better Auth at /api/auth/*<br/>global AuthGuard, @CurrentOwner()"]
     teams["<b>TeamsModule</b><br/>(Team Management)"]
     tasks["<b>TasksModule</b><br/>(Task Management)"]
     health["<b>HealthModule</b><br/>Terminus: live / ready"]
@@ -250,7 +250,7 @@ Writes that span aggregates (team deletion → unassign from tasks) run inside o
 ├── docs/                    # constitution, product, specs, architecture, ADRs
 ├── tools/                   # bruno/, http/, k6/
 ├── docker-compose.yml       # postgres, api, mobile (optional), observability profile
-├── Makefile                 # up, down, logs, seed, reset, obs-up
+├── Makefile                 # up, down, logs, seed, reset, test, observability, observability-down, mobile, smoke, load
 ├── turbo.json · pnpm-workspace.yaml
 └── .github/workflows/ci.yml
 ```
@@ -267,7 +267,8 @@ apps/api/
 │   ├── instrumentation.ts               # OTel NodeSDK, loaded before anything else
 │   ├── main.ts                          # NestFactory.create(AppModule, { bodyParser: false })
 │   ├── app.module.ts
-│   ├── config/                          # env schema (class-validator) + typed config
+│   ├── config/                          # env schema as a class-validator class, validated via ConfigModule `validate()` (fail fast) + typed config
+│   │   └── telemetry.env.ts             # OTel/logging env, composed into the same ConfigModule `validate()`
 │   ├── shared/
 │   │   ├── domain/                      # AggregateRoot, DomainEvent, DomainError (pure TS)
 │   │   ├── application/                 # Clock, IdGenerator ports, Page<T>, PageRequest
@@ -280,9 +281,12 @@ apps/api/
 │   │   │   ├── interceptors/            # envelope, etag, idempotency
 │   │   │   ├── dto/                     # PaginationQueryDto, ErrorResponseDto, envelope helpers
 │   │   │   └── decorators/              # @ApiEnvelopedResponse, @IfMatch()
-│   │   └── observability/               # ObservabilityModule, meters, log/trace correlation
+│   │   └── observability/
+│   │       ├── observability.module.ts  # ObservabilityModule (global): meter provider, logging, tracing
+│   │       ├── logging/                 # nestjs-pino config, redaction, request id, trace mixin
+│   │       └── tracing/                 # use-case spans around command/query handlers
 │   └── modules/
-│       ├── auth/                        # betterAuth instance, AuthModule (nestjs-better-auth)
+│       ├── identity/                    # Identity context: betterAuth instance, IdentityModule (wraps nestjs-better-auth AuthModule), @CurrentOwner()
 │       ├── health/                      # Terminus controller + Prisma indicator
 │       ├── teams/
 │       │   ├── contracts/               # PUBLIC: TeamDeleted, GetTeamSummariesQuery + result types
@@ -300,9 +304,9 @@ apps/api/
 │           ├── application/
 │           │   ├── commands/            # create-task/, replace-task/, change-task-status/, delete-task/
 │           │   ├── queries/             # list-tasks/, get-task/, count-tasks-by-team/
-│           │   ├── events/              # on-team-deleted.handler.ts (unassign)
-│           │   └── ports/               # TaskRepository, TaskReadModel, TeamDirectory
-│           ├── infrastructure/          # prisma-task.repository.ts, task.mapper.ts, team-directory.adapter.ts
+│           │   ├── events/              # on-team-deleted.handler.ts (unassign), record-task-metrics.handler.ts (after commit)
+│           │   └── ports/               # TaskRepository, TaskReadModel, TeamDirectory, task-metrics.ts (TaskMetrics)
+│           ├── infrastructure/          # prisma-task.repository.ts, task.mapper.ts, team-directory.adapter.ts, otel-task-metrics.adapter.ts
 │           ├── presentation/            # tasks.controller.ts, dto/
 │           └── tasks.module.ts
 ├── test/
@@ -329,19 +333,34 @@ apps/mobile/
 ├── src/
 │   ├── features/
 │   │   ├── auth/                        # auth-client.ts, useSession, forms
-│   │   ├── teams/                       # components/, hooks/, schemas/, index.ts (public)
-│   │   └── tasks/                       # components/, hooks/ (optimistic mutations), schemas/, index.ts
+│   │   ├── teams/                       # components/, hooks/, schemas/, mutations/, index.ts (public)
+│   │   ├── tasks/                       # components/, hooks/, schemas/, mutations/, index.ts (public)
+│   │   │                                # mutations/: register<Feature>MutationDefaults() — mutationFn, onMutate, rollback, cache transforms
+│   │   └── settings/                    # SettingsScreen (theme, language, sync status, sign-out), index.ts
 │   └── shared/
 │       ├── ui/                          # Button, Chip, Card, TextField, EmptyState
-│       ├── query/                       # query-client.ts, persister.ts, online-manager.ts, mutation-defaults.ts, keys.ts
+│       ├── query/
+│       │   ├── query-client.ts · keys.ts
+│       │   ├── persister.ts             # React Query persister on the StorageAdapter
+│       │   ├── online-manager.ts        # NetInfo → onlineManager, AppState → focusManager
+│       │   ├── session-gate.ts          # pauses/clears the queue on 401 or user switch (session source injected)
+│       │   ├── mutation-defaults.ts     # registry: registerMutationDefaults(defs); features supply the defs
+│       │   ├── optimistic/              # generic cache-patch helpers (snapshot, patch list pages, rollback)
+│       │   ├── resolve.ts               # tmp- id → server id map (ADR-0012)
+│       │   └── conflicts.ts             # 412 / 404-on-delete handling for queued mutations
 │       ├── storage/                     # storage-adapter.ts, async-storage.adapter.ts, mmkv.adapter.ts
-│       ├── stores/                      # filters.store.ts, preferences.store.ts, sync.store.ts
-│       ├── i18n/ · theme/ · config/
+│       ├── stores/                      # filters.store.ts, preferences.store.ts, sync.store.ts, toast.store.ts
+│       ├── config/
+│       │   └── api-client.ts            # setupApiClient({ baseUrl, getAuthHeaders, onUnauthenticated }) for @hitss/api-client
+│       ├── i18n/                        # index.ts, locales/, error-messages.ts (ApiError.code → message)
+│       └── theme/
 ├── global.css                           # @tailwind + @apply semantic classes, CSS variables
 ├── tailwind.config.js · babel.config.js · metro.config.js · app.config.ts
 ├── e2e/maestro/                         # Maestro flows
 └── .dependency-cruiser.cjs
 ```
+
+**Keeping `shared/` a leaf (M1).** `shared/` never imports a feature. Anything feature-specific is **injected** at the composition root, `app/_layout.tsx`, which may import both. It passes `setupApiClient` the auth headers and the `onUnauthenticated` callback from `features/auth`, gives `session-gate` its session source, and calls each feature's `register<Feature>MutationDefaults()` (from `features/<f>/mutations/`, re-exported by the feature's `index.ts`) before cache restoration (ADR-0012). Mutations import only `shared/` (registry, `optimistic/`, `resolve.ts`, `keys.ts`) and `@hitss/api-client`; a team mutation that patches cached task lists (e.g. stripping a deleted team's chip) uses the shared query keys, never `features/tasks` (M2). Storage libraries stay inside `shared/storage/` (M5); `persister.ts` and the `persist` stores use the `StorageAdapter`.
 
 ## 7. Dependency rules (enforced by dependency-cruiser in CI)
 

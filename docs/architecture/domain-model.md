@@ -126,7 +126,7 @@ All length limits count **Unicode code points** after trimming (not UTF-16 units
 | `TeamDeleted { teamId, ownerId }`         | `Team.delete`       | Task Management: unassign team from tasks.                                            |
 | `TaskCreated { taskId, ownerId, status }` | `Task.create`       | Metrics (`tasks_created_total`; also `tasks_completed_total` when created as `DONE`). |
 | `TaskStatusChanged { taskId, from, to }`  | `Task.changeStatus` | Metrics (`tasks_completed_total`), logs.                                              |
-| `TaskDeleted { taskId }`                  | `Task.delete`       | Metrics.                                                                              |
+| `TaskDeleted { taskId }`                  | `Task.delete`       | Metrics (`tasks_deleted_total`).                                                      |
 
 Two dispatch paths ([ADR-0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md#teamdeleted-consistency)):
 
