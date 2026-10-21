@@ -44,7 +44,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-teams_tasks}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-local-dev-secret-change-me-0123456789abcdef}
       SEED_ON_START: ${SEED_ON_START:-true}
-    ports: ['${API_PORT:-3000}:3000']
+    ports: ['${API_BIND:-0.0.0.0}:${API_PORT:-3000}:3000']
     healthcheck:
       # TODO(T-001-08 / T-006-03): switch to GET /api/v1/health/ready once the health routes exist.
       # Interim: the API only listens after the config is valid, the database module is up and
