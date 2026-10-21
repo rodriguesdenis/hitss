@@ -30,7 +30,7 @@ describe('auth and security variables', () => {
         CORS_ORIGINS:
           ' https://app.example.test , https://admin.example.test:8443,',
         TRUSTED_PROXIES: '10.0.0.0/8, 192.168.1.10,::1, fd00::/8',
-        RATE_LIMIT_IP_MAX: '50',
+        RATE_LIMIT_IP_MAX: '500',
         AUTH_RATE_LIMIT_ENABLED: 'false',
         SEED_DEMO: 'false',
         DOCS_ENABLED: 'false',
@@ -43,7 +43,7 @@ describe('auth and security variables', () => {
         'https://admin.example.test:8443',
       ],
       trustedProxies: ['10.0.0.0/8', '192.168.1.10', '::1', 'fd00::/8'],
-      rateLimitIpMax: 50,
+      rateLimitIpMax: 500,
       authRateLimitEnabled: false,
       seedDemo: false,
       docsEnabled: false,
@@ -90,6 +90,51 @@ describe('auth and security variables', () => {
       check({ [variable]: value }, variable);
     },
   );
+});
+
+describe('rate limits (every environment)', () => {
+  it.each(['RATE_LIMIT_MAX', 'RATE_LIMIT_IP_MAX'])(
+    '%s above 10000 is refused',
+    (variable) => {
+      check(
+        {
+          RATE_LIMIT_MAX: '100',
+          RATE_LIMIT_IP_MAX: '10000',
+          [variable]: '10001',
+        },
+        variable,
+      );
+    },
+  );
+
+  it('both limits accept 10000', () => {
+    expect(
+      toAppConfig(
+        validate({
+          ...VALID_ENV,
+          RATE_LIMIT_MAX: '10000',
+          RATE_LIMIT_IP_MAX: '10000',
+        }),
+      ),
+    ).toMatchObject({ rateLimitMax: 10000, rateLimitIpMax: 10000 });
+  });
+
+  it('RATE_LIMIT_IP_MAX below RATE_LIMIT_MAX is refused (the per-user limit could never be reached)', () => {
+    check(
+      { RATE_LIMIT_MAX: '200', RATE_LIMIT_IP_MAX: '199' },
+      'RATE_LIMIT_IP_MAX',
+    );
+  });
+
+  it('equal limits are accepted', () => {
+    expect(() =>
+      validate({
+        ...VALID_ENV,
+        RATE_LIMIT_MAX: '200',
+        RATE_LIMIT_IP_MAX: '200',
+      }),
+    ).not.toThrow();
+  });
 });
 
 describe('APP_SCHEME reserved schemes (every environment)', () => {

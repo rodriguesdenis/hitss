@@ -1,5 +1,13 @@
 import { Transform } from 'class-transformer';
-import { integer, isBoolean, oneOf, toBoolean, toNumber } from './transforms';
+import {
+  atMostMaxRateLimit,
+  integer,
+  isBoolean,
+  MAX_RATE_LIMIT,
+  oneOf,
+  toBoolean,
+  toNumber,
+} from './transforms';
 import {
   IsIn,
   IsInt,
@@ -56,6 +64,7 @@ export class EnvironmentVariables extends AuthEnvironmentVariables {
   @Transform(toNumber)
   @IsInt(integer)
   @Min(1, { message: 'must be at least 1' })
+  @Max(MAX_RATE_LIMIT, atMostMaxRateLimit)
   RATE_LIMIT_MAX: number = 100;
 
   @Transform(toBoolean)

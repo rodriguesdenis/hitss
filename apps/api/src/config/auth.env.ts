@@ -5,11 +5,20 @@ import {
   IsInt,
   isIP,
   IsUrl,
+  Max,
   Min,
   ValidateBy,
 } from 'class-validator';
 import { TelemetryEnv } from './telemetry.env';
-import { integer, isBoolean, toBoolean, toList, toNumber } from './transforms';
+import {
+  atMostMaxRateLimit,
+  integer,
+  isBoolean,
+  MAX_RATE_LIMIT,
+  toBoolean,
+  toList,
+  toNumber,
+} from './transforms';
 
 /** `scheme://host[:port]` with no path, as browsers send in the Origin header. */
 const HTTP_ORIGIN = /^https?:\/\/[^\s/?#]+$/;
@@ -153,6 +162,26 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   @Transform(toNumber)
   @IsInt(integer)
   @Min(1, { message: 'must be at least 1' })
+  @Max(MAX_RATE_LIMIT, atMostMaxRateLimit)
+  @ValidateBy({
+    name: 'isAtLeastRateLimitMax',
+    validator: {
+      // Checked only when both are numbers; an invalid RATE_LIMIT_MAX reports its own error.
+      validate: (value: unknown, args) => {
+        const userMax = (args?.object as { RATE_LIMIT_MAX?: unknown })
+          .RATE_LIMIT_MAX;
+        return (
+          typeof value !== 'number' ||
+          typeof userMax !== 'number' ||
+          value >= userMax
+        );
+      },
+      defaultMessage: buildMessage(
+        () =>
+          'must be greater than or equal to RATE_LIMIT_MAX, or the per-user limit can never be reached',
+      ),
+    },
+  })
   RATE_LIMIT_IP_MAX: number = 300;
 
   /** Create the demo account when seeding. */
