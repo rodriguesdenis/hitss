@@ -289,7 +289,7 @@ apps/api/
 │   │       ├── observability.module.ts  # ObservabilityModule: logging, telemetry shutdown (last in AppModule.imports)
 │   │       ├── is-probe.ts              # probe requests (/api/v1/health/*) are never logged or traced
 │   │       ├── sanitize-url.ts          # strips query strings; shared by logging and the span exporter
-│   │       ├── logging/                 # nestjs-pino config, redaction, request id, trace mixin
+│   │       ├── logging/                 # logger.config, redact-paths, request-id, route-template, trace-fields, pino-bridge (Better Auth → pino)
 │   │       ├── telemetry/               # diag-logger, resource-attributes, sanitizing-span-exporter, telemetry-lifecycle, telemetry-shutdown
 │   │       └── tracing/                 # use-case spans around command/query handlers
 │   └── modules/
