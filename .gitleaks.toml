@@ -8,3 +8,18 @@ description = "Nest boilerplate README badge URL with its public placeholder tok
 targetRules = ["generic-api-key"]
 regexTarget = "line"
 regexes = ['''img\.shields\.io/circleci/build/github/nestjs/nest/master\?token=abc123def456''']
+
+# The default generic-api-key rule missed a quoted fixture secret that GitGuardian caught.
+# This rule flags any quoted, high-entropy literal assigned to a secret-like name. Fixtures must
+# build such values at runtime with low entropy (e.g. 'prod-like-' + 'x'.repeat(40)).
+[[rules]]
+id = "secret-assignment-high-entropy"
+description = "High-entropy string literal assigned to a secret-like name"
+regex = '''(?i)[a-z0-9_.-]*(?:secret|token|password|passwd|api[_-]?key|private[_-]?key)[a-z0-9_]*["']?\s*[:=]\s*["']([A-Za-z0-9_+/=.-]{24,})["']'''
+secretGroup = 1
+entropy = 3.5
+keywords = ["secret", "token", "password", "passwd", "api_key", "api-key", "apikey", "private"]
+
+  [[rules.allowlists]]
+  description = "Documented, obviously fake placeholder prefixes (see .env.example and the test setup)"
+  regexes = ['''^(unit-test-secret-|local-dev-)''']
