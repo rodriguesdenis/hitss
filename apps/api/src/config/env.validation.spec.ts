@@ -102,6 +102,36 @@ describe('environment validation', () => {
 describe('production rules', () => {
   const production = PRODUCTION_ENV;
 
+  it.each(['http://collector.example.test:4318', 'http://localhost:4318'])(
+    'AC-06.5.5 APP_ENV=production refuses a plain http OTLP endpoint %s',
+    (endpoint) => {
+      expectInvalid(
+        validate,
+        { ...production, OTEL_EXPORTER_OTLP_ENDPOINT: endpoint },
+        'OTEL_EXPORTER_OTLP_ENDPOINT',
+      );
+    },
+  );
+
+  it('AC-06.5.5 APP_ENV=production allows http to the compose-internal collector', () => {
+    expect(() =>
+      validate({
+        ...production,
+        OTEL_EXPORTER_OTLP_ENDPOINT: 'http://signoz-otel-collector:4318',
+      }),
+    ).not.toThrow();
+  });
+
+  it('AC-06.5.5 APP_ENV=production accepts any endpoint when telemetry is disabled', () => {
+    expect(() =>
+      validate({
+        ...production,
+        OTEL_SDK_DISABLED: 'true',
+        OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:4318',
+      }),
+    ).not.toThrow();
+  });
+
   it('AC-06.5.5 APP_ENV=production accepts a fully valid production configuration', () => {
     expect(() => validate({ ...production })).not.toThrow();
   });

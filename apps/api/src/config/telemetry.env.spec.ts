@@ -38,6 +38,24 @@ describe('TelemetryEnv', () => {
     },
   );
 
+  it.each([
+    'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT',
+    'OTEL_EXPORTER_OTLP_METRICS_ENDPOINT',
+    'OTEL_EXPORTER_OTLP_TRACES_PROTOCOL',
+    'OTEL_EXPORTER_OTLP_METRICS_PROTOCOL',
+    'OTEL_TRACES_EXPORTER',
+    'OTEL_METRICS_EXPORTER',
+  ])('AC-06.5.5 the unvalidated override %s is rejected', (variable) => {
+    expectInvalid(validate, { [variable]: 'http://elsewhere.test' }, variable);
+    expect(() => validateTelemetryEnv({ [variable]: 'x' })).toThrow(variable);
+  });
+
+  it('AC-06.5.5 empty override values are ignored', () => {
+    expect(() =>
+      validateTelemetryEnv({ OTEL_TRACES_EXPORTER: '' }),
+    ).not.toThrow();
+  });
+
   it('AC-06.5.5 the same rules apply through the composed application validate()', () => {
     expectInvalid(
       validate,

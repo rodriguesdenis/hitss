@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { plainToInstance, Transform } from 'class-transformer';
 import {
+  IsEmpty,
   IsIn,
   IsNotEmpty,
   IsString,
@@ -20,11 +21,36 @@ export const SAMPLERS = [
 ] as const;
 export const OTLP_PROTOCOLS = ['http/protobuf', 'http/json'] as const;
 
+const unsupported = (use: string) => ({
+  message: `is not supported; use ${use}`,
+});
+
 /**
- * OpenTelemetry settings. Composed into the application `validate()` (EnvironmentVariables extends
+ * OpenTelemetry settings. Only the variables below are supported: the SDK also honours
+ * per-signal endpoints and exporter selection that would bypass this validation, so those are
+ * rejected when set. OTEL_EXPORTER_OTLP_HEADERS (may carry credentials) is read by the SDK only
+ * and is never logged. Composed into the application `validate()` (EnvironmentVariables extends
  * this class) and validated directly by `src/instrumentation.ts`, which runs before Nest exists.
  */
 export class TelemetryEnv {
+  @IsEmpty(unsupported('OTEL_EXPORTER_OTLP_ENDPOINT'))
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT?: string;
+
+  @IsEmpty(unsupported('OTEL_EXPORTER_OTLP_ENDPOINT'))
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT?: string;
+
+  @IsEmpty(unsupported('OTEL_EXPORTER_OTLP_PROTOCOL'))
+  OTEL_EXPORTER_OTLP_TRACES_PROTOCOL?: string;
+
+  @IsEmpty(unsupported('OTEL_EXPORTER_OTLP_PROTOCOL'))
+  OTEL_EXPORTER_OTLP_METRICS_PROTOCOL?: string;
+
+  @IsEmpty(unsupported('OTEL_SDK_DISABLED'))
+  OTEL_TRACES_EXPORTER?: string;
+
+  @IsEmpty(unsupported('OTEL_SDK_DISABLED'))
+  OTEL_METRICS_EXPORTER?: string;
+
   @Transform(toBoolean)
   @IsIn([true, false], isBoolean)
   OTEL_SDK_DISABLED: boolean = false;
