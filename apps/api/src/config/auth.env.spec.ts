@@ -89,6 +89,36 @@ describe('auth and security variables', () => {
   );
 });
 
+describe('APP_SCHEME reserved schemes (every environment)', () => {
+  // The scheme becomes a Better Auth trusted origin matched by prefix: `http` would trust
+  // every http:// origin. Expo Go's exp:// is added by the auth module, never through here.
+  it.each([
+    'http',
+    'https',
+    'ws',
+    'wss',
+    'file',
+    'ftp',
+    'data',
+    'javascript',
+    'blob',
+    'about',
+    'exp',
+    'exps',
+  ])('AC-01.8.5 %s is refused even with APP_ENV=local', (scheme) => {
+    check({ APP_ENV: 'local', APP_SCHEME: scheme }, 'APP_SCHEME');
+  });
+
+  it.each(['teamstasks', 'teams-tasks', 'com.example.teams+dev'])(
+    '%s is accepted',
+    (scheme) => {
+      expect(
+        toAppConfig(validate({ ...VALID_ENV, APP_SCHEME: scheme })).appScheme,
+      ).toBe(scheme);
+    },
+  );
+});
+
 describe('auth and security production rules (AC-01.8.5)', () => {
   const production = PRODUCTION_ENV;
 
@@ -121,10 +151,6 @@ describe('auth and security production rules (AC-01.8.5)', () => {
     );
   });
 
-  it('APP_SCHEME must not be exp (Expo Go)', () => {
-    check({ ...production, APP_SCHEME: 'exp' }, 'APP_SCHEME');
-  });
-
   it('AC-01.8.4 SEED_DEMO=true is refused', () => {
     check({ ...production, SEED_DEMO: 'true' }, 'SEED_DEMO');
   });
@@ -144,7 +170,6 @@ describe('auth and security production rules (AC-01.8.5)', () => {
         BETTER_AUTH_URL: 'http://localhost:3000',
         CORS_ORIGINS: '*,http://localhost:8081,https://127.0.0.1:8443',
         AUTH_RATE_LIMIT_ENABLED: 'false',
-        APP_SCHEME: 'exp',
         SEED_DEMO: 'true',
         DOCS_ENABLED: 'true',
       }),
