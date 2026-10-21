@@ -1,0 +1,9 @@
+# gitleaks configuration (T-007-03). Extends the default ruleset; allowlist entries must stay
+# narrow (one rule + one file) and say why.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Nest boilerplate README badge URL (false positive) in the API README"
+targetRules = ["generic-api-key"]
+paths = ['''^(server|apps/api)/README\.md$''']

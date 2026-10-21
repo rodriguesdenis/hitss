@@ -16,7 +16,8 @@
     "test:tools": "node --test \"tools/**/*.test.mjs\"",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "guard:env": "node tools/ci/no-tracked-env.mjs"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
