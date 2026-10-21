@@ -11,7 +11,6 @@ import { ExpressInstrumentation } from '@opentelemetry/instrumentation-express';
 import { HttpInstrumentation } from '@opentelemetry/instrumentation-http';
 import { NestInstrumentation } from '@opentelemetry/instrumentation-nestjs-core';
 import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
-import { PinoInstrumentation } from '@opentelemetry/instrumentation-pino';
 import { UndiciInstrumentation } from '@opentelemetry/instrumentation-undici';
 import { resourceFromAttributes } from '@opentelemetry/resources';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
@@ -99,8 +98,7 @@ function startTelemetry(): void {
       new NestInstrumentation(),
       // No parameter values in DB spans (AC-06.2.5).
       new PgInstrumentation({ enhancedDatabaseReporting: false }),
-      // Log sending is off: no OTLP log pipeline until it is designed with its own sanitizing.
-      new PinoInstrumentation({ disableLogSending: true }),
+      // No pino instrumentation: trace ids in logs come from the traceFields mixin only.
       new UndiciInstrumentation(),
       new PrismaInstrumentation(),
     ],

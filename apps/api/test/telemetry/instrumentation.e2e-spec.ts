@@ -227,6 +227,12 @@ describe('OpenTelemetry bootstrap', () => {
       res: { statusCode: 200 },
     });
     expect(completed[0]?.spanId).toMatch(/^[0-9a-f]{16}$/);
+    // One correlation source: only the traceFields mixin, no OpenTelemetry pino injection.
+    for (const entry of entries) {
+      for (const field of ['trace_id', 'span_id', 'trace_flags']) {
+        expect(entry).not.toHaveProperty(field);
+      }
+    }
     expect(response.headers.get('x-request-id')).toBe(completed[0]?.reqId);
   }, 60_000);
 
