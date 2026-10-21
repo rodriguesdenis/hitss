@@ -22,9 +22,15 @@ export class TeamName {
   }
 
   /**
-   * Case-insensitive, with the same semantics as the `lower(name)` unique
-   * index: each code point is lowercased on its own (simple case mapping), so
-   * a capital sigma never becomes a final sigma as `String#toLowerCase` does.
+   * Case-insensitive comparison approximating the database. The authority for
+   * name uniqueness is PostgreSQL's `lower(name)` unique index
+   * (teams_owner_id_lower_name_key); repositories check names with SQL
+   * `lower()`, not with this method. Like `lower()`, each code point is
+   * lowercased on its own (simple case mapping), so a capital sigma never
+   * becomes a final sigma as `String#toLowerCase` does, and U+0130 maps to a
+   * plain "i". Known residual on the libc/musl image: code points `lower()`
+   * leaves unchanged (circled letters, Unicode 14+) compare equal here only;
+   * see test/integration/team-name-collation.int-spec.ts.
    */
   equals(other: TeamName): boolean {
     return lowerEachCodePoint(this.value) === lowerEachCodePoint(other.value);
