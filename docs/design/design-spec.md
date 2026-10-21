@@ -19,32 +19,37 @@ The design lives **in this document** (text, tables, ASCII wireframes, Mermaid).
 
 ### 1.1 Color — semantic roles
 
-Each role has a light value and a `-dark` counterpart. Components never use raw palette names (`indigo-600`); they use roles (`primary`, `surface`). Contrast ratios are WCAG 2.1 against the role's intended background.
+Each role is a **CSS variable** holding space-separated RGB channels, defined once for light under `:root` and once for dark under `.dark` in `global.css` (§2.1), and mapped to a semantic Tailwind color name in `tailwind.config.js` (§1.6). Components therefore use **one** class (`bg-surface`, `text-fg`, `border-border-muted`) that switches theme automatically — no `dark:` pairs. Components never use raw palette names (`indigo-600`). The `dark:` variant is reserved for the documented exceptions in §2.2. Contrast ratios are WCAG 2.1 against the role's intended background.
 
-| Role              | Light            | Dark             | Use                                                                 | Contrast (L / D)                        |
-| ----------------- | ---------------- | ---------------- | ------------------------------------------------------------------- | --------------------------------------- |
-| `background`      | `#F8FAFC`        | `#0B1120`        | Screen background                                                   | —                                       |
-| `surface`         | `#FFFFFF`        | `#111827`        | Cards, list rows, sheets, inputs                                    | —                                       |
-| `surface-muted`   | `#F1F5F9`        | `#1F2937`        | Skeletons, segmented control track, pressed rows                    | —                                       |
-| `border`          | `#E2E8F0`        | `#334155`        | Decorative dividers, card outline (dark)                            | decorative (exempt)                     |
-| `border-strong`   | `#64748B`        | `#94A3B8`        | Input outline, low-contrast chip outline, focus-adjacent boundaries | 4.76 / 6.92 vs surface (≥ 3:1 non-text) |
-| `text`            | `#0F172A`        | `#F1F5F9`        | Primary text                                                        | 17.9 / 16.2                             |
-| `text-muted`      | `#475569`        | `#CBD5E1`        | Secondary text (descriptions, meta)                                 | 7.6 / 12.0                              |
-| `text-subtle`     | `#64748B`        | `#94A3B8`        | Placeholders, captions, disabled labels                             | 4.76 / 6.9 (4.55 on `background` L)     |
-| `primary`         | `#4F46E5`        | `#818CF8`        | Primary buttons, links, active tab, focus ring                      | 6.3 / 6.0 (as text on surface)          |
-| `primary-pressed` | `#4338CA`        | `#6366F1`        | Pressed state of primary                                            | —                                       |
-| `on-primary`      | `#FFFFFF`        | `#0B1120`        | Text/icons on `primary`                                             | 6.3 / 6.3                               |
-| `danger`          | `#DC2626`        | `#F87171`        | Destructive buttons, field errors, error icons                      | 4.83 / 6.4                              |
-| `danger-pressed`  | `#B91C1C`        | `#EF4444`        | Pressed destructive                                                 | —                                       |
-| `on-danger`       | `#FFFFFF`        | `#0B1120`        | Text on `danger`                                                    | 4.83 / 6.8                              |
-| `danger-soft`     | `#FEE2E2`        | `#450A0A`        | Error banner / inline error container background                    | —                                       |
-| `success`         | `#15803D`        | `#4ADE80`        | Success toast icon, sync-complete                                   | 5.0 / 10.2                              |
-| `warning`         | `#B45309`        | `#FBBF24`        | Overdue date, offline banner icon                                   | 5.0 / 10.6                              |
-| `warning-soft`    | `#FEF3C7`        | `#422006`        | Offline banner background                                           | `text` on it: 16.0 / 14.0               |
-| `info-soft`       | `#E0E7FF`        | `#1E1B4B`        | Pending-sync badge background                                       | —                                       |
-| `on-info-soft`    | `#3730A3`        | `#C7D2FE`        | Pending-sync badge text/icon                                        | 8.0 / 11.3                              |
-| `overlay`         | `#0F172A` @ 50 % | `#000000` @ 60 % | Modal / dialog scrim                                                | —                                       |
-| `focus`           | `#4F46E5`        | `#A5B4FC`        | 2 px focus ring (keyboard / switch control, web)                    | ≥ 3:1                                   |
+| Role (= Tailwind color / CSS variable `--color-<role>`) | Light            | Dark             | Use                                              | Contrast (L / D)                        |
+| ------------------------------------------------------- | ---------------- | ---------------- | ------------------------------------------------ | --------------------------------------- |
+| `canvas`                                                | `#F8FAFC`        | `#0B1120`        | Screen background                                | —                                       |
+| `surface`                                               | `#FFFFFF`        | `#111827`        | Cards, list rows, sheets, inputs                 | —                                       |
+| `surface-muted`                                         | `#F1F5F9`        | `#1F2937`        | Skeletons, segmented-control track, pressed rows | —                                       |
+| `border-muted`                                          | `#E2E8F0`        | `#334155`        | Decorative dividers, card outline                | decorative (exempt)                     |
+| `border-strong`                                         | `#64748B`        | `#94A3B8`        | Input outline, low-contrast chip outline         | 4.76 / 6.92 vs surface (≥ 3:1 non-text) |
+| `fg`                                                    | `#0F172A`        | `#F1F5F9`        | Primary text                                     | 17.9 / 16.2                             |
+| `fg-muted`                                              | `#475569`        | `#CBD5E1`        | Secondary text                                   | 7.6 / 12.0                              |
+| `fg-subtle`                                             | `#64748B`        | `#94A3B8`        | Placeholders, captions, disabled labels          | 4.76 / 6.9 (4.55 on `canvas` L)         |
+| `primary`                                               | `#4F46E5`        | `#818CF8`        | Primary buttons, links, active segment           | 6.3 / 6.0 (as text on surface)          |
+| `primary-pressed`                                       | `#4338CA`        | `#6366F1`        | Pressed primary                                  | —                                       |
+| `on-primary`                                            | `#FFFFFF`        | `#0B1120`        | Text/icons on primary                            | 6.3 / 6.3                               |
+| `danger`                                                | `#DC2626`        | `#F87171`        | Destructive buttons, field errors                | 4.83 / 6.4                              |
+| `danger-pressed`                                        | `#B91C1C`        | `#EF4444`        | Pressed destructive                              | —                                       |
+| `on-danger`                                             | `#FFFFFF`        | `#0B1120`        | Text on danger                                   | 4.83 / 6.8                              |
+| `danger-soft`                                           | `#FEE2E2`        | `#450A0A`        | Error banner background                          | —                                       |
+| `success`                                               | `#15803D`        | `#4ADE80`        | Success icon, sync-complete                      | 5.0 / 10.2                              |
+| `warning`                                               | `#B45309`        | `#FBBF24`        | Overdue date, offline icon                       | 5.0 / 10.6                              |
+| `warning-soft`                                          | `#FEF3C7`        | `#422006`        | Offline banner background                        | `fg` on it: 16.0 / 14.0                 |
+| `info-soft`                                             | `#E0E7FF`        | `#1E1B4B`        | Pending-sync badge background                    | —                                       |
+| `on-info-soft`                                          | `#3730A3`        | `#C7D2FE`        | Pending-sync badge text/icon                     | 8.0 / 11.3                              |
+| `focus`                                                 | `#4F46E5`        | `#A5B4FC`        | Focus ring                                       | ≥ 3:1                                   |
+| `inverse`                                               | `#0F172A`        | `#1F2937`        | Toast background                                 | —                                       |
+| `on-inverse`                                            | `#FFFFFF`        | `#F1F5F9`        | Toast text                                       | 17.9 / 13.4                             |
+| `inverse-action`                                        | `#818CF8`        | `#818CF8`        | Toast action (Undo, Retry)                       | 6.0 / 4.9                               |
+| `overlay`                                               | `#0F172A` @ 50 % | `#000000` @ 60 % | Scrim colour (alpha in --alpha-overlay)          | —                                       |
+
+Class usage: `bg-<role>` / `text-<role>` / `border-<role>`; e.g. `bg-canvas`, `bg-surface`, `text-fg`, `text-fg-muted`, `text-on-primary`, `border-border-strong`. Overlay alpha is a separate variable (`--alpha-overlay`: `0.5` light, `0.6` dark). Task-status colors (§1.2) are roles too: `status-{pending,progress,done}-{bg,fg}`.
 
 ### 1.2 Color — task status
 
@@ -107,10 +112,12 @@ System font stack (San Francisco on iOS, Roboto on Android) — no font download
 
 ### 1.6 Tailwind theme extension
 
-`apps/mobile/tailwind.config.js` (NativeWind v4 preset, `darkMode: 'class'`). Each role is a flat color so `dark:` variants work without CSS variables.
+`apps/mobile/tailwind.config.js` (NativeWind v4 preset, `darkMode: 'class'`). Colors are **semantic names mapped to the CSS variables** of §2.1; there are no `*-dark` keys. The `<alpha-value>` placeholder keeps opacity modifiers (`bg-primary/10`) working.
 
 ```js
-// tailwind.config.js — theme.extend (abridged keys are exhaustive for roles above)
+// tailwind.config.js
+const v = (name) => `rgb(var(--color-${name}) / <alpha-value>)`;
+
 module.exports = {
   darkMode: 'class',
   content: ['./app/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
@@ -118,78 +125,38 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: { DEFAULT: '#F8FAFC', dark: '#0B1120' },
-        surface: {
-          DEFAULT: '#FFFFFF',
-          dark: '#111827',
-          muted: '#F1F5F9',
-          'muted-dark': '#1F2937',
-        },
-        border: {
-          DEFAULT: '#E2E8F0',
-          dark: '#334155',
-          strong: '#64748B',
-          'strong-dark': '#94A3B8',
-        },
-        content: {
-          DEFAULT: '#0F172A',
-          dark: '#F1F5F9',
-          muted: '#475569',
-          'muted-dark': '#CBD5E1',
-          subtle: '#64748B',
-          'subtle-dark': '#94A3B8',
-        },
-        primary: {
-          DEFAULT: '#4F46E5',
-          dark: '#818CF8',
-          pressed: '#4338CA',
-          'pressed-dark': '#6366F1',
-          on: '#FFFFFF',
-          'on-dark': '#0B1120',
-        },
-        danger: {
-          DEFAULT: '#DC2626',
-          dark: '#F87171',
-          pressed: '#B91C1C',
-          'pressed-dark': '#EF4444',
-          on: '#FFFFFF',
-          'on-dark': '#0B1120',
-          soft: '#FEE2E2',
-          'soft-dark': '#450A0A',
-        },
-        success: { DEFAULT: '#15803D', dark: '#4ADE80' },
-        warning: {
-          DEFAULT: '#B45309',
-          dark: '#FBBF24',
-          soft: '#FEF3C7',
-          'soft-dark': '#422006',
-        },
-        info: {
-          soft: '#E0E7FF',
-          'soft-dark': '#1E1B4B',
-          on: '#3730A3',
-          'on-dark': '#C7D2FE',
-        },
-        focus: { DEFAULT: '#4F46E5', dark: '#A5B4FC' },
+        canvas: v('canvas'),
+        surface: v('surface'),
+        'surface-muted': v('surface-muted'),
+        'border-muted': v('border-muted'),
+        'border-strong': v('border-strong'),
+        fg: v('fg'),
+        'fg-muted': v('fg-muted'),
+        'fg-subtle': v('fg-subtle'),
+        primary: v('primary'),
+        'primary-pressed': v('primary-pressed'),
+        'on-primary': v('on-primary'),
+        danger: v('danger'),
+        'danger-pressed': v('danger-pressed'),
+        'on-danger': v('on-danger'),
+        'danger-soft': v('danger-soft'),
+        success: v('success'),
+        warning: v('warning'),
+        'warning-soft': v('warning-soft'),
+        'info-soft': v('info-soft'),
+        'on-info-soft': v('on-info-soft'),
+        focus: v('focus'),
+        inverse: v('inverse'),
+        'on-inverse': v('on-inverse'),
+        'inverse-action': v('inverse-action'),
+        overlay: v('overlay'),
         status: {
-          pending: {
-            bg: '#FEF3C7',
-            fg: '#92400E',
-            'bg-dark': '#422006',
-            'fg-dark': '#FCD34D',
-          },
-          progress: {
-            bg: '#DBEAFE',
-            fg: '#1E40AF',
-            'bg-dark': '#172554',
-            'fg-dark': '#93C5FD',
-          },
-          done: {
-            bg: '#DCFCE7',
-            fg: '#166534',
-            'bg-dark': '#052E16',
-            'fg-dark': '#86EFAC',
-          },
+          'pending-bg': v('status-pending-bg'),
+          'pending-fg': v('status-pending-fg'),
+          'progress-bg': v('status-progress-bg'),
+          'progress-fg': v('status-progress-fg'),
+          'done-bg': v('status-done-bg'),
+          'done-fg': v('status-done-fg'),
         },
       },
       fontSize: {
@@ -216,69 +183,160 @@ module.exports = {
 };
 ```
 
-Values needed outside className (navigation theme, status bar, `RefreshControl` tint, placeholder color, icon colors) are exported from `src/theme/tokens.ts`, generated from the **same** object, so there is a single source.
+Utility names are the contract between design and implementation: `bg-canvas`, `bg-surface`, `bg-surface-muted`, `text-fg`, `text-fg-muted`, `text-fg-subtle`, `border-border-muted`, `border-border-strong`, `bg-primary`, `bg-primary-pressed`, `text-on-primary`, `bg-danger`, `bg-danger-pressed`, `text-on-danger`, `bg-danger-soft`, `text-danger`, `text-success`, `text-warning`, `bg-warning-soft`, `bg-info-soft`, `text-on-info-soft`, `border-focus`, `bg-inverse`, `text-on-inverse`, `text-inverse-action`, `bg-overlay`, `bg-status-{pending,progress,done}-bg`, `text-status-{pending,progress,done}-fg`.
+
+**TypeScript mirror.** Values needed outside `className` (navigation theme, status bar, `RefreshControl` tint, placeholder color, icon colors, `contrastingText` surface) are exported from `src/shared/theme/tokens.ts` as `{ light, dark }` hex maps keyed by the role names above. `global.css` is the styling source; a unit test parses `global.css` and fails if any role differs from `tokens.ts` (no silent drift).
 
 ---
 
-## 2. Semantic class catalog (`global.css`)
+## 2. `global.css` — theme variables and semantic class catalog
 
-Components use these classes; raw utilities are allowed only for one-off layout (`flex-row`, `gap-2`, `mt-4`). Every class includes its dark variant. NativeWind v4 compiles `@apply` inside `@layer components`.
+Components use these classes; raw utilities are allowed only for one-off layout (`flex-row`, `gap-2`, `mt-4`). Because every color is a theme variable (§2.1), **no class below needs a `dark:` pair**. NativeWind v4 compiles `@apply` inside `@layer components`.
+
+### 2.1 Theme variables
+
+Light values under `:root`, dark values under `.dark` (NativeWind toggles the class from `preferences.theme` via `colorScheme.set()`). Variable names and values are normative; if the installed NativeWind version needs a different dark selector (`.dark:root`, or `@media (prefers-color-scheme: dark)`), change the selector only.
 
 ```css
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    --color-canvas: 248 250 252; /* #F8FAFC */
+    --color-surface: 255 255 255; /* #FFFFFF */
+    --color-surface-muted: 241 245 249; /* #F1F5F9 */
+    --color-border-muted: 226 232 240; /* #E2E8F0 */
+    --color-border-strong: 100 116 139; /* #64748B */
+    --color-fg: 15 23 42; /* #0F172A */
+    --color-fg-muted: 71 85 105; /* #475569 */
+    --color-fg-subtle: 100 116 139; /* #64748B */
+    --color-primary: 79 70 229; /* #4F46E5 */
+    --color-primary-pressed: 67 56 202; /* #4338CA */
+    --color-on-primary: 255 255 255; /* #FFFFFF */
+    --color-danger: 220 38 38; /* #DC2626 */
+    --color-danger-pressed: 185 28 28; /* #B91C1C */
+    --color-on-danger: 255 255 255; /* #FFFFFF */
+    --color-danger-soft: 254 226 226; /* #FEE2E2 */
+    --color-success: 21 128 61; /* #15803D */
+    --color-warning: 180 83 9; /* #B45309 */
+    --color-warning-soft: 254 243 199; /* #FEF3C7 */
+    --color-info-soft: 224 231 255; /* #E0E7FF */
+    --color-on-info-soft: 55 48 163; /* #3730A3 */
+    --color-focus: 79 70 229; /* #4F46E5 */
+    --color-inverse: 15 23 42; /* #0F172A */
+    --color-on-inverse: 255 255 255; /* #FFFFFF */
+    --color-inverse-action: 129 140 248; /* #818CF8 */
+    --color-overlay: 15 23 42; /* #0F172A */
+    --color-status-pending-bg: 254 243 199; /* #FEF3C7 */
+    --color-status-pending-fg: 146 64 14; /* #92400E */
+    --color-status-progress-bg: 219 234 254; /* #DBEAFE */
+    --color-status-progress-fg: 30 64 175; /* #1E40AF */
+    --color-status-done-bg: 220 252 231; /* #DCFCE7 */
+    --color-status-done-fg: 22 101 52; /* #166534 */
+    --alpha-overlay: 0.5;
+  }
+  .dark {
+    --color-canvas: 11 17 32; /* #0B1120 */
+    --color-surface: 17 24 39; /* #111827 */
+    --color-surface-muted: 31 41 55; /* #1F2937 */
+    --color-border-muted: 51 65 85; /* #334155 */
+    --color-border-strong: 148 163 184; /* #94A3B8 */
+    --color-fg: 241 245 249; /* #F1F5F9 */
+    --color-fg-muted: 203 213 225; /* #CBD5E1 */
+    --color-fg-subtle: 148 163 184; /* #94A3B8 */
+    --color-primary: 129 140 248; /* #818CF8 */
+    --color-primary-pressed: 99 102 241; /* #6366F1 */
+    --color-on-primary: 11 17 32; /* #0B1120 */
+    --color-danger: 248 113 113; /* #F87171 */
+    --color-danger-pressed: 239 68 68; /* #EF4444 */
+    --color-on-danger: 11 17 32; /* #0B1120 */
+    --color-danger-soft: 69 10 10; /* #450A0A */
+    --color-success: 74 222 128; /* #4ADE80 */
+    --color-warning: 251 191 36; /* #FBBF24 */
+    --color-warning-soft: 66 32 6; /* #422006 */
+    --color-info-soft: 30 27 75; /* #1E1B4B */
+    --color-on-info-soft: 199 210 254; /* #C7D2FE */
+    --color-focus: 165 180 252; /* #A5B4FC */
+    --color-inverse: 31 41 55; /* #1F2937 */
+    --color-on-inverse: 241 245 249; /* #F1F5F9 */
+    --color-inverse-action: 129 140 248; /* #818CF8 */
+    --color-overlay: 0 0 0; /* #000000 */
+    --color-status-pending-bg: 66 32 6; /* #422006 */
+    --color-status-pending-fg: 252 211 77; /* #FCD34D */
+    --color-status-progress-bg: 23 37 84; /* #172554 */
+    --color-status-progress-fg: 147 197 253; /* #93C5FD */
+    --color-status-done-bg: 5 46 22; /* #052E16 */
+    --color-status-done-fg: 134 239 172; /* #86EFAC */
+    --alpha-overlay: 0.6;
+  }
+}
+```
+
+### 2.2 Documented `dark:` exceptions
+
+Only values that are **not colors** may branch on theme:
+
+| Where   | Exception                    | Why                                                                                                   |
+| ------- | ---------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `.card` | `shadow-sm dark:shadow-none` | Elevation e1 is a shadow in light and a hairline border in dark (§1.5); shadows are not color tokens. |
+
+Any new `dark:` usage needs an entry here.
+
+### 2.3 Semantic classes
+
+```css
 @layer components {
   /* Layout */
   .screen {
-    @apply flex-1 bg-background dark:bg-background-dark;
+    @apply flex-1 bg-canvas;
   }
   .screen-padded {
-    @apply flex-1 bg-background dark:bg-background-dark px-4 pt-4;
+    @apply flex-1 bg-canvas px-4 pt-4;
   }
   .section {
     @apply gap-3 mb-6;
   }
   .section-title {
-    @apply text-caption uppercase tracking-wide text-content-subtle dark:text-content-subtle-dark;
+    @apply text-caption uppercase tracking-wide text-fg-subtle;
   }
 
-  /* Text */
-  .text-display {
-    @apply text-display text-content dark:text-content-dark;
+  /* Typography (named type-* so they never collide with the text-* size utilities) */
+  .type-display {
+    @apply text-display text-fg;
   }
-  .text-title {
-    @apply text-title text-content dark:text-content-dark;
+  .type-title {
+    @apply text-title text-fg;
   }
-  .text-headline {
-    @apply text-headline text-content dark:text-content-dark;
+  .type-headline {
+    @apply text-headline text-fg;
   }
-  .text-body {
-    @apply text-body text-content dark:text-content-dark;
+  .type-body {
+    @apply text-body text-fg;
   }
-  .text-muted {
-    @apply text-callout text-content-muted dark:text-content-muted-dark;
+  .type-muted {
+    @apply text-callout text-fg-muted;
   }
-  .text-meta {
-    @apply text-caption text-content-subtle dark:text-content-subtle-dark;
+  .type-meta {
+    @apply text-caption text-fg-subtle;
   }
-  .text-link {
-    @apply text-label text-primary dark:text-primary-dark underline;
+  .type-link {
+    @apply text-label text-primary underline;
   }
 
   /* Surfaces */
   .card {
-    @apply bg-surface dark:bg-surface-dark rounded-lg p-4 shadow-sm dark:shadow-none dark:border dark:border-border-dark;
+    @apply bg-surface rounded-lg p-4 border border-border-muted shadow-sm dark:shadow-none;
   }
   .list-item {
-    @apply bg-surface dark:bg-surface-dark rounded-lg px-4 py-3 min-h-row-min gap-1.5 active:bg-surface-muted dark:active:bg-surface-muted-dark dark:border dark:border-border-dark;
+    @apply bg-surface rounded-lg px-4 py-3 min-h-row-min gap-1.5 border border-border-muted active:bg-surface-muted;
   }
   .list-item-pending {
     @apply opacity-80;
   } /* + pending-sync badge; never the only signal */
   .divider {
-    @apply h-px bg-border dark:bg-border-dark;
+    @apply h-px bg-border-muted;
   }
 
   /* Buttons (all ≥ 48 high, ≥ 44 wide) */
@@ -289,37 +347,40 @@ Components use these classes; raw utilities are allowed only for one-off layout 
     @apply text-label;
   }
   .btn-primary {
-    @apply btn bg-primary dark:bg-primary-dark active:bg-primary-pressed dark:active:bg-primary-pressed-dark;
+    @apply btn bg-primary active:bg-primary-pressed;
   }
   .btn-primary-label {
-    @apply btn-label text-primary-on dark:text-primary-on-dark;
+    @apply btn-label text-on-primary;
   }
   .btn-secondary {
-    @apply btn bg-transparent border border-border-strong dark:border-border-strong-dark active:bg-surface-muted dark:active:bg-surface-muted-dark;
+    @apply btn bg-transparent border border-border-strong active:bg-surface-muted;
   }
   .btn-secondary-label {
-    @apply btn-label text-content dark:text-content-dark;
+    @apply btn-label text-fg;
   }
   .btn-danger {
-    @apply btn bg-danger dark:bg-danger-dark active:bg-danger-pressed dark:active:bg-danger-pressed-dark;
+    @apply btn bg-danger active:bg-danger-pressed;
   }
   .btn-danger-label {
-    @apply btn-label text-danger-on dark:text-danger-on-dark;
+    @apply btn-label text-on-danger;
   }
   .btn-ghost {
-    @apply btn bg-transparent active:bg-surface-muted dark:active:bg-surface-muted-dark;
+    @apply btn bg-transparent active:bg-surface-muted;
   }
   .btn-ghost-label {
-    @apply btn-label text-primary dark:text-primary-dark;
+    @apply btn-label text-primary;
   }
+  .btn-ghost-danger-label {
+    @apply btn-label text-danger;
+  } /* Delete task / Delete team / Sign out */
   .btn-disabled {
     @apply opacity-50;
   }
   .icon-btn {
-    @apply h-touch w-touch items-center justify-center rounded-full active:bg-surface-muted dark:active:bg-surface-muted-dark;
+    @apply h-touch w-touch items-center justify-center rounded-full active:bg-surface-muted;
   }
   .fab {
-    @apply absolute bottom-6 right-4 h-fab w-fab items-center justify-center rounded-full bg-primary dark:bg-primary-dark shadow-lg active:bg-primary-pressed dark:active:bg-primary-pressed-dark;
+    @apply absolute bottom-6 right-4 h-fab w-fab items-center justify-center rounded-full bg-primary shadow-lg active:bg-primary-pressed;
   }
 
   /* Forms */
@@ -327,22 +388,22 @@ Components use these classes; raw utilities are allowed only for one-off layout 
     @apply gap-1.5 mb-4;
   }
   .field-label {
-    @apply text-label text-content dark:text-content-dark;
+    @apply text-label text-fg;
   }
   .field-help {
-    @apply text-caption text-content-subtle dark:text-content-subtle-dark;
+    @apply text-caption text-fg-subtle;
   }
   .field-error {
-    @apply text-caption text-danger dark:text-danger-dark;
+    @apply text-caption text-danger;
   }
   .input {
-    @apply min-h-control rounded-md border border-border-strong dark:border-border-strong-dark bg-surface dark:bg-surface-dark px-3 text-body text-content dark:text-content-dark;
+    @apply min-h-control rounded-md border border-border-strong bg-surface px-3 text-body text-fg;
   }
   .input-focused {
-    @apply border-2 border-primary dark:border-primary-dark;
+    @apply border-2 border-focus;
   }
   .input-error {
-    @apply border-2 border-danger dark:border-danger-dark;
+    @apply border-2 border-danger;
   }
   .input-multiline {
     @apply input min-h-[112px] py-3;
@@ -359,25 +420,13 @@ Components use these classes; raw utilities are allowed only for one-off layout 
     @apply text-caption font-medium;
   }
   .chip-outline {
-    @apply border border-border-strong dark:border-border-strong-dark;
+    @apply border border-border-strong;
   } /* low-contrast team colors */
   .chip-overflow {
-    @apply chip bg-surface-muted dark:bg-surface-muted-dark;
+    @apply chip bg-surface-muted;
   }
   .chip-overflow-label {
-    @apply chip-label text-content-muted dark:text-content-muted-dark;
-  }
-  .segment {
-    @apply min-h-touch flex-row items-center gap-1.5 rounded-full px-3 border border-border-strong dark:border-border-strong-dark;
-  }
-  .segment-active {
-    @apply bg-primary dark:bg-primary-dark border-primary dark:border-primary-dark;
-  }
-  .segment-label {
-    @apply text-label text-content dark:text-content-dark;
-  }
-  .segment-label-active {
-    @apply text-label text-primary-on dark:text-primary-on-dark;
+    @apply chip-label text-fg-muted;
   }
   .badge {
     @apply flex-row items-center gap-1 self-start rounded-sm px-2 py-0.5;
@@ -386,45 +435,62 @@ Components use these classes; raw utilities are allowed only for one-off layout 
     @apply text-caption font-medium;
   }
   .badge-status-pending {
-    @apply badge bg-status-pending-bg dark:bg-status-pending-bg-dark;
+    @apply badge bg-status-pending-bg;
   }
   .badge-status-pending-label {
-    @apply badge-label text-status-pending-fg dark:text-status-pending-fg-dark;
+    @apply badge-label text-status-pending-fg;
   }
   .badge-status-in_progress {
-    @apply badge bg-status-progress-bg dark:bg-status-progress-bg-dark;
+    @apply badge bg-status-progress-bg;
   }
   .badge-status-in_progress-label {
-    @apply badge-label text-status-progress-fg dark:text-status-progress-fg-dark;
+    @apply badge-label text-status-progress-fg;
   }
   .badge-status-done {
-    @apply badge bg-status-done-bg dark:bg-status-done-bg-dark;
+    @apply badge bg-status-done-bg;
   }
   .badge-status-done-label {
-    @apply badge-label text-status-done-fg dark:text-status-done-fg-dark;
+    @apply badge-label text-status-done-fg;
   }
   .badge-pending-sync {
-    @apply badge bg-info-soft dark:bg-info-soft-dark;
+    @apply badge bg-info-soft;
   }
   .badge-pending-sync-label {
-    @apply badge-label text-info-on dark:text-info-on-dark;
+    @apply badge-label text-on-info-soft;
+  }
+
+  /* Segmented control (status filter, status change, theme) — single-select, radiogroup */
+  .segmented {
+    @apply flex-row rounded-full bg-surface-muted p-1 gap-1;
+  } /* track */
+  .segment {
+    @apply flex-1 min-h-touch flex-row items-center justify-center gap-1.5 rounded-full px-2;
+  }
+  .segment-active {
+    @apply bg-primary;
+  }
+  .segment-label {
+    @apply text-label text-fg;
+  }
+  .segment-label-active {
+    @apply text-label text-on-primary;
   }
 
   /* Feedback */
   .banner-offline {
-    @apply flex-row items-center gap-2 px-4 py-2 bg-warning-soft dark:bg-warning-soft-dark;
+    @apply flex-row items-center gap-2 px-4 py-2 bg-warning-soft;
   }
   .banner-error {
-    @apply flex-row items-center gap-2 rounded-md p-3 bg-danger-soft dark:bg-danger-soft-dark;
+    @apply flex-row items-center gap-2 rounded-md p-3 bg-danger-soft;
   }
   .toast {
-    @apply mx-4 mb-4 flex-row items-center gap-3 rounded-md px-4 py-3 bg-content dark:bg-surface-muted-dark shadow-lg;
+    @apply mx-4 mb-4 flex-row items-center gap-3 rounded-md px-4 py-3 bg-inverse shadow-lg;
   }
   .toast-label {
-    @apply flex-1 text-callout text-surface dark:text-content-dark;
+    @apply flex-1 text-callout text-on-inverse;
   }
   .toast-action {
-    @apply min-h-touch justify-center px-2 text-label text-primary-dark dark:text-primary-dark;
+    @apply min-h-touch justify-center px-2 text-label text-inverse-action;
   }
   .empty-state {
     @apply flex-1 items-center justify-center gap-3 px-8 py-12;
@@ -433,7 +499,7 @@ Components use these classes; raw utilities are allowed only for one-off layout 
     @apply flex-1 items-center justify-center gap-3 px-8 py-12;
   }
   .skeleton {
-    @apply rounded-md bg-surface-muted dark:bg-surface-muted-dark;
+    @apply rounded-md bg-surface-muted;
   }
   .skeleton-line {
     @apply skeleton h-3;
@@ -443,25 +509,31 @@ Components use these classes; raw utilities are allowed only for one-off layout 
   }
 
   /* Sheets & dialogs */
+  .scrim {
+    @apply absolute inset-0 bg-overlay;
+    opacity: var(--alpha-overlay);
+  }
   .sheet {
-    @apply bg-surface dark:bg-surface-dark rounded-t-lg px-4 pt-3 pb-8 gap-2;
+    @apply bg-surface rounded-t-lg px-4 pt-3 pb-8 gap-2;
   }
   .sheet-handle {
-    @apply self-center h-1 w-10 rounded-full bg-border-strong dark:bg-border-strong-dark mb-2;
+    @apply self-center h-1 w-10 rounded-full bg-border-strong mb-2;
   }
   .sheet-option {
-    @apply min-h-touch flex-row items-center gap-3 px-2 rounded-md active:bg-surface-muted dark:active:bg-surface-muted-dark;
+    @apply min-h-touch flex-row items-center gap-3 px-2 rounded-md active:bg-surface-muted;
   }
   .dialog {
-    @apply mx-6 rounded-lg bg-surface dark:bg-surface-dark p-6 gap-4 shadow-xl;
+    @apply mx-6 rounded-lg bg-surface p-6 gap-4 border border-border-muted shadow-xl;
   }
   .form-footer {
-    @apply flex-row gap-3 px-4 pt-3 pb-6 bg-surface dark:bg-surface-dark border-t border-border dark:border-border-dark;
+    @apply flex-row gap-3 px-4 pt-3 pb-6 bg-surface border-t border-border-muted;
   }
 }
 ```
 
 > NativeWind note for implementers: if a nested `@apply` of a custom class (e.g. `.btn-primary { @apply btn ... }`) is not supported by the installed NativeWind version, inline the `.btn` utilities — the composition above is normative, the nesting is a convenience.
+
+**Changes vs. the earlier catalog (for reviewers):** all `dark:` pairs removed (colors are variables); `.text-display/-title/-headline/-body/-muted/-meta/-link` renamed `.type-*` (a class named like its own `@apply` utility would recurse); `.segment` split into a `.segmented` track plus equal-width `.segment` items (status filter is a single-select segmented control, D32); `.btn-ghost-danger-label`, `.scrim` added; toast uses the `inverse` roles instead of borrowing `fg`/`surface`.
 
 ---
 
@@ -500,6 +572,8 @@ A team chip shows the **team name** on the **team color**. Color is decorative; 
 | S10 | Team form — create                                | `app/(app)/teams/new.tsx`                                                    | modal                 | US-04.3              |
 | S11 | Team form — edit                                  | `app/(app)/teams/[id]/edit.tsx`                                              | modal                 | US-04.3              |
 | —   | Sort sheet, status sheet, confirm dialogs, toasts | in-screen components                                                         | bottom sheet / dialog | —                    |
+
+**Priority (MoSCoW, per spec 004):** MUST — S1 sign in, S3/S6 task lists with **status filter and search**, S4 teams list, **S10/S11 team create / edit / delete** (S4 `⋯` menu, S11 footer, confirm dialog), S5 settings (theme, language, sign out), S7, S8, S9. COULD — **S2 sign up** (an account can be seeded/created via the API; if cut, S1 drops the “New here?” link and S2 is not routed) and **task sort** (`⇅` button, sort sheet and “Sorted by” caption; if cut, lists use the default `-createdAt`). Everything below is fully specified (wireframe, states, copy) even for COULD items, so cutting one is a deletion, not a redesign.
 
 ```mermaid
 flowchart TD
@@ -548,7 +622,7 @@ flowchart TD
 
 ## 5. Wireframes
 
-Legend: `[ Button ]` button · `( Chip )` chip/segment · `▢` skeleton · `⋯` overflow menu · `◷` pending-sync badge · `▔▔` input · `●` selected segment. All widths are a 375 pt phone; layouts are single-column and grow with dynamic type.
+Legend: `[ Button ]` button · `( Chip )` chip · `⟦ a│b ⟧` segmented control (`●` = selected segment) · `▢` skeleton · `⋯` overflow menu · `◷` pending-sync badge · `▔▔` input · `●` selected segment. All widths are a 375 pt phone; layouts are single-column and grow with dynamic type.
 
 ### Global elements (present on every authenticated screen)
 
@@ -584,7 +658,7 @@ Legend: `[ Button ]` button · `( Chip )` chip/segment · `▢` skeleton · `⋯
 │   └──────────────────────────────┘ │
 │   [        Sign in         ]       │  btn-primary, spinner while submitting
 │                                    │
-│   New here?  Create an account     │  text-link → S2
+│   New here?  Create an account     │  type-link → S2 (COULD; hidden if sign-up is cut)
 └────────────────────────────────────┘
 ```
 
@@ -617,11 +691,11 @@ S3 and S6 are the **same screen component** with an optional `teamId`. S6 adds t
 ```
 S3 (global)                              S6 (filtered by team "Mobile")
 ┌────────────────────────────────────┐   ┌────────────────────────────────────┐
-│ Tasks                         ⇅    │   │ ‹ Teams  ● Mobile            ⋯    │  ● = team color dot; ⋯ = Edit team / Show all tasks
+│ Tasks                    ⇅ (COULD)│   │ ‹ Teams  ● Mobile            ⋯    │  ● = team color dot; ⋯ = Edit team / Show all tasks
 ├────────────────────────────────────┤   │ 4 tasks                            │  text-meta
 │ 🔍 Search tasks             ✕      │   ├────────────────────────────────────┤
-│ (●All)(○Pending)(◐In prog)(✓Done)  │   │ 🔍 Search in Mobile         ✕      │
-│ Sorted by: Newest first            │   │ (●All)(○Pending)(◐In prog)(✓Done)  │
+│ ⟦●All│○Pending│◐In prog│✓Done⟧      │   │ 🔍 Search in Mobile         ✕      │
+│ Sorted by: Newest first (COULD)    │   │ ⟦●All│○Pending│◐In prog│✓Done⟧      │
 ├────────────────────────────────────┤   ├────────────────────────────────────┤
 │ ┌────────────────────────────────┐ │   │ ┌────────────────────────────────┐ │
 │ │ Implement login screen     ◐   │ │   │ │ Implement login screen     ◐   │ │
@@ -649,12 +723,12 @@ S3 (global)                              S6 (filtered by team "Mobile")
 **Filter bar:**
 
 - **Search** — `.search-input`, placeholder "Search tasks" / "Search in {team}". Debounce **300 ms**; minimum 1 non-space char; trimmed; max 100 chars (input `maxLength=100`). Clear button (✕, 44 pt) appears when non-empty. While a debounced search is in flight, the previous results stay visible with a thin progress bar under the filter bar (no skeleton flash).
-- **Status segmented chips** — `All · Pending · In progress · Done`; single-select (All = no status filter). `.segment` / `.segment-active`, each 44 pt high, horizontally scrollable if dynamic type makes them overflow. `accessibilityRole="radio"` within a `radiogroup`.
-- **Sort** — header icon button `⇅` opens the sort sheet; the current sort is shown as a caption under the chips ("Sorted by: Newest first").
+- **Status filter (MUST)** — one **single-select segmented control**: `All · Pending · In progress · Done` (`All` = no status filter, default). Track `.segmented`, items `.segment` / `.segment-active` (equal width, ≥ 44 pt high, icon + label; `All` has no icon). Exactly one segment is always selected; selecting a segment replaces the previous one and refetches page 1. At OS font scale > 130 % the labels wrap to two lines, and above 200 % the control becomes horizontally scrollable with intrinsic widths. `accessibilityRole="radio"` per segment inside a `radiogroup` labelled “Filter by status”; selected state announced.
+- **Sort (COULD)** — header icon button `⇅` opens the sort sheet; the current sort is shown as a caption under the chips ("Sorted by: Newest first").
 - Filters are remembered **per list** (global list and each team list keep their own search/status/sort) while the app is running; they reset when the app is restarted or on sign-out.
 - "Clear filters" link appears in the empty-state when any filter is active.
 
-**Sort sheet:**
+**Sort sheet (COULD):**
 
 ```
 ┌────────────────────────────────────┐
@@ -715,7 +789,15 @@ S3 (global)                              S6 (filtered by team "Mobile")
 - **Tap a team → S6** (tasks filtered by that team). This is the brief's core interaction; the whole card is the target, with `accessibilityHint="Shows the tasks of this team"`.
 - `⋯` (44 pt icon button) opens a sheet: **Edit team** → S11, **Delete team** → confirm dialog "Delete “{name}”? Its tasks are kept and will no longer be assigned to this team." `[Cancel] [Delete]`.
 - Sorted by name A–Z (`sort=name`); search debounced 300 ms; infinite scroll + pull to refresh as S3.
-- States: skeleton (5 rows: stripe + 40 % line + 25 % line); empty "No teams yet — Teams group related tasks and give them a color." `[ Create team ]`; empty-with-search "No teams match “{term}”"; error/offline/pending-sync as S3.
+- **Team management is MUST** (create / edit / delete): create = FAB → S10; edit = `⋯` → Edit team → S11; delete = `⋯` → Delete team → confirm dialog (also reachable from S11 and from the S6 header `⋯`).
+- States: skeleton (5 rows: stripe + 40 % line + 25 % line); empty "No teams yet — Teams group related tasks and give them a color." `[ Create team ]`; empty-with-search "No teams match “{term}”" + `[ Clear search ]`; error/offline/pending-sync as S3.
+
+| Team action       | Behaviour                                                                                                                                                                                                                                                                                                                                                             |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Create (S10)      | Closes the modal on submit; the new row appears immediately with `◷ Pending sync` until confirmed; toast “Team created”. If opened from the task form's “+ New team”, it returns there with the team selected.                                                                                                                                                        |
+| Edit (S11)        | Row updates immediately (name, color, description); toast “Team updated”; chips on tasks update in place.                                                                                                                                                                                                                                                             |
+| Delete            | Dialog “Delete “{name}”?” / “Its tasks are kept and will no longer be assigned to this team.” `[Cancel] [Delete]` (focus on Cancel). Confirm → row disappears at once, toast “Team deleted”; if the user was on S6 for that team, navigate to Teams. On failure the row reappears and a toast explains. Offline: queued, row marked `◷ Pending sync` until confirmed. |
+| Deleted elsewhere | Opening S6/S11 for a missing team → `.error-state` “This team no longer exists” + `[ Back to teams ]`; a queued edit that conflicts shows the sync toast (§6.5).                                                                                                                                                                                                      |
 
 ### S5 — Settings
 
@@ -730,13 +812,13 @@ S3 (global)                              S6 (filtered by team "Mobile")
 │ └────────────────────────────────┘ │
 │ APPEARANCE                         │
 │ ┌────────────────────────────────┐ │
-│ │ Theme   (System)(●Light)(Dark) │ │  segmented, radiogroup
+│ │ Theme ⟦System│●Light│Dark⟧       │ │  segmented control, radiogroup
 │ └────────────────────────────────┘ │
 │ LANGUAGE                           │
 │ ┌────────────────────────────────┐ │
-│ │ ◉ System default (Português)   │ │
-│ │ ○ English                      │ │
-│ │ ○ Português (Brasil)           │ │
+│ │ ◉ System                       │ │  value `system`; caption “Currently: Português”
+│ │ ○ English                      │ │  value `en`
+│ │ ○ Português (Brasil)           │ │  value `pt-BR`
 │ └────────────────────────────────┘ │
 │ SYNC                               │
 │ ┌────────────────────────────────┐ │
@@ -747,6 +829,7 @@ S3 (global)                              S6 (filtered by team "Mobile")
 └────────────────────────────────────┘
 ```
 
+- Language options are **System / English / Português (Brasil)**, stored as `system` | `en` | `pt-BR`; `system` follows the device locale (`pt*` → `pt-BR`, anything else → `en`) and shows the resolved language as a caption. Option names `English` and `Português (Brasil)` are never translated (each is shown in its own language). Single-select radio list, each row ≥ 44 pt, `accessibilityRole="radio"`.
 - Theme and language apply **immediately** (no save button) and persist across restarts.
 - **Sign out:** if the offline queue is non-empty, confirm dialog "You have {n} changes that haven't synced. Signing out will discard them." `[Cancel] [Sign out anyway]` (danger). Otherwise sign out directly. Sign-out clears the session, the persisted cache and the queue, then shows S1.
 
@@ -770,7 +853,7 @@ S3 (global)                              S6 (filtered by team "Mobile")
 │                                    │
 ├────────────────────────────────────┤
 │ CHANGE STATUS                      │  sticky quick-action bar
-│ (○Pending)(●In progress)(✓Done)    │  segmented, one tap = change
+│ ⟦○Pending│●In progress│✓Done⟧       │  segmented control, one tap = change
 │ [🗑 Delete task]                   │  btn-ghost danger label
 └────────────────────────────────────┘
 ```
@@ -805,7 +888,7 @@ S3 (global)                              S6 (filtered by team "Mobile")
 │ └──────────────────────────────┘   │
 │                          0 / 2000  │
 │ Status                             │
-│ (●Pending)(◐In progress)(✓Done)    │  segmented; default Pending
+│ ⟦●Pending│◐In progress│✓Done⟧       │  segmented control; default Pending
 │ Due date                           │
 │ ▔ 📅 Select a date ▔▔▔▔▔▔▔▔▔ ✕ ▔   │  opens native date picker; ✕ clears
 │ Teams                    2 of 10   │
@@ -860,6 +943,21 @@ S3 (global)                              S6 (filtered by team "Mobile")
 - Swatch a11y label: "Indigo, #6366F1" + selected state.
 - Errors: name length (2–50), duplicate name (`TEAM_NAME_ALREADY_EXISTS`, on Name field), invalid hex, description length. Concurrency conflict as task form.
 - Success: toast "Team created" / "Team updated"; team lists and task chips reflect the new name/color.
+- Hex field: accepts with or without `#`, case-insensitive, normalized to `#RRGGBB` uppercase on blur; typing a valid value selects the matching swatch (or none) and updates the preview; typing an invalid value shows `team.color.invalid` and keeps the last valid color in the preview.
+
+**States (S10 / S11):**
+
+| State                                                  | Rendering                                                                                                                                                                                                                                    |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initial (S10)                                          | Name autofocused; color preselected `#6366F1` (Indigo); preview shows the placeholder name “Team name”.                                                                                                                                      |
+| Loading (S11, opened by deep link with nothing cached) | Skeleton: name field, 2 swatch rows, description box; footer buttons disabled. From the list it renders instantly from cached data.                                                                                                          |
+| Validation                                             | Name 2–50 (trimmed), hex `#RRGGBB`, description ≤ 280; errors on blur/submit, same rules as the task form (button always enabled, first invalid field focused, “Fix 1 error to continue” announced).                                         |
+| Submitting                                             | Footer button spinner + “Saving…”; fields remain visible and disabled.                                                                                                                                                                       |
+| Server errors                                          | `TEAM_NAME_ALREADY_EXISTS` on Name; `VALIDATION_FAILED` mapped to fields; `PRECONDITION_FAILED` → dialog “This team was changed elsewhere” `[Reload] [Keep editing]`; network/other → `.banner-error` above the footer with `[ Try again ]`. |
+| Not found (S11)                                        | `.error-state` “This team no longer exists” + `[ Back to teams ]`.                                                                                                                                                                           |
+| Offline                                                | Banner; save is queued, toast “Saved. It will sync when you're back online.” (a queued create whose name later collides surfaces as a sync toast, §6.5).                                                                                     |
+| Dirty-cancel                                           | “Discard changes?” `[Keep editing] [Discard]`.                                                                                                                                                                                               |
+| Delete (S11)                                           | `[🗑 Delete team]` → same confirm dialog as S4; confirm closes the modal and returns to Teams.                                                                                                                                                |
 
 ---
 
@@ -880,17 +978,18 @@ S3 (global)                              S6 (filtered by team "Mobile")
 
 ## 7. Screen-state matrix (checklist for component tests)
 
-| Screen            | Loading                        | Empty           | Error + retry                    | Offline                | Pending sync        | Success feedback |
-| ----------------- | ------------------------------ | --------------- | -------------------------------- | ---------------------- | ------------------- | ---------------- |
-| S1 Sign in        | button spinner                 | —               | banner                           | banner + disabled      | —                   | navigate         |
-| S2 Sign up        | button spinner                 | —               | banner / field                   | banner + disabled      | —                   | toast "Welcome"  |
-| S3 Tasks          | skeleton rows                  | none / filtered | error-state / toast              | banner + cache         | row badge + tab dot | mutation toasts  |
-| S4 Teams          | skeleton rows                  | none / filtered | error-state / toast              | banner + cache         | row badge           | toasts           |
-| S5 Settings       | —                              | —               | —                                | banner                 | queue count         | immediate apply  |
-| S6 Team tasks     | skeleton rows                  | none / filtered | error-state / not-found          | banner + cache         | row badge           | toasts           |
-| S7 Detail         | skeleton (deep link)           | —               | error-state / not-found          | banner, actions queued | badge               | toast + Undo     |
-| S8/S9 Task form   | footer spinner; teams skeleton | no teams        | field + banner / conflict dialog | banner, queued save    | —                   | toast + close    |
-| S10/S11 Team form | footer spinner                 | —               | field + banner / conflict dialog | banner, queued save    | —                   | toast + close    |
+| Screen               | Loading                                  | Empty           | Error + retry                                | Offline                | Pending sync        | Success feedback     |
+| -------------------- | ---------------------------------------- | --------------- | -------------------------------------------- | ---------------------- | ------------------- | -------------------- |
+| S1 Sign in           | button spinner                           | —               | banner                                       | banner + disabled      | —                   | navigate             |
+| S2 Sign up           | button spinner                           | —               | banner / field                               | banner + disabled      | —                   | toast "Welcome"      |
+| S3 Tasks             | skeleton rows                            | none / filtered | error-state / toast                          | banner + cache         | row badge + tab dot | mutation toasts      |
+| S4 Teams             | skeleton rows                            | none / filtered | error-state / toast                          | banner + cache         | row badge           | toasts               |
+| S5 Settings          | —                                        | —               | —                                            | banner                 | queue count         | immediate apply      |
+| S6 Team tasks        | skeleton rows                            | none / filtered | error-state / not-found                      | banner + cache         | row badge           | toasts               |
+| S7 Detail            | skeleton (deep link)                     | —               | error-state / not-found                      | banner, actions queued | badge               | toast + Undo         |
+| S8/S9 Task form      | footer spinner; teams skeleton           | no teams        | field + banner / conflict dialog             | banner, queued save    | —                   | toast + close        |
+| S10/S11 Team form    | footer spinner; skeleton (S11 deep link) | —               | field + banner / conflict dialog / not-found | banner, queued save    | —                   | toast + close        |
+| Team delete (S4/S11) | —                                        | —               | toast, row restored                          | queued, row badge      | row badge           | toast “Team deleted” |
 
 ---
 
@@ -950,29 +1049,31 @@ Keys map 1:1 to i18n resource keys (`src/i18n/locales/{en,pt-BR}.json`). Domain 
 
 ### 9.2 Status, filters, sort
 
-| Key                     | en                         | pt-BR                           |
-| ----------------------- | -------------------------- | ------------------------------- |
-| `status.PENDING`        | Pending                    | Pendente                        |
-| `status.IN_PROGRESS`    | In progress                | Em andamento                    |
-| `status.DONE`           | Done                       | Concluída                       |
-| `filters.all`           | All                        | Todas                           |
-| `filters.search.global` | Search tasks               | Buscar tarefas                  |
-| `filters.search.team`   | Search in {team}           | Buscar em {team}                |
-| `filters.search.teams`  | Search teams               | Buscar times                    |
-| `filters.clearSearch`   | Clear search               | Limpar busca                    |
-| `filters.clear`         | Clear filters              | Limpar filtros                  |
-| `sort.sheetTitle`       | Sort by                    | Ordenar por                     |
-| `sort.button`           | Sort tasks                 | Ordenar tarefas                 |
-| `sort.current`          | Sorted by: {option}        | Ordenado por: {option}          |
-| `sort.-createdAt`       | Newest first               | Mais recentes                   |
-| `sort.createdAt`        | Oldest first               | Mais antigas                    |
-| `sort.dueDate`          | Due date (soonest)         | Prazo (mais próximo)            |
-| `sort.-updatedAt`       | Recently updated           | Atualizadas recentemente        |
-| `sort.title`            | Title A–Z                  | Título A–Z                      |
-| `sort.status`           | Status                     | Status                          |
-| `list.loadingMore`      | Loading more…              | Carregando mais…                |
-| `list.loadMoreFailed`   | Couldn't load more.        | Não foi possível carregar mais. |
-| `list.end`              | That's all ({total} tasks) | Isso é tudo ({total} tarefas)   |
+| Key                     | en                                     | pt-BR                                  |
+| ----------------------- | -------------------------------------- | -------------------------------------- |
+| `status.PENDING`        | Pending                                | Pendente                               |
+| `status.IN_PROGRESS`    | In progress                            | Em andamento                           |
+| `status.DONE`           | Done                                   | Concluída                              |
+| `filters.all`           | All                                    | Todas                                  |
+| `filters.status`        | Filter by status                       | Filtrar por status                     |
+| `filters.status.a11y`   | {status}, filter {position} of {total} | {status}, filtro {position} de {total} |
+| `filters.search.global` | Search tasks                           | Buscar tarefas                         |
+| `filters.search.team`   | Search in {team}                       | Buscar em {team}                       |
+| `filters.search.teams`  | Search teams                           | Buscar times                           |
+| `filters.clearSearch`   | Clear search                           | Limpar busca                           |
+| `filters.clear`         | Clear filters                          | Limpar filtros                         |
+| `sort.sheetTitle`       | Sort by                                | Ordenar por                            |
+| `sort.button`           | Sort tasks                             | Ordenar tarefas                        |
+| `sort.current`          | Sorted by: {option}                    | Ordenado por: {option}                 |
+| `sort.-createdAt`       | Newest first                           | Mais recentes                          |
+| `sort.createdAt`        | Oldest first                           | Mais antigas                           |
+| `sort.dueDate`          | Due date (soonest)                     | Prazo (mais próximo)                   |
+| `sort.-updatedAt`       | Recently updated                       | Atualizadas recentemente               |
+| `sort.title`            | Title A–Z                              | Título A–Z                             |
+| `sort.status`           | Status                                 | Status                                 |
+| `list.loadingMore`      | Loading more…                          | Carregando mais…                       |
+| `list.loadMoreFailed`   | Couldn't load more.                    | Não foi possível carregar mais.        |
+| `list.end`              | That's all ({total} tasks)             | Isso é tudo ({total} tarefas)          |
 
 ### 9.3 Task detail and form
 
@@ -1019,6 +1120,14 @@ Keys map 1:1 to i18n resource keys (`src/i18n/locales/{en,pt-BR}.json`). Domain 
 | `team.color`               | Color                                                                           | Cor                                                                                         |
 | `team.color.invalid`       | Use a color like #6366F1                                                        | Use uma cor como #6366F1                                                                    |
 | `team.preview`             | Preview                                                                         | Prévia                                                                                      |
+| `team.name.placeholder`    | Team name                                                                       | Nome do time                                                                                |
+| `team.hex`                 | Hex color                                                                       | Cor em hexadecimal                                                                          |
+| `team.swatch.a11y`         | {color}, {hex}                                                                  | {color}, {hex}                                                                              |
+| `team.description`         | Description                                                                     | Descrição                                                                                   |
+| `team.notFound`            | This team no longer exists                                                      | Este time não existe mais                                                                   |
+| `team.backToTeams`         | Back to teams                                                                   | Voltar para times                                                                           |
+| `team.conflict.title`      | This team was changed elsewhere                                                 | Este time foi alterado em outro lugar                                                       |
+| `team.conflict.reload`     | Reload                                                                          | Recarregar                                                                                  |
 | `team.description.max`     | Description must be at most 280 characters                                      | A descrição deve ter no máximo 280 caracteres                                               |
 | `team.delete.title`        | Delete “{name}”?                                                                | Excluir “{name}”?                                                                           |
 | `team.delete.body`         | Its tasks are kept and will no longer be assigned to this team.                 | As tarefas serão mantidas e deixarão de estar atribuídas a este time.                       |
@@ -1088,7 +1197,10 @@ Keys map 1:1 to i18n resource keys (`src/i18n/locales/{en,pt-BR}.json`). Domain 
 | `settings.theme.light`          | Light                                                                        | Claro                                                                           |
 | `settings.theme.dark`           | Dark                                                                         | Escuro                                                                          |
 | `settings.language`             | Language                                                                     | Idioma                                                                          |
-| `settings.language.system`      | System default ({language})                                                  | Padrão do sistema ({language})                                                  |
+| `settings.language.system`      | System                                                                       | Sistema                                                                         |
+| `settings.language.systemHint`  | Currently: {language}                                                        | Atual: {language}                                                               |
+| `settings.language.en`          | English                                                                      | English                                                                         |
+| `settings.language.pt-BR`       | Português (Brasil)                                                           | Português (Brasil)                                                              |
 | `settings.sync`                 | Sync                                                                         | Sincronização                                                                   |
 | `settings.synced`               | All changes synced                                                           | Todas as alterações sincronizadas                                               |
 | `settings.signOut`              | Sign out                                                                     | Sair                                                                            |
