@@ -1,9 +1,7 @@
+import type { Violation } from './config-validation-error';
 import type { EnvironmentVariables } from './env.schema';
 
-export interface Violation {
-  variable: string;
-  message: string;
-}
+export type { Violation };
 
 /** A production rule inspects the already type-valid configuration. Names variables, never values. */
 export type ProductionRule = (config: EnvironmentVariables) => Violation[];

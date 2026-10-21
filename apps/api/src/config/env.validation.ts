@@ -1,32 +1,11 @@
 import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
-import { validateSync, ValidationError } from 'class-validator';
+import { validateSync } from 'class-validator';
+import { ConfigValidationError, toViolations } from './config-validation-error';
 import { EnvironmentVariables } from './env.schema';
-import { ProductionRule, productionRules, Violation } from './production-rules';
+import { ProductionRule, productionRules } from './production-rules';
 
-/** Names every offending variable and the rule broken; never contains a value (secrets). */
-export class ConfigValidationError extends Error {
-  constructor(readonly violations: Violation[]) {
-    super(
-      `Invalid configuration:\n${violations
-        .map((v) => `  - ${v.variable}: ${v.message}`)
-        .join('\n')}`,
-    );
-    this.name = 'ConfigValidationError';
-  }
-}
-
-function toViolations(errors: ValidationError[]): Violation[] {
-  return errors.flatMap((error) => {
-    const messages = Object.values(error.constraints ?? {});
-    return [
-      {
-        variable: error.property,
-        message: messages.join('; ') || 'is invalid',
-      },
-    ];
-  });
-}
+export { ConfigValidationError };
 
 /** Builds a validator running the decorator pass, then `rules` when APP_ENV=production. */
 export function validateWith(rules: ProductionRule[]) {
