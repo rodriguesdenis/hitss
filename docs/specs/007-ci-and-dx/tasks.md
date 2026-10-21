@@ -46,10 +46,10 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 
 ## T-007-04 — API Dockerfile and compose `api` service
 
-- **Goal:** `docker compose up` builds the API image (pruned, non-root), applies migrations, seeds (when enabled) and starts with instrumentation; healthy via `/api/v1/health/ready`.
-- **Changes:** `apps/api/Dockerfile`, `apps/api/docker-entrypoint.sh`, compose `api` service (`depends_on: service_healthy`, healthcheck, `init`, `stop_grace_period`), `prisma` as prod dependency, seed compiled to `dist/prisma/seed.js` (stub until T-007-07), `pnpm.onlyBuiltDependencies`.
+- **Goal:** `docker compose up` builds the API image (pruned, non-root), applies migrations in a one-shot `migrate` service, seeds (when enabled) and starts with instrumentation; healthy via `/api/v1/health/ready`.
+- **Changes:** `apps/api/Dockerfile` (targets `migrator` and `runtime`), `apps/api/docker-entrypoint.sh`, `docker-migrate.sh`, `database-url.cjs`, `prune-cli.cjs`, compose `migrate` (one-shot) and `api` services (`depends_on: postgres service_healthy` and `migrate service_completed_successfully`, healthcheck, `init`, `stop_grace_period`, hardening), `prisma` stays a dev dependency (only the migrator carries the CLI), seed compiled to `dist/prisma/seed.js` (stub until T-007-07), `pnpm.onlyBuiltDependencies`.
 - **Covers:** @AC-07.1.1, @AC-07.1.2, @AC-07.1.6, @AC-07.1.7
-- **Done when:** fresh clone → `docker compose up -d --build --wait` returns with `api` healthy; `docker compose exec api id -u` ≠ 0; image has no `src/`, `test/`, `.env`, `.git`; unreachable DB → container exits non-zero; image < 300 MB.
+- **Done when:** fresh clone → `docker compose up -d --build --wait` returns with `api` healthy; `docker compose exec api id -u` ≠ 0; image has no `src/`, `test/`, `.env`, `.git`; unreachable DB → the `migrate` container exits non-zero and `api` never starts; image < 500 MB (base 244 MB + `@prisma/client` 71 MB).
 
 ## T-007-05 — Architecture rules
 
