@@ -18,7 +18,7 @@ Feature: Team management
       And it has a task count of 0 and version 1
       And it has creation and update timestamps
       And the response gives the location of the new team
-      And the response carries the version tag for version 1
+      And the response carries the version tag (ETag) for version 1
 
     @US-02.1 @AC-02.1.1 @must
     Scenario: Create a team without a description
@@ -53,6 +53,20 @@ Feature: Team management
     Scenario: Names are measured in characters, not bytes
       When I create a team with a name of 50 characters made of accented letters and emoji
       Then the team is created
+
+    @US-02.1 @AC-02.1.10 @must @security
+    Scenario Outline: Team names reject control characters
+      When I create a team with a name containing <characters>
+      Then the creation is rejected with a validation error on field "name"
+      And no team is created
+
+      Examples:
+        | characters                      |
+        | a newline between two words     |
+        | a tab between two words         |
+        | a NUL character                 |
+        | an escape character             |
+        | a carriage return at the end    |
 
     @US-02.1 @AC-02.1.2 @must
     Scenario: Missing name
@@ -120,12 +134,25 @@ Feature: Team management
       And no team is created
 
       Examples:
-        | field     |
-        | id        |
-        | ownerId   |
-        | version   |
-        | taskCount |
-        | createdAt |
+        | field       |
+        | id          |
+        | ownerId     |
+        | owner_id    |
+        | userId      |
+        | owner       |
+        | version     |
+        | taskCount   |
+        | createdAt   |
+        | updatedAt   |
+        | deletedAt   |
+        | __proto__   |
+        | constructor |
+
+    @US-02.1 @AC-02.1.8 @must @security
+    Scenario: An owner given as an object is rejected, not merged
+      When I create a team named "Platform" with color "#0EA5E9" and an "owner" field holding an object with Rafael's id
+      Then the creation is rejected with a validation error on field "owner"
+      And no team is created
 
   Rule: Team names are unique per user, ignoring letter case
 
@@ -293,9 +320,15 @@ Feature: Team management
       Then I see exactly "Backend"
 
     @US-02.3 @AC-02.3.2 @must
-    Scenario: A blank search term is ignored
-      When I search my teams for "   "
-      Then I see all 3 of my teams
+    Scenario Outline: A search term that is blank after trimming is rejected
+      When I search my teams for "<term>"
+      Then the request is rejected with status 400 and code "VALIDATION_FAILED"
+      And the error details name the field "search"
+
+      Examples:
+        | term  |
+        |       |
+        | "   " |
 
     @US-02.3 @AC-02.3.2 @must
     Scenario Outline: Search term length limit
@@ -421,7 +454,7 @@ Feature: Team management
       Then the team has name "Platform", color "#0EA5E9" and description "Infra & tooling"
       And its version is 2
       And its update time advanced and its creation time is unchanged
-      And the response carries the version tag for version 2
+      And the response carries the version tag (ETag) for version 2
 
     @US-02.6 @AC-02.6.2 @must
     Scenario Outline: Invalid replacements leave the team unchanged
@@ -437,6 +470,14 @@ Feature: Team management
         | color "blue"                         | colorHex    |
         | a description of 281 characters      | description |
         | an extra field "ownerId"             | ownerId     |
+        | an extra field "owner_id"            | owner_id    |
+        | an extra field "userId"              | userId      |
+        | an extra field "owner" holding an object | owner   |
+        | an extra field "updatedAt"           | updatedAt   |
+        | an extra field "deletedAt"           | deletedAt   |
+        | an extra field "__proto__"           | __proto__   |
+        | an extra field "constructor"         | constructor |
+        | a name with a control character      | name        |
         | no name                              | name        |
         | no color                             | colorHex    |
 
@@ -619,11 +660,46 @@ Feature: Team management
         | W/"-1"     |
         | garbage    |
 
-    @US-02.9 @AC-02.9.7 @could
-    Scenario: Not found takes precedence over a precondition
+    @US-02.9 @AC-02.9.6 @could
+    Scenario: A malformed precondition on delete is rejected
+      When I delete the team "Backend" with the precondition "garbage"
+      Then the deletion is rejected with status 412 and code "PRECONDITION_FAILED"
+      And the team "Backend" still exists
+
+    @US-02.9 @AC-02.9.7 @AC-02.9.8 @could
+    Scenario Outline: Not found takes precedence over a precondition
       Given the team belongs to another user "rafael@example.com"
-      When I update that team with the precondition for version 1
+      When I <operation> that team with the precondition for version 1
       Then the response is status 404 with code "TEAM_NOT_FOUND"
+      And the team is unchanged
+
+      Examples:
+        | operation |
+        | update    |
+        | delete    |
+
+    @US-02.9 @AC-02.9.2 @could
+    Scenario Outline: Validation runs before the precondition check
+      Given the team "Backend" was updated on another device to version 2
+      When I update the team "Backend" with <change> and the stale precondition for version 1
+      Then the update is rejected with status 400 and code "VALIDATION_FAILED"
+      And it is not rejected with "PRECONDITION_FAILED"
+
+      Examples:
+        | change                  |
+        | a name of 1 character   |
+        | color "blue"            |
+        | an extra field "ownerId" |
+
+    @US-02.9 @AC-02.9.2 @could
+    Scenario: A malformed precondition together with an invalid body is a validation error
+      When I update the team "Backend" with a name of 1 character and the precondition "garbage"
+      Then the update is rejected with status 400 and code "VALIDATION_FAILED"
+
+    @US-02.9 @AC-02.9.1 @could
+    Scenario: A successful conditional update returns the new version tag
+      When I update the team "Backend" with the precondition for version 1
+      Then the response carries the version tag (ETag) for version 2
 
   Rule: Retried creations with the same idempotency key do not duplicate teams
     # "K1" denotes a fixed, valid UUID chosen by the test (e.g. 9b2f0c4e-…).
@@ -632,15 +708,32 @@ Feature: Team management
     Scenario: Retrying the same creation replays the original response
       Given I created a team named "Platform" with idempotency key "K1"
       When I send the same creation again with idempotency key "K1"
-      Then I receive the original response with the same team id
-      And the response indicates it was replayed
+      Then I receive the original response with the same status, body, location and version tag
+      And the response carries the header "Idempotent-Replayed: true"
+      And the original response did not carry that header
       And I have exactly one team named "Platform"
 
-    @US-02.10 @AC-02.10.1 @could @idempotency @concurrency
+    @US-02.10 @AC-02.10.1 @AC-02.10.8 @could @idempotency @concurrency
     Scenario: Concurrent identical creations with the same key
       When I send the same creation of a team named "Platform" twice at the same time with idempotency key "K1"
-      Then both responses carry the same team id
-      And I have exactly one team named "Platform"
+      Then exactly one team named "Platform" is created
+      And one request receives the 201 creation
+      And the other receives either the 201 replay or status 409 with code "IDEMPOTENCY_REQUEST_IN_PROGRESS"
+
+    @US-02.10 @AC-02.10.8 @could @idempotency @concurrency
+    Scenario: A request arriving while the first is still processing is not queued
+      Given a creation with idempotency key "K1" is still being processed
+      When I send the same creation again with idempotency key "K1"
+      Then the request is rejected immediately with status 409 and code "IDEMPOTENCY_REQUEST_IN_PROGRESS"
+      And the response carries a "Retry-After" value of 1
+      And no second team is created
+
+    @US-02.10 @AC-02.10.8 @could @idempotency
+    Scenario: Retrying after the in-progress answer succeeds
+      Given my request with idempotency key "K1" was answered with "IDEMPOTENCY_REQUEST_IN_PROGRESS"
+      And the first request has since completed
+      When I retry with idempotency key "K1"
+      Then I receive the original response, marked as replayed
 
     @US-02.10 @AC-02.10.2 @could @idempotency
     Scenario: Reusing a key with a different body
@@ -668,6 +761,13 @@ Feature: Team management
       Then my team "Platform" is created
       And I do not receive Rafael's response
 
+    @US-02.10 @AC-02.10.9 @could @idempotency @concurrency @security
+    Scenario: Another user's identical key is never blocked by an in-flight request
+      Given a creation by "rafael@example.com" with idempotency key "K1" is still being processed
+      When I create a team named "Platform" with idempotency key "K1"
+      Then my team "Platform" is created
+      And I do not receive status 409
+
     @US-02.10 @AC-02.10.5 @could @idempotency
     Scenario Outline: Failed attempts are not remembered
       Given my creation with idempotency key "K1" was rejected because <reason>
@@ -686,6 +786,20 @@ Feature: Team management
       When I send the same creation again with idempotency key "K1"
       Then a new team named "Platform" is created with a different id
 
+    @US-02.10 @AC-02.10.11 @could @idempotency @security
+    Scenario: The request fingerprint ignores prototype keys
+      Given two request bodies that differ only by a "__proto__" or "constructor" key
+      When the idempotency fingerprint of each is computed
+      Then both fingerprints are identical
+      And no prototype pollution occurs
+
+    @US-02.10 @AC-02.10.10 @could @idempotency
+    Scenario: A key used for a team cannot be reused for a task
+      Given I created a team named "Platform" with idempotency key "K1"
+      When I create a task titled "Buy milk" with idempotency key "K1"
+      Then the request is rejected with status 422 and code "IDEMPOTENCY_KEY_REUSED"
+      And no task titled "Buy milk" exists
+
     @US-02.10 @AC-02.10.7 @could @idempotency
     Scenario: The idempotency key is optional
       When I create a team named "Platform" with color "#0EA5E9" and no idempotency key
@@ -693,11 +807,37 @@ Feature: Team management
 
   Rule: Teams are private to the signed-in user
 
-    @US-01.5 @AC-01.5.1 @could @security
+    Background:
+      Given another user "rafael@example.com" owns a team "Backend"
+
+    @US-02.11 @AC-02.11.1 @must @security
+    Scenario: Another user's team never appears in my list or search
+      Given I have a team named "Mobile"
+      When I list my teams
+      Then I see "Mobile" and not "Backend"
+      And the total counts only my teams
+      When I search my teams for "Back"
+      Then I receive no teams
+
+    @US-02.11 @AC-02.11.1 @must @security
+    Scenario Outline: By-id operations on another user's team look like a missing team
+      When I <operation> Rafael's team "Backend" by its id
+      Then the response is identical to the same operation on a nonexistent id
+      And the status is 404 with code "TEAM_NOT_FOUND"
+      And Rafael's team "Backend" is unchanged
+
+      Examples:
+        | operation |
+        | get       |
+        | update    |
+        | delete    |
+
+    @US-02.11 @AC-02.11.2 @must @security
     Scenario Outline: Anonymous access to team operations
       Given I am not signed in
       When I <operation>
       Then the request is rejected with status 401 and code "UNAUTHENTICATED"
+      And no existence check was made on the team
 
       Examples:
         | operation        |
@@ -706,3 +846,16 @@ Feature: Team management
         | create a team    |
         | update a team    |
         | delete a team    |
+
+    @US-02.11 @AC-02.11.3 @must @security
+    Scenario: The owner of a new team is always the signed-in user
+      When I create a team named "Platform" with color "#0EA5E9"
+      Then the team belongs to "marina@example.com"
+      And it does not appear in Rafael's list
+
+    @US-02.11 @AC-02.11.4 @must
+    Scenario: Equal names owned by different users do not interfere
+      Given I have a team named "Backend"
+      When I list my teams and Rafael lists his
+      Then each sees only their own "Backend"
+      And neither can read the other's team by id

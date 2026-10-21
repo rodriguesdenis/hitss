@@ -48,22 +48,23 @@ Marina can create, find, rename, recolor and remove the color-coded teams she us
 | US-02.8  | See how many tasks a team has                    | `COULD`  | [002-teams](../../specs/002-teams/spec.md) |
 | US-02.9  | Edit safely when another device changed the team | `COULD`  | [002-teams](../../specs/002-teams/spec.md) |
 | US-02.10 | Retry team creation safely                       | `COULD`  | [002-teams](../../specs/002-teams/spec.md) |
+| US-02.11 | Keep my teams private (owner isolation)          | `MUST`   | [002-teams](../../specs/002-teams/spec.md) |
 
 ## Traceability to the brief
 
-| Brief item                                                                             | Stories                                                                 |
-| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| "CRUD de times"                                                                        | US-02.1, US-02.5, US-02.6, US-02.7                                      |
-| "Ao listar, retornar metadata (ex.: total/pagination)"                                 | US-02.2                                                                 |
-| Suggested contract `GET /api/teams?limit=&offset=&search=`                             | US-02.2, US-02.3                                                        |
-| Suggested contract `POST /api/teams { name, colorHex, description? }`, `PUT`, `DELETE` | US-02.1, US-02.6, US-02.7                                               |
-| "CRUD de times e tarefas funcional via API" (acceptance)                               | US-02.1–US-02.7 (API). The UI part is in EP-04.                         |
-| "Cores dos times aparecem como label/chip" (acceptance)                                | US-02.1 (color captured and validated). The chip is in EP-03 and EP-04. |
-| "Seeds/fixtures (ex.: 3 times)"                                                        | Seed task in 002 (T-002-11)                                             |
+| Brief item                                                                             | Stories                                                                                      |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| "CRUD de times"                                                                        | US-02.1, US-02.5, US-02.6, US-02.7                                                           |
+| "Ao listar, retornar metadata (ex.: total/pagination)"                                 | US-02.2                                                                                      |
+| Suggested contract `GET /api/teams?limit=&offset=&search=`                             | US-02.2, US-02.3                                                                             |
+| Suggested contract `POST /api/teams { name, colorHex, description? }`, `PUT`, `DELETE` | US-02.1, US-02.6, US-02.7                                                                    |
+| "CRUD de times e tarefas funcional via API" (acceptance)                               | US-02.1–US-02.7 (API), US-02.11 (owner scoping). The UI part is in EP-04 (US-04.2, US-04.3). |
+| "Cores dos times aparecem como label/chip" (acceptance)                                | US-02.1 (color captured and validated). The chip is in EP-03 and EP-04.                      |
+| "Seeds/fixtures (ex.: 3 times)"                                                        | Seed task in 002 (T-002-11)                                                                  |
 
 ## Success criteria
 
-- Every `MUST` acceptance criterion in 002 has at least one passing automated scenario.
+- Every `MUST` acceptance criterion in 002 (44 of 70; the other 26 are `COULD`) has at least one passing automated scenario.
 - Team listing p95 < 100 ms locally with the seed plus 1,000 extra teams. Indexes back the default sort and the uniqueness check.
 - Domain layer (`TeamName`, `ColorHex`, `Team`) line coverage ≥ 90 %, mutation score ≥ 80 %.
 - No duplicate team names per user, even under concurrent requests. The database guarantees this, and a test proves it.
