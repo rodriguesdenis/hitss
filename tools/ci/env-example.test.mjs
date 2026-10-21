@@ -63,4 +63,12 @@ describe('.env.example parity with docker-compose.yml', () => {
     assert.ok(defaults.has('POSTGRES_PORT'));
     assert.match(read('docker-compose.yml'), /\$\{POSTGRES_PORT:-\d+\}:5432/);
   });
+
+  it('AC-07.1.5 the database port is published on loopback by default', () => {
+    assert.equal(defaults.get('POSTGRES_BIND'), '127.0.0.1');
+    assert.match(
+      read('docker-compose.yml'),
+      /\$\{POSTGRES_BIND:-127\.0\.0\.1\}:\$\{POSTGRES_PORT:-\d+\}:5432/,
+    );
+  });
 });
