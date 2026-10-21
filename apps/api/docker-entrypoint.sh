@@ -12,5 +12,5 @@ if [ -z "${DATABASE_URL:-}" ]; then
 fi
 
 # TODO(T-007-07): run the idempotent seed here when SEED_ON_START=true.
-# TODO(T-006-01): start with `node --import ./dist/instrumentation.js` once instrumentation lands.
-exec node dist/main.js
+# OpenTelemetry must be loaded before the application code (ADR-0013).
+exec node --import ./dist/instrumentation.js dist/main.js
