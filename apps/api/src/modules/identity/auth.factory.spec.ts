@@ -3,6 +3,7 @@ import { validate } from '../../config/env.validation';
 import { VALID_ENV } from '../../config/testing/expect-invalid';
 import type { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
 import { AUTH_BASE_PATH, createAuth, trustedOrigins } from './auth.factory';
+import { authInputHook } from './hooks/auth-input.hook';
 import { BetterAuthPasswordHasher, PasswordHasher } from './password-hasher';
 
 const config = (env: Record<string, string> = {}) =>
@@ -81,6 +82,10 @@ describe('createAuth', () => {
       disableOriginCheck: false,
       disableCSRFCheck: false,
     });
+  });
+
+  it('AC-01.1.5 AC-01.2.6 runs the name rule and email trimming before Better Auth validates', () => {
+    expect(options.hooks?.before).toBe(authInputHook);
   });
 
   it('uses the signed bearer plugin and the Expo plugin', () => {
