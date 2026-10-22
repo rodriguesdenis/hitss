@@ -14,7 +14,7 @@ import { GetTeamSummariesHandler } from './application/queries/get-team-summarie
 import { GetTeamHandler } from './application/queries/get-team/get-team.handler';
 import { ListTeamsHandler } from './application/queries/list-teams/list-teams.handler';
 import { TeamRepository } from './domain/team.repository';
-import { ZeroTeamTaskCounts } from './infrastructure/adapters/team-task-counts.adapter';
+import { QueryBusTeamTaskCounts } from './infrastructure/adapters/team-task-counts.adapter';
 import { PrismaTeamReadModel } from './infrastructure/prisma-team.read-model';
 import { PrismaTeamRepository } from './infrastructure/prisma-team.repository';
 import { TeamsController } from './presentation/teams.controller';
@@ -38,7 +38,8 @@ import { TEAM_ERROR_MAPPINGS } from './presentation/team-error.mapping';
     GetTeamSummariesHandler,
     { provide: TeamRepository, useClass: PrismaTeamRepository },
     { provide: TeamReadModel, useClass: PrismaTeamReadModel },
-    { provide: TeamTaskCounts, useClass: ZeroTeamTaskCounts },
+    // Task counts come from Task Management through the QueryBus (T-003-14b).
+    { provide: TeamTaskCounts, useClass: QueryBusTeamTaskCounts },
     { provide: Clock, useClass: SystemClock },
     { provide: IdGenerator, useClass: UuidGenerator },
   ],

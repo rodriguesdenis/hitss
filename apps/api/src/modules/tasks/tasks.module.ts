@@ -14,6 +14,7 @@ import { TASK_METRICS_HANDLERS } from './application/events/record-task-metrics.
 import { TaskMetrics } from './application/ports/task-metrics';
 import { TaskReadModel } from './application/ports/task.read-model';
 import { TeamDirectory } from './application/ports/team-directory';
+import { CountTasksByTeamHandler } from './application/queries/count-tasks-by-team/count-tasks-by-team.handler';
 import { ListTasksHandler } from './application/queries/list-tasks/list-tasks.handler';
 import { GetTaskHandler } from './application/queries/get-task/get-task.handler';
 import {
@@ -42,6 +43,8 @@ import { TasksController } from './presentation/tasks.controller';
     DeleteTaskHandler,
     GetTaskHandler,
     ListTasksHandler,
+    // Public: answers CountTasksByTeamQuery (contracts/) for Team Management's taskCount.
+    CountTasksByTeamHandler,
     ...TASK_METRICS_HANDLERS,
     {
       provide: TaskMetrics,

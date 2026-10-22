@@ -1,17 +1,30 @@
 import { Injectable } from '@nestjs/common';
+import { QueryBus } from '@nestjs/cqrs';
+import { CountTasksByTeamQuery } from '../../../tasks/contracts/count-tasks-by-team.query';
 import { TeamTaskCounts } from '../../application/ports/team-task-counts';
 
 /**
- * Placeholder until Task Management ships CountTasksByTeamQuery (T-003-14): every team counts 0,
- * which is exact for a new team (AC-02.8.3). T-003-14b switches this adapter to the QueryBus.
+ * Team Management's view of task counts, answered by Task Management through the QueryBus
+ * (`CountTasksByTeamQuery` from tasks/contracts, rule A5): one query per page, distinct ids, and
+ * every requested id in the result (0 when Task Management has none for it).
  */
-// replaced by CountTasksByTeamQuery in T-003-14b
 @Injectable()
-export class ZeroTeamTaskCounts extends TeamTaskCounts {
-  countByTeam(
-    _ownerId: string,
+export class QueryBusTeamTaskCounts extends TeamTaskCounts {
+  constructor(private readonly queryBus: QueryBus) {
+    super();
+  }
+
+  async countByTeam(
+    ownerId: string,
     teamIds: readonly string[],
   ): Promise<ReadonlyMap<string, number>> {
-    return Promise.resolve(new Map(teamIds.map((id) => [id, 0])));
+    const ids = [...new Set(teamIds)];
+    if (ids.length === 0) {
+      return new Map();
+    }
+    const counts = await this.queryBus.execute(
+      new CountTasksByTeamQuery(ownerId, ids),
+    );
+    return new Map(ids.map((id) => [id, counts.get(id) ?? 0]));
   }
 }
