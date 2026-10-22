@@ -44,8 +44,7 @@ export interface ListTasksCriteria {
 
 /**
  * Query side of Task Management (plan 003 "Why a separate read side"): rows straight from SQL,
- * never aggregates. Every method is owner-scoped and sees active tasks only. Counting by team
- * arrives with T-003-14.
+ * never aggregates. Every method is owner-scoped and sees active tasks only.
  */
 export abstract class TaskReadModel {
   /** The owner's active task, or `null` when it is unknown, foreign, malformed or deleted. */
@@ -60,4 +59,14 @@ export abstract class TaskReadModel {
     ownerId: string,
     criteria: ListTasksCriteria,
   ): Promise<Page<TaskRecord>>;
+
+  /**
+   * The number of the owner's active tasks assigned to each team, in one query. Every distinct
+   * requested id is a key: 0 when it has no active task or is unknown, foreign or malformed.
+   * A soft-deleted task keeps its links but never counts (AC-03.11.3).
+   */
+  abstract countByTeams(
+    ownerId: string,
+    teamIds: readonly string[],
+  ): Promise<ReadonlyMap<string, number>>;
 }

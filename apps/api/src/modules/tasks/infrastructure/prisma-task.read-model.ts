@@ -130,6 +130,37 @@ export class PrismaTaskReadModel extends TaskReadModel {
     );
     return { items: rows.map(toRecord), total: counted[0]?.total ?? 0 };
   }
+
+  async countByTeams(
+    ownerId: string,
+    teamIds: readonly string[],
+  ): Promise<ReadonlyMap<string, number>> {
+    // One key per distinct requested id, 0 until a count says otherwise.
+    const counts = new Map<string, number>(teamIds.map((id) => [id, 0]));
+    // PostgreSQL returns canonical lower-case uuids; map them back to the ids as requested.
+    const requested = new Map<string, string[]>();
+    for (const id of counts.keys()) {
+      if (!UUID.test(id)) continue;
+      const key = id.toLowerCase();
+      requested.set(key, [...(requested.get(key) ?? []), id]);
+    }
+    if (requested.size === 0) return counts;
+    const rows = await this.prisma.$queryRaw<
+      { team_id: string; total: number }[]
+    >`
+      SELECT tt.team_id::text AS team_id, count(*)::int AS total
+      FROM task_teams tt
+      JOIN tasks t ON t.id = tt.task_id
+      WHERE tt.team_id = ANY(${[...requested.keys()]}::uuid[])
+        AND t.owner_id = ${ownerId}
+        AND t.deleted_at IS NULL
+      GROUP BY tt.team_id`;
+    for (const row of rows) {
+      for (const id of requested.get(row.team_id) ?? [])
+        counts.set(id, row.total);
+    }
+    return counts;
+  }
 }
 
 /**
