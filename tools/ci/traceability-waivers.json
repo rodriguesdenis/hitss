@@ -1,0 +1,6 @@
+[
+  {
+    "ac": "AC-07.1.2",
+    "reason": "T-007-04 delivers the ordering (depends_on service_healthy, up --wait) but the readiness check is still an interim TCP probe; the readiness route lands with T-001-08 / T-006-03 and gets the AC's test then (compose-smoke covers the stack coming up healthy)."
+  }
+]
