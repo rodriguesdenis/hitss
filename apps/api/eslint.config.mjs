@@ -52,6 +52,7 @@ export default tseslint.config(
       'src/config/**/*.ts',
       'src/instrumentation.ts',
       'test/**/*.ts',
+      'src/modules/*/tests/**/*.ts',
       '**/*.spec.ts',
       '**/*.e2e-spec.ts',
     ],

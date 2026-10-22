@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import pino from 'pino';
 import type { AppConfig } from '../../src/config/app-config';
 import { loadAppConfig } from '../../src/config/load-config';
-import { VALID_ENV } from '../../src/config/testing/expect-invalid';
+import { VALID_ENV } from '../unit/config/testing/expect-invalid';
 import { createAuth } from '../../src/modules/identity/auth.factory';
 import { BetterAuthPasswordHasher } from '../../src/modules/identity/password-hasher';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';

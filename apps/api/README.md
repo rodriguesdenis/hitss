@@ -47,13 +47,13 @@ $ npm run start:prod
 ## Run tests
 
 ```bash
-# unit tests only (src/**/*.spec.ts): the `pnpm test` entry point, no Docker needed
+# unit tests only (src/modules/*/tests/unit, test/unit): the `pnpm test` entry point, no Docker needed
 $ pnpm test
 
-# integration tests (test/**/*.int-spec.ts) against a real PostgreSQL; needs Docker
+# integration tests (src/modules/*/tests/integration, test/integration) against a real PostgreSQL; needs Docker
 $ pnpm test:integration
 
-# e2e tests (test/**/*.e2e-spec.ts) against the full Nest app; needs Docker
+# e2e tests (src/modules/*/tests/e2e, test/e2e, test/telemetry) against the full Nest app; needs Docker
 $ pnpm test:e2e
 
 # unit test coverage

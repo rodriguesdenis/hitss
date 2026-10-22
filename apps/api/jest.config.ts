@@ -26,13 +26,16 @@ const base = {
     ],
   },
   // The generated Prisma client imports its siblings as `./x.js` (Node ESM-style specifiers).
-  moduleNameMapper: { '^(\\.{1,2}/.*)\\.js$': '$1' },
+  moduleNameMapper: {
+    '^@test/(.*)$': '<rootDir>/test/$1',
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
   setupFiles: ['<rootDir>/test/setup-env.ts'],
 } satisfies Config;
 
 const withDatabase = {
   ...base,
-  roots: ['<rootDir>/test'],
+  roots: ['<rootDir>/src/modules', '<rootDir>/test'],
   globalSetup: '<rootDir>/test/support/global-setup.ts',
   globalTeardown: '<rootDir>/test/support/global-teardown.ts',
   // The 120 s test timeout is set by jest.setTimeout() in after-env.ts, not by a `testTimeout`
@@ -93,6 +96,7 @@ const config: Config = {
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.spec.ts',
+    '!src/modules/*/tests/**',
     '!src/**/infrastructure/**',
     '!src/**/presentation/**',
     '!src/generated/**',
@@ -110,19 +114,27 @@ const config: Config = {
     {
       ...base,
       displayName: 'unit',
-      // test/support holds shared fakes; their contract specs run with the unit tests.
-      roots: ['<rootDir>/src', '<rootDir>/test/support'],
-      testRegex: '.*\\.spec\\.ts$',
+      // Unit specs live in each module's tests/unit and in test/unit (shared, config, app-level);
+      // test/support holds shared fakes, and their contract specs run with the unit tests.
+      roots: [
+        '<rootDir>/src/modules',
+        '<rootDir>/test/unit',
+        '<rootDir>/test/support',
+      ],
+      testRegex:
+        '(src/modules/[^/]+/tests/unit|test/unit|test/support)/.*\\.spec\\.ts$',
     },
     {
       ...withDatabase,
       displayName: 'integration',
-      testRegex: '.*\\.int-spec\\.ts$',
+      testRegex:
+        '(src/modules/[^/]+/tests/integration|test/integration)/.*\\.int-spec\\.ts$',
     },
     {
       ...withDatabase,
       displayName: 'e2e',
-      testRegex: '.*\\.e2e-spec\\.ts$',
+      testRegex:
+        '(src/modules/[^/]+/tests/e2e|test/e2e|test/telemetry)/.*\\.e2e-spec\\.ts$',
     },
     {
       // Never selected by a script: test/support/in-time-zone.ts runs these files in a child

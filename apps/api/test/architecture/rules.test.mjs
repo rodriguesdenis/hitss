@@ -41,7 +41,11 @@ function project(files) {
   const all = {
     'package.json': JSON.stringify(manifest),
     'tsconfig.json': JSON.stringify({
-      compilerOptions: { module: 'commonjs' },
+      compilerOptions: {
+        module: 'commonjs',
+        baseUrl: '.',
+        paths: { '@test/*': ['test/*'] },
+      },
     }),
     // Type-only package, as installed by the real project (express itself is not a direct dependency).
     'node_modules/@types/express/package.json': JSON.stringify({
@@ -67,17 +71,27 @@ function project(files) {
   return root;
 }
 
-/** Runs the real rule set over a project; returns the violations of severity "error". */
+/**
+ * Runs the real rule set over a project; returns the violations of severity "error". The cruise
+ * runs from the fixture's directory because dependency-cruiser resolves tsconfig paths (@test/*)
+ * against the working directory.
+ */
 async function violationsOf(root) {
-  const result = await cruise(['src'], {
-    ...config.options,
-    baseDir: root,
-    validate: true,
-    ruleSet: { forbidden: config.forbidden },
-  });
-  return result.output.summary.violations.filter(
-    (v) => v.rule.severity === 'error',
-  );
+  const previous = process.cwd();
+  process.chdir(root);
+  try {
+    const result = await cruise(['src'], {
+      ...config.options,
+      baseDir: root,
+      validate: true,
+      ruleSet: { forbidden: config.forbidden },
+    });
+    return result.output.summary.violations.filter(
+      (v) => v.rule.severity === 'error',
+    );
+  } finally {
+    process.chdir(previous);
+  }
 }
 
 const importOf = (target) => `import '${target}';\n`;
@@ -309,6 +323,27 @@ const VIOLATIONS = [
     'production file imports from the test/ folder',
     {
       'src/shared/application/a.ts': importOf('../../../test/helper'),
+      'test/helper.ts': 'export {};\n',
+    },
+    ['src/shared/application/a.ts', 'test/helper.ts'],
+  ],
+  [
+    'no-tests-in-production',
+    'production file imports from a module tests/ folder',
+    {
+      'src/modules/teams/application/a.ts': importOf('../tests/unit/helper'),
+      'src/modules/teams/tests/unit/helper.ts': 'export {};\n',
+    },
+    [
+      'src/modules/teams/application/a.ts',
+      'src/modules/teams/tests/unit/helper.ts',
+    ],
+  ],
+  [
+    'no-tests-in-production',
+    'production file imports a test helper through the @test alias',
+    {
+      'src/shared/application/a.ts': importOf('@test/helper'),
       'test/helper.ts': 'export {};\n',
     },
     ['src/shared/application/a.ts', 'test/helper.ts'],
