@@ -39,7 +39,7 @@ interface Seed {
 
 /**
  * GET /api/v1/tasks: filters (`teamId`, `status`) and paging (T-003-08b) on the full AppModule,
- * only the clock fixed. Teams are created through POST /teams and resolved through the QueryBus.
+ * only the clock fixed. Teams are created through POST /teams and resolved through TeamLookup.
  */
 describe('GET /api/v1/tasks — filters and paging (e2e)', () => {
   const db = useTestDatabase();

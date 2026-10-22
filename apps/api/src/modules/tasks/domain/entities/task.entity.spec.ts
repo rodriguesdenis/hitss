@@ -1,5 +1,4 @@
 import { DueDate } from '../value-objects/due-date.vo';
-import { TaskCreated, TaskDeleted, TaskStatusChanged } from '../task.events';
 import { isOverdue } from '../policies/overdue.policy';
 import { Task, TaskProps } from './task.entity';
 import { TaskDescription } from '../value-objects/task-description.vo';
@@ -17,7 +16,6 @@ const { PENDING, IN_PROGRESS, DONE } = TaskStatus;
 
 function created(status?: TaskStatus): Task {
   return Task.create({
-    id: TASK_ID,
     ownerId: OWNER_ID,
     title: TaskTitle.create('Write release notes'),
     description: TaskDescription.create(null),
@@ -30,7 +28,7 @@ function created(status?: TaskStatus): Task {
 
 /** "Ship it": version 3, notes, due 2026-10-31, assigned to Mobile and Backend. */
 function stored(overrides: Partial<TaskProps> = {}): Task {
-  return Task.reconstitute({
+  return Task.restore({
     id: TASK_ID,
     ownerId: OWNER_ID,
     title: TaskTitle.create('Ship it'),
@@ -54,7 +52,6 @@ describe('Task', () => {
     it('AC-03.1.1 defaults: pending, nothing optional set, version 1, created = updated = now', () => {
       const task = created();
 
-      expect(task.id).toBe(TASK_ID);
       expect(task.ownerId).toBe(OWNER_ID);
       expect(task.title.value).toBe('Write release notes');
       expect(task.description.value).toBeNull();
@@ -66,9 +63,10 @@ describe('Task', () => {
       expect(iso(task.createdAt)).toBe(CREATED);
       expect(iso(task.updatedAt)).toBe(CREATED);
       expect(task.deletedAt).toBeNull();
-      expect(task.pullEvents()).toStrictEqual([
-        new TaskCreated(TASK_ID, OWNER_ID, PENDING, new Date(CREATED)),
-      ]);
+      expect(task.id).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+      expect(created().id).not.toBe(task.id);
     });
 
     it.each([
@@ -82,14 +80,11 @@ describe('Task', () => {
 
         expect(task.status).toBe(status);
         expect(iso(task.completedAt)).toBe(completedAt);
-        expect(task.pullEvents()).toStrictEqual([
-          new TaskCreated(TASK_ID, OWNER_ID, status, new Date(CREATED)),
-        ]);
       },
     );
   });
 
-  it('reconstitute restores a persisted task without events', () => {
+  it('restore rebuilds a persisted task', () => {
     const task = stored({ status: DONE, completedAt: new Date(COMPLETED) });
 
     expect(task.title.value).toBe('Ship it');
@@ -98,7 +93,6 @@ describe('Task', () => {
     expect(task.teamIds.values).toEqual(['backend', 'mobile']);
     expect(iso(task.completedAt)).toBe(COMPLETED);
     expect(task.version).toBe(3);
-    expect(task.pullEvents()).toStrictEqual([]);
   });
 
   describe('AC-03.10.1 AC-03.10.2 AC-03.10.3 AC-03.9.4 changeStatus transition matrix', () => {
@@ -126,11 +120,6 @@ describe('Task', () => {
         expect(iso(task.completedAt)).toBe(completedAt);
         expect(task.version).toBe(3);
         expect(iso(task.updatedAt)).toBe(changed ? NOW : CREATED);
-        expect(task.pullEvents()).toStrictEqual(
-          changed
-            ? [new TaskStatusChanged(TASK_ID, from, to, new Date(NOW))]
-            : [],
-        );
       },
     );
 
@@ -206,7 +195,6 @@ describe('Task', () => {
       expect(iso(task.updatedAt)).toBe(NOW);
       expect(task.version).toBe(3);
       expect(task.status).toBe(PENDING);
-      expect(task.pullEvents()).toStrictEqual([]);
     });
   });
 
@@ -229,55 +217,25 @@ describe('Task', () => {
       expect(task.teamIds.values).toEqual(['design']);
       expect(iso(task.updatedAt)).toBe(NOW);
       expect(task.version).toBe(3);
-      expect(task.pullEvents()).toStrictEqual([]);
-    });
-  });
-
-  describe('unassignTeam (reaction to TeamDeleted)', () => {
-    it('AC-03.13.2 AC-03.13.4 removes an assigned team and reports a change', () => {
-      const task = stored({ status: DONE, completedAt: new Date(COMPLETED) });
-
-      expect(task.unassignTeam('mobile', new Date(NOW))).toBe(true);
-      expect(task.teamIds.values).toEqual(['backend']);
-      expect(iso(task.updatedAt)).toBe(NOW);
-      expect(task.version).toBe(3); // persistence writes version 4
-      expect(task.title.value).toBe('Ship it');
-      expect(task.status).toBe(DONE);
-      expect(task.dueDate?.value).toBe('2026-10-31');
-      expect(iso(task.completedAt)).toBe(COMPLETED);
-      expect(task.pullEvents()).toStrictEqual([]);
-    });
-
-    it('AC-03.13.4 a team that was not assigned changes nothing', () => {
-      const task = stored();
-
-      expect(task.unassignTeam('design', new Date(NOW))).toBe(false);
-      expect(task.teamIds.values).toEqual(['backend', 'mobile']);
-      expect(iso(task.updatedAt)).toBe(CREATED);
     });
   });
 
   describe('delete', () => {
-    it('archives the task and raises exactly one TaskDeleted', () => {
+    it('archives the task', () => {
       const task = stored();
 
       task.delete(new Date(NOW));
 
       expect(iso(task.deletedAt)).toBe(NOW);
-      expect(task.pullEvents()).toStrictEqual([
-        new TaskDeleted(TASK_ID, new Date(NOW)),
-      ]);
     });
 
     it('deleting twice is a no-op', () => {
       const task = stored();
       task.delete(new Date(NOW));
-      task.pullEvents();
 
       task.delete(new Date('2026-10-22T00:00:00.000Z'));
 
       expect(iso(task.deletedAt)).toBe(NOW);
-      expect(task.pullEvents()).toStrictEqual([]);
     });
   });
 
@@ -318,7 +276,6 @@ describe('Task', () => {
     it('inputs are copied', () => {
       const createdAt = new Date(CREATED);
       const task = Task.create({
-        id: TASK_ID,
         ownerId: OWNER_ID,
         title: TaskTitle.create('Ship it'),
         description: TaskDescription.create(null),
@@ -342,12 +299,9 @@ describe('Task', () => {
       expect(iso(task.updatedAt)).toBe(NOW);
       expect(iso(task.completedAt)).toBe(NOW);
       expect(iso(task.deletedAt)).toBe(NOW);
-      for (const event of task.pullEvents()) {
-        expect(event.occurredAt.getUTCFullYear()).toBe(2026);
-      }
     });
 
-    it('reconstituted dates are copied', () => {
+    it('restored dates are copied', () => {
       const props = {
         createdAt: new Date(CREATED),
         updatedAt: new Date(CREATED),

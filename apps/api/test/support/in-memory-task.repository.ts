@@ -31,26 +31,13 @@ export class InMemoryTaskRepository extends TaskRepository {
 
   /** Every stored task, deleted ones included, as fresh aggregates. */
   all(): Task[] {
-    return [...this.rows.values()].map((row) => Task.reconstitute(row));
+    return [...this.rows.values()].map((row) => Task.restore(row));
   }
 
   findById(ownerId: string, id: string): Promise<Task | null> {
     const row = this.rows.get(id);
     const visible = row && row.ownerId === ownerId && row.deletedAt === null;
-    return Promise.resolve(visible ? Task.reconstitute(row) : null);
-  }
-
-  findByTeam(ownerId: string, teamId: string): Promise<Task[]> {
-    const tasks = [...this.rows.values()]
-      .filter(
-        (row) =>
-          row.ownerId === ownerId &&
-          row.deletedAt === null &&
-          row.teamIds.values.includes(teamId),
-      )
-      .sort((a, b) => (a.id < b.id ? -1 : 1))
-      .map((row) => Task.reconstitute(row));
-    return Promise.resolve(tasks);
+    return Promise.resolve(visible ? Task.restore(row) : null);
   }
 
   insert(task: Task): Promise<void> {
@@ -61,14 +48,6 @@ export class InMemoryTaskRepository extends TaskRepository {
       return Promise.reject(new UnknownTeams([]));
     }
     this.rows.set(task.id, snapshot(task, 1));
-    return Promise.resolve();
-  }
-
-  /** Records the requested locks; one process has no concurrent writers to serialize. */
-  readonly lockedTeams: string[][] = [];
-
-  lockTeamLinks(teamIds: readonly string[]): Promise<void> {
-    this.lockedTeams.push([...teamIds]);
     return Promise.resolve();
   }
 

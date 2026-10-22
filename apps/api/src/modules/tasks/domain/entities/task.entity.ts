@@ -1,6 +1,4 @@
-import { AggregateRoot } from '../../../../shared/domain/aggregate-root';
 import { DueDate } from '../value-objects/due-date.vo';
-import { TaskCreated, TaskDeleted, TaskStatusChanged } from '../task.events';
 import { TaskDescription } from '../value-objects/task-description.vo';
 import { TaskStatus } from '../value-objects/task-status.vo';
 import { TaskTeamIds } from '../value-objects/task-team-ids.vo';
@@ -33,14 +31,12 @@ export interface TaskEdit {
  * write and keeps it as data (last write wins, ADR-0020). A no-op returns
  * `false` and changes nothing (BR-03.12).
  */
-export class Task extends AggregateRoot {
-  private constructor(private props: TaskProps) {
-    super();
-  }
+export class Task {
+  private constructor(private props: TaskProps) {}
 
+  /** A new task at version 1, with a fresh id (the global Web Crypto API, no import). */
   static create(
     p: TaskEdit & {
-      id: string;
       ownerId: string;
       status?: TaskStatus;
       teamIds: TaskTeamIds;
@@ -48,8 +44,8 @@ export class Task extends AggregateRoot {
     },
   ): Task {
     const status = p.status ?? TaskStatus.PENDING;
-    const task = new Task({
-      id: p.id,
+    return new Task({
+      id: crypto.randomUUID(),
       ownerId: p.ownerId,
       title: p.title,
       description: p.description,
@@ -62,12 +58,10 @@ export class Task extends AggregateRoot {
       updatedAt: new Date(p.now),
       deletedAt: null,
     });
-    task.raise(new TaskCreated(p.id, p.ownerId, status, new Date(p.now)));
-    return task;
   }
 
-  /** Rebuilds a persisted task; raises no events. */
-  static reconstitute(props: TaskProps): Task {
+  /** Rebuilds a persisted task. */
+  static restore(props: TaskProps): Task {
     return new Task({
       ...props,
       completedAt: copyDate(props.completedAt),
@@ -171,22 +165,15 @@ export class Task extends AggregateRoot {
       completedAt: to === TaskStatus.DONE ? new Date(now) : null,
     };
     this.touch(now);
-    this.raise(new TaskStatusChanged(this.props.id, from, to, new Date(now)));
     return true;
   }
 
-  /** Reaction to `TeamDeleted`: a change only if the team was assigned. */
-  unassignTeam(teamId: string, now: Date): boolean {
-    return this.assignTo(this.props.teamIds.without(teamId), now);
-  }
-
-  /** Archives the task and raises `TaskDeleted`; deleting again is a no-op. */
+  /** Archives the task; deleting again is a no-op. */
   delete(now: Date): void {
     if (this.props.deletedAt !== null) {
       return;
     }
     this.props = { ...this.props, deletedAt: new Date(now) };
-    this.raise(new TaskDeleted(this.props.id, new Date(now)));
   }
 
   /** Records a change time; the version is incremented by persistence. */

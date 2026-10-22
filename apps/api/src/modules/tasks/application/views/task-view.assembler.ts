@@ -1,11 +1,11 @@
 import { isOverdue } from '../../domain/policies/overdue.policy';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
 import type { TaskRecord } from '../ports/task.read-model';
-import type { TeamSummary } from '../ports/team-directory';
+import type { TeamSummary } from '../../../teams/team-lookup.service';
 import type { TaskView } from './task.view';
 
 /**
- * Builds the TaskView from a read-model record, the TeamDirectory's live summaries and today's
+ * Builds the TaskView from a read-model record, TeamLookup's live summaries and today's
  * UTC day. Pure, so list handlers can fetch summaries once per page and assemble every row.
  * Only summaries of the task's own teams are embedded: a team the directory did not return
  * (deleted) never appears (AC-03.2.5).

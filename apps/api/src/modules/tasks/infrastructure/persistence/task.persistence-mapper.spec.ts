@@ -44,7 +44,6 @@ describe('TaskMapper', () => {
     expect(task.createdAt).toEqual(CREATED);
     expect(task.updatedAt).toEqual(UPDATED);
     expect(task.deletedAt).toBeNull();
-    expect(task.pullEvents()).toEqual([]);
   });
 
   it('round-trips a row through the aggregate (links aside)', () => {
@@ -72,7 +71,6 @@ describe('TaskMapper', () => {
 
   it('inserts at version 1 and never writes id, owner, version or createdAt on update', () => {
     const task = Task.create({
-      id: ID,
       ownerId: OWNER,
       title: TaskTitle.create('Plan the sprint'),
       description: TaskDescription.create('Goals'),

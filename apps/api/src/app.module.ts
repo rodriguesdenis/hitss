@@ -7,7 +7,6 @@ import { IdentityModule } from './modules/identity/identity.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { TeamsModule } from './modules/teams/teams.module';
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
-import { TransactionsModule } from './shared/infrastructure/transactions/transactions.module';
 import { ObservabilityModule } from './shared/observability/observability.module';
 import { HttpConventionsModule } from './shared/presentation/http-conventions.module';
 
@@ -17,7 +16,6 @@ import { HttpConventionsModule } from './shared/presentation/http-conventions.mo
     CqrsModule.forRoot(),
     AppConfigModule.forRoot(),
     PrismaModule,
-    TransactionsModule,
     HttpConventionsModule,
     IdentityModule,
     HealthModule,

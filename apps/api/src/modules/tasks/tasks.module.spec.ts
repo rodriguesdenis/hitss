@@ -1,16 +1,12 @@
 import { Global, Module } from '@nestjs/common';
-import { CqrsModule } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
-import { DomainEventPublisher } from '../../shared/application/ports/domain-event-publisher';
-import { UnitOfWork } from '../../shared/application/ports/unit-of-work';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
-import { CreateTaskHandler } from './application/commands/create-task/create-task.handler';
-import { TaskReadModel } from './application/ports/task.read-model';
-import { TaskRepository } from './domain/repositories/task.repository';
+import { TeamLookup } from '../teams/team-lookup.service';
 import { TeamReadModel } from '../teams/application/ports/team.read-model';
 import { TeamRepository } from '../teams/domain/repositories/team.repository';
-import { TeamLookupDirectory } from './infrastructure/adapters/team-directory.adapter';
-import { TeamDirectory } from './application/ports/team-directory';
+import { TaskReadModel } from './application/ports/task.read-model';
+import { CreateTaskUseCase } from './application/use-cases/create-task.use-case';
+import { TaskRepository } from './domain/repositories/task.repository';
 import { TasksModule } from './tasks.module';
 
 /** What AppModule's global modules give TasksModule; the database is not needed here. */
@@ -18,17 +14,15 @@ import { TasksModule } from './tasks.module';
 @Module({
   providers: [
     { provide: DomainErrorMappings, useValue: { register: jest.fn() } },
-    { provide: UnitOfWork, useValue: {} },
-    { provide: DomainEventPublisher, useValue: {} },
   ],
-  exports: [DomainErrorMappings, UnitOfWork, DomainEventPublisher],
+  exports: [DomainErrorMappings],
 })
 class GlobalsStub {}
 
 describe('TasksModule', () => {
-  it('compiles with its handlers wired, TeamsModule imported', async () => {
+  it('compiles with its use cases wired and TeamLookup injected from TeamsModule', async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [CqrsModule.forRoot(), GlobalsStub, TasksModule],
+      imports: [GlobalsStub, TasksModule],
     })
       .overrideProvider(TaskReadModel)
       .useValue({})
@@ -41,8 +35,10 @@ describe('TasksModule', () => {
       .compile();
     await moduleRef.init();
 
-    expect(moduleRef.get(CreateTaskHandler)).toBeInstanceOf(CreateTaskHandler);
+    expect(moduleRef.get(CreateTaskUseCase)).toBeInstanceOf(CreateTaskUseCase);
     // Teams come through TeamsModule's exported TeamLookup (ADR-0020).
-    expect(moduleRef.get(TeamDirectory)).toBeInstanceOf(TeamLookupDirectory);
+    expect(moduleRef.get(TeamLookup, { strict: false })).toBeInstanceOf(
+      TeamLookup,
+    );
   });
 });
