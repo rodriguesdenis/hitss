@@ -131,6 +131,7 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 
 ## T-001-14 — Auth endpoint hardening
 
+- **Status:** done
 - **Goal:** `/api/auth/*` rejects oversized bodies before hashing, never leaks database errors, and logs through pino.
 - **Changes:** `modules/identity/middleware/auth-body-limit.middleware.ts` (16 kB cap on `/api/auth/*` by `Content-Length` and streamed byte count → `413`, registered before the Better Auth handler), Better Auth `onAPIError` (generic error body, details logged with `traceId`), Better Auth `logger` bridged to pino at `warn`.
 - **Covers:** `@AC-01.7.10 @AC-01.4.5`, plan STRIDE rows "Information disclosure (secrets in logs or errors)" and "Denial of service".
