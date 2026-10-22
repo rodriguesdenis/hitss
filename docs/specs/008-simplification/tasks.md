@@ -24,6 +24,7 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 - **Goal:** `/api/v1/*` authenticates with Bearer tokens only (AC-08.2).
 - **Changes:** auth guard rejects a cookie-only request on `/api/v1` (`401`); remove `CsrfGuard`, Origin/`Sec-Fetch-Site` checks, `JsonBodyGuard` and the `415` code; remove the cookie security scheme from OpenAPI; delete their specs and e2e cases; mark the affected 001 ACs "Superseded by 008"; update api-contracts (auth row, error table).
+- **Status:** done
 - **Done when:** e2e: cookie-only → `401`, Bearer → as before; no CSRF/`415` code left; contract suites green.
 
 ## T-008-03 — Slim observability
