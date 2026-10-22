@@ -1,4 +1,3 @@
-import { Inject } from '@nestjs/common';
 import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import {
   TaskCreated,
@@ -6,13 +5,13 @@ import {
   TaskStatusChanged,
 } from '../../domain/task.events';
 import { TaskStatus } from '../../domain/value-objects/task-status';
-import { TASK_METRICS, type TaskMetrics } from '../ports/task-metrics';
+import { TaskMetrics } from '../ports/task-metrics';
 
 // Events are published after the repository commit, so these count stored changes only (BR-06.6).
 
 @EventsHandler(TaskCreated)
 export class RecordTaskCreatedMetrics implements IEventHandler<TaskCreated> {
-  constructor(@Inject(TASK_METRICS) private readonly metrics: TaskMetrics) {}
+  constructor(private readonly metrics: TaskMetrics) {}
 
   handle(event: TaskCreated): void {
     this.metrics.taskCreated();
@@ -23,7 +22,7 @@ export class RecordTaskCreatedMetrics implements IEventHandler<TaskCreated> {
 
 @EventsHandler(TaskStatusChanged)
 export class RecordTaskCompletedMetrics implements IEventHandler<TaskStatusChanged> {
-  constructor(@Inject(TASK_METRICS) private readonly metrics: TaskMetrics) {}
+  constructor(private readonly metrics: TaskMetrics) {}
 
   handle(event: TaskStatusChanged): void {
     if (event.to === TaskStatus.DONE) this.metrics.taskCompleted();
@@ -32,7 +31,7 @@ export class RecordTaskCompletedMetrics implements IEventHandler<TaskStatusChang
 
 @EventsHandler(TaskDeleted)
 export class RecordTaskDeletedMetrics implements IEventHandler<TaskDeleted> {
-  constructor(@Inject(TASK_METRICS) private readonly metrics: TaskMetrics) {}
+  constructor(private readonly metrics: TaskMetrics) {}
 
   handle(): void {
     this.metrics.taskDeleted();
