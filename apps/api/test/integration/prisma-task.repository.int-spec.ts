@@ -7,6 +7,7 @@ import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-st
 import { TaskTeamIds } from '../../src/modules/tasks/domain/value-objects/task-team-ids';
 import { PrismaTaskRepository } from '../../src/modules/tasks/infrastructure/prisma-task.repository';
 import { createTestApp } from '../support/app';
+import { expectProbePassed, runProbeInTimeZone } from '../support/in-time-zone';
 import { useTestDatabase } from '../support/postgres';
 import {
   aTask,
@@ -136,17 +137,16 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     const [kept, added] = [await newTeam(ownerId), await newTeam(ownerId)];
     const task = aTask(ownerId, { teamIds: [kept] });
     await repository.insert(task);
-    const before = await prisma.taskTeam.findUniqueOrThrow({
-      where: { taskId_teamId: { taskId: task.id, teamId: kept } },
-    });
+    // A fixed past timestamp: a re-created row would get the default (now) instead.
+    const pinned = new Date('2020-01-01T00:00:00.000Z');
+    const link = { taskId_teamId: { taskId: task.id, teamId: kept } };
+    await prisma.taskTeam.update({ where: link, data: { createdAt: pinned } });
 
     task.assignTo(TaskTeamIds.of([kept, added]), LATER);
     await repository.update(task, 1);
 
-    const after = await prisma.taskTeam.findUniqueOrThrow({
-      where: { taskId_teamId: { taskId: task.id, teamId: kept } },
-    });
-    expect(after.createdAt).toEqual(before.createdAt);
+    const after = await prisma.taskTeam.findUniqueOrThrow({ where: link });
+    expect(after.createdAt).toEqual(pinned);
   });
 
   it('stores the due date as that calendar day', async () => {
@@ -159,4 +159,17 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
 
     expect(row?.day).toBe('2026-12-31');
   });
+
+  // A test cannot change its own process's zone, so each zone runs in a child process that
+  // writes and reads through PrismaTaskRepository against this file's database.
+  it.each(['Pacific/Kiritimati', 'America/Los_Angeles'])(
+    'stores and loads year-edge calendar days with the process in %s',
+    (zone) => {
+      expectProbePassed(
+        runProbeInTimeZone('task-due-date.tz-probe.ts', zone, {
+          PROBE_DATABASE_URL: db.url,
+        }),
+      );
+    },
+  );
 });
