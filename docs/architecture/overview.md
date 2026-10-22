@@ -227,7 +227,7 @@ modules/
     └── tasks.module.ts                      # imports TeamsModule for TeamLookup
 ```
 
-Unit tests (`*.spec.ts`) sit next to the file they test; `test/integration` (Testcontainers PostgreSQL) and `test/e2e` (supertest against the full app) live next to `src/`.
+Source folders hold no tests. Each module keeps its own under `src/modules/<module>/tests/{unit,integration,e2e}` (unit specs mirror the source path); unit specs of `shared/**` and `config/**` live in `test/unit/` with the same mirrored path; cross-cutting suites (auth, health, docs, security, throttling, telemetry, architecture rules, schema drift) and the helpers in `test/support/` stay in `apps/api/test/`. Integration tests use Testcontainers PostgreSQL, e2e tests run supertest against the full app; both import helpers through the `@test/*` alias.
 
 ## 7. Dependency rules
 
@@ -247,7 +247,7 @@ Unit tests (`*.spec.ts`) sit next to the file they test; `test/integration` (Tes
 | `shared-not-to-features`             | `shared/**`, `config/**`  | `modules/**`                                                                     |
 | `auth-library-in-identity`           | `src/**` outside identity | `better-auth`, `@better-auth/*`, `@thallesp/nestjs-better-auth`                  |
 | `no-circular`                        | any                       | circular dependencies                                                            |
-| `no-tests-in-production`             | `src/**` (non-spec)       | `*.spec.ts`, `test/**`                                                           |
+| `no-tests-in-production`             | `src/**` (non-test)       | any `tests/` folder, `*.spec.ts`, `test/**` (and `@test/*`)                      |
 
 Only `*.module.ts` composition roots reference both ports and adapters.
 
