@@ -60,4 +60,15 @@ describe('OTLP sink used by the compose smoke', () => {
     assert.equal(response.status, 200);
     assert.ok(!output.includes('TRACE_RECEIVED'), output);
   });
+
+  it('AC-06.2.1 logs a metrics export that names the service as METRICS_RECEIVED', async () => {
+    output = '';
+    const response = await post(
+      '/v1/metrics',
+      Buffer.from('\u000aservice.name teams-tasks-api'),
+    );
+    assert.equal(response.status, 200);
+    assert.match(output, /METRICS_RECEIVED service=teams-tasks-api bytes=\d+/);
+    assert.ok(!output.includes('TRACE_RECEIVED'), output);
+  });
 });
