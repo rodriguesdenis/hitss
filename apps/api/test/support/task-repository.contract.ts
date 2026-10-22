@@ -35,21 +35,32 @@ export function aTask(
     teamIds?: string[];
   } = {},
 ): Task {
-  return Task.create({
-    id: extra.id ?? randomUUID(),
+  const status = extra.status ?? TaskStatus.PENDING;
+  const values = {
     ownerId,
     title: TaskTitle.create(extra.title ?? 'Write release notes'),
     description: TaskDescription.create(
       extra.description === undefined ? 'For 1.2' : extra.description,
     ),
-    status: extra.status,
     dueDate:
       extra.dueDate === null
         ? null
         : DueDate.create(extra.dueDate ?? '2026-10-30'),
     teamIds: TaskTeamIds.of(extra.teamIds ?? []),
-    now: CREATED,
-  });
+  };
+  // A chosen id (to provoke a duplicate key or order by id) needs restore(); create() draws one.
+  return extra.id === undefined
+    ? Task.create({ ...values, status, now: CREATED })
+    : Task.restore({
+        ...values,
+        id: extra.id,
+        status,
+        completedAt: status === TaskStatus.DONE ? CREATED : null,
+        version: 1,
+        createdAt: CREATED,
+        updatedAt: CREATED,
+        deletedAt: null,
+      });
 }
 
 function snapshot(task: Task) {
@@ -106,7 +117,6 @@ export function describeTaskRepositoryContract(
         updatedAt: CREATED,
         deletedAt: null,
       });
-      expect(loaded!.pullEvents()).toEqual([]);
     });
 
     it('keeps a task without teams, description or due date', async () => {
@@ -191,7 +201,6 @@ export function describeTaskRepositoryContract(
         expect(
           (await repo().findById(ownerId, task.id))!.teamIds.values,
         ).toEqual([b, c].sort());
-        await expect(repo().findByTeam(ownerId, a)).resolves.toEqual([]);
       });
 
       it('clears every team link', async () => {
@@ -228,7 +237,7 @@ export function describeTaskRepositoryContract(
         const [ownerId, stranger] = [await owner(), await owner()];
         const task = aTask(ownerId);
         await repo().insert(task);
-        const impostor = Task.reconstitute({
+        const impostor = Task.restore({
           ...propsOf(task),
           ownerId: stranger,
           title: TaskTitle.create('Hijacked'),
@@ -254,12 +263,11 @@ export function describeTaskRepositoryContract(
         task.delete(LATER);
         await expect(repo().update(task)).resolves.toBeUndefined();
         await expect(repo().findById(ownerId, task.id)).resolves.toBeNull();
-        await expect(repo().findByTeam(ownerId, a)).resolves.toEqual([]);
         await expect(repo().update(task)).rejects.toBeInstanceOf(TaskNotFound);
       });
     });
 
-    // The precise ids are the handler's job (it re-runs TeamDirectory.findMissing).
+    // The precise ids are the use case's job (it asks TeamLookup.findMissing again).
     describe('a team that no longer exists (TOCTOU after the directory check)', () => {
       it('insert fails with UnknownTeams and stores nothing', async () => {
         const ownerId = await owner();
@@ -292,29 +300,6 @@ export function describeTaskRepositoryContract(
         expect(stored.version).toBe(1);
         expect(stored.status).toBe('PENDING');
         expect(stored.teamIds.values).toEqual([live]);
-      });
-    });
-
-    describe('findByTeam', () => {
-      it('returns only the owner’s active tasks of that team, ordered by id', async () => {
-        const [ownerId, stranger] = [await owner(), await owner()];
-        const [a, b] = [await team(ownerId), await team(ownerId)];
-        const ids = [randomUUID(), randomUUID(), randomUUID()];
-        await repo().insert(aTask(ownerId, { id: ids[0], teamIds: [a] }));
-        await repo().insert(aTask(ownerId, { id: ids[1], teamIds: [a, b] }));
-        await repo().insert(aTask(ownerId, { id: ids[2], teamIds: [b] }));
-        const gone = aTask(ownerId, { teamIds: [a] });
-        await repo().insert(gone);
-        gone.delete(LATER);
-        await repo().update(gone);
-
-        const found = await repo().findByTeam(ownerId, a);
-
-        expect(found.map((t) => t.id)).toEqual([ids[0]!, ids[1]!].sort());
-        expect(found.find((t) => t.id === ids[1])!.teamIds.values).toEqual(
-          [a, b].sort(),
-        );
-        await expect(repo().findByTeam(stranger, a)).resolves.toEqual([]);
       });
     });
   });

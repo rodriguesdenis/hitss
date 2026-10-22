@@ -1,7 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../../generated/prisma/client';
-import type { PrismaTransactionHost } from '../../../../shared/infrastructure/transactions/cls-unit-of-work';
-import { TransactionHost } from '@nestjs-cls/transactional';
+import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
 import { Team } from '../../domain/entities/team.entity';
 import {
   TeamNameAlreadyExists,
@@ -16,20 +15,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Write-side persistence of the Team aggregate. Every statement filters by owner_id, and
- * reads only see active rows (deleted_at IS NULL). Statements run on `txHost.tx`, so they join
- * the transaction of the current unit of work.
+ * reads only see active rows (deleted_at IS NULL). `delete` also unassigns the team from its
+ * tasks in the same transaction: one database, so the shared task_teams and tasks tables are
+ * written here directly (ADR-0020).
  */
 @Injectable()
 export class PrismaTeamRepository extends TeamRepository {
-  constructor(
-    @Inject(TransactionHost) private readonly txHost: PrismaTransactionHost,
-  ) {
+  constructor(private readonly prisma: PrismaService) {
     super();
-  }
-
-  /** The client of the ambient transaction (UnitOfWork.run), or the base client outside one. */
-  private get prisma() {
-    return this.txHost.tx;
   }
 
   async findById(ownerId: string, id: string): Promise<Team | null> {
@@ -79,6 +72,23 @@ export class PrismaTeamRepository extends TeamRepository {
       throw translateNameCollision(error);
     }
     if (count === 0) throw new TeamNotFound();
+  }
+
+  async delete(team: Team): Promise<void> {
+    const deletedAt = team.deletedAt ?? new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const { count } = await tx.team.updateMany({
+        where: { id: team.id, ownerId: team.ownerId, deletedAt: null },
+        data: { ...TeamMapper.toUpdate(team), version: { increment: 1 } },
+      });
+      if (count === 0) throw new TeamNotFound();
+      // One statement for every affected task (AC-03.13.4), before their links go.
+      await tx.$executeRaw`
+        UPDATE tasks SET version = version + 1, updated_at = ${deletedAt}
+        WHERE owner_id = ${team.ownerId} AND deleted_at IS NULL
+          AND id IN (SELECT task_id FROM task_teams WHERE team_id = ${team.id}::uuid)`;
+      await tx.taskTeam.deleteMany({ where: { teamId: team.id } });
+    });
   }
 }
 

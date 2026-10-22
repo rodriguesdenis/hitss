@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
-import { TransactionHost } from '@nestjs-cls/transactional';
 import { assembleTaskView } from '../../src/modules/tasks/application/views/task-view.assembler';
 import { DueDate } from '../../src/modules/tasks/domain/value-objects/due-date.vo';
 import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status.vo';
@@ -8,7 +7,7 @@ import { PrismaTaskReadModel } from '../../src/modules/tasks/infrastructure/pers
 import { PrismaTaskRepository } from '../../src/modules/tasks/infrastructure/persistence/task.prisma-repository';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '../support/app';
-import { InMemoryTeamDirectory } from '../support/in-memory-team-directory';
+import { InMemoryTeamLookup } from '../support/in-memory-team-lookup';
 import { useTestDatabase } from '../support/postgres';
 import { aTask } from '../support/task-repository.contract';
 
@@ -25,7 +24,7 @@ describe('PrismaTaskReadModel (integration, T-003-06a)', () => {
     app = await createTestApp(db.url);
     prisma = app.get(PrismaService);
     readModel = new PrismaTaskReadModel(prisma);
-    repository = new PrismaTaskRepository(app.get(TransactionHost));
+    repository = new PrismaTaskRepository(app.get(PrismaService));
   });
 
   afterAll(async () => {
@@ -127,7 +126,7 @@ describe('PrismaTaskReadModel (integration, T-003-06a)', () => {
       teamIds: [mobile, backend, archived],
     });
     await repository.insert(task);
-    const directory = new InMemoryTeamDirectory();
+    const directory = new InMemoryTeamLookup();
     directory.add(ownerId, { id: mobile, name: 'mobile', colorHex: '#7C3AED' });
     directory.add(ownerId, {
       id: backend,

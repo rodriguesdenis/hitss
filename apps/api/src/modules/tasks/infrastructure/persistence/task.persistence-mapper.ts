@@ -13,7 +13,7 @@ export type TaskRowWithTeams = TaskRow & { teams: { teamId: string }[] };
 export const TaskMapper = {
   /** Re-validates through the VOs' create(): tightening a VO rule needs a data migration (ADR-0004). */
   toDomain(row: TaskRowWithTeams): Task {
-    return Task.reconstitute({
+    return Task.restore({
       id: row.id,
       ownerId: row.ownerId,
       title: TaskTitle.create(row.title),

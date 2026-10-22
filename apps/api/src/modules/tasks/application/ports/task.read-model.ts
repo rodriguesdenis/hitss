@@ -14,7 +14,7 @@ export interface TaskRecord {
   /** Calendar day (UTC), `YYYY-MM-DD`. */
   readonly dueDate: string | null;
   readonly completedAt: Date | null;
-  /** Sorted ids of the task's team links (team liveness is the TeamDirectory's business). */
+  /** Sorted ids of the task's team links (team liveness is TeamLookup's business). */
   readonly teamIds: readonly string[];
   readonly version: number;
   readonly createdAt: Date;
@@ -33,7 +33,7 @@ export type TaskSortField = (typeof TASK_SORT_FIELDS)[number];
 
 export interface ListTasksCriteria {
   readonly page: PageRequest;
-  /** Only tasks linked to this team (the handler first checks the team is live and owned). */
+  /** Only tasks linked to this team (the use case first checks the team is live and owned). */
   readonly teamId?: string;
   /** Any of these statuses (distinct, non-empty). */
   readonly statuses?: readonly TaskStatus[];

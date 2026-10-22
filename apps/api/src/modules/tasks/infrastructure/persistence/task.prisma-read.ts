@@ -61,7 +61,7 @@ const ORDER: Record<TaskSortField, Record<SortDirection, Prisma.Sql>> = {
 /**
  * Query side of Task Management: flat records straight from the tables, never aggregates.
  * Every query is owner-scoped and sees active tasks only (deleted_at IS NULL). Team links are
- * returned as ids; names and colors come from the TeamDirectory (constitution II.2).
+ * returned as ids; names and colors come from TeamLookup (ADR-0020).
  */
 @Injectable()
 export class PrismaTaskReadModel extends TaskReadModel {

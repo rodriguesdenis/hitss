@@ -34,7 +34,6 @@ describe('TeamMapper', () => {
     expect(team.createdAt).toEqual(CREATED);
     expect(team.updatedAt).toEqual(UPDATED);
     expect(team.deletedAt).toBeNull();
-    expect(team.pullEvents()).toEqual([]);
   });
 
   it('round-trips a row through the aggregate', () => {

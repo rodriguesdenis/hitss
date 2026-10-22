@@ -53,6 +53,11 @@ export class InMemoryTeamRepository extends TeamRepository {
     return Promise.resolve();
   }
 
+  /** The soft delete only: task links live in another module's store (proven in integration). */
+  delete(team: Team): Promise<void> {
+    return this.update(team);
+  }
+
   update(team: Team): Promise<void> {
     const row = this.rows.get(team.id);
     if (!row || row.ownerId !== team.ownerId || row.deletedAt !== null) {

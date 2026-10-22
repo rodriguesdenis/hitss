@@ -49,16 +49,6 @@ describe('TaskTeamIds', () => {
     expect(teamIds.values).toEqual(['a', 'b']);
   });
 
-  describe('without (unassigning a deleted team, AC-03.13.2)', () => {
-    const teamIds = TaskTeamIds.of(['mobile', 'backend']);
-
-    it('returns a new set without the id and keeps the original', () => {
-      expect(teamIds.without('mobile').values).toEqual(['backend']);
-      expect(teamIds.without('design').values).toEqual(['backend', 'mobile']);
-      expect(teamIds.values).toEqual(['backend', 'mobile']);
-    });
-  });
-
   describe('equals ignores order (AC-03.9.5)', () => {
     it.each([
       [['a', 'b'], ['b', 'a'], true],

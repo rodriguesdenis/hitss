@@ -36,7 +36,7 @@ interface ErrorBody {
 }
 
 /**
- * POST /api/v1/tasks on the full AppModule (teams checked through the QueryBus), only the clock
+ * POST /api/v1/tasks on the full AppModule (teams checked through TeamLookup), only the clock
  * fixed. Every rejection also asserts that no task row was written for the user.
  */
 describe('POST /api/v1/tasks (e2e)', () => {

@@ -1,5 +1,5 @@
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
-import type { TeamSummary } from '../ports/team-directory';
+import type { TeamSummary } from '../../../teams/team-lookup.service';
 
 /** The task as every API response shows it (api-contracts "Task resource"). */
 export interface TaskView {

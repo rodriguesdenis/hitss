@@ -456,7 +456,7 @@ describe('PUT /api/v1/tasks/:id (e2e)', () => {
       '#/components/schemas/TaskResponseDto',
     );
     expect(JSON.stringify(operation?.requestBody)).toContain(
-      '#/components/schemas/ReplaceTaskDto',
+      '#/components/schemas/UpdateTaskDto',
     );
   });
 });

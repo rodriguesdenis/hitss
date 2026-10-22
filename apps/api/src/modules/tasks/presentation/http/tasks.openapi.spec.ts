@@ -1,8 +1,13 @@
 import { VersioningType } from '@nestjs/common';
-import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
 import { buildOpenApiDocument } from '../../../../openapi/openapi-document';
 import { openApiProblems } from '../../../../openapi/openapi-structure';
+import { ChangeTaskStatusUseCase } from '../../application/use-cases/change-task-status.use-case';
+import { CreateTaskUseCase } from '../../application/use-cases/create-task.use-case';
+import { DeleteTaskUseCase } from '../../application/use-cases/delete-task.use-case';
+import { GetTaskUseCase } from '../../application/use-cases/get-task.use-case';
+import { ListTasksUseCase } from '../../application/use-cases/list-tasks.use-case';
+import { UpdateTaskUseCase } from '../../application/use-cases/update-task.use-case';
 import { TasksController } from './tasks.controller';
 
 /** The schemas the generated client (orval, T-007-10) is built from. */
@@ -10,10 +15,15 @@ describe('Tasks in the OpenAPI document', () => {
   async function document() {
     const moduleRef = await Test.createTestingModule({
       controllers: [TasksController],
+      // The document only needs the routes: the use cases are never called.
       providers: [
-        { provide: CommandBus, useValue: {} },
-        { provide: QueryBus, useValue: {} },
-      ],
+        CreateTaskUseCase,
+        UpdateTaskUseCase,
+        ChangeTaskStatusUseCase,
+        DeleteTaskUseCase,
+        GetTaskUseCase,
+        ListTasksUseCase,
+      ].map((useCase) => ({ provide: useCase, useValue: {} })),
     }).compile();
     const app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
@@ -130,7 +140,7 @@ describe('Tasks in the OpenAPI document', () => {
     expect(openApiProblems(doc)).toEqual([]);
     for (const dto of [
       'CreateTaskDto',
-      'ReplaceTaskDto',
+      'UpdateTaskDto',
       'ChangeTaskStatusDto',
     ]) {
       expect(doc.components?.schemas?.[dto]).toHaveProperty('properties');

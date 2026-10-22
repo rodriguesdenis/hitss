@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
-import { ClsService } from 'nestjs-cls';
 import { Client } from 'pg';
-import { CreateTaskCommand } from '../../src/modules/tasks/application/commands/create-task/create-task.command';
-import { ReplaceTaskCommand } from '../../src/modules/tasks/application/commands/replace-task/replace-task.command';
-import { TeamDirectory } from '../../src/modules/tasks/application/ports/team-directory';
+import { CreateTaskUseCase } from '../../src/modules/tasks/application/use-cases/create-task.use-case';
+import { UpdateTaskUseCase } from '../../src/modules/tasks/application/use-cases/update-task.use-case';
+import { TeamLookup } from '../../src/modules/teams/team-lookup.service';
 import { UnknownTeams } from '../../src/modules/tasks/domain/errors/task.errors';
 import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status.vo';
 import { createTestApp } from '../support/app';
@@ -13,9 +11,9 @@ import { signUpAndSignIn } from '../support/auth';
 import { useTestDatabase } from '../support/postgres';
 
 /**
- * A team-link foreign-key violation (P2003) inside the unit of work: the directory said every
- * team was live, but one team row is not there. After the rollback the handler asks the
- * TeamDirectory again and reports exactly that id; nothing is written.
+ * A team-link foreign-key violation (P2003) on the write: the directory said every
+ * team was live, but one team row is not there. After the failed write the use case asks the
+ * TeamLookup again and reports exactly that id; nothing is written.
  */
 describe('UNKNOWN_TEAMS after a team-link FK violation (integration)', () => {
   const db = useTestDatabase();
@@ -41,10 +39,8 @@ describe('UNKNOWN_TEAMS after a team-link FK violation (integration)', () => {
     jest.restoreAllMocks();
   });
 
-  const execute = <T>(command: object) =>
-    app
-      .get(ClsService)
-      .run(() => app.get(CommandBus).execute<object, T>(command));
+  const createTask = () => app.get(CreateTaskUseCase, { strict: false });
+  const updateTask = () => app.get(UpdateTaskUseCase, { strict: false });
 
   const team = async (): Promise<string> => {
     const id = randomUUID();
@@ -57,7 +53,9 @@ describe('UNKNOWN_TEAMS after a team-link FK violation (integration)', () => {
   };
   /** The directory's check passes once, as if the team vanished right after it. */
   const checkPassesOnce = () =>
-    jest.spyOn(app.get(TeamDirectory), 'findMissing').mockResolvedValueOnce([]);
+    jest
+      .spyOn(app.get(TeamLookup, { strict: false }), 'findMissing')
+      .mockResolvedValueOnce([]);
   const taskCount = async () =>
     Number(
       (
@@ -74,34 +72,36 @@ describe('UNKNOWN_TEAMS after a team-link FK violation (integration)', () => {
     const before = await taskCount();
     const findMissing = checkPassesOnce();
 
-    const error = await execute(
-      new CreateTaskCommand(owner, 'Release', null, undefined, null, [
-        live,
-        gone,
-      ]),
-    ).catch((e: unknown) => e);
+    const error: unknown = await createTask()
+      .execute({ ownerId: owner, title: 'Release', teamIds: [live, gone] })
+      .catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(UnknownTeams);
     expect((error as UnknownTeams).teamIds).toEqual([gone]);
-    // Asked twice: the check inside the unit of work, then again after the rollback.
+    // Asked twice: the check before the insert, then again after the failed insert.
     expect(findMissing).toHaveBeenCalledTimes(2);
     expect(await taskCount()).toBe(before);
   });
 
   it('AC-03.9.3 replace: UNKNOWN_TEAMS lists the id whose row is gone, and the task is unchanged', async () => {
     const live = await team();
-    const { id } = await execute<{ id: string }>(
-      new CreateTaskCommand(owner, 'Draft', null, undefined, null, [live]),
-    );
+    const id = await createTask().execute({
+      ownerId: owner,
+      title: 'Draft',
+      teamIds: [live],
+    });
     const gone = randomUUID();
     checkPassesOnce();
 
-    const error = await execute(
-      new ReplaceTaskCommand(owner, id, 'Draft', TaskStatus.PENDING, [
-        live,
-        gone,
-      ]),
-    ).catch((e: unknown) => e);
+    const error: unknown = await updateTask()
+      .execute({
+        ownerId: owner,
+        id,
+        title: 'Draft',
+        status: TaskStatus.PENDING,
+        teamIds: [live, gone],
+      })
+      .catch((e: unknown) => e);
 
     expect(error).toBeInstanceOf(UnknownTeams);
     expect((error as UnknownTeams).teamIds).toEqual([gone]);

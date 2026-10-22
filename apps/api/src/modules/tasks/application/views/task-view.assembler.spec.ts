@@ -1,7 +1,7 @@
 import { DueDate } from '../../domain/value-objects/due-date.vo';
 import { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import type { TaskRecord } from '../ports/task.read-model';
-import type { TeamSummary } from '../ports/team-directory';
+import type { TeamSummary } from '../../../teams/team-lookup.service';
 import { assembleTaskView } from './task-view.assembler';
 
 const TODAY = DueDate.create('2026-10-21');

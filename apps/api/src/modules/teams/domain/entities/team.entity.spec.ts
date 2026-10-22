@@ -1,5 +1,4 @@
 import { ColorHex } from '../value-objects/color-hex.vo';
-import { TeamDeleted } from './team.events';
 import { Team } from './team.entity';
 import { TeamDescription } from '../value-objects/team-description.vo';
 import { TeamName } from '../value-objects/team-name.vo';
@@ -55,10 +54,6 @@ describe('Team', () => {
       expect(team.updatedAt).toEqual(CREATED_AT);
       expect(team.deletedAt).toBeNull();
     });
-
-    it('raises no event', () => {
-      expect(backend().pullEvents()).toStrictEqual([]);
-    });
   });
 
   describe('restore', () => {
@@ -83,7 +78,6 @@ describe('Team', () => {
       expect(team.createdAt).toEqual(CREATED_AT);
       expect(team.updatedAt).toEqual(LATER);
       expect(team.deletedAt).toEqual(deletedAt);
-      expect(team.pullEvents()).toStrictEqual([]);
     });
   });
 
@@ -96,7 +90,6 @@ describe('Team', () => {
       expect(changed).toBe(false);
       expect(team.version).toBe(1);
       expect(team.updatedAt).toEqual(CREATED_AT);
-      expect(team.pullEvents()).toStrictEqual([]);
     });
 
     it.each([
@@ -147,29 +140,21 @@ describe('Team', () => {
   });
 
   describe('delete', () => {
-    it('AC-02.7.1 sets deletedAt and raises exactly one TeamDeleted', () => {
+    it('AC-02.7.1 sets deletedAt', () => {
       const team = backend();
 
       team.delete(LATER);
 
       expect(team.deletedAt).toEqual(LATER);
-      const events = team.pullEvents();
-      expect(events).toHaveLength(1);
-      expect(events[0]).toBeInstanceOf(TeamDeleted);
-      expect(events[0]).toStrictEqual(
-        new TeamDeleted(team.id, OWNER_ID, LATER),
-      );
     });
 
-    it('deleting twice is a no-op: no second event, first deletion time kept', () => {
+    it('deleting twice is a no-op: the first deletion time is kept', () => {
       const team = backend();
       team.delete(LATER);
-      team.pullEvents();
 
       team.delete(new Date('2026-10-22T00:00:00.000Z'));
 
       expect(team.deletedAt).toEqual(LATER);
-      expect(team.pullEvents()).toStrictEqual([]);
     });
   });
 
@@ -239,7 +224,7 @@ describe('Team', () => {
       expect(team.deletedAt?.toISOString()).toBe(LATER_ISO);
     });
 
-    it('the TeamDeleted event does not share the deletion Date', () => {
+    it("the deletion time does not share the caller's Date", () => {
       const team = Team.create({
         ownerId: OWNER_ID,
         name: TeamName.create('Backend'),
@@ -251,7 +236,7 @@ describe('Team', () => {
       team.delete(deleted);
       deleted.setFullYear(2000);
 
-      expect(team.pullEvents()[0]?.occurredAt.toISOString()).toBe(LATER_ISO);
+      expect(team.deletedAt?.toISOString()).toBe(LATER_ISO);
     });
   });
 });

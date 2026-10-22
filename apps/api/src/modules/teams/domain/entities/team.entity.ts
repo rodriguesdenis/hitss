@@ -1,6 +1,4 @@
-import { AggregateRoot } from '../../../../shared/domain/aggregate-root';
 import { ColorHex } from '../value-objects/color-hex.vo';
-import { TeamDeleted } from './team.events';
 import { TeamDescription } from '../value-objects/team-description.vo';
 import { TeamName } from '../value-objects/team-name.vo';
 
@@ -28,10 +26,8 @@ export interface TeamValues {
  * reports whether anything changed.
  * Name uniqueness per owner is enforced by the application and the database.
  */
-export class Team extends AggregateRoot {
-  private constructor(private props: TeamProps) {
-    super();
-  }
+export class Team {
+  private constructor(private props: TeamProps) {}
 
   /** A new team at version 1, with a fresh id (the global Web Crypto API, no import). */
   static create(p: TeamValues & { ownerId: string; now: Date }): Team {
@@ -48,7 +44,7 @@ export class Team extends AggregateRoot {
     });
   }
 
-  /** Rebuilds a persisted team; raises no events. */
+  /** Rebuilds a persisted team. */
   static restore(props: TeamProps): Team {
     return new Team({
       ...props,
@@ -117,15 +113,12 @@ export class Team extends AggregateRoot {
     return true;
   }
 
-  /** Archives the team and raises `TeamDeleted`; deleting again is a no-op. */
+  /** Archives the team; deleting again is a no-op. */
   delete(now: Date): void {
     if (this.props.deletedAt !== null) {
       return;
     }
     this.props = { ...this.props, deletedAt: new Date(now) };
-    this.raise(
-      new TeamDeleted(this.props.id, this.props.ownerId, new Date(now)),
-    );
   }
 }
 

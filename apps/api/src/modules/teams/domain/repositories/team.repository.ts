@@ -39,4 +39,13 @@ export abstract class TeamRepository {
    * @throws TeamNameAlreadyExists when a rename collides with another active team.
    */
   abstract update(team: Team): Promise<void>;
+
+  /**
+   * Soft-deletes the team (version + 1) and, in the same transaction, unassigns it from every
+   * task: the owner's live tasks linked to it get version + 1 and the deletion time as updated
+   * time, then the team's task_teams rows are removed (AC-02.7.2, AC-02.7.4, AC-03.13.x). Either
+   * everything is applied or nothing is.
+   * @throws TeamNotFound when the row is unknown, foreign or already deleted.
+   */
+  abstract delete(team: Team): Promise<void>;
 }

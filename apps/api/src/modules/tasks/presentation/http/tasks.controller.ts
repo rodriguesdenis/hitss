@@ -11,10 +11,8 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
-import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiExtraModels, ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
 import type { ServerResponse } from 'node:http';
-import type { Page } from '../../../../shared/application/page';
 import type { Owner } from '../../../../shared/domain/owner';
 import { CurrentOwner } from '../../../../shared/presentation/decorators/current-owner.decorator';
 import {
@@ -27,19 +25,18 @@ import type { PageMeta } from '../../../../shared/presentation/openapi/api-envel
 import { toPageMeta } from '../../../../shared/presentation/page-meta';
 import { parseSort } from '../../../../shared/presentation/sort';
 import { ParseUuidPipe } from '../../../../shared/presentation/pipes/parse-uuid.pipe';
-import { ChangeTaskStatusCommand } from '../../application/commands/change-task-status/change-task-status.command';
-import { CreateTaskCommand } from '../../application/commands/create-task/create-task.command';
-import { ReplaceTaskCommand } from '../../application/commands/replace-task/replace-task.command';
-import { DeleteTaskCommand } from '../../application/commands/delete-task/delete-task.command';
 import type { TaskSortField } from '../../application/ports/task.read-model';
-import { ListTasksQuery } from '../../application/queries/list-tasks/list-tasks.query';
-import { GetTaskQuery } from '../../application/queries/get-task/get-task.query';
-import type { TaskView } from '../../application/views/task.view';
+import { ChangeTaskStatusUseCase } from '../../application/use-cases/change-task-status.use-case';
+import { CreateTaskUseCase } from '../../application/use-cases/create-task.use-case';
+import { DeleteTaskUseCase } from '../../application/use-cases/delete-task.use-case';
+import { GetTaskUseCase } from '../../application/use-cases/get-task.use-case';
+import { ListTasksUseCase } from '../../application/use-cases/list-tasks.use-case';
+import { UpdateTaskUseCase } from '../../application/use-cases/update-task.use-case';
 import { ChangeTaskStatusDto } from './dto/change-task-status.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
-import { ReplaceTaskDto } from './dto/replace-task.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
+import { UpdateTaskDto } from './dto/update-task.dto';
 import { toTaskResponse } from './presenters/task.presenter';
 
 /** `/api/v1/tasks`: private (global auth guard), always scoped to the signed-in owner. */
@@ -50,13 +47,17 @@ import { toTaskResponse } from './presenters/task.presenter';
 @ApiExtraModels(TaskResponseDto)
 export class TasksController {
   constructor(
-    private readonly commands: CommandBus,
-    private readonly queries: QueryBus,
+    private readonly createTask: CreateTaskUseCase,
+    private readonly updateTask: UpdateTaskUseCase,
+    private readonly changeTaskStatus: ChangeTaskStatusUseCase,
+    private readonly deleteTask: DeleteTaskUseCase,
+    private readonly getTask: GetTaskUseCase,
+    private readonly listTasks: ListTasksUseCase,
   ) {}
 
   /**
-   * 201 with the created task read back through GetTask (same shape as every single-task
-   * response), `Location` and the version tag (AC-03.1.1).
+   * 201 with the created task read back through GetTaskUseCase (same shape as every single-task
+   * response) and `Location` (AC-03.1.1).
    */
   @Post()
   @HttpCode(201)
@@ -71,22 +72,15 @@ export class TasksController {
     @Body() body: CreateTaskDto,
     @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<TaskResponseDto> {
-    const { id } = await this.commands.execute<
-      CreateTaskCommand,
-      { id: string }
-    >(
-      new CreateTaskCommand(
-        ownerId,
-        body.title,
-        body.description,
-        body.status,
-        body.dueDate,
-        body.teamIds,
-      ),
-    );
-    const task = await this.queries.execute<GetTaskQuery, TaskView>(
-      new GetTaskQuery(ownerId, id),
-    );
+    const id = await this.createTask.execute({
+      ownerId,
+      title: body.title,
+      description: body.description,
+      status: body.status,
+      dueDate: body.dueDate,
+      teamIds: body.teamIds,
+    });
+    const task = await this.getTask.execute({ ownerId, id });
     response.setHeader('Location', `/api/v1/tasks/${task.id}`);
     return toTaskResponse(task);
   }
@@ -108,25 +102,23 @@ export class TasksController {
     @Query() query: ListTasksQueryDto,
   ): Promise<{ data: TaskResponseDto[]; meta: PageMeta }> {
     const page = { limit: query.limit, offset: query.offset };
-    const { items, total } = await this.queries.execute<
-      ListTasksQuery,
-      Page<TaskView>
-    >(
-      new ListTasksQuery(ownerId, {
+    const { items, total } = await this.listTasks.execute({
+      ownerId,
+      criteria: {
         page,
         teamId: query.teamId,
         statuses: query.status && [...new Set(query.status)],
         search: query.search,
         sort: parseSort(query.sort as TaskSortField | `-${TaskSortField}`),
-      }),
-    );
+      },
+    });
     return {
       data: items.map(toTaskResponse),
       meta: toPageMeta(page, items.length, total),
     };
   }
 
-  /** 200 with the task view and its version tag (AC-03.8.1); unknown → 404 TASK_NOT_FOUND. */
+  /** 200 with the task view (AC-03.8.1); unknown → 404 TASK_NOT_FOUND. */
   @Get(':id')
   @ApiOkEnvelope(TaskResponseDto)
   @ApiErrorResponses({
@@ -137,15 +129,12 @@ export class TasksController {
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
   ): Promise<TaskResponseDto> {
-    const task = await this.queries.execute<GetTaskQuery, TaskView>(
-      new GetTaskQuery(ownerId, id),
-    );
-    return toTaskResponse(task);
+    return toTaskResponse(await this.getTask.execute({ ownerId, id }));
   }
 
   /**
-   * 200 with the task read back and its version tag (AC-03.10.1). The same status is a no-op:
-   * the unchanged task and the same tag (AC-03.10.3).
+   * 200 with the task read back (AC-03.10.1). The same status is a no-op: the unchanged task,
+   * same version (AC-03.10.3).
    */
   @Patch(':id/status')
   @ApiOkEnvelope(TaskResponseDto)
@@ -159,18 +148,13 @@ export class TasksController {
     @Param('id', ParseUuidPipe) id: string,
     @Body() body: ChangeTaskStatusDto,
   ): Promise<TaskResponseDto> {
-    await this.commands.execute<ChangeTaskStatusCommand, { id: string }>(
-      new ChangeTaskStatusCommand(ownerId, id, body.status),
-    );
-    const task = await this.queries.execute<GetTaskQuery, TaskView>(
-      new GetTaskQuery(ownerId, id),
-    );
-    return toTaskResponse(task);
+    await this.changeTaskStatus.execute({ ownerId, id, status: body.status });
+    return toTaskResponse(await this.getTask.execute({ ownerId, id }));
   }
 
   /**
-   * 200 with the replaced task read back and its version tag (AC-03.9.1). An identical
-   * replacement is a no-op: the unchanged task and the same tag (AC-03.9.5).
+   * 200 with the replaced task read back (AC-03.9.1). An identical replacement is a no-op: the
+   * unchanged task, same version (AC-03.9.5).
    */
   @Put(':id')
   @ApiOkEnvelope(TaskResponseDto)
@@ -183,23 +167,18 @@ export class TasksController {
   async replace(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
-    @Body() body: ReplaceTaskDto,
+    @Body() body: UpdateTaskDto,
   ): Promise<TaskResponseDto> {
-    await this.commands.execute<ReplaceTaskCommand, { id: string }>(
-      new ReplaceTaskCommand(
-        ownerId,
-        id,
-        body.title,
-        body.status,
-        body.teamIds,
-        body.description,
-        body.dueDate,
-      ),
-    );
-    const task = await this.queries.execute<GetTaskQuery, TaskView>(
-      new GetTaskQuery(ownerId, id),
-    );
-    return toTaskResponse(task);
+    await this.updateTask.execute({
+      ownerId,
+      id,
+      title: body.title,
+      status: body.status,
+      teamIds: body.teamIds,
+      description: body.description,
+      dueDate: body.dueDate,
+    });
+    return toTaskResponse(await this.getTask.execute({ ownerId, id }));
   }
 
   /** 204 with no content; afterwards every read and write of the task → 404 (AC-03.11.1). */
@@ -214,8 +193,6 @@ export class TasksController {
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
   ): Promise<void> {
-    await this.commands.execute<DeleteTaskCommand, void>(
-      new DeleteTaskCommand(ownerId, id),
-    );
+    await this.deleteTask.execute({ ownerId, id });
   }
 }
