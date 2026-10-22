@@ -9,6 +9,25 @@ export class LogCapture extends Writable {
     done();
   }
 
+  /**
+   * Resolves once a line matching `predicate` exists. pino-http writes the completion line on the
+   * response's `finish` event, which can land after the client has its response, so tests wait
+   * for the line instead of reading it right away.
+   */
+  async waitFor(
+    predicate: (line: Record<string, unknown>) => boolean,
+    timeoutMs = 3000,
+  ): Promise<Record<string, unknown>> {
+    const deadline = Date.now() + timeoutMs;
+    for (;;) {
+      const found = this.lines.find(predicate);
+      if (found) return found;
+      if (Date.now() > deadline)
+        throw new Error('timed out waiting for a log line');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+  }
+
   reset(): void {
     this.text = '';
   }
