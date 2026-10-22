@@ -334,6 +334,27 @@ describe('Better Auth at /api/auth (e2e)', () => {
       );
     });
 
+    it('a preflight from an allowed origin may send the API headers but not expo-origin', async () => {
+      const response = await http()
+        .options('/api/auth/sign-in/email')
+        .set('Origin', TRUSTED)
+        .set('Access-Control-Request-Method', 'POST')
+        .set(
+          'Access-Control-Request-Headers',
+          'content-type,authorization,expo-origin',
+        );
+
+      expect(response.status).toBe(204);
+      const allowed = String(response.headers['access-control-allow-headers'])
+        .toLowerCase()
+        .split(',')
+        .map((header) => header.trim());
+      expect(allowed).toEqual(
+        expect.arrayContaining(['content-type', 'authorization']),
+      );
+      expect(allowed).not.toContain('expo-origin');
+    });
+
     it('an untrusted Origin gets no CORS on auth routes either', async () => {
       const response = await getSession().set('Origin', UNTRUSTED);
 
