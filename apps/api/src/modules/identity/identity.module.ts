@@ -13,6 +13,7 @@ import {
   clientIpMiddleware,
 } from './middleware/client-ip.middleware';
 import { BetterAuthPasswordHasher, PasswordHasher } from './password-hasher';
+import { JsonBodyGuard } from '../../shared/presentation/guards/json-body.guard';
 import { CsrfGuard } from './presentation/csrf.guard';
 
 type Middleware = (
@@ -86,6 +87,8 @@ export class PasswordHasherModule {}
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
+    // JSON bodies only, for every client (api-contracts → 415), after authentication.
+    { provide: APP_GUARD, useClass: JsonBodyGuard },
   ],
 })
 export class IdentityModule {}
