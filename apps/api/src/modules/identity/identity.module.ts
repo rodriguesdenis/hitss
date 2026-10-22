@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import type { ServerResponse } from 'node:http';
-import { AuthModule } from '@thallesp/nestjs-better-auth';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard, AuthModule } from '@thallesp/nestjs-better-auth';
 import { PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
@@ -12,6 +13,7 @@ import {
   clientIpMiddleware,
 } from './middleware/client-ip.middleware';
 import { BetterAuthPasswordHasher, PasswordHasher } from './password-hasher';
+import { CsrfGuard } from './presentation/csrf.guard';
 
 type Middleware = (
   request: ClientRequest,
@@ -46,7 +48,8 @@ export class PasswordHasherModule {}
  * format (spec Q-01.1). Nest is created with `bodyParser: false`; this module re-adds the JSON
  * parser (100 kB, the API-wide limit) for every other route, with urlencoded bodies disabled.
  * CORS for auth routes is the app's own (setupApp), so the module's trusted-origins CORS is off,
- * and the global guard is registered in order by T-001-08.
+ * and the global guards are registered here, in order: deny by default (AuthGuard), then CSRF
+ * for cookie-authenticated mutations (CsrfGuard). A route opts out with `@Public()`.
  */
 @Module({
   imports: [
@@ -74,8 +77,15 @@ export class PasswordHasherModule {}
           urlencoded: { enabled: false },
         },
       }),
+      // Registered below instead, so the global guards run in the documented order.
       disableGlobalAuthGuard: true,
     }),
+  ],
+  // Global guards run in registration order (plan 001 → Guards, in order). The slot before
+  // AuthGuard is the per-IP throttler of T-001-15; the per-user throttler follows CsrfGuard.
+  providers: [
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
   ],
 })
 export class IdentityModule {}
