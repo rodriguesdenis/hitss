@@ -9,9 +9,12 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "start": "docker compose up -d --build --wait",
+    "stop": "docker compose down",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "test:all": "turbo run test test:integration test:e2e",
     "test:integration": "turbo run test:integration",
     "test:e2e": "turbo run test:e2e",
     "test:tools": "node --test \"tools/**/*.test.mjs\"",
