@@ -6,13 +6,13 @@ How the API is instrumented, how to see the signals locally, and what to chart a
 
 ## Signals at a glance
 
-| Signal      | Source                                                                                                                                                                   | Where to read it locally                              |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| Traces      | OpenTelemetry Node SDK (`src/instrumentation.ts`) — auto-instrumentation `http`, `express`, `@nestjs/core`, `pg` + `@prisma/instrumentation` + one span per CQRS handler | SigNoz → Traces                                       |
-| Metrics     | OTel SDK → OTLP every 15 s                                                                                                                                               | SigNoz → Dashboards / Metrics explorer                |
-| Logs        | `nestjs-pino` JSON on stdout; also sent over OTLP (pino instrumentation)                                                                                                 | `docker compose logs -f api` · SigNoz → Logs          |
-| Health      | `@nestjs/terminus`                                                                                                                                                       | `GET /api/v1/health/live`, `GET /api/v1/health/ready` |
-| Correlation | `X-Request-Id` response header, `error.traceId` in error envelopes                                                                                                       | response headers / app error screen                   |
+| Signal      | Source                                                                                                                                                                                                  | Where to read it locally                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Traces      | OpenTelemetry Node SDK (`src/instrumentation.ts`) — instrumentations `http`, `express`, `@nestjs/core`, `pg`, `undici` + `@prisma/instrumentation`, plus one `@Traced()` span per command/query handler | SigNoz → Traces                                       |
+| Metrics     | OTel SDK → OTLP every 15 s                                                                                                                                                                              | SigNoz → Dashboards / Metrics explorer                |
+| Logs        | `nestjs-pino` JSON on stdout only; there is no OTLP log pipeline (decided in T-006-02, proven by an e2e)                                                                                                | `docker compose logs -f api`                          |
+| Health      | `DatabaseReadiness` (the boot probe, bounded at 1.5 s); no Terminus                                                                                                                                     | `GET /api/v1/health/live`, `GET /api/v1/health/ready` |
+| Correlation | `X-Request-Id` response header, `error.traceId` in error envelopes                                                                                                                                      | response headers / app error screen                   |
 
 Resource attributes on every signal: `service.name=teams-tasks-api`, `service.version=<package version>`, `deployment.environment.name=<APP_ENV>`.
 
@@ -70,7 +70,7 @@ One JSON object per line. Example completion entry:
 - Query strings are stripped from `/api/auth/*` URLs; other routes log the route template.
 - Better Auth's own logger is routed into pino at `warn`; Prisma logs events (warn/error, `query` at `debug`) **without parameters**.
 - Unexpected errors: one `level:50` entry with `err.type`, `err.message`, `err.stack` and the `traceId` returned to the client.
-- Find all logs of a request: `docker compose logs api | grep <traceId>` (or click "Logs" on the trace in SigNoz).
+- Find all logs of a request: `docker compose logs api | grep <traceId>` .
 
 ## Health
 
@@ -79,9 +79,11 @@ One JSON object per line. Example completion entry:
 | `GET /api/v1/health/live`  | Process up; no dependency check                                                                                                                                                                          | liveness (orchestrator restart)                  |
 | `GET /api/v1/health/ready` | DB reachable (`SELECT 1`, 1.5 s timeout; one attempt outstanding, bounded by the pg connect 2 s / query 5 s timeouts so a black-holed database recovers within seconds of returning) → `200`, else `503` | compose healthcheck, `depends_on`, load balancer |
 
-Public, unthrottled, not logged/traced. Liveness ships with the auth work (001); readiness is added by 006. The telemetry backend is never a readiness dependency.
+Public, unthrottled, not logged/traced. Liveness ships with the auth work (001); readiness (T-006-03) asks the database only, with one `SELECT 1` outstanding and the pg connect/query bounds of 2 s / 5 s, so it is back within seconds of the database returning. The telemetry backend is never a readiness dependency.
 
 ## Running SigNoz locally
+
+> **Not in the repository yet** (T-006-06): the `observability` compose profile, the Makefile targets and the dashboard JSON below are the specified behavior. Until then point `OTEL_EXPORTER_OTLP_ENDPOINT` at any OTLP/HTTP collector. Logs stay on stdout; correlate them with `traceId`.
 
 Requirements: Docker with **≈ 4 GB free RAM** (ClickHouse is the heavy part) and ~2 GB disk.
 
@@ -104,7 +106,7 @@ The API needs no change: its default `OTEL_EXPORTER_OTLP_ENDPOINT` already point
 
 ### Find errors
 
-SigNoz → Traces → filter `hasError = true` or `httpStatusCode >= 500`; or Logs → `severity_text = ERROR`, then jump to the trace.
+SigNoz → Traces → filter `hasError = true` or `httpStatusCode >= 500`; or search the stdout logs for `"level":50` and take the `traceId`.
 
 ## Dashboards to create
 
@@ -137,6 +139,8 @@ SLO proposals and error budgets are in [production readiness](production-readine
 
 ## Load and smoke tests
 
+> **Not in the repository yet** (T-006-07): the k6 scripts and targets below are the specified behavior (the Makefile target for the k6 smoke will be `k6-smoke`; `make smoke` is the compose smoke).
+
 `tools/k6/` — see [006 plan § k6](../specs/006-observability/plan.md#k6).
 
 ```bash
@@ -150,13 +154,13 @@ Run `make load` with SigNoz up to see the latency panels move; compare p95 there
 
 ## Configuration reference
 
-| Variable                      | Default                             | Effect                       |
-| ----------------------------- | ----------------------------------- | ---------------------------- |
-| `OTEL_SDK_DISABLED`           | `false`                             | `true` → no telemetry at all |
-| `OTEL_SERVICE_NAME`           | `teams-tasks-api`                   | service name                 |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://signoz-otel-collector:4318` | collector                    |
-| `OTEL_TRACES_SAMPLER`         | `parentbased_always_on`             | sampling                     |
-| `LOG_LEVEL`                   | `info`                              | log threshold                |
-| `LOG_PRETTY`                  | `false`                             | human-readable logs          |
+| Variable                      | Default                                                                                                                          | Effect                                                               |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `OTEL_SDK_DISABLED`           | `false`                                                                                                                          | `true` → no telemetry at all                                         |
+| `OTEL_SERVICE_NAME`           | `teams-tasks-api`                                                                                                                | service name                                                         |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` (the `.env.example` value; the SigNoz profile will point compose at `http://signoz-otel-collector:4318`) | collector; must be https in production, except the compose collector |
+| `OTEL_TRACES_SAMPLER`         | `parentbased_always_on`                                                                                                          | sampling                                                             |
+| `LOG_LEVEL`                   | `info`                                                                                                                           | log threshold                                                        |
+| `LOG_PRETTY`                  | `false`                                                                                                                          | human-readable logs                                                  |
 
-Validated at start by a class-validator env class (`src/config/telemetry.env.ts`); an invalid value fails the start naming the variable (never its value).
+Validated at start by a class-validator env class (`src/config/telemetry.env.ts`); an invalid value fails the start naming the variable (never its value). Only these variables are supported: per-signal endpoints/protocols (`OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_*`) and `OTEL_{TRACES,METRICS,LOGS}_EXPORTER` are rejected when set.
