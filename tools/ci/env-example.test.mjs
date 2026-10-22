@@ -56,7 +56,10 @@ const schema = schemaFiles.flatMap((name) =>
   schemaVariables(read(configDir + name)),
 );
 /** Variables whose empty value is meaningful (documented next to them in .env.example). */
-const EMPTY_ALLOWED = new Set(['TRUSTED_PROXIES']); // empty = trust no proxy
+const EMPTY_ALLOWED = new Set([
+  'TRUSTED_PROXIES', // empty = trust no proxy
+  'OTEL_EXPORTER_OTLP_ENDPOINT', // empty = telemetry off
+]);
 const defaults = composeDefaults(read('docker-compose.yml'));
 const example = envEntries(read('.env.example'));
 
