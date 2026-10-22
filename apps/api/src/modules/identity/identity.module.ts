@@ -6,6 +6,7 @@ import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
 import { AUTH_BASE_PATH, createAuth } from './auth.factory';
 import { authRouteAllowlist } from './auth-routes';
+import { authBodyLimit } from './middleware/auth-body-limit.middleware';
 import {
   ClientRequest,
   clientIpMiddleware,
@@ -61,9 +62,11 @@ export class PasswordHasherModule {}
         auth: createAuth(config, prisma, logger.logger, passwordHasher),
         disableTrustedOriginsCors: true,
         // In front of the Better Auth handler (Nest middleware would run after it): any auth path
-        // outside the allowlist answers 404, then the client address is set for the limiter.
+        // outside the allowlist answers 404, an oversized body 413 (before any hashing), then the client
+        // address is set for the limiter.
         middleware: chain(
           authRouteAllowlist(AUTH_BASE_PATH),
+          authBodyLimit(),
           clientIpMiddleware(config.trustedProxies.length > 0),
         ),
         bodyParser: {
