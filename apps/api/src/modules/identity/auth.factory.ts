@@ -7,6 +7,7 @@ import type { AppConfig } from '../../config/app-config';
 import type { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
 import { createAuthLogger } from '../../shared/observability/logging/pino-bridge';
 import { DISABLED_AUTH_PATHS } from './auth-routes';
+import { authInputHook } from './hooks/auth-input.hook';
 import { CLIENT_IP_HEADER } from './middleware/client-ip.middleware';
 import type { PasswordHasher } from './password-hasher';
 
@@ -131,5 +132,7 @@ export function createAuth(
       },
     },
     logger: createAuthLogger(logger, 'warn'),
+    // Name rule and email trimming, before Better Auth validates the body (T-001-07).
+    hooks: { before: authInputHook },
   });
 }
