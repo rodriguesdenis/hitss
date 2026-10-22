@@ -99,6 +99,8 @@ erDiagram
 
 `sessions`, `accounts` and `verifications` are the Better Auth tables ([ADR-0007](docs/architecture/adr/0007-better-auth.md)).
 
+**Migrations and seed.** The schema lives in `apps/api/prisma/schema.prisma`; SQL migrations in `apps/api/prisma/migrations/` (identity tables, teams, tasks and `task_teams` so far) are applied non-interactively by `prisma migrate deploy` — by the one-shot `migrate` service of `docker compose up` and by the Testcontainers harness in the tests — so a fresh machine reaches the same schema. Indexes and checks Prisma cannot express (partial unique `(owner_id, lower(name))`, trigram search, status/completion consistency) are raw SQL in those migrations. `idempotency_keys` is part of the model above but its migration arrives with T-002-05; the deterministic demo seed (one user, 3 teams, 10 tasks with fixed ids) is T-007-07 ([data model](docs/architecture/data-model.md), [ADR-0004](docs/architecture/adr/0004-prisma-migrations-and-seeding.md)).
+
 ## How to run
 
 > ⚠️ **Implementation in progress.** `docker compose up --build` already starts PostgreSQL and the API process (verified), but the API exposes no routes yet. The seed, Swagger UI, health routes and the `Makefile` are not in the repository yet; rows marked ⚠️ below are the specified behavior ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
@@ -147,11 +149,27 @@ docker compose --profile observability up -d --build --wait   # or: make observa
 # UI: http://localhost:8080
 ```
 
-How to find a trace and which dashboards and alerts exist: [observability](docs/operations/observability.md).
+Telemetry is optional: without a collector the API starts and serves normally and drops what it cannot export, `OTEL_SDK_DISABLED=true` turns it off, and logs are JSON on stdout only (no OTLP log pipeline). How to find a trace and which dashboards and alerts exist: [observability](docs/operations/observability.md).
 
 ### Other operations
 
 Stop, reset, logs, re-seed and common failures: [runbook](docs/operations/runbook.md).
+
+## API contract summary
+
+Base URL `http://localhost:3000`; business routes under `/api/v1`, authentication under `/api/auth` (Better Auth, its native format). Full contract: [API contracts](docs/architecture/api-contracts.md) and Swagger UI at `/docs` once the OpenAPI task (T-001-13) lands.
+
+| Topic       | Rule                                                                                                                                                                                                  |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth        | Sign up or in at `/api/auth/sign-up/email` · `/sign-in/email`; send `Authorization: Bearer <token>` (mobile) or the session cookie (web). Every `/api/v1/*` route needs one, except the health probes |
+| Success     | `{ "data": <resource or array>, "meta"?: { limit, offset, total } }`                                                                                                                                  |
+| Errors      | `{ "error": { "code": "VALIDATION_FAILED", "message": "…", "details"?: […], "traceId": "…" } }`: 400, 401, 403, 404, 409, 412, 415, 422, 429, 500                                                     |
+| Concurrency | `ETag: W/"<version>"` on single resources; `PUT`/`PATCH`/`DELETE` take `If-Match` (stale → `412`)                                                                                                     |
+| Retries     | `POST` accepts `Idempotency-Key`: the same key and body replays the first response                                                                                                                    |
+| Limits      | Per client address before authentication and per user after (`429 RATE_LIMITED` + `Retry-After`); `/api/auth/*` bodies over 16 kB → `413`                                                             |
+| Correlation | Every response has `X-Request-Id`; error envelopes carry the `traceId` of the request's trace                                                                                                         |
+
+Routes implemented on `main` today: `POST /api/v1/teams`, `GET /api/v1/tasks/:id`, `GET /api/v1/health/live` and `/ready`, and the four `/api/auth` routes (sign-up, sign-in, sign-out, get-session). The rest of the teams and tasks endpoints are the remaining MUST tasks of specs [002](docs/specs/002-teams/tasks.md) and [003](docs/specs/003-tasks/tasks.md).
 
 ## Request examples
 
@@ -201,7 +219,7 @@ The project stops deliberately where the cost only pays off with real traffic or
 | Topic              | Today                                                                           | In production                                                                                                                                        |
 | ------------------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cache              | `ETag` on single resources; React Query cache on the device                     | `If-None-Match` → `304`, `Cache-Control: private, no-cache`, Redis read-through cache with event-driven invalidation for hot lists                   |
-| Logs and telemetry | JSON logs to stdout, redacted; optional local SigNoz                            | Managed backend, retention policy, tail sampling, audit log, mobile crash reporting, alerts as code                                                  |
+| Logs and telemetry | JSON logs to stdout, redacted (no OTLP logs); local SigNoz profile planned      | Managed backend, retention policy, tail sampling, audit log, mobile crash reporting, alerts as code                                                  |
 | Scalability        | One stateless API container; offset pagination; in-memory rate limiter          | Horizontal scaling, Redis-backed throttling, PgBouncer, read replicas, cursor pagination, transactional outbox                                       |
 | Security           | Owner scoping, validation, throttler, `helmet`, env secrets with local defaults | Secrets manager, TLS/HSTS, WAF, email verification + MFA, SCA/SAST and container scanning, least-privilege DB roles, Swagger disabled or behind auth |
 
@@ -224,16 +242,18 @@ Full target layout of the API and the mobile app: [architecture overview §6](do
 
 ## Testing
 
-⚠️ Implementation in progress — the commands below are the ones defined in the [test strategy](docs/quality/test-strategy.md) and are verified at the end of phase 4. Requires Node ≥ 24, pnpm 10 and a running Docker daemon (Testcontainers).
+Requires Node ≥ 24, pnpm 10 and a running Docker daemon for the Testcontainers suites. CI runs all of these; the fast ones are enough while developing.
 
 ```bash
 pnpm install
 pnpm lint && pnpm typecheck && pnpm test      # fast gates; `pnpm test` = unit tests only, no Docker
 pnpm test:integration                         # real PostgreSQL via Testcontainers (needs Docker)
 pnpm test:e2e                                 # supertest against the full Nest app (needs Docker)
+pnpm arch                                     # dependency-cruiser layer rules
+pnpm test:tools && pnpm traceability:check    # CI scripts, and AC ↔ test traceability
 ```
 
-Strategy, pyramid proportions, mutation testing and test data: [test strategy](docs/quality/test-strategy.md) · [ADR-0014](docs/architecture/adr/0014-testing-strategy.md).
+Every acceptance criterion of the specs is traced to tests by the AC id leading the test title ([traceability matrix](docs/quality/traceability-matrix.md)). Strategy, pyramid proportions, mutation testing and test data: [test strategy](docs/quality/test-strategy.md) · [ADR-0014](docs/architecture/adr/0014-testing-strategy.md).
 
 ## Contributing
 
