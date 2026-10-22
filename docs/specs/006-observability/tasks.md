@@ -53,14 +53,14 @@ Order matters; each task is one PR. Sizes: **S** < 150 changed lines, **M** < 40
 - **Goal:** `docker compose --profile observability up -d` (or `make observability`) runs SigNoz; API exports to it with no edits.
 - **Changes:** `infra/signoz/docker-compose.signoz.yml` (pinned images, profile `observability`), collector config, `include:` in root `docker-compose.yml`, `infra/signoz/dashboards/teams-tasks-api.json`, Makefile `observability` / `observability-down` targets.
 - **Covers:** @AC-06.6.1, @AC-06.6.2, @AC-06.6.3, @AC-06.6.4
-- **Done when:** on a clean machine the UI opens at `http://localhost:8080`, a request's trace is found by trace id with linked logs, the dashboard imports and shows RED + counters; `docker compose up` (no profile) starts no SigNoz container. Evidence (screenshot) in the PR.
+- **Done when:** on a clean machine the UI opens at `http://localhost:8080`, a request's trace is found by trace id with linked logs, the dashboard imports and shows RED + counters; `docker compose up` (no profile) starts no SigNoz container. Evidence (screenshot) in the PR. Also: move the `observability` and `observability-down` alias from the “Not available yet” block of `make help` to a real `##` target in the Makefile, and add it to the CI `make -n` list and to `tools/ci/makefile.test.mjs`.
 
 ## T-006-07 — k6 smoke and load scripts
 
 - **Goal:** repeatable performance verification with thresholds, Docker only.
 - **Changes:** `tools/k6/{smoke.js,load.js,lib/*.js,README.md}`, compose service `k6` (profile `load`), Makefile `smoke` / `load` targets, `make load` raises `RATE_LIMIT_MAX` and `RATE_LIMIT_IP_MAX` for the run (override documented in the runbook).
 - **Covers:** @AC-06.7.1, @AC-06.7.2, @AC-06.7.3, @AC-06.7.4
-- **Done when:** `make smoke` passes on the seeded stack and leaves 3 teams / 10 tasks; `make load` (with both rate limits raised) reports list p95 < 100 ms and error rate < 1 % on a dev laptop (output in PR); a deliberately low threshold makes it exit non-zero. Smoke is wired into the CI `compose-smoke` job (T-007-09).
+- **Done when:** `make smoke` passes on the seeded stack and leaves 3 teams / 10 tasks; `make load` (with both rate limits raised) reports list p95 < 100 ms and error rate < 1 % on a dev laptop (output in PR); a deliberately low threshold makes it exit non-zero. Smoke is wired into the CI `compose-smoke` job (T-007-09). Also: move the `load` alias from the “Not available yet” block of `make help` to a real `##` target in the Makefile, and add it to the CI `make -n` list and to `tools/ci/makefile.test.mjs`.
 
 ## T-006-08 — Operations docs final pass
 
