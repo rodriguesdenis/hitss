@@ -155,5 +155,11 @@ module.exports = {
     tsPreCompilationDeps: true,
     // Generated code is a dependency target, never part of the checked graph.
     doNotFollow: { path: `node_modules|${GENERATED}` },
+    // ESM-only packages (better-auth, @thallesp/nestjs-better-auth) publish their subpaths under
+    // the `import` export condition only; resolve both conditions, as Node 24 does at runtime.
+    enhancedResolveOptions: {
+      exportsFields: ['exports'],
+      conditionNames: ['import', 'require', 'node', 'default'],
+    },
   },
 };
