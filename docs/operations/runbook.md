@@ -4,17 +4,17 @@ Local operation of Teams & Tasks. Commands assume the repository root. Every `ma
 
 ## Run
 
-| Goal                                               | Command                                                                              |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Start DB + API (migrate, seed, wait until healthy) | `docker compose up --build` (foreground) · `make up` (background, waits for healthy) |
-| Stop (keep data)                                   | `make down`                                                                          |
-| Follow API logs                                    | `make logs` (`LOG_PRETTY=true make up` for human-readable logs)                      |
-| Re-apply demo data                                 | `make seed`                                                                          |
-| Wipe everything and start fresh                    | `make reset`                                                                         |
-| With SigNoz (≈ 4 GB RAM)                           | `make observability` → http://localhost:8080                                         |
-| Mobile dev server (Expo Go QR)                     | `make mobile` (see [mobile on a device](#expo-device-cant-reach-the-api))            |
-| Smoke / load test                                  | `make smoke` · `make load`                                                           |
-| Status                                             | `docker compose ps` (look for `healthy`)                                             |
+| Goal                                                                   | Command                                                                              |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Start DB + API (migrate, seed, wait until healthy)                     | `docker compose up --build` (foreground) · `make up` (background, waits for healthy) |
+| Stop (keep data)                                                       | `make down`                                                                          |
+| Follow API logs                                                        | `make logs` (`LOG_PRETTY=true make up` for human-readable logs)                      |
+| Re-apply demo data                                                     | `make seed`                                                                          |
+| Wipe everything and start fresh                                        | `make reset`                                                                         |
+| With SigNoz (≈ 4 GB RAM)                                               | _planned (T-006-06), not in the Makefile yet_                                        |
+| Mobile dev server (Expo Go QR)                                         | _planned (mobile app), not in the Makefile yet_                                      |
+| Smoke test (stop the dev stack first: ports 3000 and 5432) · load test | `make smoke` · `make load` (_planned, T-006-07_)                                     |
+| Status                                                                 | `docker compose ps` (look for `healthy`)                                             |
 
 URLs once healthy:
 
@@ -93,12 +93,11 @@ Rate limit: `RATE_LIMIT_MAX` (default 100) req/min per user, `RATE_LIMIT_IP_MAX`
 
 ## Reset the database
 
-| Need                              | Command                                                                     | Data        |
-| --------------------------------- | --------------------------------------------------------------------------- | ----------- |
-| Restore demo records, keep my own | `make seed`                                                                 | kept        |
-| Fresh DB with only demo data      | `make reset` (`docker compose down -v && make up`)                          | **deleted** |
-| From the host toolchain           | `pnpm db:reset` (drops, migrates, seeds via `prisma migrate reset --force`) | **deleted** |
-| Start without demo data           | `SEED_ON_START=false make reset`                                            | empty       |
+| Need                              | Command                                            | Data        |
+| --------------------------------- | -------------------------------------------------- | ----------- |
+| Restore demo records, keep my own | `make seed`                                        | kept        |
+| Fresh DB with only demo data      | `make reset` (`docker compose down -v && make up`) | **deleted** |
+| Start without demo data           | `SEED_ON_START=false make reset`                   | empty       |
 
 ## Logs
 
