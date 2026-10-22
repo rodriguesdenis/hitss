@@ -1,11 +1,37 @@
 import { Module } from '@nestjs/common';
+import type { ServerResponse } from 'node:http';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
 import { AUTH_BASE_PATH, createAuth } from './auth.factory';
 import { authRouteAllowlist } from './auth-routes';
+import {
+  ClientRequest,
+  clientIpMiddleware,
+} from './middleware/client-ip.middleware';
 import { BetterAuthPasswordHasher, PasswordHasher } from './password-hasher';
+
+type Middleware = (
+  request: ClientRequest,
+  response: ServerResponse,
+  next: () => void,
+) => void;
+
+/** Runs middleware in order; each one calls `next` to continue or answers to stop. */
+function chain(...middleware: Middleware[]): Middleware {
+  return (request, response, next) => {
+    const run = (index: number): void => {
+      const current = middleware[index];
+      if (current) {
+        current(request, response, () => run(index + 1));
+      } else {
+        next();
+      }
+    };
+    run(0);
+  };
+}
 
 /** Provides the password hasher to the auth factory; e2e tests override it to observe calls. */
 @Module({
@@ -34,8 +60,12 @@ export class PasswordHasherModule {}
       ) => ({
         auth: createAuth(config, prisma, logger.logger, passwordHasher),
         disableTrustedOriginsCors: true,
-        // In front of the handler: any auth path outside the allowlist answers 404.
-        middleware: authRouteAllowlist(AUTH_BASE_PATH),
+        // In front of the Better Auth handler (Nest middleware would run after it): any auth path
+        // outside the allowlist answers 404, then the client address is set for the limiter.
+        middleware: chain(
+          authRouteAllowlist(AUTH_BASE_PATH),
+          clientIpMiddleware(config.trustedProxies.length > 0),
+        ),
         bodyParser: {
           json: { limit: '100kb' },
           urlencoded: { enabled: false },

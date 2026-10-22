@@ -90,6 +90,25 @@ describe('createAuth', () => {
     ]);
   });
 
+  it('AC-01.7.1 AC-01.7.7 limits each credential endpoint to 10/min and everything else to 100/min', () => {
+    expect(options.rateLimit).toMatchObject({
+      window: 60,
+      max: 100,
+      storage: 'memory',
+      customRules: {
+        '/sign-in/email': { window: 60, max: 10 },
+        '/sign-up/email': { window: 60, max: 10 },
+        '/sign-out': { window: 60, max: 10 },
+      },
+    });
+  });
+
+  it('AC-01.7.6 reads the client address only from x-tt-client-ip (set by clientIpMiddleware)', () => {
+    expect(options.advanced?.ipAddress).toEqual({
+      ipAddressHeaders: ['x-tt-client-ip'],
+    });
+  });
+
   it('takes the rate limiter switch from AUTH_RATE_LIMIT_ENABLED', () => {
     expect(options.rateLimit?.enabled).toBe(false);
     expect(

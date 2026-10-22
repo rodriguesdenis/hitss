@@ -6,6 +6,7 @@ import type { AppConfig } from '../../config/app-config';
 import type { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
 import { createAuthLogger } from '../../shared/observability/logging/pino-bridge';
 import { DISABLED_AUTH_PATHS } from './auth-routes';
+import { CLIENT_IP_HEADER } from './middleware/client-ip.middleware';
 import type { PasswordHasher } from './password-hasher';
 
 type AuthLoggerTarget = Parameters<typeof createAuthLogger>[0];
@@ -13,6 +14,9 @@ type AuthLoggerTarget = Parameters<typeof createAuthLogger>[0];
 export const AUTH_BASE_PATH = '/api/auth';
 const SESSION_EXPIRES_IN = 60 * 60 * 24 * 7; // 7 days (BR-01.4)
 const SESSION_UPDATE_AGE = 60 * 60 * 24; // renewed once a day while used
+
+/** Per client address and per endpoint (each its own bucket, AC-01.7.1). */
+const CREDENTIAL_RULE = { window: 60, max: 10 };
 
 /**
  * Origins Better Auth trusts for cookie-based auth calls: the app's deep-link scheme, Expo Go
@@ -75,12 +79,19 @@ export function createAuth(
     session: { expiresIn: SESSION_EXPIRES_IN, updateAge: SESSION_UPDATE_AGE },
     trustedOrigins: trustedOrigins(config),
     plugins: [bearer({ requireSignature: true }), expo()],
-    // Per-endpoint rules and the client-IP header come with T-001-10.
+    // Better Auth's limiter, per client address (x-tt-client-ip) and endpoint: credential routes
+    // 10/min each; get-session (and anything else) 100/min (AC-01.7.7). The custom rules also
+    // replace Better Auth's built-in 3-per-10 s rule for sign-in and sign-up.
     rateLimit: {
       enabled: config.authRateLimitEnabled,
       window: 60,
       max: 100,
       storage: 'memory',
+      customRules: {
+        '/sign-in/email': CREDENTIAL_RULE,
+        '/sign-up/email': CREDENTIAL_RULE,
+        '/sign-out': CREDENTIAL_RULE,
+      },
     },
     advanced: {
       // Explicit: Better Auth skips both checks by default when NODE_ENV=test, so the e2e suite
@@ -88,6 +99,8 @@ export function createAuth(
       disableOriginCheck: false,
       disableCSRFCheck: false,
       database: { generateId: 'uuid' },
+      // Written only by clientIpMiddleware (any client-sent value is dropped first, AC-01.7.6).
+      ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
       useSecureCookies: config.appEnv === 'production',
       defaultCookieAttributes: { httpOnly: true, sameSite: 'lax' },
     },
