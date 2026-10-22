@@ -15,6 +15,8 @@ The working rules the team settled on while building the backend. They complemen
 - **No `git stash`:** the stash is shared by all worktrees, so a stash in one can be popped in another. Switch branches with a temporary WIP commit instead.
 - **Never edit the main checkout:** it is the sync point for `main`. Reviews are read-only (`git fetch` + `git diff`, or `git archive` into a scratch folder).
 - **Merging:** rebase-merge only (linear history), one task per PR. A stacked PR is retargeted to `main` **before** its base merges.
+- **One merge at a time:** merges go through a single script that holds a lock (`flock`), so two merges never run in parallel. Under the lock, a PR that is behind `main` is rebased on GitHub (update branch) and merged only after CI passes on that new head, so `main` stays green. (Two PRs merged in parallel once broke `main`'s typecheck.) Queue several merges sequentially in one background command.
+- **After a rebase on GitHub:** before amending a branch that was rebased remotely, run `git fetch && git reset --keep origin/<branch>`.
 
 ## Task status
 
