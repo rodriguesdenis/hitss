@@ -26,7 +26,7 @@ Applies to every task, pull request and feature ([Constitution V.4](../constitut
 
 - [ ] **Tests first:** every scenario listed under "Covers" has ≥ 1 automated test whose name starts with the AC id; tests were seen failing before the implementation.
 - [ ] Tests are at the right pyramid level ([test strategy](test-strategy.md)); no sleeps, isolated data, no order dependence.
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm arch` and `pnpm test` pass locally; integration/E2E pass where relevant.
+- [ ] Light checks pass locally (format, lint, typecheck, `pnpm arch`, `pnpm traceability:check`, the changed tests); the full gate, integration and E2E pass in CI ([engineering process](engineering-process.md)).
 - [ ] Coverage gates hold (domain ≥ 90 % lines, API ≥ 80 %); mutation score ≥ 80 % when domain code changed (run with label `mutation`).
 - [ ] Strict TypeScript: no `any`, no `@ts-ignore` without a linked reason, no non-null assertions to silence `noUncheckedIndexedAccess`.
 - [ ] Architecture: domain is framework-free; layers respect dependency rules; aggregates change state only via methods.
