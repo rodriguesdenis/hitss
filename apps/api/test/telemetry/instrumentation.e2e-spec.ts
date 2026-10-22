@@ -78,6 +78,17 @@ function dbSpansBelow(spans: ReceivedSpan[], rootId: string | undefined) {
   return spans.filter((s) => isDb(s) && below(s));
 }
 
+function descendsFrom(
+  spans: ReceivedSpan[],
+  span: ReceivedSpan,
+  ancestorId: string,
+): boolean {
+  const parent = spans.find((s) => s.spanId === span.parentSpanId);
+  return parent
+    ? parent.spanId === ancestorId || descendsFrom(spans, parent, ancestorId)
+    : false;
+}
+
 const get = (app: Running, headers: Record<string, string> = {}, query = '') =>
   fetch(`http://127.0.0.1:${app.port}/api/v1/ping${query}`, { headers });
 
@@ -145,6 +156,11 @@ describe('OpenTelemetry bootstrap', () => {
     expect(server?.traceId).toBe(TRACE_ID);
     expect(server?.parentSpanId).toBe('00f067aa0ba902b7');
     expect(dbSpansBelow(receiver.spans, server?.spanId)).not.toHaveLength(0);
+    // HTTP -> use case -> DB: the handler span sits between them (AC-06.2.1).
+    const useCase = receiver.spans.find((s) => s.name === 'PingHandler');
+    expect(useCase).toBeDefined();
+    expect(descendsFrom(receiver.spans, useCase!, server!.spanId)).toBe(true);
+    expect(dbSpansBelow(receiver.spans, useCase?.spanId)).not.toHaveLength(0);
     const attributes = Object.fromEntries(
       (receiver.resources[0]?.attributes ?? []).map((a) => [
         a.key,
@@ -310,6 +326,37 @@ describe('OpenTelemetry bootstrap', () => {
     expect(exported).not.toContain('secret-value');
     expect(exported).not.toContain('marina');
     expect(exported).not.toContain('token=');
+  }, 60_000);
+
+  it('AC-06.2.4 AC-06.3.4 error envelopes carry the trace id and no stack; the use-case span is marked failed', async () => {
+    receiver.spans.length = 0;
+    const app = await launch({ OTEL_EXPORTER_OTLP_ENDPOINT: endpoint });
+    const traceparent = `00-${TRACE_ID}-00f067aa0ba902b7-01`;
+
+    const forced = await fetch(`http://127.0.0.1:${app.port}/api/v1/boom`, {
+      headers: { traceparent },
+    });
+    const missing = await fetch(`http://127.0.0.1:${app.port}/api/v1/missing`, {
+      headers: { traceparent },
+    });
+    app.child.kill('SIGTERM');
+    expect(await app.exit).toBe(0);
+
+    expect(forced.status).toBe(500);
+    expect(missing.status).toBe(404);
+    for (const response of [forced, missing]) {
+      const body = await response.clone().text();
+      expect(
+        (JSON.parse(body) as { error: { traceId: string } }).error.traceId,
+      ).toBe(TRACE_ID);
+      expect(body).not.toContain('secret-value');
+      expect(body).not.toMatch(/\bat \S+ \(/); // no stack frames
+      expect(body).not.toContain('stack');
+    }
+
+    const useCase = receiver.spans.find((s) => s.name === 'PingHandler');
+    expect(useCase?.traceId).toBe(TRACE_ID);
+    expect(JSON.stringify(receiver.spans)).not.toContain('secret-value');
   }, 60_000);
 
   it('AC-06.5.1 starts and serves 2xx with no collector reachable', async () => {
