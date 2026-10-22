@@ -8,6 +8,7 @@ import { DomainErrorMappings } from '../../shared/presentation/filters/domain-er
 import { CreateTeamHandler } from './application/commands/create-team/create-team.handler';
 import { TeamReadModel } from './application/ports/team.read-model';
 import { TeamTaskCounts } from './application/ports/team-task-counts';
+import { GetTeamSummariesHandler } from './application/queries/get-team-summaries/get-team-summaries.handler';
 import { GetTeamHandler } from './application/queries/get-team/get-team.handler';
 import { TeamRepository } from './domain/team.repository';
 import { ZeroTeamTaskCounts } from './infrastructure/adapters/team-task-counts.adapter';
@@ -27,6 +28,8 @@ import { TEAM_ERROR_MAPPINGS } from './presentation/team-error.mapping';
   providers: [
     CreateTeamHandler,
     GetTeamHandler,
+    // Public: answers GetTeamSummariesQuery (contracts/) for Task Management's TeamDirectory.
+    GetTeamSummariesHandler,
     { provide: TeamRepository, useClass: PrismaTeamRepository },
     { provide: TeamReadModel, useClass: PrismaTeamReadModel },
     { provide: TeamTaskCounts, useClass: ZeroTeamTaskCounts },
