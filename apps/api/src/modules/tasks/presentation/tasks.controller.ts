@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -11,6 +12,7 @@ import {
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiExtraModels,
   getSchemaPath,
 } from '@nestjs/swagger';
@@ -21,6 +23,7 @@ import { ApiOkEnvelope } from '../../../shared/presentation/openapi/api-envelope
 import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
 import { ChangeTaskStatusCommand } from '../application/commands/change-task-status/change-task-status.command';
 import { CreateTaskCommand } from '../application/commands/create-task/create-task.command';
+import { DeleteTaskCommand } from '../application/commands/delete-task/delete-task.command';
 import { GetTaskQuery } from '../application/queries/get-task/get-task.query';
 import type { TaskView } from '../application/views/task.view';
 import { ChangeTaskStatusDto } from './dto/change-task-status.dto';
@@ -114,5 +117,18 @@ export class TasksController {
     // Until the shared EtagInterceptor (T-002-07) takes over, in the same W/"<version>" form.
     response.setHeader('ETag', `W/"${task.version}"`);
     return toTaskResponse(task);
+  }
+
+  /** 204 with no content; afterwards every read and write of the task → 404 (AC-03.11.1). */
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiNoContentResponse()
+  async delete(
+    @CurrentOwner() { ownerId }: Owner,
+    @Param('id', ParseUuidPipe) id: string,
+  ): Promise<void> {
+    await this.commands.execute<DeleteTaskCommand, void>(
+      new DeleteTaskCommand(ownerId, id),
+    );
   }
 }
