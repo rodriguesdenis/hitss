@@ -6,6 +6,7 @@ import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.ser
 import { TeamNameAlreadyExists } from '../../src/modules/teams/domain/team.errors';
 import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name';
 import { PrismaTeamRepository } from '../../src/modules/teams/infrastructure/prisma-team.repository';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { createTestApp } from '../support/app';
 import { useTestDatabase } from '../support/postgres';
 import {
@@ -22,7 +23,7 @@ describe('PrismaTeamRepository (integration, T-002-03)', () => {
   beforeAll(async () => {
     app = await createTestApp(db.url);
     prisma = app.get(PrismaService);
-    repository = new PrismaTeamRepository(prisma);
+    repository = new PrismaTeamRepository(app.get(TransactionHost));
   });
 
   afterAll(async () => {

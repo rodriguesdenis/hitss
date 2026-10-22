@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -12,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import type { ServerResponse } from 'node:http';
-import { ApiHeader, ApiTags } from '@nestjs/swagger';
+import { ApiHeader, ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
 import type { ExpectedVersion } from '../../../shared/domain/expected-version';
 import { IfMatch } from '../../../shared/presentation/decorators/if-match.decorator';
 import type { Page } from '../../../shared/application/page';
@@ -29,6 +30,7 @@ import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
 import { CreateTeamCommand } from '../application/commands/create-team/create-team.command';
+import { DeleteTeamCommand } from '../application/commands/delete-team/delete-team.command';
 import { ReplaceTeamCommand } from '../application/commands/replace-team/replace-team.command';
 import type { TeamSortField } from '../application/ports/team.read-model';
 import { GetTeamQuery } from '../application/queries/get-team/get-team.query';
@@ -159,6 +161,29 @@ export class TeamsController {
       await this.queries.execute<GetTeamQuery, TeamDetails>(
         new GetTeamQuery(ownerId, id),
       ),
+    );
+  }
+
+  /**
+   * Soft-deletes the team (AC-02.7.1): 204, then it is gone from get and list. Unknown, foreign
+   * and deleted ids → 404 whatever the If-Match (AC-02.9.8); a stale tag → 412 (AC-02.9.3).
+   */
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiNoContentResponse({ description: 'The team was deleted.' })
+  @ApiHeader({
+    name: 'If-Match',
+    required: false,
+    description:
+      'The ETag you read (W/"<version>"); a stale or malformed tag → 412.',
+  })
+  async remove(
+    @CurrentOwner() { ownerId }: Owner,
+    @Param('id', ParseUuidPipe) id: string,
+    @IfMatch() expected: ExpectedVersion,
+  ): Promise<void> {
+    await this.commands.execute<DeleteTeamCommand, void>(
+      new DeleteTeamCommand(ownerId, id, expected),
     );
   }
 }
