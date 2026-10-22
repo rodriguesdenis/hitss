@@ -31,6 +31,7 @@ Order matters; each task is one PR. Sizes: **S** < 150 changed lines, **M** < 40
 
 ## T-006-03 — Liveness and readiness probes
 
+- **Status:** done
 - **Goal:** add `/api/v1/health/ready` (DB ping, 1.5 s timeout), public and unthrottled. `/api/v1/health/live` already exists from T-001-08 and is **not recreated**; this task only verifies it and extends the module.
 - **Changes:** `src/modules/health/` (add the readiness route to the existing controller, Terminus `PrismaHealthIndicator`; same `@AllowAnonymous() @SkipThrottle() @RawResponse()` as liveness), probes excluded from request logs and traces (`isProbe` helper in `src/shared/observability/`, shared with T-006-01/02).
 - **Covers:** @AC-06.1.1, @AC-06.1.2, @AC-06.1.3, @AC-06.1.4, @AC-06.1.5
