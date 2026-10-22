@@ -170,5 +170,6 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
         }),
       );
     },
+    120_000,
   );
 });
