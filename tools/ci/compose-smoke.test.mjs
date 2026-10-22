@@ -49,4 +49,18 @@ describe('compose smoke script', () => {
   it('AC-07.1.7 never writes a literal credentials URL', () => {
     assert.ok(!/:\/\/[^/\s$]+:[^@\s$]{6,}@/.test(source));
   });
+
+  it("AC-07.1.7 the unreachable-database checks reject timeout's own exit code and record the elapsed time", () => {
+    assert.match(source, /124/);
+    assert.match(source, /elapsed|ELAPSED/);
+    assert.match(source, /expect_fast_failure/);
+  });
+
+  it('AC-07.1.7 both the migrator and the API are started against an unreachable database', () => {
+    const calls = [...source.matchAll(/expect_fast_failure\s+(\w+)/g)].map(
+      (m) => m[1],
+    );
+    assert.ok(calls.includes('migrate'), 'migrate case missing');
+    assert.ok(calls.includes('api'), 'api case missing');
+  });
 });

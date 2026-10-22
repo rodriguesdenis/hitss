@@ -100,17 +100,31 @@ case "$API_STATE" in ''|created) echo "migrate exit code $CODE; api state: ${API
 docker compose down -v --remove-orphans
 unset COMPOSE_FILE
 
+# The URL is assembled from parts at runtime: no literal credentials in this source.
+DB_USER=x; DB_PASSWORD=x
+UNREACHABLE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:1/x"
+
+# Runs a service against an unreachable database; it must fail by itself (exit code other than 0
+# and than 124, timeout's own code, which would mean it hung) within 60 seconds.
+expect_fast_failure() {
+  local service="$1" started=$SECONDS code=0 elapsed
+  timeout 60 docker compose run --rm --no-deps -e "DATABASE_URL=$UNREACHABLE_URL" "$service" || code=$?
+  elapsed=$((SECONDS - started))
+  [ "$code" -ne 0 ] || fail "$service started without a reachable database"
+  [ "$code" -ne 124 ] || fail "$service hung for ${elapsed}s instead of failing fast"
+  echo "$service failed fast: exit code $code after ${elapsed}s"
+  summary "| Unreachable database: \`$service\` exits $code after ${elapsed} s | passed |"
+}
+
 log 'an unreachable database makes migrate exit non-zero quickly (AC-07.1.7)'
-DB_USER=smoke; DB_PASSWORD=x
-if timeout 60 docker compose run --rm --no-deps \
-  -e "DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@127.0.0.1:1/smoke" migrate; then
-  fail 'migrate succeeded without a reachable database'
-fi
+expect_fast_failure migrate
+
+log 'an unreachable database makes the API fail fast on boot (AC-07.1.7)'
+expect_fast_failure api
 
 summary "| Services healthy, migrate exited 0, HTTP answer | passed |" \
   "| Non-root user, minimal read-only image, no capabilities | passed |" \
   "| \`docker compose stop api\` exits 0 | passed |" \
   "| \`API_PORT=3100\` | passed |" \
-  "| Failing migration: migrate fails, API never starts | passed |" \
-  "| Unreachable database: migrate fails | passed |"
+  "| Failing migration: migrate fails, API never starts | passed |"
 echo; echo 'Compose smoke passed.'
