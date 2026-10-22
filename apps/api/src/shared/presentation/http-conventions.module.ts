@@ -1,7 +1,8 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, OnModuleInit } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 import { DomainErrorMappings } from './filters/domain-error-mappings';
 import { GlobalExceptionFilter } from './filters/global-exception.filter';
+import { SHARED_ERROR_MAPPINGS } from './filters/shared-error.mapping';
 
 /**
  * Container side of the HTTP conventions: the domain-error registry modules register into, and
@@ -25,4 +26,11 @@ import { GlobalExceptionFilter } from './filters/global-exception.filter';
   ],
   exports: [DomainErrorMappings, GlobalExceptionFilter],
 })
-export class HttpConventionsModule {}
+export class HttpConventionsModule implements OnModuleInit {
+  constructor(private readonly mappings: DomainErrorMappings) {}
+
+  /** The shared kernel's errors (ConcurrencyConflict → 412); contexts register their own. */
+  onModuleInit(): void {
+    this.mappings.register(SHARED_ERROR_MAPPINGS);
+  }
+}
