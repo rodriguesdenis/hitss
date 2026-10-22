@@ -3,26 +3,14 @@ import { Client } from 'pg';
 import request, { Response, Test } from 'supertest';
 import { App } from 'supertest/types';
 import { createTestApp } from '../support/app';
+import { bearerOf, signUpAndSignIn, TestUser, twoUsers } from '../support/auth';
 import { useTestDatabase } from '../support/postgres';
 import { KNOWN_ID, OwnerProbeModule, writes } from './owner-probe.module';
 
-// Built at runtime with low entropy so secret scanners never mistake a fixture for a secret.
-const PASSWORD = ['correct', 'horse', 'battery', '42'].join('-');
 const TRUSTED = 'https://app.example.test';
 const UNTRUSTED = 'https://evil.example.test';
 const PROBE = '/api/v1/owner-probe';
 const OTHER_ID = '0b7a3c1e-2d4f-4a6b-8c9d-1e2f3a4b5c6d';
-
-let emailSeq = 0;
-const freshEmail = () => `guard${++emailSeq}-${Date.now()}@example.test`;
-
-interface SignedIn {
-  id: string;
-  email: string;
-  bearer: string;
-  /** `name=value` of the session cookie, as a browser would send it back. */
-  cookie: string;
-}
 
 describe('route protection: deny by default, CSRF for cookies (e2e)', () => {
   const db = useTestDatabase();
@@ -49,25 +37,7 @@ describe('route protection: deny by default, CSRF for cookies (e2e)', () => {
 
   const http = () => request(app.getHttpServer() as App);
 
-  const signIn = async (): Promise<SignedIn> => {
-    const email = freshEmail();
-    const response = await http()
-      .post('/api/auth/sign-up/email')
-      .send({ name: 'Marina', email, password: PASSWORD });
-    expect(response.status).toBe(200);
-    const cookies = ([] as string[]).concat(
-      response.headers['set-cookie'] ?? [],
-    );
-    const session = cookies.find((c) =>
-      c.startsWith('better-auth.session_token='),
-    );
-    return {
-      id: (response.body as { user: { id: string } }).user.id,
-      email,
-      bearer: response.headers['set-auth-token'] as string,
-      cookie: (session ?? '').split(';')[0] ?? '',
-    };
-  };
+  const signIn = () => signUpAndSignIn(app);
 
   const expectUnauthenticated = (response: Response) => {
     expect(response.status).toBe(401);
@@ -168,15 +138,15 @@ describe('route protection: deny by default, CSRF for cookies (e2e)', () => {
     });
 
     it('AC-01.5.7 a bearer token of A with a session cookie of B → processed as A', async () => {
-      const a = await signIn();
-      const b = await signIn();
+      const { marina, rafael } = await twoUsers(app);
 
       const response = await http()
         .get(PROBE)
-        .set('Authorization', `Bearer ${a.bearer}`)
-        .set('Cookie', b.cookie);
+        .set('Authorization', bearerOf(marina))
+        .set('Cookie', rafael.cookie);
 
-      expect(response.body).toEqual({ data: { ownerId: a.id } });
+      expect(response.body).toEqual({ data: { ownerId: marina.id } });
+      expect(marina.id).not.toBe(rafael.id);
     });
 
     it('AC-01.5.5 without credentials an existing and a missing id get the same 401', async () => {
@@ -213,7 +183,7 @@ describe('route protection: deny by default, CSRF for cookies (e2e)', () => {
   });
 
   describe('CSRF for cookie sessions (AC-01.5.8 to AC-01.5.10)', () => {
-    const cookiePost = (user: SignedIn) =>
+    const cookiePost = (user: TestUser) =>
       http()
         .post(PROBE)
         .set('Cookie', user.cookie)
