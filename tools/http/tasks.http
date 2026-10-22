@@ -43,6 +43,10 @@ Content-Type: application/json
 GET {{baseUrl}}/api/v1/tasks/{{createTask.response.body.data.id}}
 Authorization: Bearer {{signIn.response.headers.set-auth-token}}
 
+### List tasks
+GET {{baseUrl}}/api/v1/tasks?teamId={{createTeam.response.body.data.id}}&status=PENDING,IN_PROGRESS&search=http&sort=dueDate&limit=10&offset=0
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+
 ### Change task status
 PATCH {{baseUrl}}/api/v1/tasks/{{createTask.response.body.data.id}}/status
 Authorization: Bearer {{signIn.response.headers.set-auth-token}}
