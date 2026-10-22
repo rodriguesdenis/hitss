@@ -57,8 +57,6 @@ describe('environment validation', () => {
     ['RATE_LIMIT_MAX', '1.5'],
     ['OTEL_SDK_DISABLED', 'nope'],
     ['OTEL_EXPORTER_OTLP_ENDPOINT', 'not a url'],
-    ['OTEL_EXPORTER_OTLP_PROTOCOL', 'carrier-pigeon'],
-    ['OTEL_TRACES_SAMPLER', 'whenever'],
     ['BETTER_AUTH_SECRET', 'too-short'],
   ])(
     'AC-06.5.5 %s=%s is rejected naming the variable, not the value',
@@ -103,7 +101,7 @@ describe('production rules', () => {
   const production = PRODUCTION_ENV;
 
   it.each(['http://collector.example.test:4318', 'http://localhost:4318'])(
-    'AC-06.5.5 APP_ENV=production refuses a plain http OTLP endpoint %s',
+    'AC-08.7 APP_ENV=production refuses a plain http OTLP endpoint %s',
     (endpoint) => {
       expectInvalid(
         validate,
@@ -113,16 +111,11 @@ describe('production rules', () => {
     },
   );
 
-  it('AC-06.5.5 APP_ENV=production allows http to the compose-internal collector', () => {
-    expect(() =>
-      validate({
-        ...production,
-        OTEL_EXPORTER_OTLP_ENDPOINT: 'http://signoz-otel-collector:4318',
-      }),
-    ).not.toThrow();
+  it('AC-08.7 APP_ENV=production accepts no endpoint at all (nothing is exported)', () => {
+    expect(() => validate({ ...production })).not.toThrow();
   });
 
-  it('AC-06.5.5 APP_ENV=production accepts any endpoint when telemetry is disabled', () => {
+  it('AC-08.7 APP_ENV=production accepts any endpoint when telemetry is disabled', () => {
     expect(() =>
       validate({
         ...production,

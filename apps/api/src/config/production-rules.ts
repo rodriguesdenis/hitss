@@ -58,16 +58,11 @@ export const logPrettyIsOff: ProductionRule = (config) =>
     ? [{ variable: 'LOG_PRETTY', message: 'must be false in production' }]
     : [];
 
-/** Collector inside the compose network, reached over plain HTTP by design. */
-export const COMPOSE_COLLECTOR_HOST = 'signoz-otel-collector';
-
+/** Telemetry leaves the process only over https in production (when an endpoint is set). */
 export const otlpEndpointIsSecure: ProductionRule = (config) => {
-  if (config.OTEL_SDK_DISABLED) return [];
-  const url = URL.canParse(config.OTEL_EXPORTER_OTLP_ENDPOINT)
-    ? new URL(config.OTEL_EXPORTER_OTLP_ENDPOINT)
-    : undefined;
-  return url &&
-    (url.protocol === 'https:' || url.hostname === COMPOSE_COLLECTOR_HOST)
+  const endpoint = config.OTEL_EXPORTER_OTLP_ENDPOINT;
+  if (config.OTEL_SDK_DISABLED || !endpoint) return [];
+  return URL.canParse(endpoint) && new URL(endpoint).protocol === 'https:'
     ? []
     : [
         {

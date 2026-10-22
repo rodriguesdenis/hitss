@@ -45,6 +45,14 @@ describe('request logging', () => {
     expect(out.raw).not.toContain('private');
   });
 
+  it('AC-08.7 without telemetry the completion line still carries reqId and a traceId (the request id)', async () => {
+    const response = await call('/api/v1/tasks/1');
+    const line = await out.waitFor(completed('/api/v1/tasks/1'));
+    expect(line.reqId).toBe(response.headers.get('x-request-id'));
+    expect(line.traceId).toBe(line.reqId);
+    expect(line).not.toHaveProperty('spanId');
+  });
+
   it('AC-06.3.2 entries written during the request share its request id', async () => {
     await call('/api/v1/tasks/1', { headers: { 'X-Request-Id': 'abc-123' } });
 
