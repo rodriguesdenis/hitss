@@ -1,6 +1,9 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import type { OpenAPIObject } from '@nestjs/swagger';
+import { IDENTITY_TAG } from '../../src/openapi/auth-paths';
+import { openApiProblems } from '../../src/openapi/openapi-structure';
 import { createTestApp } from '../support/app';
 import { useTestDatabase } from '../support/postgres';
 
@@ -20,6 +23,14 @@ describe('API documentation (e2e, T-001-13)', () => {
   });
 
   const http = (app: INestApplication) => request(app.getHttpServer() as App);
+
+  it('AC-01.5.4 the served /docs/openapi.json is structurally valid (refs, path params, 2xx, error schema)', async () => {
+    const response = await http(enabled).get('/docs/openapi.json');
+
+    expect(
+      openApiProblems(response.body as OpenAPIObject, [IDENTITY_TAG]),
+    ).toEqual([]);
+  });
 
   it('AC-01.5.4 /docs and /docs/openapi.json are public while DOCS_ENABLED', async () => {
     const page = await http(enabled).get('/docs/');
