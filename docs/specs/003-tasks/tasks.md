@@ -33,6 +33,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-01 — Add `tasks`, `task_teams`, `task_status` schema, migration, indexes, CHECKs
 
+- **Status:** done
 - **Goal:** persistence for Task Management exactly as [data-model.md](../../architecture/data-model.md) + the plan's proposed `tasks_owner_created_idx`.
 - **Changes:** `apps/api/prisma/schema.prisma` (`TaskStatus`, `Task`, `TaskTeam`, back-relations on `User`/`Team`); `prisma/migrations/<ts>_create_tasks/migration.sql` (generated + raw SQL: `pg_trgm`, partial indexes, GIN, CHECKs); `docs/architecture/data-model.md` only if the proposed index is approved (the database-specialist / architect owns that file).
 - **Covers:** foundation (no scenario); CHECK constraints back BR-03.1, BR-03.5.
@@ -40,6 +41,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-02 — Implement task value objects (TDD)
 
+- **Status:** done
 - **Goal:** invalid task values cannot be constructed.
 - **Changes:** `modules/tasks/domain/value-objects/{task-title,task-description,task-status,due-date,task-team-ids}.ts` + `*.spec.ts`; errors `InvalidTaskTitle`, `InvalidTaskDescription`, `InvalidTaskStatus`, `InvalidDueDate`, `TooManyTeams`.
 - **Covers:** @AC-03.1.2 @AC-03.1.3 @AC-03.1.5 @AC-03.1.6 (count) @AC-03.1.8 — outline rows at unit level.
@@ -47,6 +49,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-03 — Implement `Task` aggregate, events, errors, overdue policy (TDD)
 
+- **Status:** done
 - **Goal:** lifecycle rules live in the aggregate.
 - **Changes:** `domain/task.ts`, `domain/overdue.policy.ts`, `domain/task.events.ts`, `domain/task.errors.ts` (`TaskNotFound`, `UnknownTeams`) + specs (`ConcurrencyConflict` is reused from `shared/domain`).
 - **Covers:** @AC-03.1.1 @AC-03.1.4 @AC-03.9.4 @AC-03.9.5 @AC-03.10.1 @AC-03.10.2 @AC-03.10.3 @AC-03.10.5 @AC-03.13.2 @AC-03.13.4 @AC-03.14.1 @AC-03.14.2 @AC-03.14.3 (unit level).

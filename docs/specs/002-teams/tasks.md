@@ -22,6 +22,7 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 
 ## T-002-01 — Prisma `Team` model and migration
 
+- **Status:** done
 - **Goal:** The `teams` table exists with integrity and performance guarantees.
 - **Changes:** `apps/api/prisma/schema.prisma` (`Team` model, relation on `User`). Migration `create_teams` with raw SQL appended: partial unique `teams_owner_id_lower_name_key`, partial `teams_owner_id_created_at_idx`, and checks `teams_color_hex_format` and `teams_version_positive`. Verify `docs/architecture/data-model.md` is in sync.
 - **Covers:** storage for all US-02.x. Its integrity guarantees back AC-02.1.5, AC-02.1.7 and AC-02.1.9.
@@ -29,6 +30,7 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 
 ## T-002-02 — Team domain
 
+- **Status:** done
 - **Goal:** Framework-free domain where invalid teams cannot be constructed.
 - **Changes:** `modules/teams/domain/**`, `shared/domain/{aggregate-root.ts,domain-error.ts,domain-event.ts,expected-version.ts}` (`ExpectedVersion` lives in the domain because `Team.assertVersion` uses it and rule A1 forbids `domain → application`), plus unit tests alongside each file.
 - **Covers:** `@AC-02.1.2 @AC-02.1.3 @AC-02.1.4 @AC-02.1.10 @AC-02.1.11 @AC-02.6.7 @AC-02.9.2 @AC-02.9.6` (domain level)
@@ -36,6 +38,7 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 
 ## T-002-03 — Team repository
 
+- **Status:** done
 - **Goal:** Persist and load the aggregate, scoped by owner, with an optimistic version guard.
 - **Changes:** `domain/team.repository.ts` (`findById(ownerId, id)`, `existsActiveByName(ownerId, name, excludingId?)`, `insert(team)`, `update(team, expectedVersion)`), `infrastructure/prisma-team.repository.ts`, `infrastructure/team.mapper.ts`, `test/support/in-memory-team.repository.ts` (fake shared by handler tests), and a contract test suite run against **both** the fake and the Prisma adapter.
 - **Covers:** `@AC-02.1.9 @AC-02.9.5` (persistence level), BR-02.8.

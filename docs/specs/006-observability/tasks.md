@@ -15,6 +15,7 @@ Order matters; each task is one PR. Sizes: **S** < 150 changed lines, **M** < 40
 
 ## T-006-01 — Bootstrap OpenTelemetry before Nest
 
+- **Status:** done
 - **Goal:** traces and metrics exported over OTLP/HTTP, started before any instrumented module loads, never crashing the API.
 - **Changes:** `apps/api/src/instrumentation.ts`; `TelemetryEnv` class-validator class in `src/config/telemetry.env.ts` (composed into the `ConfigModule` `validate()` and called directly by the bootstrap); `package.json` scripts `start`/`start:prod` use `node --import ./dist/instrumentation.js dist/main.js`; diag→logger bridge with 60 s de-dup; shutdown hook; `.env.example` OTEL variables; deps `@opentelemetry/sdk-node`, `@opentelemetry/auto-instrumentations-node`, OTLP HTTP exporters, `@prisma/instrumentation`.
 - **Covers:** @AC-06.2.1 (HTTP + DB spans present), @AC-06.2.2, @AC-06.2.5 (pg/http hygiene), @AC-06.2.6, @AC-06.5.1, @AC-06.5.2, @AC-06.5.3, @AC-06.5.4, @AC-06.5.5 (telemetry settings)
@@ -22,6 +23,7 @@ Order matters; each task is one PR. Sizes: **S** < 150 changed lines, **M** < 40
 
 ## T-006-02 — Structured logging with trace correlation and redaction
 
+- **Status:** done
 - **Goal:** one JSON completion line per request with `reqId`, `traceId`, `spanId`, `userId`; no credentials or PII ever logged.
 - **Changes:** `src/shared/observability/` (`observability.module.ts`, `logging/{logger.config,redact-paths,request-id,sanitize-url,pino-bridge,prisma-log}.ts`, trace mixin); Better Auth `logger` and Prisma `log` events wired to the bridges, `main.ts` `app.useLogger(app.get(Logger))`, `bufferLogs: true`; `LOG_LEVEL`, `LOG_PRETTY` in `TelemetryEnv`; `X-Request-Id` response header.
 - **Covers:** @AC-06.2.3, @AC-06.3.1, @AC-06.3.2, @AC-06.3.3, @AC-06.3.4 (log side), @AC-06.3.5, @AC-06.3.6, @AC-06.3.7, @AC-06.3.8, @AC-06.1.5 (log side)
@@ -43,6 +45,7 @@ Order matters; each task is one PR. Sizes: **S** < 150 changed lines, **M** < 40
 
 ## T-006-05 — RED metrics and task counters
 
+- **Status:** done
 - **Goal:** `http.server.request.duration` with route template; `tasks_created_total`, `tasks_completed_total`, `tasks_deleted_total` from domain events.
 - **Changes:** `TaskMetrics` port (`modules/tasks/application/ports/`), `record-task-metrics.handler.ts` (`modules/tasks/application/events/`), `otel-task-metrics.adapter.ts` (`modules/tasks/infrastructure/adapters/`), binding in `tasks.module.ts`; metric views if needed to drop high-cardinality attributes. Only the three task counters exist (no `teams_*` metrics).
 - **Covers:** @AC-06.4.1, @AC-06.4.2, @AC-06.4.3, @AC-06.4.4, @AC-06.4.5
