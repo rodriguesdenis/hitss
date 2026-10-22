@@ -11,7 +11,6 @@ Local operation of Teams & Tasks. Commands assume the repository root. Every `ma
 | Follow API logs                                            | `make logs` (`LOG_PRETTY=true make up` for human-readable logs)                      |
 | Re-apply demo data                                         | `make seed`                                                                          |
 | Wipe everything and start fresh                            | `make reset`                                                                         |
-| Mobile dev server (Expo Go QR)                             | _planned (mobile app), not in the Makefile yet_                                      |
 | Smoke test (stop the dev stack first: ports 3000 and 5432) | `make smoke`                                                                         |
 | Status                                                     | `docker compose ps` (look for `healthy`)                                             |
 
@@ -52,20 +51,6 @@ Symptom: `api` stays `waiting` or `dependency failed to start: container teams-t
 4. Production-rule errors (`APP_ENV=production`): `BETTER_AUTH_SECRET` is the local default, `BETTER_AUTH_URL` not https, `CORS_ORIGINS` has `*`/`http://`/`localhost`, `AUTH_RATE_LIMIT_ENABLED=false`, `APP_SCHEME=exp`, `SEED_DEMO=true` → fix the named variable, or use `APP_ENV=local` locally (`NODE_ENV` is always `production` inside the image; only `APP_ENV` selects these rules). `DOCS_ENABLED` is forced off in production, so `/docs` is 404 there.
 5. Readiness `503` with `database: down` → DB unreachable; see the previous section.
 
-### Expo device can't reach the API
-
-Symptom: the app on a phone shows network errors/timeouts; on an emulator it works.
-
-- `localhost` on the phone is the phone itself. Use your computer's LAN IP:
-  1. Find it: `ipconfig getifaddr en0` (macOS) · `hostname -I` (Linux) · `ipconfig` (Windows).
-  2. `EXPO_PUBLIC_API_URL=http://192.168.1.20:3000 make mobile` (restart Metro after changing `EXPO_PUBLIC_*`; they are inlined at bundle time — clear with `expo start -c` if stale).
-  3. Phone and computer on the same Wi-Fi; corporate/guest Wi-Fi often isolates clients — use a hotspot.
-  4. Firewall: allow inbound TCP 3000 (macOS: System Settings → Network → Firewall; Windows Defender: allow Docker/`com.docker.backend`).
-- Emulators: Android emulator → `http://10.0.2.2:3000`; iOS simulator → `http://localhost:3000`.
-- `--tunnel` only exposes **Metro** (the JS bundle), not the API. A phone on mobile data can load the app but still needs a reachable API URL.
-- QR not visible in `make mobile`: the service runs with a TTY; run `docker compose --profile mobile up mobile` in the foreground, or open the `exp://…` URL printed in the logs manually in Expo Go.
-- Tunnel fails (`ngrok tunnel took too long to connect`): retry, or use LAN mode: `docker compose --profile mobile run --rm --service-ports mobile pnpm --filter @hitss/mobile exec expo start --lan` (requires host networking reachability).
-
 ### Requests return 401
 
 - Token missing/expired: sign in again (`POST /api/auth/sign-in/email`), read the `set-auth-token` header, send `Authorization: Bearer <token>`.
@@ -74,7 +59,7 @@ Symptom: the app on a phone shows network errors/timeouts; on an emulator it wor
 
 ### Requests return 429
 
-Rate limit: `RATE_LIMIT_MAX` (default 100) req/min per user, `RATE_LIMIT_IP_MAX` (default 300) req/min per client IP checked before authentication, and, on `/api/auth/*`, 10 req/min per IP on each credential route (sign-up, sign-in, sign-out) and 100 req/min per IP on `get-session`. Wait for `Retry-After` seconds (`X-Retry-After` on `/api/auth/*`, set by Better Auth's limiter; `AUTH_RATE_LIMIT_ENABLED=false` turns that limiter off outside production). For load tests use `make load` (raises `RATE_LIMIT_MAX` and `RATE_LIMIT_IP_MAX` for that run).
+Rate limit: `RATE_LIMIT_MAX` (default 100) req/min per user, `RATE_LIMIT_IP_MAX` (default 300) req/min per client IP checked before authentication, and, on `/api/auth/*`, 10 req/min per IP on each credential route (sign-up, sign-in, sign-out) and 100 req/min per IP on `get-session`. Wait for `Retry-After` seconds (`X-Retry-After` on `/api/auth/*`, set by Better Auth's limiter; `AUTH_RATE_LIMIT_ENABLED=false` turns that limiter off outside production). For a load test, raise `RATE_LIMIT_MAX` and `RATE_LIMIT_IP_MAX` for that run.
 
 **Docker Desktop / WSL2 caveat.** On Docker Desktop (macOS, Windows, WSL2) published ports go through a NAT/userland proxy, so the API usually sees **one client IP (the gateway, e.g. `172.x.0.1` / `192.168.65.1`) for all traffic coming from the host** — Bruno, the app, `curl` and a phone on the LAN. The per-IP limits then act as one shared bucket for everything you run locally, and a burst from one tool can cause `429` in another. This is expected and local-only (native Linux Docker shows real addresses; behind a real proxy set `TRUSTED_PROXIES`). Workarounds: wait for `Retry-After`, sign in once and reuse the token, or raise the limits for a session: `RATE_LIMIT_IP_MAX=1000 make up`. Do not trust client-sent `X-Forwarded-For` / `x-tt-client-ip` to work around it — the API ignores them.
 
