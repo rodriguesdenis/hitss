@@ -104,7 +104,6 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
       .update(task, 1)
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(UnknownTeams);
-    expect((error as UnknownTeams).teamIds).toEqual([gone]);
     const stored = (await repository.findById(ownerId, task.id))!;
     expect(stored.version).toBe(1);
     expect(stored.status).toBe('PENDING');

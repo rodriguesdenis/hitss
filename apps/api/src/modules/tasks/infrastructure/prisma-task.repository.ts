@@ -14,9 +14,15 @@ const WITH_TEAMS = { teams: { select: { teamId: true } } } as const;
 /**
  * Write-side persistence of the Task aggregate: the tasks row and its task_teams links, always
  * written together. Every statement filters by owner_id; reads only see active rows.
- * Unknown team ids are the application's check (TeamDirectory.findMissing). A team that
- * disappears between that check and the write (TOCTOU) trips the task_teams foreign key; that
- * violation becomes UnknownTeams with the offending ids (422), not an unexpected error (500).
+ * Unknown team ids are the application's check (TeamDirectory.findMissing). A violation of the
+ * task_teams team foreign key becomes UnknownTeams without ids (422, not 500); the command
+ * handler re-runs findMissing to report the precise ids. This repository never reads Team
+ * Management's tables (constitution II.2).
+ *
+ * P2003 only covers a team row that is physically gone; a team SOFT-deleted between findMissing
+ * and the write still satisfies the FK and leaves a stale link (low impact: invisible chip, empty
+ * filter). The real fix goes to T-002-09 (in one CLS transaction: re-validate through
+ * TeamDirectory inside the transaction or order DeleteTeam's reaction after the task write).
  */
 @Injectable()
 export class PrismaTaskRepository extends TaskRepository {
@@ -45,7 +51,7 @@ export class PrismaTaskRepository extends TaskRepository {
   }
 
   async insert(task: Task): Promise<void> {
-    await this.withUnknownTeams(task, () =>
+    await this.withUnknownTeams(() =>
       this.transaction(async (tx) => {
         await tx.task.create({ data: TaskMapper.toInsert(task) });
         await this.addLinks(tx, task.id, task.teamIds.values);
@@ -54,9 +60,7 @@ export class PrismaTaskRepository extends TaskRepository {
   }
 
   async update(task: Task, expectedVersion: number): Promise<number> {
-    return this.withUnknownTeams(task, () =>
-      this.updateRow(task, expectedVersion),
-    );
+    return this.withUnknownTeams(() => this.updateRow(task, expectedVersion));
   }
 
   private updateRow(task: Task, expectedVersion: number): Promise<number> {
@@ -91,26 +95,15 @@ export class PrismaTaskRepository extends TaskRepository {
   }
 
   /**
-   * Runs a write; a violation of the team-link foreign key becomes UnknownTeams carrying the
-   * task's team ids that no longer exist. The failed transaction is already rolled back, so
-   * the lookup runs on its own. If every team exists again, the original error passes through.
+   * Runs a write; a violation of the team-link foreign key becomes UnknownTeams without ids.
+   * Which ids are missing is the TeamDirectory's answer, so the handler asks it again rather
+   * than this repository querying the teams table.
    */
-  private async withUnknownTeams<T>(
-    task: Task,
-    write: () => Promise<T>,
-  ): Promise<T> {
+  private async withUnknownTeams<T>(write: () => Promise<T>): Promise<T> {
     try {
       return await write();
     } catch (error) {
-      if (!isTeamLinkViolation(error)) throw error;
-      const ids = task.teamIds.values;
-      const existing = await this.prisma.team.findMany({
-        where: { id: { in: ids } },
-        select: { id: true },
-      });
-      const found = new Set(existing.map((team) => team.id));
-      const missing = ids.filter((id) => !found.has(id));
-      throw missing.length > 0 ? new UnknownTeams(missing) : error;
+      throw isTeamLinkViolation(error) ? new UnknownTeams([]) : error;
     }
   }
 

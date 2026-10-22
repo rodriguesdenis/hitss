@@ -266,8 +266,9 @@ export function describeTaskRepositoryContract(
       });
     });
 
+    // The precise ids are the handler's job (it re-runs TeamDirectory.findMissing).
     describe('a team that no longer exists (TOCTOU after the directory check)', () => {
-      it('insert fails with UnknownTeams naming it and stores nothing', async () => {
+      it('insert fails with UnknownTeams and stores nothing', async () => {
         const ownerId = await owner();
         const [live, gone] = [await team(ownerId), await unknownTeam()];
         const task = aTask(ownerId, { teamIds: [live, gone] });
@@ -277,11 +278,10 @@ export function describeTaskRepositoryContract(
           .catch((e: unknown) => e);
 
         expect(error).toBeInstanceOf(UnknownTeams);
-        expect((error as UnknownTeams).teamIds).toEqual([gone]);
         await expect(repo().findById(ownerId, task.id)).resolves.toBeNull();
       });
 
-      it('update fails with UnknownTeams naming it and writes nothing', async () => {
+      it('update fails with UnknownTeams and writes nothing', async () => {
         const ownerId = await owner();
         const live = await team(ownerId);
         const task = aTask(ownerId, { teamIds: [live] });
@@ -295,7 +295,6 @@ export function describeTaskRepositoryContract(
           .catch((e: unknown) => e);
 
         expect(error).toBeInstanceOf(UnknownTeams);
-        expect((error as UnknownTeams).teamIds).toEqual([gone]);
         const stored = (await repo().findById(ownerId, task.id))!;
         expect(stored.version).toBe(1);
         expect(stored.status).toBe('PENDING');
