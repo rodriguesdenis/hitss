@@ -53,9 +53,17 @@ updates:
       interval: weekly
     commit-message:
       prefix: 'build(infra)'
+    ignore:
+      # ADR-0003 pins PostgreSQL 17: a major upgrade is a deliberate migration, not an automatic bump.
+      - dependency-name: 'postgres'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: docker-compose
     directory: /
     schedule:
       interval: weekly
     commit-message:
       prefix: 'build(infra)'
+    ignore:
+      # ADR-0003 pins PostgreSQL 17: a major upgrade is a deliberate migration, not an automatic bump.
+      - dependency-name: 'postgres'
+        update-types: ['version-update:semver-major']
