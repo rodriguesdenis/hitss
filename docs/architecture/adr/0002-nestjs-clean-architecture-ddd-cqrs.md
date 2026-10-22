@@ -1,6 +1,7 @@
 # ADR-0002 — NestJS with Clean Architecture, DDD and CQRS
 
-- **Status:** Accepted
+- **Status:** Accepted, partly superseded by [ADR-0020](0020-simplify-architecture-for-the-hiring-test.md)
+- **Superseded (2026-10-22):** CQRS (commands, queries, buses), module `contracts/` with QueryBus adapters, the unit of work and the in-transaction / after-commit event publication — see ADR-0020.
 - **Date:** 2026-10-20
 - **Deciders:** software-architect, nestjs-specialist
 

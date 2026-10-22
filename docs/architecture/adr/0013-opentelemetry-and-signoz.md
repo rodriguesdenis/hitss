@@ -1,6 +1,7 @@
 # ADR-0013 — OpenTelemetry + SigNoz
 
-- **Status:** Accepted
+- **Status:** Accepted, partly superseded by [ADR-0020](0020-simplify-architecture-for-the-hiring-test.md)
+- **Superseded (2026-10-22):** the custom telemetry machinery (sanitizing exporter, metric views, `@Traced`, diagnostics logger, telemetry lifecycle); OTLP export only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set — see ADR-0020.
 - **Date:** 2026-10-20
 - **Deciders:** software-architect, observability-sre
 

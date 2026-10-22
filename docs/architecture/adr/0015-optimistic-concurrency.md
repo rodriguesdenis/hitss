@@ -1,6 +1,7 @@
 # ADR-0015 — Optimistic concurrency with `version` + ETag/If-Match
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0020](0020-simplify-architecture-for-the-hiring-test.md)
+- **Superseded (2026-10-22):** ETag, `If-Match`, `412` and the retry-once policy (last-write-wins; `version` stays as data) — see ADR-0020.
 - **Date:** 2026-10-20
 - **Deciders:** software-architect, nestjs-specialist, database-specialist
 

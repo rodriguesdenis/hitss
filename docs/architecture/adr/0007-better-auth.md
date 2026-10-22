@@ -1,6 +1,7 @@
 # ADR-0007 — Better Auth for authentication
 
-- **Status:** Accepted
+- **Status:** Accepted, partly superseded by [ADR-0020](0020-simplify-architecture-for-the-hiring-test.md)
+- **Superseded (2026-10-22):** cookie sessions and the CSRF / Origin / JSON-body guards on `/api/v1` (Bearer tokens only now) — see ADR-0020.
 - **Date:** 2026-10-20
 - **Deciders:** software-architect, security-specialist, nestjs-specialist
 
