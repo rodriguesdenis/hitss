@@ -36,6 +36,22 @@ export class TelemetryEnv {
     { message: 'must be an http(s) URL' },
   )
   OTEL_EXPORTER_OTLP_ENDPOINT?: string;
+
+  /**
+   * Per-signal endpoints are read by the SDK too and would bypass the https rule on the generic
+   * one, so production refuses them (see production-rules.ts).
+   */
+  @IsOptional()
+  @IsString({ message: 'must be a string' })
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT?: string;
+
+  @IsOptional()
+  @IsString({ message: 'must be a string' })
+  OTEL_EXPORTER_OTLP_METRICS_ENDPOINT?: string;
+
+  @IsOptional()
+  @IsString({ message: 'must be a string' })
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT?: string;
 }
 
 /** Validates only the telemetry variables; throws ConfigValidationError naming each bad one. */

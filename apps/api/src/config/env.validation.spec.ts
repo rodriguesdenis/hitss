@@ -111,6 +111,21 @@ describe('production rules', () => {
     },
   );
 
+  it.each([
+    'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT',
+    'OTEL_EXPORTER_OTLP_METRICS_ENDPOINT',
+    'OTEL_EXPORTER_OTLP_LOGS_ENDPOINT',
+  ])(
+    'AC-08.7 APP_ENV=production refuses the per-signal endpoint %s (it would bypass the https rule)',
+    (variable) => {
+      expectInvalid(
+        validate,
+        { ...production, [variable]: 'http://collector.example.test:4318' },
+        variable,
+      );
+    },
+  );
+
   it('AC-08.7 APP_ENV=production accepts no endpoint at all (nothing is exported)', () => {
     expect(() => validate({ ...production })).not.toThrow();
   });
