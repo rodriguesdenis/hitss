@@ -86,6 +86,7 @@ docker compose exec -T api sh -c '
   for path in src test .env .git .npmrc node_modules/.bin/prisma node_modules/prisma node_modules/typescript; do
     [ ! -e "$path" ] || { echo "unexpected /app/$path"; exit 1; }
   done
+  [ -z "$(find dist -type d -name tests)" ] || { echo "a tests folder is in /app/dist"; exit 1; }
   ! command -v npm > /dev/null || { echo "npm is present"; exit 1; }
   ! touch /app/.write-test 2> /dev/null || { echo "/app is writable"; exit 1; }
   grep -q "CapEff:.0000000000000000" /proc/self/status || { echo "capabilities not dropped"; exit 1; }

@@ -41,6 +41,10 @@ describe('compose smoke script', () => {
     assert.match(source, /\.git/);
   });
 
+  it('AC-07.1.6 asserts the image holds no tests folder under dist', () => {
+    assert.match(source, /find dist -type d -name tests/);
+  });
+
   it('AC-07.1.8 records the cold-start duration', () => {
     assert.match(source, /GITHUB_STEP_SUMMARY/);
     assert.match(source, /SECONDS|date \+%s/);
