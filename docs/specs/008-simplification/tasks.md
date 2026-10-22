@@ -61,7 +61,9 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 - **Goal:** no CQRS package or leftover shared abstractions; rules match the new tree (AC-08.5, AC-08.6).
 - **Changes:** remove `@nestjs/cqrs` and `CqrsModule`; delete unused `shared/application/*`; rewrite `.dependency-cruiser.cjs` (domain pure; use cases → domain + repositories only; presentation → use cases; persistence → domain; cross-module only through `<b>-lookup.service.ts` / `<b>s.module.ts`) with meta-test fixtures per rule.
+- **Status:** done
 - **Done when:** `pnpm arch` and its meta-tests green; no `@nestjs/cqrs` in `package.json`.
+- **Note:** rules after this task: the three domain rules, `application-not-to-adapters`, `infrastructure-not-to-presentation`, the new `persistence-not-to-use-cases`, `presentation-not-to-infra`, the new `presentation-not-to-repositories`, and `contexts-isolated` with only the lookup-service and module-file exceptions (the `contracts/` exception and both contracts rules are gone). Each rule has a violating fixture in `rules.test.mjs`. Also removed: `IdGenerator` and `UuidGenerator`, and `AggregateRoot` and `DomainEvent`, which had no users left. `precise-unknown-teams.ts` moved to `use-cases/shared/` (Trestle). The architecture docs still describe the old rules; they belong to T-008-09.
 
 ## T-008-08 — CI gate
 
