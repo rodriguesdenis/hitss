@@ -13,7 +13,12 @@ function run(attributes: Record<string, string>): Record<string, unknown> {
     },
     shutdown: () => Promise.resolve(),
   };
-  const span = { name: 'GET', attributes } as unknown as ReadableSpan;
+  const span = {
+    name: 'GET',
+    attributes,
+    events: [],
+    status: { code: 0 },
+  } as unknown as ReadableSpan;
   new SanitizingSpanExporter(inner).export([span], () => undefined);
   return seen[0]?.attributes ?? {};
 }
@@ -40,11 +45,50 @@ describe('SanitizingSpanExporter', () => {
 
   it('AC-06.2.5 leaves other attributes untouched and does not mutate the span', () => {
     const attributes = { 'url.full': '/a?b=1', other: 'x?y' };
-    const span = { attributes } as unknown as ReadableSpan;
+    const span = {
+      attributes,
+      events: [],
+      status: { code: 0 },
+    } as unknown as ReadableSpan;
     const inner = { export: jest.fn(), shutdown: jest.fn() };
     new SanitizingSpanExporter(inner).export([span], () => undefined);
     expect(attributes['url.full']).toBe('/a?b=1');
     const sent = (inner.export.mock.calls[0] as [ReadableSpan[]])[0][0];
     expect(sent?.attributes.other).toBe('x?y');
+  });
+
+  it('AC-06.2.5 drops exception messages, stacks and the status message but keeps the error type', () => {
+    let sent: ReadableSpan[] = [];
+    const inner: SpanExporter = {
+      export: (spans: ReadableSpan[]) => {
+        sent = spans;
+      },
+      shutdown: () => Promise.resolve(),
+    };
+    const span = {
+      attributes: {},
+      status: { code: 2, message: 'failed for someone@example.test' },
+      events: [
+        {
+          name: 'exception',
+          time: [0, 0],
+          attributes: {
+            'exception.type': 'TypeError',
+            'exception.message': 'secret-value',
+            'exception.stacktrace': 'TypeError: secret-value\n    at x',
+          },
+        },
+      ],
+    } as unknown as ReadableSpan;
+
+    new SanitizingSpanExporter(inner).export([span], () => undefined);
+
+    expect(sent[0]?.status).toEqual({ code: 2 });
+    expect(sent[0]?.events[0]?.attributes).toEqual({
+      'exception.type': 'TypeError',
+    });
+    expect(JSON.stringify(sent[0]?.events)).not.toContain('secret-value');
+    // The original span is untouched for other processors.
+    expect(span.status.message).toBeDefined();
   });
 });
