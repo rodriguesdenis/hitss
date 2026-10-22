@@ -2,6 +2,8 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const API_DIR = join(__dirname, '../..');
+/** A hung child must fail the test instead of blocking the run. */
+const PROBE_TIMEOUT_MS = 90_000;
 
 export interface ProbeResult {
   status: number | null;
@@ -33,9 +35,14 @@ export function runProbeInTimeZone(
       cwd: API_DIR,
       env: { ...process.env, ...env, TZ: zone, CI: '' },
       encoding: 'utf8',
+      timeout: PROBE_TIMEOUT_MS,
     },
   );
-  return { status: result.status, output: `${result.stdout}${result.stderr}` };
+  const timedOut = result.error ? `\n${result.error.message}` : '';
+  return {
+    status: result.status,
+    output: `${result.stdout}${result.stderr}${timedOut}`,
+  };
 }
 
 /** Fails with the child's output, so a broken zone shows its actual assertion. */

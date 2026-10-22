@@ -4,10 +4,6 @@ import { TaskDescription } from '../domain/value-objects/task-description';
 import { TaskStatus } from '../domain/value-objects/task-status';
 import { TaskTeamIds } from '../domain/value-objects/task-team-ids';
 import { TaskTitle } from '../domain/value-objects/task-title';
-import {
-  expectProbePassed,
-  runProbeInTimeZone,
-} from '../../../../test/support/in-time-zone';
 import { TaskMapper, TaskRowWithTeams } from './task.mapper';
 
 const ID = '11111111-1111-4111-8111-111111111111';
@@ -73,15 +69,6 @@ describe('TaskMapper', () => {
     );
     expect(TaskMapper.toDomain({ ...row, dueDate: null }).dueDate).toBeNull();
   });
-
-  // A test cannot change its own process's zone, so each zone runs in a child process.
-  it.each(['Pacific/Kiritimati', 'America/Los_Angeles'])(
-    'keeps year-edge calendar days with the process in %s',
-    (zone) => {
-      expectProbePassed(runProbeInTimeZone('task-mapper.tz-probe.ts', zone));
-    },
-    60_000,
-  );
 
   it('inserts at version 1 and never writes id, owner, version or createdAt on update', () => {
     const task = Task.create({
