@@ -17,7 +17,7 @@ export class InMemoryTaskRepository extends TaskRepository {
   private readonly rows = new Map<string, TaskProps>();
   private readonly missingTeams = new Set<string>();
 
-  /** Makes a team id fail like a team deleted after the directory check (UnknownTeams). */
+  /** Makes a team id fail like a team gone after the directory check (UnknownTeams, no ids). */
   simulateMissingTeam(teamId: string): void {
     this.missingTeams.add(teamId);
   }
@@ -55,9 +55,8 @@ export class InMemoryTaskRepository extends TaskRepository {
     if (this.rows.has(task.id)) {
       return Promise.reject(new Error(`Duplicate task id ${task.id}`));
     }
-    const missing = this.missingOf(task);
-    if (missing.length > 0) {
-      return Promise.reject(new UnknownTeams(missing));
+    if (this.linksMissingTeam(task)) {
+      return Promise.reject(new UnknownTeams([]));
     }
     this.rows.set(task.id, snapshot(task, 1));
     return Promise.resolve();
@@ -71,17 +70,16 @@ export class InMemoryTaskRepository extends TaskRepository {
     if (row.version !== expectedVersion) {
       return Promise.reject(new ConcurrencyConflict(row.version));
     }
-    const missing = this.missingOf(task);
-    if (missing.length > 0) {
-      return Promise.reject(new UnknownTeams(missing));
+    if (this.linksMissingTeam(task)) {
+      return Promise.reject(new UnknownTeams([]));
     }
     const version = expectedVersion + 1;
     this.rows.set(task.id, snapshot(task, version));
     return Promise.resolve(version);
   }
 
-  private missingOf(task: Task): string[] {
-    return task.teamIds.values.filter((id) => this.missingTeams.has(id));
+  private linksMissingTeam(task: Task): boolean {
+    return task.teamIds.values.some((id) => this.missingTeams.has(id));
   }
 }
 
