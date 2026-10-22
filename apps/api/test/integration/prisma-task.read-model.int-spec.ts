@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { assembleTaskView } from '../../src/modules/tasks/application/views/task-view.assembler';
 import { DueDate } from '../../src/modules/tasks/domain/value-objects/due-date';
 import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status';
@@ -24,7 +25,7 @@ describe('PrismaTaskReadModel (integration, T-003-06a)', () => {
     app = await createTestApp(db.url);
     prisma = app.get(PrismaService);
     readModel = new PrismaTaskReadModel(prisma);
-    repository = new PrismaTaskRepository(prisma);
+    repository = new PrismaTaskRepository(app.get(TransactionHost));
   });
 
   afterAll(async () => {

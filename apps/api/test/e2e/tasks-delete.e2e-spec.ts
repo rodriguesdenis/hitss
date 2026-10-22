@@ -99,7 +99,12 @@ describe('DELETE /api/v1/tasks/:id (e2e)', () => {
       expect(after.status).toBe(404);
       expect(codeOf(after)).toBe('TASK_NOT_FOUND');
     }
-    for (const query of [{}, { teamId: mobile }, { status: 'PENDING' }]) {
+    for (const query of [
+      {},
+      { teamId: mobile },
+      { status: 'PENDING' },
+      { teamId: mobile, status: 'PENDING' },
+    ]) {
       const listed = await http()
         .get(TASKS)
         .query(query)

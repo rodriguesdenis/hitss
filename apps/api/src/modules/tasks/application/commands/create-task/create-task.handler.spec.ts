@@ -1,7 +1,8 @@
-import { EventBus } from '@nestjs/cqrs';
 import { InMemoryTaskRepository } from '../../../../../../test/support/in-memory-task.repository';
 import { InMemoryTeamDirectory } from '../../../../../../test/support/in-memory-team-directory';
 import { Clock } from '../../../../../shared/application/ports/clock';
+import { DomainEventPublisher } from '../../../../../shared/application/ports/domain-event-publisher';
+import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
 import { IdGenerator } from '../../../../../shared/application/ports/id-generator';
 import { TaskCreated } from '../../../domain/task.events';
 import {
@@ -13,6 +14,8 @@ import { TaskStatus } from '../../../domain/value-objects/task-status';
 import { CreateTaskCommand } from './create-task.command';
 import { CreateTaskHandler } from './create-task.handler';
 
+/** Runs the work directly; the real unit of work's atomicity is proven in integration. */
+const inline: UnitOfWork = { run: (work) => work() };
 const OWNER = 'owner-1';
 const NOW = new Date('2026-10-20T13:00:00.000Z');
 const TASK_ID = '11111111-1111-4111-8111-111111111111';
@@ -22,6 +25,7 @@ const team = (n: number) =>
 describe('CreateTaskHandler', () => {
   let tasks: InMemoryTaskRepository;
   let directory: InMemoryTeamDirectory;
+  /** publishAfterCommit of the fake publisher. */
   let publishAll: jest.Mock;
   let handler: CreateTaskHandler;
 
@@ -37,7 +41,8 @@ describe('CreateTaskHandler', () => {
     handler = new CreateTaskHandler(
       tasks,
       directory,
-      { publishAll } as unknown as EventBus,
+      inline,
+      { publishAfterCommit: publishAll } as unknown as DomainEventPublisher,
       clock,
       ids,
     );

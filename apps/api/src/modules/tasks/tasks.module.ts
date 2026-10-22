@@ -10,6 +10,7 @@ import { ChangeTaskStatusHandler } from './application/commands/change-task-stat
 import { ReplaceTaskHandler } from './application/commands/replace-task/replace-task.handler';
 import { DeleteTaskHandler } from './application/commands/delete-task/delete-task.handler';
 import { CreateTaskHandler } from './application/commands/create-task/create-task.handler';
+import { OnTeamDeletedHandler } from './application/events/on-team-deleted.handler';
 import { TASK_METRICS_HANDLERS } from './application/events/record-task-metrics.handler';
 import { TaskMetrics } from './application/ports/task-metrics';
 import { TaskReadModel } from './application/ports/task.read-model';
@@ -46,6 +47,8 @@ import { TasksController } from './presentation/tasks.controller';
     // Public: answers CountTasksByTeamQuery (contracts/) for Team Management's taskCount.
     CountTasksByTeamHandler,
     ...TASK_METRICS_HANDLERS,
+    // In DeleteTeam's transaction (@InTransactionHandler(TeamDeleted), T-003-13).
+    OnTeamDeletedHandler,
     {
       provide: TaskMetrics,
       useFactory: () => new OtelTaskMetrics(metrics.getMeter(METER_NAME)),

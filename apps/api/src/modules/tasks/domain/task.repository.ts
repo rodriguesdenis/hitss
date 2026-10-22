@@ -33,4 +33,14 @@ export abstract class TaskRepository {
    * @throws UnknownTeams (without ids) when a linked team no longer exists; nothing is written.
    */
   abstract update(task: Task, expectedVersion: number): Promise<number>;
+
+  /**
+   * Serializes, until the current transaction ends, every writer of links to these teams: task
+   * writes that check the teams with TeamDirectory, and the TeamDeleted reaction that unassigns
+   * one. Whoever comes second waits for the first to commit, then reads its result, so a team
+   * deleted concurrently with a task write never leaves a stale link (T-003-13). Call it inside
+   * a unit of work, before checking the teams.
+   * @throws Error outside a transaction (the lock would be released at once).
+   */
+  abstract lockTeamLinks(teamIds: readonly string[]): Promise<void>;
 }

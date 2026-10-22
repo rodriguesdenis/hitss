@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { AppConfig } from '../../src/config/app-config';
+import type { PrismaTransactionHost } from '../../src/shared/infrastructure/transactions/cls-unit-of-work';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { PrismaTaskRepository } from '../../src/modules/tasks/infrastructure/prisma-task.repository';
 import { aTask } from '../support/task-repository.contract';
@@ -11,7 +12,14 @@ it('PrismaTaskRepository stores and loads calendar days in the process zone', as
   if (!databaseUrl) throw new Error('PROBE_DATABASE_URL is required');
   const prisma = new PrismaService({ databaseUrl } as AppConfig);
   try {
-    const repository = new PrismaTaskRepository(prisma);
+    // No Nest app (and no CLS) in this child process: a stand-in host that runs each write on
+    // the base client. The probe checks calendar-day round trips, not atomicity.
+    const txHost = {
+      tx: prisma,
+      isTransactionActive: () => false,
+      withTransaction: <T>(work: () => Promise<T>) => work(),
+    } as unknown as PrismaTransactionHost;
+    const repository = new PrismaTaskRepository(txHost);
     const owner = await prisma.user.create({
       data: { name: 'Owner', email: `tz-${randomUUID()}@example.test` },
     });

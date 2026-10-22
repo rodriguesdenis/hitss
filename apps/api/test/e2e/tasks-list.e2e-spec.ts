@@ -165,7 +165,7 @@ describe('GET /api/v1/tasks — filters and paging (e2e)', () => {
       });
     });
 
-    it('AC-03.2.3 deleted tasks and other users’ tasks never appear', async () => {
+    it('AC-03.2.3 AC-03.12.2 deleted tasks and other users’ tasks never appear', async () => {
       const user = await signUpAndSignIn(app);
       const other = await signUpAndSignIn(app);
       await seed(user, [
@@ -261,7 +261,7 @@ describe('GET /api/v1/tasks — filters and paging (e2e)', () => {
       ]);
     });
 
-    it('AC-03.3.2 an unknown team, a team without tasks, a deleted team or another user’s team → empty page, total 0', async () => {
+    it('AC-03.3.2 AC-03.12.4 an unknown team, a team without tasks, a deleted team or another user’s team → empty page, total 0', async () => {
       // Its own owner, so the deleted team's task does not leak into the other filter rows.
       const owner = await signUpAndSignIn(app);
       const infra = await createTeam(owner, 'Infra');

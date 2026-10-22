@@ -1,6 +1,8 @@
 import { Global, Module } from '@nestjs/common';
 import { CqrsModule, EventBus } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
+import { DomainEventPublisher } from '../../shared/application/ports/domain-event-publisher';
+import { UnitOfWork } from '../../shared/application/ports/unit-of-work';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
 import { TaskMetrics } from './application/ports/task-metrics';
 import { TaskReadModel } from './application/ports/task.read-model';
@@ -15,8 +17,10 @@ import { TasksModule } from './tasks.module';
 @Module({
   providers: [
     { provide: DomainErrorMappings, useValue: { register: jest.fn() } },
+    { provide: UnitOfWork, useValue: {} },
+    { provide: DomainEventPublisher, useValue: {} },
   ],
-  exports: [DomainErrorMappings],
+  exports: [DomainErrorMappings, UnitOfWork, DomainEventPublisher],
 })
 class GlobalsStub {}
 
