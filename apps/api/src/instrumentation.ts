@@ -13,10 +13,7 @@ import { NestInstrumentation } from '@opentelemetry/instrumentation-nestjs-core'
 import { PgInstrumentation } from '@opentelemetry/instrumentation-pg';
 import { UndiciInstrumentation } from '@opentelemetry/instrumentation-undici';
 import { resourceFromAttributes } from '@opentelemetry/resources';
-import {
-  createAllowListAttributesProcessor,
-  PeriodicExportingMetricReader,
-} from '@opentelemetry/sdk-metrics';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import {
   ATTR_SERVICE_NAME,
@@ -25,6 +22,7 @@ import {
 import { PrismaInstrumentation } from '@prisma/instrumentation';
 import { envFilePaths, ignoreEnvFiles } from './config/env-files';
 import { validateTelemetryEnv } from './config/telemetry.env';
+import { httpMetricViews } from './shared/observability/telemetry/http-metric-views';
 import { isProbe } from './shared/observability/is-probe';
 import { SanitizingSpanExporter } from './shared/observability/telemetry/sanitizing-span-exporter';
 import { createDedupDiagLogger } from './shared/observability/telemetry/diag-logger';
@@ -32,16 +30,6 @@ import { parseResourceAttributes } from './shared/observability/telemetry/resour
 import { telemetryLifecycle } from './shared/observability/telemetry/telemetry-lifecycle';
 
 const METRIC_EXPORT_INTERVAL_MS = 15_000;
-const HTTP_DURATION_METRICS = [
-  'http.server.request.duration',
-  'http.client.request.duration',
-];
-const HTTP_METRIC_ATTRIBUTES = [
-  'http.request.method',
-  'http.route',
-  'http.response.status_code',
-  'error.type',
-];
 
 /** Same .env files and precedence as the config module (real environment variables win). */
 function loadEnvFiles(): void {
@@ -100,12 +88,7 @@ function startTelemetry(): void {
     logRecordProcessors: [],
     // Request duration dimensions are an allowlist: the instrumentation also records the Host
     // header (server.address) and other client-controlled values, which are unbounded.
-    views: HTTP_DURATION_METRICS.map((instrumentName) => ({
-      instrumentName,
-      attributesProcessors: [
-        createAllowListAttributesProcessor(HTTP_METRIC_ATTRIBUTES),
-      ],
-    })),
+    views: httpMetricViews(),
     metricReaders: [
       new PeriodicExportingMetricReader({
         exporter: new MetricExporter({ url: `${base}/v1/metrics` }),
