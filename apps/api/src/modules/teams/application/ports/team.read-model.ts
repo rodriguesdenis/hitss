@@ -3,6 +3,7 @@ import type {
   PageRequest,
   Sort,
 } from '../../../../shared/application/page';
+import type { TeamSummary } from '../../contracts/team-summary';
 import type { TeamView } from '../views/team.view';
 
 /** BR-02.10: the sortable fields; the default is `-createdAt`, ties are broken by id. */
@@ -29,4 +30,13 @@ export abstract class TeamReadModel {
     ownerId: string,
     criteria: ListTeamsCriteria,
   ): Promise<Page<TeamView>>;
+
+  /**
+   * The owner's live teams among `ids` (GetTeamSummariesQuery). Deleted, foreign, unknown and
+   * malformed ids are omitted, duplicates appear once, and no order is promised.
+   */
+  abstract summaries(
+    ownerId: string,
+    ids: readonly string[],
+  ): Promise<TeamSummary[]>;
 }
