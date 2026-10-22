@@ -13,6 +13,7 @@ import { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import {
   DATABASE_PROBE_TIMEOUT,
   DATABASE_PROBE_TIMEOUT_MS,
+  pgPoolConfig,
   POOL_CLOSE_GRACE_MS,
   probeDatabase,
   settleWithin,
@@ -76,7 +77,7 @@ export class PrismaService
     private readonly probeTimeoutMs: number = DATABASE_PROBE_TIMEOUT_MS,
   ) {
     super({
-      adapter: new PrismaPg({ connectionString: config.databaseUrl }),
+      adapter: new PrismaPg(pgPoolConfig(config.databaseUrl)),
       log: PRISMA_LOG,
     });
     this.$on('query', (event) => this.logger.debug(toQueryLog(event)));

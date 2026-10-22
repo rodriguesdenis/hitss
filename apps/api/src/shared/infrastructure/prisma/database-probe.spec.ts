@@ -1,6 +1,7 @@
 import {
   DATABASE_PROBE_TIMEOUT_MS,
   DatabaseUnavailableError,
+  pgPoolConfig,
   probeDatabase,
   settleWithin,
 } from './database-probe';
@@ -118,5 +119,15 @@ describe('settleWithin', () => {
     await jest.advanceTimersByTimeAsync(1);
     await waiting;
     expect(done).toBe(true);
+  });
+});
+
+describe('pgPoolConfig', () => {
+  it('AC-06.1.4 bounds connecting at 2 s and queries at 5 s, so a stuck attempt ends on its own', () => {
+    expect(pgPoolConfig('postgresql://u:p@h:5432/db')).toEqual({
+      connectionString: 'postgresql://u:p@h:5432/db',
+      connectionTimeoutMillis: 2000,
+      query_timeout: 5000,
+    });
   });
 });
