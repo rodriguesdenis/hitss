@@ -30,7 +30,7 @@ As Marina, I want to create a team with a name, a color and an optional descript
 
 **Acceptance criteria**
 
-- **AC-02.1.1** Given valid input, when I create a team, then it is created and returned with: a new id, the trimmed name, the color in upper case, the description (or none), `taskCount` 0, `version` 1, and creation and update timestamps. The response gives the new team's location and its version tag.
+- **AC-02.1.1** Given valid input, when I create a team, then it is created and returned with: a new id, the trimmed name, the color in upper case, the description (or none), `taskCount` 0, `version` 1, and creation and update timestamps. The response gives the new team's location and its version tag. **Version-tag part superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: no `ETag` is sent; `version` stays in the body).
 - **AC-02.1.2** Given a name, when I create a team, then it is accepted only if its length after trimming is 2–50 characters (1 and 51 rejected, 2 and 50 accepted). A rejected name produces a validation error that names the `name` field, and nothing is created.
 - **AC-02.1.3** Given a color, when I create a team, then it is accepted only in the form `#RRGGBB` with hexadecimal digits in any letter case. It is stored and returned in upper case. Anything else (`#FFF`, `7C3AED`, `#7C3AED0`, `#GGGGGG`, `red`, empty) is a validation error naming `colorHex`.
 - **AC-02.1.4** Given a description, when I create a team, then it is optional and accepted up to 280 characters after trimming (281 rejected). An empty or blank description is stored as no description.
@@ -87,7 +87,7 @@ As Marina, I want to open one team, so that I can see its details and current ve
 
 **Acceptance criteria**
 
-- **AC-02.5.1** Given my team exists, when I get it by id, then I receive it, including `taskCount` and `version`, together with a version tag that matches `version`.
+- **AC-02.5.1** Given my team exists, when I get it by id, then I receive it, including `taskCount` and `version`, together with a version tag that matches `version`. **Version-tag part superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: no `ETag` is sent; `version` stays in the body).
 - **AC-02.5.2** Given no team has that id, when I get it, then the response is `404 TEAM_NOT_FOUND`.
 - **AC-02.5.3** Given the id belongs to another user's team, when I get it, then the response is identical to AC-02.5.2.
 - **AC-02.5.4** Given I deleted the team, when I get it, then the response is identical to AC-02.5.2.
@@ -99,7 +99,7 @@ As Marina, I want to rename, recolor or re-describe a team, so that it keeps ref
 
 **Acceptance criteria**
 
-- **AC-02.6.1** Given my team at version _n_, when I replace it with a valid name, color and description, then the new values are stored and returned, `version` becomes _n+1_, `updatedAt` advances, `createdAt` is unchanged, and the new version tag is returned.
+- **AC-02.6.1** Given my team at version _n_, when I replace it with a valid name, color and description, then the new values are stored and returned, `version` becomes _n+1_, `updatedAt` advances, `createdAt` is unchanged, and the new version tag is returned. **Version-tag part superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: no `ETag` is sent; `version` stays in the body).
 - **AC-02.6.2** Given invalid values, when I update, then the same rules as creation apply (name 2–50 after trim without control characters, `#RRGGBB` color, description ≤ 280 without control characters other than line breaks, unknown fields rejected — including `updatedAt`, `deletedAt`, `userId`, `owner_id`, `owner`, `__proto__`, `constructor`), and the team is unchanged.
 - **AC-02.6.3** Given my team has a description, when I update it without a description, then the description is cleared (full replacement).
 - **AC-02.6.4** Given I have teams "Mobile" and "Backend", when I rename "Backend" to "mobile", then the update is rejected with `409 TEAM_NAME_ALREADY_EXISTS` and "Backend" is unchanged.
@@ -134,14 +134,14 @@ As Marina, using the app on two devices, I want an edit based on an outdated cop
 
 **Acceptance criteria**
 
-- **AC-02.9.1** Given my team at version _n_, when I update or delete it with a precondition naming version _n_, then the operation succeeds.
-- **AC-02.9.2** Given my team is at version _n+1_, when I update it with a precondition naming version _n_, then it is rejected with `412 PRECONDITION_FAILED`, the error details include the current version _n+1_, and the team is unchanged.
-- **AC-02.9.3** Given my team is at version _n+1_, when I delete it with a precondition naming version _n_, then it is rejected with `412 PRECONDITION_FAILED` and the team is not deleted.
-- **AC-02.9.4** Given no precondition, when I update or delete, then the operation proceeds against the current version (preconditions are optional).
-- **AC-02.9.5** Given two updates with a precondition naming the same current version arrive at the same time, then exactly one succeeds and the other receives `412 PRECONDITION_FAILED`.
-- **AC-02.9.6** Given a precondition that is not a recognizable version tag, when I update or delete, then it is rejected with `412 PRECONDITION_FAILED` (it cannot match).
-- **AC-02.9.7** Given the team is not found (unknown, foreign or deleted), when I send any precondition on update, then the response is `404 TEAM_NOT_FOUND` (not found wins over precondition).
-- **AC-02.9.8** Given a team owned by another user, when I delete it with an `If-Match` precondition (any value), then the response is `404 TEAM_NOT_FOUND`, identical to AC-02.9.7, and the team is unchanged.
+- **AC-02.9.1** Given my team at version _n_, when I update or delete it with a precondition naming version _n_, then the operation succeeds. **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-02.9.2** Given my team is at version _n+1_, when I update it with a precondition naming version _n_, then it is rejected with `412 PRECONDITION_FAILED`, the error details include the current version _n+1_, and the team is unchanged. **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-02.9.3** Given my team is at version _n+1_, when I delete it with a precondition naming version _n_, then it is rejected with `412 PRECONDITION_FAILED` and the team is not deleted. **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-02.9.4** Given no precondition, when I update or delete, then the operation proceeds against the current version (preconditions are optional). **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-02.9.5** Given two updates with a precondition naming the same current version arrive at the same time, then exactly one succeeds and the other receives `412 PRECONDITION_FAILED`. **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-02.9.6** Given a precondition that is not a recognizable version tag, when I update or delete, then it is rejected with `412 PRECONDITION_FAILED` (it cannot match). **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-02.9.7** Given the team is not found (unknown, foreign or deleted), when I send any precondition on update, then the response is `404 TEAM_NOT_FOUND` (not found wins over precondition). **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-02.9.8** Given a team owned by another user, when I delete it with an `If-Match` precondition (any value), then the response is `404 TEAM_NOT_FOUND`, identical to AC-02.9.7, and the team is unchanged. **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
 
 ### US-02.10 — Retry team creation safely (`COULD`)
 

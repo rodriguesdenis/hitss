@@ -38,6 +38,7 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 - **Goal:** last-write-wins updates (AC-08.3).
 - **Changes:** remove `EtagInterceptor`, `@IfMatch`, `ExpectedVersion`, `assertVersion`, the `ConcurrencyConflict` → `412` mapping and the retry-once loops; repositories update by `id` + `owner_id` and still increment `version`; delete the precondition e2e cases; mark the affected 002/003 ACs "Superseded by 008"; update api-contracts.
+- **Status:** done
 - **Done when:** e2e: `If-Match` ignored, no `ETag`, no `412`; contract suites green.
 
 ## T-008-05 — Teams module, new layout
