@@ -85,10 +85,11 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-06b — Add `GetTask` query and `GET /tasks/:id`
 
+- **Status:** done
 - **Goal:** the first task endpoint, on top of T-003-06a.
-- **Owner:** Forge (NestJS). **Depends on:** T-003-06a, T-001-09 (`CurrentOwner`), the CQRS and Swagger setup.
-- **Changes:** `queries/get-task/*` (today from the `Clock` port, summaries from `TeamDirectory`, `assembleTaskView`); `presentation/tasks.controller.ts` (GET), `dto/task.response.dto.ts`, `dto/team-chip.dto.ts`, error mapping (`TaskNotFound` → 404 `TASK_NOT_FOUND`); e2e spec.
-- **Covers:** @AC-03.8.1 @AC-03.8.3 @AC-03.12.5 (view).
+- **Owner:** Strata (database specialist; reassigned by the Maestro). **Depends on:** T-003-06a, T-001-09 (`CurrentOwner`), the CQRS and Swagger setup.
+- **Changes:** `queries/get-task/*` (today from the `Clock` port, summaries from `TeamDirectory`, `assembleTaskView`); `presentation/tasks.controller.ts` (GET), `dto/task.response.dto.ts`, `dto/team-chip.dto.ts`, error mapping (`TaskNotFound` → 404 `TASK_NOT_FOUND`); e2e spec. Integration of the contexts (first consumer): `GetTeamSummariesHandler` registered in `TeamsModule`, `TasksModule` imported in `AppModule`, pinned by the e2e on the full `AppModule`.
+- **Covers:** @AC-03.8.1 @AC-03.8.2 @AC-03.8.3 @AC-03.12.5 (view).
 - **Done when:** e2e returns the contract shape (teams by name, `isOverdue` with fixed clock); unknown/deleted/foreign → 404 `TASK_NOT_FOUND`; `abc` → 400 field `id`; no session → 401; OpenAPI shows the response schema.
 
 ## T-003-07 — Add `CreateTask` command and `POST /tasks`

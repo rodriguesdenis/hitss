@@ -378,11 +378,11 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 **US-03.8 — View a task** (`MUST`) · epic EP-03
 
-| AC        | Scenarios (file › rule › scenario)                                                                           | Level    | Tasks     |
-| --------- | ------------------------------------------------------------------------------------------------------------ | -------- | --------- |
-| AC-03.8.1 | `tasks.feature` › A single task is viewed with everything needed to display it › View a task                 | e2e      | T-003-06b |
-| AC-03.8.2 | `tasks.feature` › A single task is viewed with everything needed to display it › Viewing a missing task      | unit+e2e | T-003-06a |
-| AC-03.8.3 | `tasks.feature` › A single task is viewed with everything needed to display it › Viewing with a malformed id | e2e      | T-003-06b |
+| AC        | Scenarios (file › rule › scenario)                                                                           | Level    | Tasks                |
+| --------- | ------------------------------------------------------------------------------------------------------------ | -------- | -------------------- |
+| AC-03.8.1 | `tasks.feature` › A single task is viewed with everything needed to display it › View a task                 | e2e      | T-003-06b            |
+| AC-03.8.2 | `tasks.feature` › A single task is viewed with everything needed to display it › Viewing a missing task      | unit+e2e | T-003-06a, T-003-06b |
+| AC-03.8.3 | `tasks.feature` › A single task is viewed with everything needed to display it › Viewing with a malformed id | e2e      | T-003-06b            |
 
 **US-03.9 — Edit a task** (`MUST`) · epic EP-03
 
