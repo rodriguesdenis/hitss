@@ -2,21 +2,22 @@
 
 Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth config, Prisma, HTTP conventions, security baseline, identity schema, auth and CSRF guards, `CurrentOwner`, two-user helper). Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi). Cross-context collaboration uses only the `QueryBus`, the in-transaction event publisher and each module's `contracts/` folder ([ADR-0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md)). The order below lets each PR ship a working, tested increment.
 
-| ID       | Task                                                                                              | Depends on         | Size | Branch                      |
-| -------- | ------------------------------------------------------------------------------------------------- | ------------------ | ---- | --------------------------- |
-| T-002-01 | Prisma `Team` model and migration with partial indexes                                            | T-001-05           | S    | `feat/002-team-schema`      |
-| T-002-02 | Domain: `TeamName`, `ColorHex`, `TeamDescription`, `Team` aggregate, `TeamDeleted`, errors        | —                  | M    | `feat/002-team-domain`      |
-| T-002-03 | `TeamRepository` port + Prisma adapter + mapper, with integration tests                           | T-002-01, T-002-02 | M    | `feat/002-team-repository`  |
-| T-002-04 | `CreateTeam` command + `POST /teams` + DTOs + read-back `GetTeam` view                            | T-002-03, T-001-09 | M    | `feat/002-create-team`      |
-| T-002-05 | Idempotency keys (shared): table, store, interceptor on `POST /teams`                             | T-002-04           | M    | `feat/002-idempotency-keys` |
-| T-002-06 | `ListTeams` query: pagination meta, search, sort (shared pagination)                              | T-002-04           | M    | `feat/002-list-teams`       |
-| T-002-07 | `GetTeam` endpoint + ETag (shared `EtagInterceptor`, `@IfMatch`)                                  | T-002-04           | S    | `feat/002-get-team`         |
-| T-002-08 | `ReplaceTeam` command + `PUT /teams/:id` with `If-Match` → 412                                    | T-002-07           | M    | `feat/002-replace-team`     |
-| T-002-09 | Unit of work + two-phase domain-event publisher (shared); `DeleteTeam` + `DELETE /teams/:id`      | T-002-08           | M    | `feat/002-delete-team`      |
-| T-002-10 | Cross-context seams: `contracts/` (`GetTeamSummariesQuery`, `TeamDeleted`), `TeamTaskCounts` port | T-002-06, T-002-09 | S    | `feat/002-team-contracts`   |
-| T-002-11 | Seed 3 teams for the demo user                                                                    | T-002-01, T-001-11 | S    | `feat/002-seed-teams`       |
-| T-002-12 | Teams telemetry (span attributes, logs; no team domain counters)                                  | T-002-09           | S    | `feat/002-teams-telemetry`  |
-| T-002-13 | Teams requests in Bruno/.http, OpenAPI review, contract-doc clarifications                        | T-002-09           | S    | `docs/002-teams-requests`   |
+| ID        | Task                                                                                              | Depends on          | Size | Branch                          |
+| --------- | ------------------------------------------------------------------------------------------------- | ------------------- | ---- | ------------------------------- |
+| T-002-01  | Prisma `Team` model and migration with partial indexes                                            | T-001-05            | S    | `feat/002-team-schema`          |
+| T-002-02  | Domain: `TeamName`, `ColorHex`, `TeamDescription`, `Team` aggregate, `TeamDeleted`, errors        | —                   | M    | `feat/002-team-domain`          |
+| T-002-03  | `TeamRepository` port + Prisma adapter + mapper, with integration tests                           | T-002-01, T-002-02  | M    | `feat/002-team-repository`      |
+| T-002-04  | `CreateTeam` command + `POST /teams` + DTOs + read-back `GetTeam` view                            | T-002-03, T-001-09  | M    | `feat/002-create-team`          |
+| T-002-05  | Idempotency keys (shared): table, store, interceptor on `POST /teams`                             | T-002-04            | M    | `feat/002-idempotency-keys`     |
+| T-002-06a | List teams, data side: page types, LIKE escape, `TeamReadModel.page` + Prisma adapter             | T-002-04            | S    | `feat/002-team-list-read-model` |
+| T-002-06b | List teams, endpoint: `ListTeams` query, DTOs, sort parser, page envelope, e2e                    | 06a, T-002-04       | S    | `feat/002-list-teams`           |
+| T-002-07  | `GetTeam` endpoint + ETag (shared `EtagInterceptor`, `@IfMatch`)                                  | T-002-04            | S    | `feat/002-get-team`             |
+| T-002-08  | `ReplaceTeam` command + `PUT /teams/:id` with `If-Match` → 412                                    | T-002-07            | M    | `feat/002-replace-team`         |
+| T-002-09  | Unit of work + two-phase domain-event publisher (shared); `DeleteTeam` + `DELETE /teams/:id`      | T-002-08            | M    | `feat/002-delete-team`          |
+| T-002-10  | Cross-context seams: `contracts/` (`GetTeamSummariesQuery`, `TeamDeleted`), `TeamTaskCounts` port | T-002-06a, T-002-09 | S    | `feat/002-team-contracts`       |
+| T-002-11  | Seed 3 teams for the demo user                                                                    | T-002-01, T-001-11  | S    | `feat/002-seed-teams`           |
+| T-002-12  | Teams telemetry (span attributes, logs; no team domain counters)                                  | T-002-09            | S    | `feat/002-teams-telemetry`      |
+| T-002-13  | Teams requests in Bruno/.http, OpenAPI review, contract-doc clarifications                        | T-002-09            | S    | `docs/002-teams-requests`       |
 
 ---
 
@@ -58,12 +59,21 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 - **Covers:** `@AC-02.10.1 @AC-02.10.2 @AC-02.10.3 @AC-02.10.4 @AC-02.10.5 @AC-02.10.6 @AC-02.10.7 @AC-02.10.8 @AC-02.10.9 @AC-02.10.10 @AC-02.10.11`
 - **Done when:** Unit: canonical hash (key order irrelevant, values relevant, `__proto__`/`constructor` never part of it); header validation. Integration: two concurrent identical requests → exactly one team; the other response is the `201` replay or `409 IDEMPOTENCY_REQUEST_IN_PROGRESS` with `Retry-After: 1` (never a second team, never a wait); Rafael's in-flight request with the same key does not block Marina's (owner-scoped lock); an expired row (with `expires_at` set in the past) → processed anew; a rolled-back handler leaves no row. E2E: replay with the identical body (same status, body, `Location`, `ETag`, `Idempotent-Replayed: true`), 422 on a different body, the same key reused on a different route (a test-only probe `POST` until `POST /tasks` exists; re-verified in T-003-18) → 422, per-owner scoping, retry after a 400 or 409 succeeds, no key → normal processing. If this task is the one that introduces `@nestjs-cls/transactional`, `PrismaTeamRepository` moves onto `TransactionHost` here (T-002-09 then only reuses it).
 
-## T-002-06 — List teams
+## T-002-06a — List teams, data side
 
-- **Goal:** `GET /api/v1/teams` with pagination meta, search and sort.
-- **Changes:** Shared `PaginationQueryDto`, `PageMeta`, `ApiPageEnvelope`, sort parser and LIKE-escape helper. `ListTeamsQueryDto`, `ListTeamsHandler`, `PrismaTeamReadModel.page` (raw SQL with whitelisted `ORDER BY … , id`, count query in the same `REPEATABLE READ` read transaction). One `TeamTaskCounts.countByTeam` call per page.
-- **Covers:** `@AC-02.2.1 @AC-02.2.2 @AC-02.2.3 @AC-02.2.4 @AC-02.2.5 @AC-02.2.6 @AC-02.2.7 @AC-02.2.8 @AC-02.2.9 @AC-02.3.1 @AC-02.3.2 @AC-02.3.3 @AC-02.3.4 @AC-02.3.5 @AC-02.4.1 @AC-02.4.2 @AC-02.4.3 @AC-02.4.4`, `@AC-01.6.1` (teams row)
-- **Done when:** Unit: DTO tables for limit, offset, search (trimmed; blank or whitespace-only → 400 `VALIDATION_FAILED` naming `search`; 101 chars → 400) and sort, and `PageMeta`. Integration: paging over 25 rows, ties with equal `created_at` (each team appears exactly once across pages for every sort), `lower(name)` order, the `%` and `_` literal match, an empty page beyond total with the correct total, deleted rows excluded. E2E: default meta, search plus sort plus paging combined, foreign teams never listed, unknown parameter → 400. `EXPLAIN ANALYZE` with 1,000 teams for one owner is under 5 ms (recorded in the PR).
+- **Status:** done
+- **Goal:** the read side of `GET /api/v1/teams`: one page of the owner's active teams with the total, searched and sorted in SQL.
+- **Changes:** `shared/application/page.ts` (`PageRequest`, `Page<T>`, `Sort<F>`, `hasNextPage`), `shared/infrastructure/sql/like.ts` (LIKE escape), `teams/application/views/team.view.ts` (`TeamView`, also used by GetTeam), `teams/application/ports/team.read-model.ts` (`TeamReadModel.page`), `teams/infrastructure/prisma-team.read-model.ts` (raw SQL with a whitelisted `ORDER BY … , id`, `name ILIKE … ESCAPE '\'`, count in the same `REPEATABLE READ` transaction).
+- **Covers:** `@AC-02.2.3 @AC-02.2.4 @AC-02.2.6 @AC-02.2.7 @AC-02.2.8 @AC-02.3.1 @AC-02.3.3 @AC-02.3.4 @AC-02.3.5 @AC-02.4.1 @AC-02.4.2 @AC-02.4.4` (data level; re-verified end to end in T-002-06b)
+- **Done when:** Unit: `hasNextPage` for every BR-02.10 row; the LIKE escape. Integration: paging over 25 rows, ties with equal `created_at`/`updated_at` (each team appears exactly once across pages for every sort), `lower(name)` order both ways, `%`, `_` and `\` matched literally, an empty page beyond total with the correct total, deleted and foreign rows excluded, search plus sort plus paging combined. Query plans over 1,000 teams of one owner: the default list reads `teams_owner_id_created_at_idx` and `sort=name` reads `teams_owner_id_lower_name_key`, neither with a Sort node (plan shape, not timing).
+
+## T-002-06b — List teams, endpoint
+
+- **Goal:** `GET /api/v1/teams` with pagination meta, search and sort, on top of T-002-06a.
+- **Owner:** Forge (NestJS). **Depends on:** T-002-06a, T-002-04.
+- **Changes:** Shared `PaginationQueryDto`, `PageMeta`, `ApiPageEnvelope` and the sort parser. `ListTeamsQueryDto`, `ListTeamsHandler` (one `TeamTaskCounts.countByTeam` call per page).
+- **Covers:** `@AC-02.2.1 @AC-02.2.2 @AC-02.2.5 @AC-02.2.9 @AC-02.3.2 @AC-02.4.3`, `@AC-01.6.1` (teams row), plus the end-to-end verification of every T-002-06a AC.
+- **Done when:** Unit: DTO tables for limit, offset, search (trimmed; blank or whitespace-only → 400 `VALIDATION_FAILED` naming `search`; 101 chars → 400) and sort, and `PageMeta`. E2E: default meta, search plus sort plus paging combined, foreign teams never listed, unknown parameter → 400.
 
 ## T-002-07 — Get team + ETag
 

@@ -13,7 +13,7 @@ Brief requirement → epic → story (priority) → acceptance criteria → scen
 | `MUST` ACs (with scenario / with task / total)   | 225 / 225 / 225 |
 | `SHOULD` ACs (with scenario / with task / total) | 38 / 38 / 38    |
 | `COULD` ACs (with scenario / with task / total)  | 138 / 138 / 138 |
-| Tasks                                            | 111             |
+| Tasks                                            | 112             |
 
 ## Gaps and findings
 
@@ -58,7 +58,7 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 | B-9  | Propose and justify persistence; describe logical model                       | MUST   | US-07.4                                                                 | 9   | 9         | 3     | ✅     |
 | B-10 | Explain migrations/seeding and local reproducibility                          | MUST   | US-07.1, US-07.2, US-07.4                                               | 23  | 21        | 8     | ✅     |
 | B-11 | Team CRUD                                                                     | MUST   | US-02.1, US-02.5, US-02.6, US-02.7, US-04.3                             | 32  | 42        | 10    | ✅     |
-| B-12 | Team listing returns metadata (total/pagination)                              | MUST   | US-02.2, US-02.3                                                        | 14  | 17        | 1     | ✅     |
+| B-12 | Team listing returns metadata (total/pagination)                              | MUST   | US-02.2, US-02.3                                                        | 14  | 17        | 2     | ✅     |
 | B-13 | Task CRUD with Pending / In progress / Done                                   | MUST   | US-03.1, US-03.8, US-03.9, US-03.10, US-03.11                           | 26  | 39        | 11    | ✅     |
 | B-14 | A task belongs to zero or more teams                                          | MUST   | US-03.1, US-03.9, US-03.13                                              | 18  | 30        | 7     | ✅     |
 | B-15 | Task listing filters teamId, status, search, sort, pagination                 | MUST   | US-03.2, US-03.3, US-03.4, US-03.5, US-03.6, US-03.7, US-04.5, US-04.14 | 31  | 31        | 7     | ✅     |
@@ -143,7 +143,7 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 | AC        | Scenarios (file › rule › scenario)                                                                                                                                                                                                                                   | Level    | Tasks                                                      |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------- |
-| AC-01.6.1 | `auth.feature` › A user only ever sees and changes their own data › Listings contain only my items                                                                                                                                                                   | unit+e2e | T-001-09, T-002-06                                         |
+| AC-01.6.1 | `auth.feature` › A user only ever sees and changes their own data › Listings contain only my items                                                                                                                                                                   | unit+e2e | T-001-09, T-002-06b                                        |
 | AC-01.6.2 | `auth.feature` › A user only ever sees and changes their own data › Another user's resource looks like it does not exist                                                                                                                                             | unit+e2e | T-001-09, T-002-07                                         |
 | AC-01.6.3 | `auth.feature` › A user only ever sees and changes their own data › I cannot change another user's resource                                                                                                                                                          | unit+e2e | T-001-09, T-002-08, T-002-09                               |
 | AC-01.6.4 | `auth.feature` › A user only ever sees and changes their own data › The owner cannot be chosen by the client                                                                                                                                                         | unit+e2e | T-001-03, T-001-09, T-002-04, T-003-07                     |
@@ -197,36 +197,36 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 **US-02.2 — List teams with pagination metadata** (`MUST`) · epic EP-02
 
-| AC        | Scenarios (file › rule › scenario)                                                                                                                                                                                         | Level    | Tasks    |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------- |
-| AC-02.2.1 | `teams.feature` › Teams are listed a page at a time with pagination metadata › The list contains only my active teams, with metadata                                                                                       | e2e      | T-002-06 |
-| AC-02.2.2 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Default paging and order                                                                                                                    | e2e      | T-002-06 |
-| AC-02.2.3 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Paging through 25 teams                                                                                                                     | unit+e2e | T-002-06 |
-| AC-02.2.4 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Offset at or beyond the total                                                                                                               | unit+e2e | T-002-06 |
-| AC-02.2.5 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Invalid paging parameters<br>`teams.feature` › Teams are listed a page at a time with pagination metadata › Paging limits that are accepted | unit+e2e | T-002-06 |
-| AC-02.2.6 | `teams.feature` › Teams are listed a page at a time with pagination metadata › No teams yet                                                                                                                                | e2e      | T-002-06 |
-| AC-02.2.7 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Deleted teams are not listed or counted                                                                                                     | e2e      | T-002-06 |
-| AC-02.2.8 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Paging is stable when teams share a timestamp                                                                                               | unit+e2e | T-002-06 |
-| AC-02.2.9 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Unknown query parameters are rejected                                                                                                       | e2e      | T-002-06 |
+| AC        | Scenarios (file › rule › scenario)                                                                                                                                                                                         | Level    | Tasks     |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
+| AC-02.2.1 | `teams.feature` › Teams are listed a page at a time with pagination metadata › The list contains only my active teams, with metadata                                                                                       | e2e      | T-002-06b |
+| AC-02.2.2 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Default paging and order                                                                                                                    | e2e      | T-002-06b |
+| AC-02.2.3 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Paging through 25 teams                                                                                                                     | unit+e2e | T-002-06a |
+| AC-02.2.4 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Offset at or beyond the total                                                                                                               | unit+e2e | T-002-06a |
+| AC-02.2.5 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Invalid paging parameters<br>`teams.feature` › Teams are listed a page at a time with pagination metadata › Paging limits that are accepted | unit+e2e | T-002-06b |
+| AC-02.2.6 | `teams.feature` › Teams are listed a page at a time with pagination metadata › No teams yet                                                                                                                                | e2e      | T-002-06a |
+| AC-02.2.7 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Deleted teams are not listed or counted                                                                                                     | e2e      | T-002-06a |
+| AC-02.2.8 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Paging is stable when teams share a timestamp                                                                                               | unit+e2e | T-002-06a |
+| AC-02.2.9 | `teams.feature` › Teams are listed a page at a time with pagination metadata › Unknown query parameters are rejected                                                                                                       | e2e      | T-002-06b |
 
 **US-02.3 — Search teams by name** (`MUST`) · epic EP-02
 
-| AC        | Scenarios (file › rule › scenario)                                                                                                                                                                                                                                     | Level    | Tasks    |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | -------- |
-| AC-02.3.1 | `teams.feature` › Teams can be searched by name › Case-insensitive substring search on the name                                                                                                                                                                        | unit+e2e | T-002-06 |
-| AC-02.3.2 | `teams.feature` › Teams can be searched by name › The search term is trimmed<br>`teams.feature` › Teams can be searched by name › A search term that is blank after trimming is rejected<br>`teams.feature` › Teams can be searched by name › Search term length limit | unit+e2e | T-002-06 |
-| AC-02.3.3 | `teams.feature` › Teams can be searched by name › Wildcard characters are matched literally                                                                                                                                                                            | unit+e2e | T-002-06 |
-| AC-02.3.4 | `teams.feature` › Teams can be searched by name › No team matches                                                                                                                                                                                                      | e2e      | T-002-06 |
-| AC-02.3.5 | `teams.feature` › Teams can be searched by name › Search never returns other users' teams                                                                                                                                                                              | e2e      | T-002-06 |
+| AC        | Scenarios (file › rule › scenario)                                                                                                                                                                                                                                     | Level    | Tasks     |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------- |
+| AC-02.3.1 | `teams.feature` › Teams can be searched by name › Case-insensitive substring search on the name                                                                                                                                                                        | unit+e2e | T-002-06a |
+| AC-02.3.2 | `teams.feature` › Teams can be searched by name › The search term is trimmed<br>`teams.feature` › Teams can be searched by name › A search term that is blank after trimming is rejected<br>`teams.feature` › Teams can be searched by name › Search term length limit | unit+e2e | T-002-06b |
+| AC-02.3.3 | `teams.feature` › Teams can be searched by name › Wildcard characters are matched literally                                                                                                                                                                            | unit+e2e | T-002-06a |
+| AC-02.3.4 | `teams.feature` › Teams can be searched by name › No team matches                                                                                                                                                                                                      | e2e      | T-002-06a |
+| AC-02.3.5 | `teams.feature` › Teams can be searched by name › Search never returns other users' teams                                                                                                                                                                              | e2e      | T-002-06a |
 
 **US-02.4 — Sort teams** (`COULD`) · epic EP-02
 
-| AC        | Scenarios (file › rule › scenario)                                                                            | Level    | Tasks    |
-| --------- | ------------------------------------------------------------------------------------------------------------- | -------- | -------- |
-| AC-02.4.1 | `teams.feature` › Teams can be sorted by name, creation or update time › Sort by name, case-insensitive       | unit+e2e | T-002-06 |
-| AC-02.4.2 | `teams.feature` › Teams can be sorted by name, creation or update time › Sort by creation or update time      | unit+e2e | T-002-06 |
-| AC-02.4.3 | `teams.feature` › Teams can be sorted by name, creation or update time › Unsupported sort values are rejected | unit+e2e | T-002-06 |
-| AC-02.4.4 | `teams.feature` › Teams can be sorted by name, creation or update time › Search, sort and paging combined     | e2e      | T-002-06 |
+| AC        | Scenarios (file › rule › scenario)                                                                            | Level    | Tasks     |
+| --------- | ------------------------------------------------------------------------------------------------------------- | -------- | --------- |
+| AC-02.4.1 | `teams.feature` › Teams can be sorted by name, creation or update time › Sort by name, case-insensitive       | unit+e2e | T-002-06a |
+| AC-02.4.2 | `teams.feature` › Teams can be sorted by name, creation or update time › Sort by creation or update time      | unit+e2e | T-002-06a |
+| AC-02.4.3 | `teams.feature` › Teams can be sorted by name, creation or update time › Unsupported sort values are rejected | unit+e2e | T-002-06b |
+| AC-02.4.4 | `teams.feature` › Teams can be sorted by name, creation or update time › Search, sort and paging combined     | e2e      | T-002-06a |
 
 **US-02.5 — View a team** (`MUST`) · epic EP-02
 
