@@ -343,7 +343,7 @@ Round-trips per list request: `findMissing` (only with `teamId`) + page + count 
 
 **Status filter form (decided).** The read model emits `status = $n` for a single status and `status = ANY($n::task_status[])` only for two or more. `tasks_owner_status_created_idx` returns rows in `created_at` order only under an equality: `status = ANY(...)` never uses it, even with one element (verified on `postgres:17.11-alpine` in T-003-01's schema tests).
 
-**Query plan acceptance (T-003-09).** On a synthetic owner with 10 000 tasks (and 50 other owners), `EXPLAIN (ANALYZE, BUFFERS)` is captured in the PR for:
+**Query plan acceptance (T-003-09a).** On a synthetic owner with 10 000 tasks (and other owners), the integration suite asserts the plan shape (index used, no Sort node; never timing) for:
 
 | Query                                       | Expected plan                                               | Budget  |
 | ------------------------------------------- | ----------------------------------------------------------- | ------- |

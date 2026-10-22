@@ -6,27 +6,29 @@ Prerequisites from other specs: authenticated `ownerId` decorator and guards (00
 
 **ACs of 002 verified here:** `AC-02.7.2` (T-003-13), `AC-02.8.1` and `AC-02.8.2` (T-003-14). 002 binds a zero-count placeholder until T-003-14 lands.
 
-| ID        | Task                                                                        | Depends on                        | Size | Branch                           |
-| --------- | --------------------------------------------------------------------------- | --------------------------------- | ---- | -------------------------------- |
-| T-003-01  | Add `tasks`, `task_teams`, `task_status` schema, migration, indexes, CHECKs | T-002-01                          | M    | `feat/003-tasks-schema`          |
-| T-003-02  | Implement task value objects (TDD)                                          | —                                 | S    | `feat/003-task-value-objects`    |
-| T-003-03  | Implement `Task` aggregate, events, errors, overdue policy (TDD)            | 02                                | M    | `feat/003-task-aggregate`        |
-| T-003-04  | Add `TaskRepository` port + Prisma adapter                                  | 01, 03                            | M    | `feat/003-task-repository`       |
-| T-003-05  | Add `TeamDirectory` port + `QueryBus` adapter (`GetTeamSummariesQuery`)     | T-002-10                          | S    | `feat/003-team-directory`        |
-| T-003-06a | Add task read model, team directory port and view assembler (query side)    | 04                                | S    | `feat/003-task-read-model`       |
-| T-003-06b | Add `GetTask` query, `GET /tasks/:id`, DTOs, error mapping, e2e and OpenAPI | 06a, T-001-09, CQRS/Swagger setup | S    | `feat/003-get-task`              |
-| T-003-07  | Add `CreateTask` command and `POST /tasks`                                  | 06b                               | M    | `feat/003-create-task`           |
-| T-003-08  | Add `ListTasks` with `teamId` / `status` filters and pagination             | 06b                               | M    | `feat/003-list-filters`          |
-| T-003-09  | Add search and sorting to `ListTasks` + query-plan check                    | 08                                | M    | `feat/003-list-search-sort`      |
-| T-003-10  | Add `ReplaceTask` command and `PUT /tasks/:id`                              | 07                                | M    | `feat/003-replace-task`          |
-| T-003-11  | Add `ChangeTaskStatus` command and `PATCH /tasks/:id/status`                | 06b                               | S    | `feat/003-change-status`         |
-| T-003-12  | Add `DeleteTask` command and `DELETE /tasks/:id`                            | 06b                               | S    | `feat/003-delete-task`           |
-| T-003-13  | `OnTeamDeletedHandler` in-transaction (unassign team, bump versions)        | 04, 06a, T-002-09, T-002-10       | S    | `feat/003-team-deleted-reaction` |
-| T-003-14  | Expose `CountTasksByTeamQuery`; switch 002's `TeamTaskCounts` adapter to it | 06a, T-002-10                     | S    | `feat/003-count-tasks-by-team`   |
-| T-003-15  | Seed 10 demo tasks                                                          | 01, T-002-11                      | S    | `feat/003-seed-tasks`            |
-| T-003-16  | Emit task metrics and span attributes                                       | 07, 11, 12                        | S    | `feat/003-task-observability`    |
-| T-003-17  | Add ETag / If-Match optimistic concurrency (COULD)                          | 10, 11, 12                        | M    | `feat/003-task-if-match`         |
-| T-003-18  | Add Idempotency-Key on `POST /tasks` (COULD)                                | 07, T-002-05                      | S    | `feat/003-idempotent-create`     |
+| ID        | Task                                                                                 | Depends on                        | Size | Branch                           |
+| --------- | ------------------------------------------------------------------------------------ | --------------------------------- | ---- | -------------------------------- |
+| T-003-01  | Add `tasks`, `task_teams`, `task_status` schema, migration, indexes, CHECKs          | T-002-01                          | M    | `feat/003-tasks-schema`          |
+| T-003-02  | Implement task value objects (TDD)                                                   | —                                 | S    | `feat/003-task-value-objects`    |
+| T-003-03  | Implement `Task` aggregate, events, errors, overdue policy (TDD)                     | 02                                | M    | `feat/003-task-aggregate`        |
+| T-003-04  | Add `TaskRepository` port + Prisma adapter                                           | 01, 03                            | M    | `feat/003-task-repository`       |
+| T-003-05  | Add `TeamDirectory` port + `QueryBus` adapter (`GetTeamSummariesQuery`)              | T-002-10                          | S    | `feat/003-team-directory`        |
+| T-003-06a | Add task read model, team directory port and view assembler (query side)             | 04                                | S    | `feat/003-task-read-model`       |
+| T-003-06b | Add `GetTask` query, `GET /tasks/:id`, DTOs, error mapping, e2e and OpenAPI          | 06a, T-001-09, CQRS/Swagger setup | S    | `feat/003-get-task`              |
+| T-003-07  | Add `CreateTask` command and `POST /tasks`                                           | 06b                               | M    | `feat/003-create-task`           |
+| T-003-08a | `ListTasks` data side: read model `list` with `teamId` / `status` filters and paging | 06a, T-002-06a                    | S    | `feat/003-task-list-read-model`  |
+| T-003-08b | `ListTasks` endpoint: query, DTO (`teamId`, `status`, paging), page meta, e2e        | 08a, 06b                          | M    | `feat/003-list-filters`          |
+| T-003-09a | `ListTasks` data side: search, sorting and the query-plan check                      | 08a                               | S    | `feat/003-task-list-read-model`  |
+| T-003-09b | `ListTasks` endpoint: `search` / `sort` DTO and e2e                                  | 08b, 09a                          | S    | `feat/003-search-sort`           |
+| T-003-10  | Add `ReplaceTask` command and `PUT /tasks/:id`                                       | 07                                | M    | `feat/003-replace-task`          |
+| T-003-11  | Add `ChangeTaskStatus` command and `PATCH /tasks/:id/status`                         | 06b                               | S    | `feat/003-change-status`         |
+| T-003-12  | Add `DeleteTask` command and `DELETE /tasks/:id`                                     | 06b                               | S    | `feat/003-delete-task`           |
+| T-003-13  | `OnTeamDeletedHandler` in-transaction (unassign team, bump versions)                 | 04, 06a, T-002-09, T-002-10       | S    | `feat/003-team-deleted-reaction` |
+| T-003-14  | Expose `CountTasksByTeamQuery`; switch 002's `TeamTaskCounts` adapter to it          | 06a, T-002-10                     | S    | `feat/003-count-tasks-by-team`   |
+| T-003-15  | Seed 10 demo tasks                                                                   | 01, T-002-11                      | S    | `feat/003-seed-tasks`            |
+| T-003-16  | Emit task metrics and span attributes                                                | 07, 11, 12                        | S    | `feat/003-task-observability`    |
+| T-003-17  | Add ETag / If-Match optimistic concurrency (COULD)                                   | 10, 11, 12                        | M    | `feat/003-task-if-match`         |
+| T-003-18  | Add Idempotency-Key on `POST /tasks` (COULD)                                         | 07, T-002-05                      | S    | `feat/003-idempotent-create`     |
 
 MUST work (01–15) is complete and demo-able before any COULD task (17–18) starts (constitution IX.1). 16 is cross-cutting and can run in parallel after 12.
 
@@ -94,19 +96,37 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Covers:** @AC-03.1.1 – @AC-03.1.8, @AC-03.12.3 (create), @AC-03.12.5 (create), @AC-03.12.6, `@AC-01.6.4 @AC-01.6.6 @AC-01.6.5` (task create rows).
 - **Done when:** every create outline row of `tasks.feature` passes at e2e level; mass-assignment rows (`id`, `ownerId`, `owner_id`, `userId`, `owner` as an object, `version`, `completedAt`, `createdAt`, `updatedAt`, `deletedAt`, `teams`, `isOverdue`, `__proto__`, `constructor`) → 400 naming the field and the owner is always the signed-in user; control characters in title/description → 400; 101 `teamIds` → 400, 11 → `422 TOO_MANY_TEAMS`; `TOO_MANY_TEAMS` precedes `UNKNOWN_TEAMS`; `UNKNOWN_TEAMS.details.teamIds` lists exactly the offending ids; a foreign team id and a never-existing id give byte-identical `422 UNKNOWN_TEAMS` bodies apart from `traceId` and ids; no row written on any error (asserted).
 
-## T-003-08 — Add `ListTasks` with `teamId` / `status` filters and pagination
+## T-003-08a — `ListTasks` data side: filters and paging
 
-- **Goal:** the brief's listing, part 1.
-- **Changes:** `queries/list-tasks/*`; read model `list` + `count`; `dto/list-tasks.query.dto.ts` (pagination, `teamId`, comma/repeated `status` transform); shared `PageMetaDto`; integration + e2e specs.
-- **Covers:** @AC-03.2.1 – @AC-03.2.4, @AC-03.3.1 – @AC-03.3.3, @AC-03.4.1 – @AC-03.4.3, @AC-03.7.1 – @AC-03.7.4, @AC-03.12.2, @AC-03.12.4.
-- **Done when:** all filter/pagination outline rows pass; foreign/unknown/deleted `teamId` → empty page without querying tasks; query-count test ≤ 4 for a 100-item page with 3 teams each.
+- **Status:** done
+- **Goal:** the brief's listing, part 1, in SQL: the owner's active tasks filtered by team and status, paged, with the total.
+- **Changes:** `application/ports/task.read-model.ts` (`TASK_SORT_FIELDS`, `ListTasksCriteria`, `list`), `infrastructure/prisma-task.read-model.ts` (`list`: page and count in one `REPEATABLE READ` snapshot, `teamId` as `EXISTS` on `task_teams`, one status as an equality and 2+ as `ANY`, all team ids per task); integration specs. Reuses `shared/application/page.ts` (T-002-06a).
+- **Covers:** @AC-03.2.1 @AC-03.2.3 @AC-03.2.4 @AC-03.3.1 @AC-03.3.2 @AC-03.4.1 @AC-03.4.2 @AC-03.7.2 @AC-03.7.3 @AC-03.12.2 @AC-03.12.4 (data level; re-verified end to end in T-003-08b).
+- **Done when:** integration: default order and limit with the total; full records with every team id (also when filtered by one team); deleted and foreign tasks never listed under any filter; unknown, foreign, malformed and task-less team ids → empty page; one status and any of several; the total counts all matches and an offset past the end is an empty page.
 
-## T-003-09 — Add search and sorting to `ListTasks` + query-plan check
+## T-003-08b — `ListTasks` endpoint: filters and paging
 
-- **Goal:** the brief's listing, part 2.
-- **Changes:** read model: escaped `ILIKE` on title/description, ORDER BY whitelist map with `NULLS LAST`, `lower(title)`, id tie-break; DTO `search`, `sort` (`@IsIn(TASK_SORTS)`); integration specs; `apps/api/test/perf/explain-tasks.sql` + EXPLAIN output pasted in the PR.
-- **Covers:** @AC-03.4.4, @AC-03.5.1 – @AC-03.5.4, @AC-03.6.1 – @AC-03.6.5, @AC-03.7.5.
-- **Done when:** sort outline (10 rows), nulls-last both directions, tie-break and page-walk scenarios pass against PostgreSQL; `100%` and `snake_case` match literally; EXPLAIN on a 10k-task owner meets the plan's table (no Seq Scan on `tasks`).
+- **Goal:** `GET /api/v1/tasks` with `teamId`, `status` and paging, on top of T-003-08a.
+- **Owner:** Forge (NestJS). **Depends on:** T-003-08a, T-003-06b.
+- **Changes:** `queries/list-tasks/*` (`TeamDirectory` pre-check: a team that is not live and owned → empty page without querying tasks; one batched `summaries` call per page; `assembleTaskView`); `dto/list-tasks.query.dto.ts` (pagination, `teamId`, comma/repeated `status` transform); shared `PageMetaDto`; e2e specs.
+- **Covers:** @AC-03.2.2 @AC-03.3.3 @AC-03.4.3 @AC-03.7.1 @AC-03.7.4, plus the end-to-end verification of every T-003-08a AC.
+- **Done when:** all filter/pagination outline rows pass end to end; foreign/unknown/deleted `teamId` → empty page without querying tasks; query-count test ≤ 4 for a 100-item page with 3 teams each.
+
+## T-003-09a — `ListTasks` data side: search, sorting and the query-plan check
+
+- **Status:** done
+- **Goal:** the brief's listing, part 2, in SQL.
+- **Changes:** read model: escaped `ILIKE` on title/description, `ORDER BY` whitelist map with `NULLS LAST`, `lower(title)`, enum (lifecycle) status order and an id tie-break; integration specs including the query-plan check.
+- **Covers:** @AC-03.4.4 @AC-03.5.1 @AC-03.5.3 @AC-03.5.4 @AC-03.6.1 @AC-03.6.2 @AC-03.6.3 @AC-03.6.4 @AC-03.7.5 (data level; re-verified end to end in T-003-09b).
+- **Done when:** team, status and search combine with AND; title-or-description, case-insensitive search; `100%`, `snake_case` and `\` match literally; every sort in both directions, nulls last both ways, ties broken by id in the same direction and every page walked exactly once for each sort. Plan shape (not timing) on a 10,000-task owner, seqscan off: the default list reads `tasks_owner_created_idx`, one status `tasks_owner_status_created_idx` and `dueDate` ascending `tasks_owner_due_idx`, each without a Sort node; the `teamId` filter goes through `task_teams_team_id_task_id_idx`; the trigram index `tasks_search_trgm_idx` can serve both `ILIKE` arms (BitmapOr, proven with the owner indexes dropped in a rolled-back transaction: at 10,000 tasks the planner still prefers the owner index plus a filter for `LIMIT 20`, a cost decision).
+
+## T-003-09b — `ListTasks` endpoint: search and sorting
+
+- **Goal:** `search` and `sort` on `GET /api/v1/tasks`, on top of T-003-09a.
+- **Owner:** Forge (NestJS). **Depends on:** T-003-08b, T-003-09a.
+- **Changes:** DTO `search` (trimmed, 1–100), `sort` (`@IsIn(TASK_SORTS)` with an optional `-`); e2e specs.
+- **Covers:** @AC-03.5.2 @AC-03.6.5, plus the end-to-end verification of every T-003-09a AC.
+- **Done when:** the sort outline (10 rows) passes end to end; invalid `search` and `sort` → 400 naming the field.
 
 ## T-003-10 — Add `ReplaceTask` command and `PUT /tasks/:id`
 
