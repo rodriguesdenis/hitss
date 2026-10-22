@@ -1,0 +1,69 @@
+# Tasks requests (VS Code REST Client / JetBrains HTTP Client). Run top to bottom.
+@baseUrl = http://localhost:3000
+@demoEmail = demo@teams-tasks.dev
+# The documented demo password (README); the seed creates this account.
+@demoPassword = Demo@1234
+
+### Sign in (demo user)
+# @name signIn
+POST {{baseUrl}}/api/auth/sign-in/email
+Origin: {{baseUrl}}
+Content-Type: application/json
+
+{
+  "email": "{{demoEmail}}",
+  "password": "{{demoPassword}}"
+}
+
+### Create team
+# @name createTeam
+POST {{baseUrl}}/api/v1/teams
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+Content-Type: application/json
+
+{
+  "name": "[http] Tasks team {{$timestamp}}",
+  "colorHex": "#10B981"
+}
+
+### Create task
+# @name createTask
+POST {{baseUrl}}/api/v1/tasks
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+Content-Type: application/json
+
+{
+  "title": "[http] Write release notes",
+  "description": "Created by the request files.",
+  "dueDate": "2030-12-31",
+  "teamIds": ["{{createTeam.response.body.data.id}}"]
+}
+
+### Get task
+GET {{baseUrl}}/api/v1/tasks/{{createTask.response.body.data.id}}
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+
+### Change task status
+PATCH {{baseUrl}}/api/v1/tasks/{{createTask.response.body.data.id}}/status
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+Content-Type: application/json
+
+{
+  "status": "DONE"
+}
+
+### Replace task
+PUT {{baseUrl}}/api/v1/tasks/{{createTask.response.body.data.id}}
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+Content-Type: application/json
+
+{
+  "title": "[http] Write release notes (final)",
+  "status": "IN_PROGRESS",
+  "dueDate": "2030-12-31",
+  "teamIds": ["{{createTeam.response.body.data.id}}"]
+}
+
+### Delete task
+DELETE {{baseUrl}}/api/v1/tasks/{{createTask.response.body.data.id}}
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}

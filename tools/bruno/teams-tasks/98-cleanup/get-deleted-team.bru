@@ -1,0 +1,16 @@
+meta {
+  name: Get deleted team
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/teams/{{teamId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 404
+  res.body.error.code: eq TEAM_NOT_FOUND
+}

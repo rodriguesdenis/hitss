@@ -1,0 +1,17 @@
+meta {
+  name: Get task
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tasks/{{taskId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.id: eq {{taskId}}
+  res.body.data.teams[0].id: eq {{teamId}}
+}

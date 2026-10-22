@@ -1,0 +1,23 @@
+meta {
+  name: Delete team
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/api/v1/teams/{{teamId}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  If-Match: {{etag}}
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Uses the ETag saved by `Replace team`.
+}

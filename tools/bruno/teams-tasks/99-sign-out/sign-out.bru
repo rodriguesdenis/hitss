@@ -10,6 +10,10 @@ post {
   auth: inherit
 }
 
+headers {
+  Origin: {{origin}}
+}
+
 assert {
   res.status: eq 200
   res.body.success: eq true

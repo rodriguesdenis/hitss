@@ -56,8 +56,18 @@ log 'services: postgres and api healthy, migrate exited 0'
 
 log 'the API answers over HTTP on the default port (AC-07.6.8)'
 assert_http_up "$API_PORT"
-# TODO(T-001-08, T-006-03, T-007-07): assert GET /api/v1/health/ready is 200, /docs is 200, sign in
-# as the demo user and check 3 teams and 10 tasks (AC-07.6.8) once those routes and the seed exist.
+log 'ready, docs, demo sign-in and the seeded teams (AC-07.6.8, AC-07.2.1, AC-07.2.2)'
+base="http://127.0.0.1:$API_PORT"
+[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$base/api/v1/health/ready")" = 200 ] || fail 'readiness is not 200'
+[ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$base/docs/openapi.json")" = 200 ] || fail '/docs/openapi.json is not 200'
+# The demo password is the documented public one (README); the token is kept in a variable only.
+token="$(curl -s -D - -o /dev/null --max-time 10 -H 'Content-Type: application/json' \
+  -d '{"email":"demo@teams-tasks.dev","password":"Demo@1234"}' "$base/api/auth/sign-in/email" \
+  | tr -d '\r' | awk 'tolower($1) == "set-auth-token:" { print $2 }')"
+[ -n "$token" ] || fail 'the demo user cannot sign in'
+teams_total="$(curl -s --max-time 5 -H "Authorization: Bearer $token" "$base/api/v1/teams?limit=1" | node -e 'process.stdin.on("data", (d) => console.log(JSON.parse(d).meta.total))')"
+[ "$teams_total" = 3 ] || fail "expected 3 seeded teams, found $teams_total"
+# TODO(T-003-14b): also assert 10 seeded tasks once GET /api/v1/tasks exists.
 
 log 'the request collection passes against the freshly seeded stack (AC-07.4.4)'
 node tools/ci/request-parity.mjs

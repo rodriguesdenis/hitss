@@ -1,0 +1,36 @@
+meta {
+  name: Replace team
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/teams/{{teamId}}
+  body: json
+  auth: inherit
+}
+
+headers {
+  If-Match: {{etag}}
+}
+
+body:json {
+  {
+    "name": "[bruno] Platform renamed {{$timestamp}}",
+    "colorHex": "#0EA5E9",
+    "description": "Replaced by the request collection."
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.colorHex: eq #0EA5E9
+}
+
+script:post-response {
+  bru.setVar("etag", res.headers.etag);
+}
+
+docs {
+  Full replacement with optimistic concurrency: `If-Match` carries the ETag you read (412 when stale).
+}

@@ -1,0 +1,22 @@
+meta {
+  name: List teams
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/teams?search=bruno&sort=-createdAt&limit=10&offset=0
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+  res.body.data: isArray
+  res.body.meta.limit: eq 10
+  res.body.meta.total: gte 1
+}
+
+docs {
+  Search, sort (`name`, `createdAt`, `updatedAt`, `-` for descending) and offset pagination (ADR-0006).
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Change task status
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/tasks/{{taskId}}/status
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "status": "DONE"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.status: eq DONE
+  res.body.data.completedAt: isString
+}
+
+docs {
+  The quick action: only the status changes. Moving back to `PENDING` clears `completedAt`.
+}
