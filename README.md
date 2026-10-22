@@ -108,19 +108,9 @@ This starts PostgreSQL, waits until it is healthy, runs the one-shot `migrate` s
 
 The seed is deterministic and idempotent: the demo account owns 3 teams and 10 tasks covering every status, tasks in several teams, a task without a team and an overdue task.
 
-### Mobile app (Expo Go)
+### Mobile app (next phase)
 
-⚠️ Target behavior, not yet implemented.
-
-1. Install **Expo Go** on your phone.
-2. Start the optional `mobile` service: `docker compose --profile mobile up mobile` (or `make mobile`) and scan the QR code.
-3. A physical device cannot reach your computer through `localhost`. Point the app at your computer's LAN IP (same Wi-Fi network):
-
-   ```bash
-   EXPO_PUBLIC_API_URL=http://192.168.1.20:3000 docker compose --profile mobile up mobile
-   ```
-
-   Emulators: Android → `http://10.0.2.2:3000`, iOS simulator → `http://localhost:3000`. Troubleshooting: [runbook](docs/operations/runbook.md#expo-device-cant-reach-the-api).
+⚠️ Not built yet. The Expo app (Expo Go, no native toolchain) is specified in [spec 004](docs/specs/004-mobile-app/spec.md); how to start it will be added here with the app.
 
 ### Observability (optional)
 
