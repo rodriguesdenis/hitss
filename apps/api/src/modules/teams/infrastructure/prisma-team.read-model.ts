@@ -10,6 +10,8 @@ import {
 } from '../application/ports/team.read-model';
 import type { TeamView } from '../application/views/team.view';
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 interface TeamRow {
   id: string;
   name: string;
@@ -49,6 +51,17 @@ const ORDER: Record<TeamSortField, Record<SortDirection, Prisma.Sql>> = {
 export class PrismaTeamReadModel extends TeamReadModel {
   constructor(private readonly prisma: PrismaService) {
     super();
+  }
+
+  async findById(ownerId: string, id: string): Promise<TeamView | null> {
+    // A malformed id cannot exist; skip the query (the uuid column would reject the cast).
+    if (!UUID.test(id)) {
+      return null;
+    }
+    const [row] = await this.prisma.$queryRaw<TeamRow[]>`
+      SELECT id, name, color_hex, description, version, created_at, updated_at
+      FROM teams WHERE id = ${id}::uuid AND owner_id = ${ownerId} AND deleted_at IS NULL`;
+    return row ? toView(row) : null;
   }
 
   async page(

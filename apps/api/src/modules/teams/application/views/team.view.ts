@@ -11,3 +11,6 @@ export interface TeamView {
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
+
+/** A single team as the API returns it: the view plus its active-task count (TeamTaskCounts). */
+export type TeamDetails = TeamView & { readonly taskCount: number };

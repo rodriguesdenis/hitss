@@ -21,6 +21,9 @@ export interface ListTeamsCriteria {
  * and active teams only.
  */
 export abstract class TeamReadModel {
+  /** The owner's active team, or `null` when it is unknown, foreign or soft-deleted. */
+  abstract findById(ownerId: string, id: string): Promise<TeamView | null>;
+
   /**
    * One page of the owner's active teams, in `sort` order with an id tie-break, plus the total
    * number of matches. The page and the total come from the same snapshot.
