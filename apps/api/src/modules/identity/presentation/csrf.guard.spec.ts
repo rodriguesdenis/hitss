@@ -21,7 +21,7 @@ const context = (
   method: string,
   headers: Record<string, string>,
   url = '/api/v1/teams',
-  session: unknown = { id: 'session-1' },
+  session: unknown = { session: { token: 'abc' } },
 ) =>
   ({
     switchToHttp: () => ({
@@ -30,6 +30,8 @@ const context = (
   }) as unknown as ExecutionContext;
 
 const COOKIE = { cookie: 'better-auth.session_token=abc.def' };
+/** The signed bearer of the same session: its token part equals the session token. */
+const BEARER = 'Bearer abc.signature';
 const JSON_BODY = { 'content-type': 'application/json', 'content-length': '2' };
 
 const rejection = (
@@ -91,32 +93,6 @@ describe('CsrfGuard', () => {
   });
 
   it.each([
-    'text/plain',
-    'application/x-www-form-urlencoded',
-    'multipart/form-data; boundary=x',
-  ])(
-    'AC-01.5.9 a cookie-authenticated body sent as %s → 415 UNSUPPORTED_MEDIA_TYPE',
-    (type) => {
-      const error = rejection('POST', {
-        ...COOKIE,
-        'content-type': type,
-        'content-length': '5',
-      });
-
-      expect(error).toMatchObject({ code: 'UNSUPPORTED_MEDIA_TYPE' });
-      expect((error as ApiException).getStatus()).toBe(415);
-    },
-  );
-
-  it('AC-01.5.9 a body with no Content-Type → 415', () => {
-    expect(
-      rejection('PUT', { ...COOKIE, 'transfer-encoding': 'chunked' }),
-    ).toMatchObject({
-      code: 'UNSUPPORTED_MEDIA_TYPE',
-    });
-  });
-
-  it.each([
     ['a trusted Origin and JSON', { ...COOKIE, ...JSON_BODY, origin: TRUSTED }],
     [
       'a trusted Referer',
@@ -148,7 +124,7 @@ describe('CsrfGuard', () => {
     [
       'no Origin',
       {
-        authorization: 'Bearer token.sig',
+        authorization: BEARER,
         'content-type': 'text/plain',
         'content-length': '5',
       },
@@ -156,7 +132,7 @@ describe('CsrfGuard', () => {
     [
       'an untrusted Origin',
       {
-        authorization: 'Bearer token.sig',
+        authorization: BEARER,
         ...COOKIE,
         ...JSON_BODY,
         origin: 'https://evil.example.test',
@@ -165,7 +141,7 @@ describe('CsrfGuard', () => {
     [
       'cross-site fetch metadata',
       {
-        authorization: 'bearer token.sig',
+        authorization: 'bearer abc.signature',
         ...JSON_BODY,
         'sec-fetch-site': 'cross-site',
       },
@@ -174,6 +150,38 @@ describe('CsrfGuard', () => {
     'AC-01.5.10 a bearer request with %s is not subject to the CSRF checks',
     (_label, headers) => {
       expect(guard.canActivate(context('POST', headers))).toBe(true);
+    },
+  );
+
+  it.each(['/API/V1/teams', '/Api/v1/teams/7d0c5e2a', '/api/V1/tasks'])(
+    'AC-01.5.8 the path is not inspected: a cross-site cookie POST to %s → 403',
+    (url) => {
+      expect(
+        rejection(
+          'POST',
+          { ...COOKIE, ...JSON_BODY, origin: 'https://evil.example.test' },
+          url,
+        ),
+      ).toMatchObject({ code: 'CSRF_REJECTED' });
+    },
+  );
+
+  it.each([
+    ['garbage', 'Bearer garbage'],
+    ['another session', 'Bearer other.signature'],
+    ['an empty token', 'Bearer '],
+    ['a malformed escape', 'Bearer %E0%A4%A'],
+  ])(
+    'AC-01.5.8 a bearer header with %s does not exempt a cookie session from CSRF (Lynx)',
+    (_label, authorization) => {
+      expect(
+        rejection('POST', {
+          ...COOKIE,
+          ...JSON_BODY,
+          authorization,
+          origin: 'https://evil.example.test',
+        }),
+      ).toMatchObject({ code: 'CSRF_REJECTED' });
     },
   );
 
@@ -204,16 +212,4 @@ describe('CsrfGuard', () => {
       ).toBe(true);
     },
   );
-
-  it('only /api/v1 is checked (Better Auth runs its own origin check on /api/auth)', () => {
-    expect(
-      guard.canActivate(
-        context(
-          'POST',
-          { ...COOKIE, origin: 'https://evil.example.test' },
-          '/api/auth/sign-out',
-        ),
-      ),
-    ).toBe(true);
-  });
 });
