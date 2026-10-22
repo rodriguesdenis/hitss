@@ -1,6 +1,6 @@
-// Architecture rules A1-A9 of docs/architecture/overview.md §7 (enforced in CI by `pnpm arch`).
-// Paths are the overview §6.2 paths: renaming a folder is an architecture change, amend the
-// overview first. The rule `name` is what the check prints and what the meta-tests assert
+// Architecture rules of ADR-0020 (enforced in CI by `pnpm arch`). Paths are the ADR's module
+// layout (domain/, application/use-cases/, presentation/http/, infrastructure/persistence/):
+// renaming a folder is an architecture change, amend the ADR first. The rule `name` is what the check prints and what the meta-tests assert
 // (test/architecture/rules.test.mjs); every rule needs a violating fixture there.
 
 /** Layer rules apply to production files only; specs may import their subject and fakes. */
@@ -61,8 +61,16 @@ module.exports = {
       to: { path: `${LAYER}/presentation/` },
     },
     {
+      name: 'persistence-not-to-use-cases',
+      comment:
+        'A3 (ADR-0020): persistence implements domain repositories and read ports; it never calls a use case.',
+      severity: 'error',
+      from: { path: `${LAYER}/infrastructure/`, ...NON_SPEC },
+      to: { path: `${LAYER}/application/use-cases/` },
+    },
+    {
       name: 'presentation-not-to-infra',
-      comment: 'A4: controllers use buses and use cases, never adapters.',
+      comment: 'A4: controllers call use cases, never adapters.',
       severity: 'error',
       from: { path: `${LAYER}/presentation/`, ...NON_SPEC },
       to: {
@@ -70,44 +78,26 @@ module.exports = {
       },
     },
     {
+      name: 'presentation-not-to-repositories',
+      comment:
+        'A4 (ADR-0020): presentation reaches data only through use cases, never a repository.',
+      severity: 'error',
+      from: { path: `${LAYER}/presentation/`, ...NON_SPEC },
+      to: { path: `${LAYER}/domain/repositories/` },
+    },
+    {
       name: 'contexts-isolated',
       comment:
-        'A5 (ADR-0020): a module reaches another only through its exported lookup service and its module file (and contracts/ until T-008-06).',
+        'A5 (ADR-0020, AC-08.6): a module reaches another only through its exported lookup service and its module file.',
       severity: 'error',
       from: { path: '^src/modules/([^/]+)/', ...NON_SPEC },
       to: {
         path: '^src/modules/[^/]+/',
         pathNot: [
           '^src/modules/$1/',
-          '^src/modules/[^/]+/contracts/',
           '^src/modules/[^/]+/[^/]+-lookup\\.service\\.ts$',
           '^src/modules/[^/]+/[^/]+\\.module\\.ts$',
         ],
-      },
-    },
-    {
-      name: 'contracts-are-thin',
-      comment:
-        'A6: contracts import only other contracts, their own domain events and the shared domain.',
-      severity: 'error',
-      from: { path: '^src/modules/([^/]+)/contracts/', ...NON_SPEC },
-      to: {
-        path: '^src/',
-        pathNot: [
-          '^src/modules/[^/]+/contracts/',
-          '^src/modules/$1/domain/(entities/)?[^/]+\\.events\\.ts$',
-          '^src/shared/domain/',
-        ],
-      },
-    },
-    {
-      name: 'contracts-no-libraries',
-      comment: 'A6 (libraries): only the CQRS marker types are allowed.',
-      severity: 'error',
-      from: { path: '^src/modules/[^/]+/contracts/', ...NON_SPEC },
-      to: {
-        dependencyTypes: [...NPM, 'core'],
-        pathNot: 'node_modules/@nestjs/cqrs/',
       },
     },
     {

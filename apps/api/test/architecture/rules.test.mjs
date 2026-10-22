@@ -1,4 +1,4 @@
-// Meta-tests for apps/api/.dependency-cruiser.cjs (AC-07.7.1, 07.7.2, 07.7.4-07.7.7, 07.7.9).
+// Meta-tests for apps/api/.dependency-cruiser.cjs (AC-07.7.1, 07.7.2, 07.7.6, 07.7.7, 07.7.9, AC-08.6).
 // Each case is a miniature project with the real folder names and one violating import; the
 // suite asserts the rule name, the offending file and the import. Written as node:test because
 // dependency-cruiser is ESM-only and cannot be loaded by Jest's CommonJS runtime.
@@ -18,7 +18,6 @@ const config = require(join(apiDir, '.dependency-cruiser.cjs'));
 /** Packages the fixtures import; each is created as an empty module in the fixture's node_modules. */
 const PACKAGES = [
   '@nestjs/common',
-  '@nestjs/cqrs',
   '@prisma/client',
   'class-validator',
   'better-auth',
@@ -257,77 +256,33 @@ const VIOLATIONS = [
     ],
   ],
   [
-    'contracts-are-thin',
-    'contracts import a domain aggregate of their own context',
-    {
-      'src/modules/teams/contracts/a.ts': importOf('../domain/team'),
-      'src/modules/teams/domain/team.ts': 'export {};\n',
-    },
-    ['src/modules/teams/contracts/a.ts', 'src/modules/teams/domain/team.ts'],
-  ],
-  [
-    'contracts-are-thin',
-    'contracts import the domain errors of their own context',
-    {
-      'src/modules/teams/contracts/a.ts': importOf('../domain/team.errors'),
-      'src/modules/teams/domain/team.errors.ts': 'export {};\n',
-    },
-    [
-      'src/modules/teams/contracts/a.ts',
-      'src/modules/teams/domain/team.errors.ts',
-    ],
-  ],
-  [
-    'contracts-are-thin',
-    'contracts import the domain events of another context',
-    {
-      'src/modules/teams/contracts/a.ts': importOf(
-        '../../tasks/domain/task.events',
-      ),
-      'src/modules/tasks/domain/task.events.ts': 'export {};\n',
-    },
-    [
-      'src/modules/teams/contracts/a.ts',
-      'src/modules/tasks/domain/task.events.ts',
-    ],
-  ],
-  [
-    'contracts-no-libraries',
-    'contracts import a library',
-    { 'src/modules/teams/contracts/a.ts': importOf('class-validator') },
-    [
-      'src/modules/teams/contracts/a.ts',
-      'node_modules/class-validator/index.js',
-    ],
-  ],
-  [
     'shared-not-to-features',
     'shared imports a context',
     {
       'src/shared/application/a.ts': importOf(
-        '../../modules/teams/contracts/b',
+        '../../modules/teams/team-lookup.service',
       ),
-      'src/modules/teams/contracts/b.ts': 'export {};\n',
+      'src/modules/teams/team-lookup.service.ts': 'export {};\n',
     },
-    ['src/shared/application/a.ts', 'src/modules/teams/contracts/b.ts'],
+    ['src/shared/application/a.ts', 'src/modules/teams/team-lookup.service.ts'],
   ],
   [
     'shared-not-to-features',
     'config imports a context',
     {
-      'src/config/a.ts': importOf('../modules/teams/contracts/b'),
-      'src/modules/teams/contracts/b.ts': 'export {};\n',
+      'src/config/a.ts': importOf('../modules/teams/teams.module'),
+      'src/modules/teams/teams.module.ts': 'export {};\n',
     },
-    ['src/config/a.ts', 'src/modules/teams/contracts/b.ts'],
+    ['src/config/a.ts', 'src/modules/teams/teams.module.ts'],
   ],
   [
     'no-circular',
     'two modules import each other',
     {
-      'src/modules/teams/contracts/a.ts': importOf('../../tasks/contracts/b'),
-      'src/modules/tasks/contracts/b.ts': importOf('../../teams/contracts/a'),
+      'src/modules/teams/teams.module.ts': importOf('../tasks/tasks.module'),
+      'src/modules/tasks/tasks.module.ts': importOf('../teams/teams.module'),
     },
-    ['src/modules/tasks/contracts/b.ts', 'src/modules/teams/contracts/a.ts'],
+    ['src/modules/tasks/tasks.module.ts', 'src/modules/teams/teams.module.ts'],
   ],
   [
     'no-tests-in-production',
@@ -409,6 +364,46 @@ const VIOLATIONS = [
   ],
 ];
 
+VIOLATIONS.push(
+  [
+    'persistence-not-to-use-cases',
+    'a persistence adapter calls a use case',
+    {
+      'src/modules/teams/infrastructure/persistence/a.ts': importOf(
+        '../../application/use-cases/b.use-case',
+      ),
+      'src/modules/teams/application/use-cases/b.use-case.ts': 'export {};\n',
+    },
+    [
+      'src/modules/teams/infrastructure/persistence/a.ts',
+      'src/modules/teams/application/use-cases/b.use-case.ts',
+    ],
+  ],
+  [
+    'presentation-not-to-repositories',
+    'a controller uses a repository instead of a use case',
+    {
+      'src/modules/teams/presentation/http/a.controller.ts': importOf(
+        '../../domain/repositories/b.repository',
+      ),
+      'src/modules/teams/domain/repositories/b.repository.ts': 'export {};\n',
+    },
+    [
+      'src/modules/teams/presentation/http/a.controller.ts',
+      'src/modules/teams/domain/repositories/b.repository.ts',
+    ],
+  ],
+  [
+    'contexts-isolated',
+    'AC-08.6 tasks imports a teams contracts/ file (no longer a public seam)',
+    {
+      'src/modules/tasks/application/a.ts': importOf('../../teams/contracts/b'),
+      'src/modules/teams/contracts/b.ts': 'export {};\n',
+    },
+    ['src/modules/tasks/application/a.ts', 'src/modules/teams/contracts/b.ts'],
+  ],
+);
+
 /** A5: one violating import per source layer into the same layer of another context. */
 const LAYERS = ['domain', 'application', 'infrastructure', 'presentation'];
 for (const layer of LAYERS) {
@@ -423,43 +418,39 @@ for (const layer of LAYERS) {
   ]);
 }
 
-/** Compliant code, including every allowed edge. */
+/** Compliant code in the ADR-0020 layout, including every allowed edge. */
 const COMPLIANT = {
-  'src/shared/domain/aggregate.ts': 'export {};\n',
-  'src/shared/application/clock.ts': 'export {};\n',
-  'src/modules/teams/domain/team.ts': importOf(
-    '../../../shared/domain/aggregate',
+  'src/shared/domain/clock.ts': 'export {};\n',
+  'src/modules/tasks/domain/entities/task.entity.ts': importOf(
+    '../../../../shared/domain/clock',
   ),
-  'src/modules/teams/domain/team.events.ts': 'export {};\n',
-  'src/modules/teams/contracts/team-deleted.ts':
-    importOf('../domain/team.events') + importOf('@nestjs/cqrs'),
-  'src/modules/tasks/contracts/count.ts':
-    importOf('../../teams/contracts/team-deleted') +
-    importOf('../../../shared/domain/aggregate'),
-  'src/modules/tasks/application/handler.ts':
-    importOf('../domain/task') +
-    importOf('../../teams/contracts/team-deleted') +
-    importOf('@nestjs/common') +
-    importOf('@nestjs/cqrs') +
-    importOf('../../../shared/application/clock'),
-  'src/modules/tasks/domain/task.ts': 'export {};\n',
-  'src/modules/tasks/infrastructure/repo.ts':
-    importOf('../domain/task') + importOf('@prisma/client'),
-  'src/modules/tasks/presentation/controller.ts':
-    importOf('../application/handler') + importOf('@nestjs/common'),
+  'src/modules/tasks/domain/repositories/task.repository.ts': importOf(
+    '../entities/task.entity',
+  ),
+  'src/modules/tasks/application/use-cases/create-task.use-case.ts':
+    importOf('../../domain/repositories/task.repository') +
+    importOf('../../../../shared/domain/clock') +
+    importOf('@nestjs/common'),
+  'src/modules/tasks/infrastructure/persistence/task.prisma-repository.ts':
+    importOf('../../domain/repositories/task.repository') +
+    importOf('@prisma/client'),
+  'src/modules/tasks/presentation/http/tasks.controller.ts':
+    importOf('../../application/use-cases/create-task.use-case') +
+    importOf('@nestjs/common'),
   // ADR-0020: another module is reached only through its lookup service and its module.
   'src/modules/teams/team-lookup.service.ts': 'export {};\n',
   'src/modules/teams/teams.module.ts': importOf('./team-lookup.service'),
-  'src/modules/tasks/infrastructure/directory.ts': importOf(
-    '../../teams/team-lookup.service',
+  'src/modules/tasks/infrastructure/persistence/team-directory.ts': importOf(
+    '../../../teams/team-lookup.service',
   ),
   'src/modules/tasks/tasks.module.ts':
-    importOf('./application/handler') +
-    importOf('./infrastructure/repo') +
-    importOf('./infrastructure/directory') +
-    importOf('./presentation/controller') +
+    importOf('./application/use-cases/create-task.use-case') +
+    importOf('./infrastructure/persistence/task.prisma-repository') +
+    importOf('./infrastructure/persistence/team-directory') +
+    importOf('./presentation/http/tasks.controller') +
     importOf('../teams/teams.module'),
-  'src/modules/tasks/application/handler.spec.ts': importOf('./handler'),
+  'src/modules/tasks/application/use-cases/create-task.use-case.spec.ts':
+    importOf('./create-task.use-case'),
   'src/modules/identity/auth.factory.ts': importOf('better-auth'),
   'src/modules/identity/identity.module.ts':
     importOf('./auth.factory') + importOf('@thallesp/nestjs-better-auth'),
@@ -486,7 +477,7 @@ describe('architecture rules', () => {
     });
   }
 
-  it("AC-07.7.4 a context importing another context's public contracts passes", async () => {
+  it('AC-08.6 a module reaching another through its lookup service and module file passes', async () => {
     const violations = await violationsOf(project(COMPLIANT));
     assert.deepEqual(
       violations.map((v) => `${v.rule.name} ${v.from} -> ${v.to}`),
