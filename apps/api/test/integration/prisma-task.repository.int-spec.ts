@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
-import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
 import { UnknownTeams } from '../../src/modules/tasks/domain/task.errors';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status';
@@ -64,7 +63,7 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     unknownTeam: () => Promise.resolve(randomUUID()),
   }));
 
-  it('AC-03.15.3 lets exactly one of two concurrent updates at the same version win', async () => {
+  it('AC-08.3 two concurrent updates from the same load both apply (last write wins)', async () => {
     const ownerId = await newOwner();
     const task = aTask(ownerId);
     await repository.insert(task);
@@ -76,19 +75,13 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     second!.changeStatus(TaskStatus.DONE, LATER);
 
     const results = await Promise.allSettled([
-      repository.update(first!, 1),
-      repository.update(second!, 1),
+      repository.update(first!),
+      repository.update(second!),
     ]);
 
-    const won = results.filter((r) => r.status === 'fulfilled');
-    const lost = results.filter((r) => r.status === 'rejected');
-    expect(won).toHaveLength(1);
-    expect((won[0] as PromiseFulfilledResult<number>).value).toBe(2);
-    expect(lost).toHaveLength(1);
-    const reason: unknown = (lost[0] as PromiseRejectedResult).reason;
-    expect(reason).toBeInstanceOf(ConcurrencyConflict);
-    expect((reason as ConcurrencyConflict).currentVersion).toBe(2);
-    expect((await repository.findById(ownerId, task.id))!.version).toBe(2);
+    // Last write wins (ADR-0020, AC-08.3): both writes apply, each incrementing the version.
+    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
+    expect((await repository.findById(ownerId, task.id))!.version).toBe(3);
   });
 
   it('writes the row and the links in one transaction: a failing link rolls the update back', async () => {
@@ -102,7 +95,7 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     task.assignTo(TaskTeamIds.of([team, gone]), LATER);
 
     const error: unknown = await repository
-      .update(task, 1)
+      .update(task)
       .catch((e: unknown) => e);
     expect(error).toBeInstanceOf(UnknownTeams);
     const stored = (await repository.findById(ownerId, task.id))!;
@@ -143,7 +136,7 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     await prisma.taskTeam.update({ where: link, data: { createdAt: pinned } });
 
     task.assignTo(TaskTeamIds.of([kept, added]), LATER);
-    await repository.update(task, 1);
+    await repository.update(task);
 
     const after = await prisma.taskTeam.findUniqueOrThrow({ where: link });
     expect(after.createdAt).toEqual(pinned);

@@ -8,7 +8,6 @@ import {
   InTransactionEventHandler,
   InTransactionHandler,
 } from '../../src/shared/application/in-transaction-handler';
-import { ExpectedVersion } from '../../src/shared/domain/expected-version';
 import type { PrismaTransactionHost } from '../../src/shared/infrastructure/transactions/cls-unit-of-work';
 import { DeleteTeamCommand } from '../../src/modules/teams/application/commands/delete-team/delete-team.command';
 import { TeamDeleted } from '../../src/modules/teams/domain/team.events';
@@ -150,11 +149,7 @@ describe('UnitOfWork and the two-phase publisher (integration, T-002-09)', () =>
   const deleteTeam = (id: string) =>
     app
       .get(ClsService)
-      .run(() =>
-        app
-          .get(CommandBus)
-          .execute(new DeleteTeamCommand(OWNER, id, ExpectedVersion.any())),
-      );
+      .run(() => app.get(CommandBus).execute(new DeleteTeamCommand(OWNER, id)));
 
   it('AC-02.7.4 a failing in-transaction reaction rolls the soft delete back: the team stays active', async () => {
     const team = await insertTeam('Rollback');

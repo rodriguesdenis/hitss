@@ -15,7 +15,6 @@ import { TaskTitle } from '../../src/modules/tasks/domain/value-objects/task-tit
 import { DeleteTeamCommand } from '../../src/modules/teams/application/commands/delete-team/delete-team.command';
 import { TeamDeleted } from '../../src/modules/teams/contracts/team-deleted.event';
 import { UnitOfWork } from '../../src/shared/application/ports/unit-of-work';
-import { ExpectedVersion } from '../../src/shared/domain/expected-version';
 import type { PrismaTransactionHost } from '../../src/shared/infrastructure/transactions/cls-unit-of-work';
 import { createTestApp } from '../support/app';
 import { signUpAndSignIn } from '../support/auth';
@@ -74,11 +73,7 @@ describe('OnTeamDeletedHandler (integration, T-003-13)', () => {
   /** Runs in a CLS context, as the request middleware does for HTTP. */
   const inCls = <T>(work: () => Promise<T>) => app.get(ClsService).run(work);
   const deleteTeam = (id: string) =>
-    inCls(() =>
-      app
-        .get(CommandBus)
-        .execute(new DeleteTeamCommand(owner, id, ExpectedVersion.any())),
-    );
+    inCls(() => app.get(CommandBus).execute(new DeleteTeamCommand(owner, id)));
 
   const team = async (name: string): Promise<string> => {
     const id = randomUUID();

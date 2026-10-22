@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
-import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
 import { Prisma } from '../../src/generated/prisma/client';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { TeamNameAlreadyExists } from '../../src/modules/teams/domain/team.errors';
@@ -39,7 +38,7 @@ describe('PrismaTeamRepository (integration, T-002-03)', () => {
 
   describeTeamRepositoryContract(() => ({ repository, newOwner }));
 
-  it('BR-02.8 lets exactly one of two concurrent updates at the same version succeed', async () => {
+  it('AC-08.3 two concurrent updates from the same load both apply (last write wins)', async () => {
     const ownerId = await newOwner();
     const team = aTeam(ownerId, 'Mobile');
     await repository.insert(team);
@@ -62,19 +61,13 @@ describe('PrismaTeamRepository (integration, T-002-03)', () => {
     });
 
     const results = await Promise.allSettled([
-      repository.update(first!, 1),
-      repository.update(second!, 1),
+      repository.update(first!),
+      repository.update(second!),
     ]);
 
-    const won = results.filter((r) => r.status === 'fulfilled');
-    const lost = results.filter((r) => r.status === 'rejected');
-    expect(won).toHaveLength(1);
-    expect((won[0] as PromiseFulfilledResult<number>).value).toBe(2);
-    expect(lost).toHaveLength(1);
-    const reason: unknown = (lost[0] as PromiseRejectedResult).reason;
-    expect(reason).toBeInstanceOf(ConcurrencyConflict);
-    expect((reason as ConcurrencyConflict).currentVersion).toBe(2);
-    expect((await repository.findById(ownerId, team.id))!.version).toBe(2);
+    // Last write wins (ADR-0020, AC-08.3): both writes apply, each incrementing the version.
+    expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
+    expect((await repository.findById(ownerId, team.id))!.version).toBe(3);
   });
 
   it('AC-02.1.9 maps the loser of two concurrent creates to TeamNameAlreadyExists', async () => {

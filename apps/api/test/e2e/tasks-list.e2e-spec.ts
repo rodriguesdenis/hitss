@@ -142,7 +142,7 @@ describe('GET /api/v1/tasks — filters and paging (e2e)', () => {
       const response = await list(user);
 
       expect(response.status).toBe(200);
-      // A page is not a single resource: no version tag (EtagInterceptor is per route).
+      // No ETag anywhere (AC-08.3).
       expect(response.headers.etag).toBeUndefined();
       const { data, meta } = pageOf(response);
       expect(data.map((task) => task.title)).toEqual(

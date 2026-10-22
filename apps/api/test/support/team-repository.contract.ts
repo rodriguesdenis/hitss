@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
 import { Team } from '../../src/modules/teams/domain/team';
 import {
   TeamNameAlreadyExists,
@@ -108,7 +107,7 @@ export function describeTeamRepositoryContract(
       const gone = aTeam(ownerId, 'Gone');
       await repo().insert(gone);
       gone.delete(LATER);
-      await repo().update(gone, 1);
+      await repo().update(gone);
 
       await expect(repo().findById(stranger, team.id)).resolves.toBeNull();
       await expect(repo().findById(ownerId, randomUUID())).resolves.toBeNull();
@@ -148,7 +147,7 @@ export function describeTeamRepositoryContract(
         const gone = aTeam(ownerId, 'Archive');
         await repo().insert(gone);
         gone.delete(LATER);
-        await repo().update(gone, 1);
+        await repo().update(gone);
 
         await expect(
           repo().existsActiveByName(stranger, TeamName.create('Mobile')),
@@ -204,7 +203,7 @@ export function describeTeamRepositoryContract(
         const gone = aTeam(ownerId, 'Mobile');
         await repo().insert(gone);
         gone.delete(LATER);
-        await repo().update(gone, 1);
+        await repo().update(gone);
 
         await expect(
           repo().insert(aTeam(ownerId, 'Mobile')),
@@ -229,7 +228,7 @@ export function describeTeamRepositoryContract(
           now: LATER,
         });
 
-        await expect(repo().update(loaded, 1)).resolves.toBe(2);
+        await expect(repo().update(loaded)).resolves.toBeUndefined();
         const stored = (await repo().findById(ownerId, team.id))!;
         expect(stored.name.value).toBe('Mobile Squad');
         expect(stored.color.value).toBe('#F59E0B');
@@ -239,21 +238,17 @@ export function describeTeamRepositoryContract(
         expect(stored.updatedAt).toEqual(LATER);
       });
 
-      it('BR-02.8 rejects a stale expected version with the current one', async () => {
+      it('AC-08.3 last write wins: an update from an older load still applies and bumps the version', async () => {
         const ownerId = await owner();
         const team = aTeam(ownerId);
         await repo().insert(team);
-        await repo().update(rename(team, 'First'), 1);
+        await repo().update(rename(team, 'First'));
 
-        const error: unknown = await repo()
-          .update(rename(team, 'Second'), 1)
-          .catch((e: unknown) => e);
+        await repo().update(rename(team, 'Second'));
 
-        expect(error).toBeInstanceOf(ConcurrencyConflict);
-        expect((error as ConcurrencyConflict).currentVersion).toBe(2);
-        expect((await repo().findById(ownerId, team.id))!.name.value).toBe(
-          'First',
-        );
+        const stored = (await repo().findById(ownerId, team.id))!;
+        expect(stored.name.value).toBe('Second');
+        expect(stored.version).toBe(3);
       });
 
       it('AC-02.9.5 reports a foreign or unknown team as not found', async () => {
@@ -272,11 +267,11 @@ export function describeTeamRepositoryContract(
           deletedAt: null,
         });
 
-        await expect(repo().update(impostor, 1)).rejects.toBeInstanceOf(
+        await expect(repo().update(impostor)).rejects.toBeInstanceOf(
           TeamNotFound,
         );
         await expect(
-          repo().update(aTeam(ownerId, 'Never stored'), 1),
+          repo().update(aTeam(ownerId, 'Never stored')),
         ).rejects.toBeInstanceOf(TeamNotFound);
         expect((await repo().findById(ownerId, team.id))!.name.value).toBe(
           'Mobile',
@@ -289,11 +284,9 @@ export function describeTeamRepositoryContract(
         await repo().insert(team);
 
         team.delete(LATER);
-        await expect(repo().update(team, 1)).resolves.toBe(2);
+        await expect(repo().update(team)).resolves.toBeUndefined();
         await expect(repo().findById(ownerId, team.id)).resolves.toBeNull();
-        await expect(repo().update(team, 2)).rejects.toBeInstanceOf(
-          TeamNotFound,
-        );
+        await expect(repo().update(team)).rejects.toBeInstanceOf(TeamNotFound);
       });
 
       it('rejects a rename onto another active team’s name', async () => {
@@ -303,7 +296,7 @@ export function describeTeamRepositoryContract(
         await repo().insert(team);
 
         await expect(
-          repo().update(rename(team, 'BACKEND'), 1),
+          repo().update(rename(team, 'BACKEND')),
         ).rejects.toBeInstanceOf(TeamNameAlreadyExists);
         expect((await repo().findById(ownerId, team.id))!.version).toBe(1);
       });
@@ -313,7 +306,9 @@ export function describeTeamRepositoryContract(
         const team = aTeam(ownerId, 'mobile');
         await repo().insert(team);
 
-        await expect(repo().update(rename(team, 'Mobile'), 1)).resolves.toBe(2);
+        await expect(
+          repo().update(rename(team, 'Mobile')),
+        ).resolves.toBeUndefined();
       });
     });
   });

@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
 import { Task } from '../../src/modules/tasks/domain/task';
 import {
   TaskNotFound,
@@ -130,7 +129,7 @@ export function describeTaskRepositoryContract(
       const gone = aTask(ownerId);
       await repo().insert(gone);
       gone.delete(LATER);
-      await repo().update(gone, 1);
+      await repo().update(gone);
 
       await expect(repo().findById(stranger, task.id)).resolves.toBeNull();
       await expect(repo().findById(ownerId, randomUUID())).resolves.toBeNull();
@@ -168,7 +167,7 @@ export function describeTaskRepositoryContract(
         });
         loaded.changeStatus(TaskStatus.DONE, LATER);
 
-        await expect(repo().update(loaded, 1)).resolves.toBe(2);
+        await expect(repo().update(loaded)).resolves.toBeUndefined();
         expect(snapshot((await repo().findById(ownerId, task.id))!)).toEqual({
           ...snapshot(loaded),
           version: 2,
@@ -187,7 +186,7 @@ export function describeTaskRepositoryContract(
 
         const loaded = (await repo().findById(ownerId, task.id))!;
         loaded.assignTo(TaskTeamIds.of([b, c]), LATER);
-        await repo().update(loaded, 1);
+        await repo().update(loaded);
 
         expect(
           (await repo().findById(ownerId, task.id))!.teamIds.values,
@@ -202,31 +201,27 @@ export function describeTaskRepositoryContract(
         await repo().insert(task);
 
         task.assignTo(TaskTeamIds.of([]), LATER);
-        await repo().update(task, 1);
+        await repo().update(task);
 
         expect(
           (await repo().findById(ownerId, task.id))!.teamIds.values,
         ).toEqual([]);
       });
 
-      it('BR-03.12 rejects a stale expected version with the current one and writes nothing', async () => {
+      it('AC-08.3 last write wins: an update from an older load still applies and bumps the version', async () => {
         const ownerId = await owner();
         const a = await team(ownerId);
         const task = aTask(ownerId);
         await repo().insert(task);
         task.changeStatus(TaskStatus.IN_PROGRESS, LATER);
-        await repo().update(task, 1);
+        await repo().update(task);
 
         task.assignTo(TaskTeamIds.of([a]), LATER);
-        const error: unknown = await repo()
-          .update(task, 1)
-          .catch((e: unknown) => e);
+        await repo().update(task);
 
-        expect(error).toBeInstanceOf(ConcurrencyConflict);
-        expect((error as ConcurrencyConflict).currentVersion).toBe(2);
-        expect(
-          (await repo().findById(ownerId, task.id))!.teamIds.values,
-        ).toEqual([]);
+        const stored = (await repo().findById(ownerId, task.id))!;
+        expect(stored.teamIds.values).toEqual([a]);
+        expect(stored.version).toBe(3);
       });
 
       it('AC-03.12.1 reports a foreign or unknown task as not found and writes nothing', async () => {
@@ -239,10 +234,10 @@ export function describeTaskRepositoryContract(
           title: TaskTitle.create('Hijacked'),
         });
 
-        await expect(repo().update(impostor, 1)).rejects.toBeInstanceOf(
+        await expect(repo().update(impostor)).rejects.toBeInstanceOf(
           TaskNotFound,
         );
-        await expect(repo().update(aTask(ownerId), 1)).rejects.toBeInstanceOf(
+        await expect(repo().update(aTask(ownerId))).rejects.toBeInstanceOf(
           TaskNotFound,
         );
         expect((await repo().findById(ownerId, task.id))!.title.value).toBe(
@@ -257,12 +252,10 @@ export function describeTaskRepositoryContract(
         await repo().insert(task);
 
         task.delete(LATER);
-        await expect(repo().update(task, 1)).resolves.toBe(2);
+        await expect(repo().update(task)).resolves.toBeUndefined();
         await expect(repo().findById(ownerId, task.id)).resolves.toBeNull();
         await expect(repo().findByTeam(ownerId, a)).resolves.toEqual([]);
-        await expect(repo().update(task, 2)).rejects.toBeInstanceOf(
-          TaskNotFound,
-        );
+        await expect(repo().update(task)).rejects.toBeInstanceOf(TaskNotFound);
       });
     });
 
@@ -291,7 +284,7 @@ export function describeTaskRepositoryContract(
         task.changeStatus(TaskStatus.DONE, LATER);
         task.assignTo(TaskTeamIds.of([live, gone]), LATER);
         const error: unknown = await repo()
-          .update(task, 1)
+          .update(task)
           .catch((e: unknown) => e);
 
         expect(error).toBeInstanceOf(UnknownTeams);
@@ -313,7 +306,7 @@ export function describeTaskRepositoryContract(
         const gone = aTask(ownerId, { teamIds: [a] });
         await repo().insert(gone);
         gone.delete(LATER);
-        await repo().update(gone, 1);
+        await repo().update(gone);
 
         const found = await repo().findByTeam(ownerId, a);
 

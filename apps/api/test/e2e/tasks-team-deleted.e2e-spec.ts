@@ -17,8 +17,8 @@ interface TaskBody {
 
 /**
  * Deleting a team through DELETE /api/v1/teams/:id (T-003-13): its tasks survive, lose only that
- * team, and get a new version, in the same transaction as the soft delete. The stale-If-Match
- * row (412 on an edit based on the old version) comes with If-Match on tasks, T-003-17.
+ * team, and get a new version, in the same transaction as the soft delete. Edits are last write
+ * wins (ADR-0020): the new version is informational.
  */
 describe('Deleting a team unassigns it from its tasks (e2e)', () => {
   const db = useTestDatabase();
@@ -56,10 +56,7 @@ describe('Deleting a team unassigns it from its tasks (e2e)', () => {
     ).data;
   const getTask = async (id: string) => {
     const response = await as(http().get(`/api/v1/tasks/${id}`));
-    return {
-      task: (response.body as { data: TaskBody }).data,
-      etag: response.headers.etag,
-    };
+    return { task: (response.body as { data: TaskBody }).data };
   };
 
   it('AC-02.7.2 AC-03.13.1 AC-03.13.2 AC-03.13.3 AC-03.13.4 AC-03.2.5 tasks survive, lose only that team, and get a new version', async () => {
@@ -86,8 +83,6 @@ describe('Deleting a team unassigns it from its tasks (e2e)', () => {
     const afterBoth = await getTask(both.id);
     expect(afterBoth.task.teams.map((team) => team.id)).toEqual([backend]);
     expect(afterBoth.task.version).toBe(2);
-    // An edit based on the old version is detectable: the tag moved (AC-03.13.4).
-    expect(afterBoth.etag).toBe('W/"2"');
 
     const afterOnly = await getTask(only.id);
     expect(afterOnly.task).toMatchObject({

@@ -107,7 +107,7 @@ describe('GET /api/v1/tasks/:id (e2e)', () => {
     );
   };
 
-  it('AC-03.8.1 returns the task view with its teams by name, overdue on the UTC day, and its ETag', async () => {
+  it('AC-03.8.1 returns the task view with its teams by name, overdue on the UTC day; no ETag (AC-08.3)', async () => {
     const mobile = await createTeam(marina, 'Mobile', '#7c3aed');
     const backend = await createTeam(marina, 'backend', '#0EA5E9');
     const archived = await createTeam(marina, 'Archived', '#111111');
@@ -124,7 +124,7 @@ describe('GET /api/v1/tasks/:id (e2e)', () => {
     const response = await get(marina, id);
 
     expect(response.status).toBe(200);
-    expect(response.headers.etag).toBe('W/"3"');
+    expect(response.headers.etag).toBeUndefined(); // AC-08.3
     expect((response.body as { data: TaskBody }).data).toEqual({
       id,
       title: 'Implement login screen',

@@ -145,7 +145,7 @@ describe('PUT /api/v1/tasks/:id (e2e)', () => {
     });
   };
 
-  it('AC-03.9.1 AC-03.9.6 replaces every editable field: version 2, updated now, id and created time kept, ETag', async () => {
+  it('AC-03.9.1 AC-03.9.6 replaces every editable field: version 2, updated now, id and created time kept, no ETag', async () => {
     const task = await draft();
 
     const response = await put(task.user, task.id, {
@@ -157,7 +157,7 @@ describe('PUT /api/v1/tasks/:id (e2e)', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.etag).toBe('W/"2"');
+    expect(response.headers.etag).toBeUndefined(); // AC-08.3
     expect(taskOf(response)).toMatchObject({
       id: task.id,
       title: 'Final',
@@ -388,7 +388,7 @@ describe('PUT /api/v1/tasks/:id (e2e)', () => {
     expect(taskOf(reopened).completedAt).toBeNull();
   });
 
-  it('AC-03.9.5 an identical replacement (teams in another order) is a no-op: version 1, updated time kept, ETag 1', async () => {
+  it('AC-03.9.5 an identical replacement (teams in another order) is a no-op: version 1, updated time kept, no ETag', async () => {
     const task = await draft();
 
     const response = await put(task.user, task.id, {
@@ -397,7 +397,7 @@ describe('PUT /api/v1/tasks/:id (e2e)', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.etag).toBe('W/"1"');
+    expect(response.headers.etag).toBeUndefined(); // AC-08.3
     expect(taskOf(response)).toMatchObject({
       version: 1,
       updatedAt: CREATED.toISOString(),

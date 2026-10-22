@@ -100,7 +100,7 @@ describe('PrismaTaskReadModel (integration, T-003-06a)', () => {
     const gone = aTask(ownerId);
     await repository.insert(gone);
     gone.delete(LATER);
-    await repository.update(gone, 1);
+    await repository.update(gone);
 
     await expect(readModel.findById(ownerId, gone.id)).resolves.toBeNull();
     await expect(readModel.findById(ownerId, randomUUID())).resolves.toBeNull();
