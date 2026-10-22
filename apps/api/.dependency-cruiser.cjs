@@ -113,6 +113,17 @@ module.exports = {
       to: { path: '^src/modules/' },
     },
     {
+      name: 'auth-library-in-identity',
+      comment:
+        'A5 (anti-corruption, plan 001 → CurrentOwner): only Identity uses the auth library; other code sees Owner, @Public() and @CurrentOwner(). Specs included.',
+      severity: 'error',
+      from: { path: '^src/', pathNot: '^src/modules/identity/' },
+      to: {
+        // pnpm resolves to node_modules/.pnpm/<pkg>@<v>/node_modules/<pkg>/: the tail matches both.
+        path: 'node_modules/(better-auth|@better-auth/[^/]+|@thallesp/nestjs-better-auth)/',
+      },
+    },
+    {
       name: 'no-circular',
       comment: 'A8: no import cycles.',
       severity: 'error',
