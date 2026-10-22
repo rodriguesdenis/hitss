@@ -36,6 +36,7 @@ Order matters; each task is one PR. Sizes: **S** < 150 changed lines, **M** < 40
 
 ## T-006-04 — Use-case spans and error-envelope trace id
 
+- **Status:** done
 - **Goal:** the "handler" span between HTTP and DB; `error.traceId` in every error envelope.
 - **Changes:** `src/shared/observability/tracing/traced-handler.ts` (or CQRS bus wrapper) applied to all command/query handlers; `GlobalExceptionFilter` (`src/shared/presentation/filters/`) reads the active trace id; unexpected errors logged once with stack.
 - **Covers:** @AC-06.2.1 (handler span), @AC-06.2.4, @AC-06.3.4
