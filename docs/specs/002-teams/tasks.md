@@ -73,8 +73,9 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 
 - **Goal:** `GET /api/v1/teams` with pagination meta, search and sort, on top of T-002-06a.
 - **Owner:** Forge (NestJS). **Depends on:** T-002-06a, T-002-04.
-- **Changes:** Shared `PaginationQueryDto`, `PageMeta`, `ApiPageEnvelope` and the sort parser. `ListTeamsQueryDto`, `ListTeamsHandler` (one `TeamTaskCounts.countByTeam` call per page).
+- **Changes:** Shared `PaginationQueryDto` (`shared/presentation/dto/`; strict integer parsing, so `offset=` is a 400 rather than 0), the sort helpers `sortValues`/`parseSort` (`shared/presentation/sort.ts`) and `toPageMeta` (`shared/presentation/page-meta.ts`, returning the `PageMeta` of T-001-13's `openapi/api-envelope.ts`; `ApiPageEnvelope` comes from there too, plus a new `ApiCreatedEnvelope` for 201s). `ListTeamsQueryDto`, `ListTeamsHandler` (one `TeamTaskCounts.countByTeam` call per page, none for an empty page), `GET /api/v1/teams`. Swagger decorators on the team DTOs and both team routes.
 - **Covers:** `@AC-02.2.1 @AC-02.2.2 @AC-02.2.5 @AC-02.2.9 @AC-02.3.2 @AC-02.4.3`, `@AC-01.6.1` (teams row), plus the end-to-end verification of every T-002-06a AC.
+- **Status:** done
 - **Done when:** Unit: DTO tables for limit, offset, search (trimmed; blank or whitespace-only → 400 `VALIDATION_FAILED` naming `search`; 101 chars → 400) and sort, and `PageMeta`. E2E: default meta, search plus sort plus paging combined, foreign teams never listed, unknown parameter → 400.
 
 ## T-002-07 — Get team + ETag
