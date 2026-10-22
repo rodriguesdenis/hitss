@@ -103,7 +103,7 @@ describe('Task', () => {
     expect(task.pullEvents()).toStrictEqual([]);
   });
 
-  describe('changeStatus: transition matrix (AC-03.10.1, AC-03.10.2, AC-03.10.3, AC-03.9.4)', () => {
+  describe('AC-03.10.1 AC-03.10.2 AC-03.10.3 AC-03.9.4 changeStatus transition matrix', () => {
     // `changed` true ⇔ persistence writes version n+1; false ⇔ version stays n.
     it.each([
       [PENDING, PENDING, false, null],
