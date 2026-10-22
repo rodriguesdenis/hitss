@@ -97,7 +97,15 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 - **Goal:** the same for tasks (AC-08.10); tasks ~22 source files.
 - **Changes:** (a) `domain/policies/overdue.policy.ts` → `Task.isOverdue(today)` (the read side computes the same rule from the view: one exported pure function next to the entity, or the presenter calls the entity rule; no `policies/` folder); (b) `TaskDescription` and `TaskTeamIds` folded into `Task` validation (keeps `TaskTitle`, `TaskStatus`, `DueDate`; error classes and codes unchanged); (c) `application/views/` removed: the view type moves into `ports/task.read-model.ts`, assembly (team chips from `TeamLookup`) into the presenter or the get/list use cases; (e) `UpdateTaskDto extends CreateTaskDto`, `task-fields.ts` removed, `TeamChipDto` inside `task-response.dto.ts`; (g) `task.persistence-mapper.ts` → private functions in `task.prisma-repository.ts`.
+- **Status:** done
 - **Done when:** unit, integration and e2e green; `pnpm arch` green; OpenAPI document unchanged; overview §3, §4 and §6 updated (no policies, views or mapper files).
+- **Note:**
+  - (a) is `static Task.isOverdue(status, dueDate, today)`, with the instance method using it; the presenter calls the static for read rows (one implementation).
+  - (b) `assignTo` runs before `edit` in UpdateTask, so `TOO_MANY_TEAMS` still precedes every other check; the entity re-validates description and teams on `restore`, like teams.
+  - (c) GetTask/ListTasks return `TaskView` / `TaskPageView` (row or page, the live teams from one TeamLookup call, today); the presenter keeps the task's own teams by name and derives `isOverdue`.
+  - (e) `UpdateTaskDto extends OmitType(CreateTaskDto, ['status', 'teamIds'])` with both redeclared as required: extending `CreateTaskDto` directly would inherit its `@IsOptional` and let a `PUT` omit them (AC-03.9.3), as a probe showed.
+  - (g) the mapper's time-zone probe goes with it; the repository probe already covers the same zones through a real write and read.
+  - Tasks has 24 source files. The tasks OpenAPI document is identical before and after (key-sorted diff).
 
 ## T-008-11 — Tests inside each module
 
