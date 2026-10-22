@@ -97,8 +97,9 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 ## T-001-09 — `CurrentOwner` decorator and two-user helper
 
 - **Goal:** Controllers receive `Owner { ownerId }`. Application code never sees Better Auth types.
-- **Changes:** (`shared/domain/owner.ts` and `shared/presentation/decorators/current-owner.decorator.ts` shipped with T-001-08; decision CO-1: shared, so teams and tasks never import `modules/identity`, rule A5; it returns the framework-free `Owner` and imports no Better Auth types), `dependency-cruiser` rule "only `modules/identity/**` may import `better-auth*` / `@thallesp/*`", `test/support/auth.ts` (`signUpAndSignIn`, `twoUsers`).
+- **Changes:** (`shared/domain/owner.ts` and `shared/presentation/decorators/current-owner.decorator.ts` shipped with T-001-08; decision CO-1: shared, so teams and tasks never import `modules/identity`, rule A5; it returns the framework-free `Owner` and imports no Better Auth types), `dependency-cruiser` rule `auth-library-in-identity` (A5b: only `modules/identity/**` may import `better-auth`, `@better-auth/*` or `@thallesp/nestjs-better-auth`, specs included; meta-test fixtures for a context controller, shared code and a context spec), `test/support/auth.ts` (`signUpAndSignIn`, `twoUsers`, `bearerOf`).
 - **Covers:** foundation for `@AC-01.6.1 @AC-01.6.2 @AC-01.6.3 @AC-01.6.4 @AC-01.6.5 @AC-01.6.6`, which are verified per resource in T-002-04/06/07/08/09 and the 003 tasks.
+- **Status:** done
 - **Done when:** Unit test of the decorator (user → owner; missing user → 401). The probe controller e2e returns the signed-in user's id. The `depcruise` rule fails on a deliberate violation in a fixture.
 
 ## T-001-10 — Client-IP middleware and Better Auth rate limiter
