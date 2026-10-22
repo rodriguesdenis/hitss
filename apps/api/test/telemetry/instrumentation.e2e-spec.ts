@@ -336,6 +336,9 @@ describe('OpenTelemetry bootstrap', () => {
     const forced = await fetch(`http://127.0.0.1:${app.port}/api/v1/boom`, {
       headers: { traceparent },
     });
+    const dbFailed = await fetch(`http://127.0.0.1:${app.port}/api/v1/dbfail`, {
+      headers: { traceparent },
+    });
     const missing = await fetch(`http://127.0.0.1:${app.port}/api/v1/missing`, {
       headers: { traceparent },
     });
@@ -343,8 +346,9 @@ describe('OpenTelemetry bootstrap', () => {
     expect(await app.exit).toBe(0);
 
     expect(forced.status).toBe(500);
+    expect(dbFailed.status).toBe(500);
     expect(missing.status).toBe(404);
-    for (const response of [forced, missing]) {
+    for (const response of [forced, dbFailed, missing]) {
       const body = await response.clone().text();
       expect(
         (JSON.parse(body) as { error: { traceId: string } }).error.traceId,

@@ -91,4 +91,24 @@ describe('SanitizingSpanExporter', () => {
     // The original span is untouched for other processors.
     expect(span.status.message).toBeDefined();
   });
+
+  it.each([
+    'exception.message',
+    'exception.stacktrace',
+    'error.message',
+    'db.error.message',
+    'prisma.error_message',
+    'http.error_message',
+  ])('AC-06.2.5 drops the error text attribute %s', (key) => {
+    expect(
+      run({ [key]: 'DETAIL: Key (email)=(someone@example.test)' }),
+    ).toEqual({});
+  });
+
+  it.each(['error.type', 'exception.type', 'error.name', 'db.error.code'])(
+    'AC-06.2.5 keeps the identifying attribute %s',
+    (key) => {
+      expect(run({ [key]: 'TypeError' })).toEqual({ [key]: 'TypeError' });
+    },
+  );
 });

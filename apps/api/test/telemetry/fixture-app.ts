@@ -23,6 +23,12 @@ class PingHandler {
   }
 
   @Traced()
+  async dbFail() {
+    // The driver error echoes the bound value in its message and DETAIL text.
+    await this.prisma.$queryRaw`SELECT ${'secret-value'}::int`;
+  }
+
+  @Traced()
   fail(): never {
     throw new Error('forced failure with secret-value');
   }
@@ -35,6 +41,11 @@ class PingController {
   @Get('ping')
   ping() {
     return this.handler.execute();
+  }
+
+  @Get('dbfail')
+  dbfail() {
+    return this.handler.dbFail();
   }
 
   @Get('boom')
