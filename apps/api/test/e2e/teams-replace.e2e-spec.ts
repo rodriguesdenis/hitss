@@ -427,7 +427,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
       expect((await row(team.id))?.version).toBe(3);
     });
 
-    it('AC-02.6.4 AC-02.9.5 two concurrent renames of two teams to one name → exactly one 200; the loser gets 409 or 412', async () => {
+    it('AC-02.6.4 AC-02.9.5 two concurrent renames of two teams to one name → exactly one 200; the loser gets 409', async () => {
       const user = await signUpAndSignIn(app);
       const a = await createTeam(user, 'Alpha');
       const b = await createTeam(user, 'Beta');
@@ -438,8 +438,9 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
       ]);
 
       const statuses = responses.map((response) => response.status).sort();
-      expect(statuses[0]).toBe(200);
-      expect([409, 412]).toContain(statuses[1]);
+      // Different rows, each at its own version 1: neither precondition can go stale, so the loser
+      // is a name collision (409). A 412 here would be a bug.
+      expect(statuses).toEqual([200, 409]);
       const names = [(await row(a.id))?.name, (await row(b.id))?.name];
       expect(
         names.filter((name) => name?.toLowerCase() === 'shared'),
