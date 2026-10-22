@@ -1,4 +1,4 @@
-import { UnknownTeams } from '../../domain/task.errors';
+import { UnknownTeams } from '../../domain/errors/task.errors';
 import type { TeamDirectory } from '../ports/team-directory';
 
 /**

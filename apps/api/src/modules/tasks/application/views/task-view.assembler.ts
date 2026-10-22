@@ -1,5 +1,5 @@
-import { isOverdue } from '../../domain/overdue.policy';
-import { DueDate } from '../../domain/value-objects/due-date';
+import { isOverdue } from '../../domain/policies/overdue.policy';
+import { DueDate } from '../../domain/value-objects/due-date.vo';
 import type { TaskRecord } from '../ports/task.read-model';
 import type { TeamSummary } from '../ports/team-directory';
 import type { TaskView } from './task.view';

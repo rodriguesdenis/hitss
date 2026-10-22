@@ -1,9 +1,12 @@
-import { Task, TaskProps } from '../../src/modules/tasks/domain/task';
+import {
+  Task,
+  TaskProps,
+} from '../../src/modules/tasks/domain/entities/task.entity';
 import {
   TaskNotFound,
   UnknownTeams,
-} from '../../src/modules/tasks/domain/task.errors';
-import { TaskRepository } from '../../src/modules/tasks/domain/task.repository';
+} from '../../src/modules/tasks/domain/errors/task.errors';
+import { TaskRepository } from '../../src/modules/tasks/domain/repositories/task.repository';
 
 /**
  * In-memory TaskRepository for handler unit tests. It passes the same contract suite as the

@@ -4,7 +4,7 @@ import {
   InTransactionHandler,
 } from '../../../../shared/application/in-transaction-handler';
 import { TeamDeleted } from '../../../teams/contracts/team-deleted.event';
-import { TaskRepository } from '../../domain/task.repository';
+import { TaskRepository } from '../../domain/repositories/task.repository';
 
 /**
  * Team Management deleted a team: unassign it from the owner's tasks, inside DeleteTeam's unit

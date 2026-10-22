@@ -7,8 +7,8 @@ import type {
   ListTasksCriteria,
   TaskSortField,
 } from '../../src/modules/tasks/application/ports/task.read-model';
-import type { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status';
-import { PrismaTaskReadModel } from '../../src/modules/tasks/infrastructure/prisma-task.read-model';
+import type { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status.vo';
+import { PrismaTaskReadModel } from '../../src/modules/tasks/infrastructure/persistence/task.prisma-read';
 import { createTestApp } from '../support/app';
 import { useTestDatabase } from '../support/postgres';
 

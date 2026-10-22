@@ -9,8 +9,8 @@ import {
   InvalidTaskTitle,
   TooManyTeams,
   UnknownTeams,
-} from '../../../domain/task.errors';
-import { TaskStatus } from '../../../domain/value-objects/task-status';
+} from '../../../domain/errors/task.errors';
+import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
 import { CreateTaskCommand } from './create-task.command';
 import { CreateTaskHandler } from './create-task.handler';
 

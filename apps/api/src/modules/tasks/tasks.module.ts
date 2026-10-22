@@ -15,11 +15,11 @@ import { TeamDirectory } from './application/ports/team-directory';
 import { ListTasksHandler } from './application/queries/list-tasks/list-tasks.handler';
 import { GetTaskHandler } from './application/queries/get-task/get-task.handler';
 import { TeamLookupDirectory } from './infrastructure/adapters/team-directory.adapter';
-import { TaskRepository } from './domain/task.repository';
-import { PrismaTaskReadModel } from './infrastructure/prisma-task.read-model';
-import { PrismaTaskRepository } from './infrastructure/prisma-task.repository';
-import { TASK_ERROR_MAPPINGS } from './presentation/task-error.mapping';
-import { TasksController } from './presentation/tasks.controller';
+import { TaskRepository } from './domain/repositories/task.repository';
+import { PrismaTaskReadModel } from './infrastructure/persistence/task.prisma-read';
+import { PrismaTaskRepository } from './infrastructure/persistence/task.prisma-repository';
+import { TASK_ERROR_MAPPINGS } from './presentation/http/task-error.mapping';
+import { TasksController } from './presentation/http/tasks.controller';
 import { TeamsModule } from '../teams/teams.module';
 
 /**

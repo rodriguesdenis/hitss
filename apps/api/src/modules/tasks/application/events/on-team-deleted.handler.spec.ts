@@ -1,9 +1,9 @@
 import { InMemoryTaskRepository } from '../../../../../test/support/in-memory-task.repository';
 import { TeamDeleted } from '../../../teams/contracts/team-deleted.event';
-import { Task } from '../../domain/task';
-import { TaskDescription } from '../../domain/value-objects/task-description';
-import { TaskTeamIds } from '../../domain/value-objects/task-team-ids';
-import { TaskTitle } from '../../domain/value-objects/task-title';
+import { Task } from '../../domain/entities/task.entity';
+import { TaskDescription } from '../../domain/value-objects/task-description.vo';
+import { TaskTeamIds } from '../../domain/value-objects/task-team-ids.vo';
+import { TaskTitle } from '../../domain/value-objects/task-title.vo';
 import { OnTeamDeletedHandler } from './on-team-deleted.handler';
 
 const OWNER = 'owner-1';

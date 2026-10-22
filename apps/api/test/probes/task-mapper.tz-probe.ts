@@ -1,4 +1,4 @@
-import { TaskMapper } from '../../src/modules/tasks/infrastructure/task.mapper';
+import { TaskMapper } from '../../src/modules/tasks/infrastructure/persistence/task.persistence-mapper';
 import { CALENDAR_EDGES, activeZone } from './zone';
 
 const row = {

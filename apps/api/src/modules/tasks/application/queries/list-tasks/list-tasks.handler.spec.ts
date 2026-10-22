@@ -1,6 +1,6 @@
 import { InMemoryTeamDirectory } from '../../../../../../test/support/in-memory-team-directory';
 import { Clock } from '../../../../../shared/domain/clock';
-import { TaskStatus } from '../../../domain/value-objects/task-status';
+import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
 import type {
   ListTasksCriteria,
   TaskReadModel,

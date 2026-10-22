@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { AppConfig } from '../../src/config/app-config';
 import type { PrismaTransactionHost } from '../../src/shared/infrastructure/transactions/cls-unit-of-work';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
-import { PrismaTaskRepository } from '../../src/modules/tasks/infrastructure/prisma-task.repository';
+import { PrismaTaskRepository } from '../../src/modules/tasks/infrastructure/persistence/task.prisma-repository';
 import { aTask } from '../support/task-repository.contract';
 import { CALENDAR_EDGES, activeZone } from './zone';
 

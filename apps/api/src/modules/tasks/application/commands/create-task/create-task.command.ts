@@ -1,4 +1,4 @@
-import type { TaskStatus } from '../../../domain/value-objects/task-status';
+import type { TaskStatus } from '../../../domain/value-objects/task-status.vo';
 
 /** Create a task for the signed-in owner (AC-03.1.x). Values are the DTO's, already trimmed. */
 export class CreateTaskCommand {
