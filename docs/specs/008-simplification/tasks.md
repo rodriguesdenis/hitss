@@ -109,6 +109,7 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 ## T-008-11 — Tests inside each module
 
+- **Status:** done
 - **Goal:** a module's tests live with the module (AC-08.11).
 - **Changes:** `src/modules/<m>/tests/{unit,integration,e2e}/`: unit specs move out of the source folders; module-specific integration and e2e suites move from `apps/api/test/{integration,e2e}`; cross-cutting suites (auth, health, docs, route inventory and protection, security baseline, throttling, architecture, telemetry, probes) and `test/support` stay in `apps/api/test`. Jest projects (`roots`/`testMatch`), coverage `collectFromFiles`/exclusions, `tsconfig` includes and the build (tests never in `dist`) updated; dependency-cruiser `no-tests-in-production` treats `src/modules/*/tests/**` as test code and the layer rules ignore it (Gantry). Only paths and imports change; no assertion changes.
 - **Done when:** the three Jest projects run the same number of tests as before (counts in the PR); coverage gates unchanged; `pnpm arch` and its meta-tests green (a fixture proves production code importing `tests/` fails); `dist/` holds no test file; overview §6 and the test strategy updated.
