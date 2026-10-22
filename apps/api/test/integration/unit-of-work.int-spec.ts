@@ -46,6 +46,41 @@ class SiblingWriter implements InTransactionEventHandler<TeamDeleted> {
 class AfterCommitProbe implements IEventHandler<TeamDeleted> {
   static seen: { teamId: string; committed: boolean }[] = [];
   static sql: Client;
+  private static listeners: (() => boolean)[] = [];
+
+  /**
+   * Resolves once this team's after-commit event has been recorded; rejects after `timeoutMs`
+   * (bounded like LogCapture.waitFor), so a missing event fails fast instead of hanging.
+   */
+  static waitFor(teamId: string, timeoutMs = 3_000): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const arrived = () =>
+        AfterCommitProbe.seen.some((entry) => entry.teamId === teamId);
+      if (arrived()) {
+        resolve();
+        return;
+      }
+      const listener = () => {
+        if (!arrived()) {
+          return false;
+        }
+        clearTimeout(timer);
+        resolve();
+        return true;
+      };
+      const timer = setTimeout(() => {
+        AfterCommitProbe.listeners = AfterCommitProbe.listeners.filter(
+          (l) => l !== listener,
+        );
+        reject(
+          new Error(
+            `no after-commit TeamDeleted for ${teamId} within ${timeoutMs} ms`,
+          ),
+        );
+      }, timeoutMs);
+      AfterCommitProbe.listeners.push(listener);
+    });
+  }
 
   async handle(event: TeamDeleted): Promise<void> {
     const { rows } = await AfterCommitProbe.sql.query<{ deleted: boolean }>(
@@ -56,6 +91,10 @@ class AfterCommitProbe implements IEventHandler<TeamDeleted> {
       teamId: event.teamId,
       committed: rows[0]?.deleted ?? false,
     });
+    // Notify the waiters; the ones that resolved drop out.
+    AfterCommitProbe.listeners = AfterCommitProbe.listeners.filter(
+      (listener) => !listener(),
+    );
   }
 }
 
@@ -117,8 +156,6 @@ describe('UnitOfWork and the two-phase publisher (integration, T-002-09)', () =>
           .execute(new DeleteTeamCommand(OWNER, id, ExpectedVersion.any())),
       );
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 200));
-
   it('AC-02.7.4 a failing in-transaction reaction rolls the soft delete back: the team stays active', async () => {
     const team = await insertTeam('Rollback');
     SiblingWriter.siblingId = await insertTeam('Sibling');
@@ -135,8 +172,15 @@ describe('UnitOfWork and the two-phase publisher (integration, T-002-09)', () =>
     });
     // The reaction's own write rolled back with it.
     expect((await state(SiblingWriter.siblingId))?.description).toBeNull();
-    await settle();
-    expect(AfterCommitProbe.seen).toEqual([]);
+    // Sentinel: a later, succeeding delete. After-commit events are delivered in order, so once
+    // the sentinel's has arrived, an event leaked by the failed delete would already be visible.
+    reaction.fail = false;
+    const sentinel = await insertTeam('Sentinel');
+    await deleteTeam(sentinel);
+    await AfterCommitProbe.waitFor(sentinel);
+    expect(AfterCommitProbe.seen).toEqual([
+      { teamId: sentinel, committed: true },
+    ]);
   });
 
   it('AC-02.7.3 a succeeding reaction commits together with the soft delete', async () => {
@@ -156,7 +200,7 @@ describe('UnitOfWork and the two-phase publisher (integration, T-002-09)', () =>
     SiblingWriter.siblingId = await insertTeam('Sibling');
 
     await deleteTeam(team);
-    await settle();
+    await AfterCommitProbe.waitFor(team);
 
     expect(AfterCommitProbe.seen).toEqual([{ teamId: team, committed: true }]);
   });
