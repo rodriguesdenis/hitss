@@ -28,7 +28,6 @@ assert {
 
 script:post-response {
   bru.setVar("teamId", res.body.data.id);
-  bru.setVar("etag", res.headers.etag);
 }
 
 docs {

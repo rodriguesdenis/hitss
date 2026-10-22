@@ -10,14 +10,6 @@ delete {
   auth: inherit
 }
 
-headers {
-  If-Match: {{etag}}
-}
-
 assert {
   res.status: eq 204
-}
-
-docs {
-  Uses the ETag saved by `Replace team`.
 }
