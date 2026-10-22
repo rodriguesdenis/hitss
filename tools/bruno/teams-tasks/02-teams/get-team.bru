@@ -14,11 +14,3 @@ assert {
   res.status: eq 200
   res.body.data.id: eq {{teamId}}
 }
-
-script:post-response {
-  bru.setVar("etag", res.headers.etag);
-}
-
-docs {
-  The `ETag` header (`W/"<version>"`) is saved in `etag` for the next write.
-}
