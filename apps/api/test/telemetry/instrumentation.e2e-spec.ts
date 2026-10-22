@@ -79,6 +79,21 @@ function dbSpansBelow(spans: ReceivedSpan[], rootId: string | undefined) {
 const get = (app: Running, headers: Record<string, string> = {}, query = '') =>
   fetch(`http://127.0.0.1:${app.port}/api/v1/ping${query}`, { headers });
 
+interface MetricsPayload {
+  resourceMetrics: {
+    scopeMetrics: {
+      metrics: {
+        name: string;
+        histogram: {
+          dataPoints: {
+            attributes: { key: string; value: Record<string, unknown> }[];
+          }[];
+        };
+      }[];
+    }[];
+  }[];
+}
+
 describe('OpenTelemetry bootstrap', () => {
   const db = useTestDatabase();
   currentDatabaseUrl = () => db.url;
@@ -234,6 +249,39 @@ describe('OpenTelemetry bootstrap', () => {
       }
     }
     expect(response.headers.get('x-request-id')).toBe(completed[0]?.reqId);
+  }, 60_000);
+
+  it('AC-06.4.1 AC-06.4.4 exports the request duration by method, route template and status only', async () => {
+    receiver.bodies.clear();
+    const app = await launch({ OTEL_EXPORTER_OTLP_ENDPOINT: endpoint });
+    expect(
+      (await get(app, {}, '?token=secret-value&search=marina')).status,
+    ).toBe(200);
+    app.child.kill('SIGTERM');
+    expect(await app.exit).toBe(0);
+
+    const payloads = (receiver.bodies.get('/v1/metrics') ?? []).map(
+      (body) => JSON.parse(body) as MetricsPayload,
+    );
+    const durations = payloads
+      .flatMap((p) => p.resourceMetrics)
+      .flatMap((r) => r.scopeMetrics)
+      .flatMap((s) => s.metrics)
+      .filter((m) => m.name === 'http.server.request.duration')
+      .flatMap((m) => m.histogram.dataPoints);
+    expect(durations.length).toBeGreaterThan(0);
+
+    const attributes = Object.fromEntries(
+      durations[0]!.attributes.map((a) => [a.key, a.value]),
+    );
+    expect(attributes['http.request.method']).toEqual({ stringValue: 'GET' });
+    expect(attributes['http.route']).toEqual({ stringValue: '/ping' });
+    expect(attributes['http.response.status_code']).toEqual({ intValue: 200 });
+
+    const exported = JSON.stringify(payloads);
+    expect(exported).not.toContain('secret-value');
+    expect(exported).not.toContain('marina');
+    expect(exported).not.toContain('token=');
   }, 60_000);
 
   it('AC-06.5.1 starts and serves 2xx with no collector reachable', async () => {
