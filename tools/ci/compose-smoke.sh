@@ -104,10 +104,11 @@ docker compose down -v --remove-orphans
 if [ "${OTEL_SDK_DISABLED:-false}" = true ]; then
   echo "skipped: OTEL_SDK_DISABLED=true"
 else
-  log 'the built image exports a trace to an OTLP sink: the --import telemetry hand-off works (AC-06.2.1, AC-06.2.6)'
+  log 'telemetry is optional: no export without OTEL_EXPORTER_OTLP_ENDPOINT, a trace with it (AC-08.7)'
   # The sink runs on the Node image the API Dockerfile pins (ARG NODE_IMAGE).
   SINK_IMAGE="$(sed -n 's/^ARG NODE_IMAGE=//p' apps/api/Dockerfile)"
-  cat > "$TMP/otlp-sink.yml" << YAML
+  write_sink() { # $1: the API environment lines (YAML, indented to sit under `environment:`)
+    cat > "$TMP/otlp-sink.yml" << YAML
 services:
   otlp-sink:
     image: $SINK_IMAGE
@@ -124,27 +125,42 @@ services:
       otlp-sink:
         condition: service_healthy
     environment:
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otlp-sink:4318
       OTEL_BSP_SCHEDULE_DELAY: "500"
+$1
 YAML
+  }
   export COMPOSE_FILE="docker-compose.yml:$TMP/otlp-sink.yml"
+
+  # No endpoint: even a per-signal endpoint pointing at the sink must not make the API export.
+  write_sink '      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otlp-sink:4318/v1/traces'
   docker compose up -d --wait
   assert_http_up "$API_PORT"
-  # Traces are batched (500 ms here); metrics follow the SDK's 15 s export interval, hence 45 tries.
-  SEEN=no
-  for _ in $(seq 1 45); do
+  for _ in $(seq 1 6); do
     curl -s -o /dev/null --max-time 5 "http://127.0.0.1:$API_PORT/api/v1/" || true
-    SINK_LOG="$(docker compose logs --no-color otlp-sink 2> /dev/null)"
-    if grep -q 'TRACE_RECEIVED service=teams-tasks-api' <<< "$SINK_LOG" \
-      && grep -q 'METRICS_RECEIVED service=teams-tasks-api' <<< "$SINK_LOG"; then
+    sleep 1
+  done
+  if docker compose logs --no-color otlp-sink 2> /dev/null | grep -q 'TRACE_RECEIVED'; then
+    fail 'the API exported telemetry although OTEL_EXPORTER_OTLP_ENDPOINT is not set'
+  fi
+  echo "no telemetry was exported without the endpoint"
+  docker compose down -v --remove-orphans
+
+  # With the endpoint: a trace arrives.
+  write_sink '      OTEL_EXPORTER_OTLP_ENDPOINT: http://otlp-sink:4318'
+  docker compose up -d --wait
+  assert_http_up "$API_PORT"
+  SEEN=no
+  for _ in $(seq 1 20); do
+    curl -s -o /dev/null --max-time 5 "http://127.0.0.1:$API_PORT/api/v1/" || true
+    if docker compose logs --no-color otlp-sink 2> /dev/null | grep -q 'TRACE_RECEIVED service=teams-tasks-api'; then
       SEEN=yes
       break
     fi
     sleep 1
   done
-  [ "$SEEN" = yes ] || fail 'the sink did not receive both a trace and a metrics export for teams-tasks-api: the image does not export telemetry (is the entrypoint still loading dist/instrumentation.js with --import?)'
-  echo "the sink received a trace and a metrics export for teams-tasks-api"
-  summary "| Telemetry hand-off: the sink received a trace and a metrics export for \`teams-tasks-api\` | passed |"
+  [ "$SEEN" = yes ] || fail 'the sink did not receive a trace for teams-tasks-api: the image does not export telemetry (is the entrypoint still loading dist/instrumentation.js with --import?)'
+  echo "the sink received a trace for teams-tasks-api"
+  summary "| Telemetry: no export without the endpoint, a trace for \`teams-tasks-api\` with it | passed |"
   docker compose down -v --remove-orphans
   unset COMPOSE_FILE
 fi
