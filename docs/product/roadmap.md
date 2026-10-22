@@ -4,13 +4,13 @@ How the work is sequenced, what "done" means at each milestone, and what blocks 
 
 ## Phases
 
-| Phase | Name                  | Scope                                                                                                  | Status      |
-| ----- | --------------------- | ------------------------------------------------------------------------------------------------------ | ----------- |
-| 0     | Foundation            | Repo, agents, project guide, constitution                                                              | ✔ Done      |
-| 1     | Docs                  | Vision, epics, domain/data model, API contracts, ADRs, specs, BDD features, plans, tasks               | ✔ Done      |
-| 2     | Backend               | 007 foundations → 001 auth → 002 teams → 003 tasks → 006 observability                                 | Not started |
-| 3     | Mobile                | 004 mobile app → 005 offline sync                                                                      | Not started |
-| 4     | CI / README hardening | Contract-drift, mutation testing, compose smoke, request collections, final README and operations docs | Not started |
+| Phase | Name                  | Scope                                                                                                  | Status                                                          |
+| ----- | --------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| 0     | Foundation            | Repo, agents, project guide, constitution                                                              | ✔ Done                                                          |
+| 1     | Docs                  | Vision, epics, domain/data model, API contracts, ADRs, specs, BDD features, plans, tasks               | ✔ Done                                                          |
+| 2     | Backend               | 007 foundations → 001 auth → 002 teams → 003 tasks → 006 observability                                 | In progress (foundations done; MUST endpoints next)             |
+| 3     | Mobile                | 004 mobile app → 005 offline sync                                                                      | Not started                                                     |
+| 4     | CI / README hardening | Contract-drift, mutation testing, compose smoke, request collections, final README and operations docs | Partly done (CI gate, smoke in review); rest after the MUST API |
 
 ## Milestones and exit criteria
 
@@ -24,6 +24,32 @@ How the work is sequenced, what "done" means at each milestone, and what blocks 
 | **M6 — Mobile MUST**       | 004 US-04.1–04.9 (sign-in, teams list + CRUD, tasks list, status filter + search, detail, form, chips, feedback states) | An evaluator signs in as the demo user in Expo Go and completes every brief journey; every MUST AC of 004 is covered by a component test or Maestro flow tagged with its id.                                                                              |
 | **M7 — Offline**           | 005 (SHOULD)                                                                                                            | Status change and delete are instant with rollback; creates/edits work offline and replay after restart; conflicts are explained; offline Maestro flow passes.                                                                                            |
 | **M8 — Release candidate** | Phase 4: US-07.4/07.8/07.9 etc., README final, COULD polish (theme, i18n, a11y, sort, sign-up UX)                       | Fresh clone → one command → seeded API in < 5 min; CI green including compose smoke and contract drift; README covers decisions, data model, how to run, request examples and production notes.                                                           |
+
+## Status (2026-10-22)
+
+**User decision for the current phase: MUST only.** COULD and optional work is deferred until the MUST API is complete and demo-able (constitution IX.1). Mobile (Phase 3) starts in a later session.
+
+| Milestone                  | Status      | Done (tasks with `Status: done`)                                                                                                                                                                                                                                | Left                                                                              |
+| -------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **M1 — Runnable skeleton** | ✔ Done      | T-007-01…03, plus T-007-04 (API image, one-shot `migrate` service), T-007-05 (architecture rules), T-007-06 (integration job, coverage gates, traceability), T-007-08 (scripts + Makefile), T-007-11 (supply chain), T-007-16/17 (doc check, `--require-tests`) | —                                                                                 |
+| **M2 — Secure API base**   | In progress | T-001-01…06 (config, Prisma, HTTP conventions, security baseline, identity schema, Better Auth), T-001-10 (client IP + auth limiter)                                                                                                                            | T-001-07, 08, 09 (`@CurrentOwner` in `shared/presentation`, CO-1), 11, 14, 15     |
+| **M3 — Teams API**         | In progress | T-002-01…03 (schema, domain, repository)                                                                                                                                                                                                                        | MUST endpoints below                                                              |
+| **M4 — Tasks API**         | In progress | T-003-01…04 (schema, value objects, aggregate, repository)                                                                                                                                                                                                      | MUST endpoints below                                                              |
+| **M5 — API complete**      | Partly done | T-006-01, 02, 04, 05 (OpenTelemetry bootstrap, pino logging, use-case spans, metrics); boot-time database probe                                                                                                                                                 | T-006-03 readiness, T-006-08 operations docs (US-06.8 is MUST); the rest deferred |
+
+In review (not yet on `main`): T-007-09 compose smoke, T-007-18 telemetry hand-off in the smoke, T-003-06 read model (parked).
+
+### Next milestone — MUST API, per spec
+
+| Spec              | MUST tasks left                                                                                                                                                                                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 001 auth          | T-001-07 sign-up rules · T-001-08 global auth guard, CSRF guard, liveness, route inventory · T-001-09 `CurrentOwner` + two-user helper · T-001-11 demo user seed · T-001-14 auth hardening · T-001-15 per-IP / per-user throttlers                                                        |
+| 002 teams         | T-002-04 create · T-002-06 list (pagination, search, sort) · T-002-07 get (the ETag part is deferred) · T-002-08 replace (the `If-Match` part is deferred) · T-002-09 unit of work + delete with in-transaction unassignment · T-002-10 contracts / `TeamTaskCounts` · T-002-11 team seed |
+| 003 tasks         | T-003-05 `TeamDirectory` · T-003-06 read model + get · T-003-07 create · T-003-08 list filters + pagination · T-003-09 search + sort · T-003-10 replace · T-003-11 change status · T-003-12 delete · T-003-13 `OnTeamDeleted` · T-003-14 `CountTasksByTeamQuery` · T-003-15 task seed     |
+| 006 observability | T-006-03 readiness (`/health/live` never touches the DB; `/health/ready` reuses the boot probe with 1.5 s) · T-006-08 operations docs                                                                                                                                                     |
+| 007 CI / DX       | T-007-07 deterministic seed · T-007-09 compose smoke (in review) · T-007-14 request collections · T-007-15 README final                                                                                                                                                                   |
+
+**Deferred by user decision (after the MUST API):** T-001-12 auth observability, T-001-13 auth request collection + OpenAPI security schemes (folded into T-007-14/15 where needed), T-002-05 idempotency keys, ETag/`If-Match` (T-002-07/08 parts, T-003-17), T-003-18 task idempotency, T-002-12 / T-003-16 extra telemetry, T-006-06 SigNoz profile, T-006-07 k6, T-007-10 contract drift (needs the mobile API client), T-007-12 mutation testing, T-007-13 mobile Metro, and all of 004/005 (mobile, offline).
 
 ## Critical path
 
@@ -57,11 +83,9 @@ Parallelism: 006 (T-006-02…05) can proceed alongside 002/003 once T-006-01 lan
 
 ## Now / Next / Later
 
-| Now                                                                   | Next                                                        | Later                                                                                      |
-| --------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 007: compose + Postgres, validated config, CI skeleton (M1)           | 003 tasks API, MUST stories first (M4)                      | 005 offline sync (M7)                                                                      |
-| 001: foundation tasks, Better Auth, global guard, `CurrentOwner` (M2) | 006 health probes + telemetry; start 004 UI kit in parallel | COULD polish: theme, i18n, a11y, sort UI, sign-up/sign-out UX, Storybook, mutation testing |
-| 002: teams API (M3)                                                   | 004 mobile MUST screens (M6)                                | k6 load test, SigNoz dashboards, MMKV adapter                                              |
+| Now                                                                                   | Next                                                                                   | Later                                                                                                    |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| MUST API: 001 guards + `CurrentOwner`, 002 team endpoints, 003 task endpoints (M2–M4) | Seed, readiness, request collections, README final, operations docs (M5/M8 MUST parts) | Deferred COULD work (idempotency, ETag, SigNoz, k6, mutation testing), then mobile (M6) and offline (M7) |
 
 ## Brief → story validation
 
