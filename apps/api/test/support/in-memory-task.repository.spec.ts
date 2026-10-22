@@ -13,5 +13,10 @@ describe('InMemoryTaskRepository', () => {
     repository,
     newOwner: () => Promise.resolve(randomUUID()),
     newTeam: () => Promise.resolve(randomUUID()),
+    unknownTeam: () => {
+      const id = randomUUID();
+      repository.simulateMissingTeam(id);
+      return Promise.resolve(id);
+    },
   }));
 });

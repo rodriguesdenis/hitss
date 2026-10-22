@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
+import { UnknownTeams } from '../../src/modules/tasks/domain/task.errors';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status';
 import { TaskTeamIds } from '../../src/modules/tasks/domain/value-objects/task-team-ids';
@@ -53,7 +54,13 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     return id;
   };
 
-  describeTaskRepositoryContract(() => ({ repository, newOwner, newTeam }));
+  describeTaskRepositoryContract(() => ({
+    repository,
+    newOwner,
+    newTeam,
+    // A random id has no teams row, so the link trips the foreign key.
+    unknownTeam: () => Promise.resolve(randomUUID()),
+  }));
 
   it('AC-03.15.3 lets exactly one of two concurrent updates at the same version win', async () => {
     const ownerId = await newOwner();
@@ -87,26 +94,38 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     const team = await newTeam(ownerId);
     const task = aTask(ownerId, { teamIds: [team] });
     await repository.insert(task);
+    const gone = randomUUID(); // no teams row: the link insert trips the foreign key
 
     task.changeStatus(TaskStatus.DONE, LATER);
-    task.assignTo(TaskTeamIds.of([team, randomUUID()]), LATER); // unknown team: FK violation
+    task.assignTo(TaskTeamIds.of([team, gone]), LATER);
 
-    await expect(repository.update(task, 1)).rejects.toMatchObject({
-      code: 'P2003',
-    });
+    const error: unknown = await repository
+      .update(task, 1)
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(UnknownTeams);
+    expect((error as UnknownTeams).teamIds).toEqual([gone]);
     const stored = (await repository.findById(ownerId, task.id))!;
     expect(stored.version).toBe(1);
     expect(stored.status).toBe('PENDING');
     expect(stored.teamIds.values).toEqual([team]);
   });
 
+  it('translates only the team-link foreign key: an unknown owner fails as it is', async () => {
+    const task = aTask(randomUUID());
+
+    const error: unknown = await repository
+      .insert(task)
+      .catch((e: unknown) => e);
+
+    expect(error).not.toBeInstanceOf(UnknownTeams);
+    expect(error).toMatchObject({ code: 'P2003' });
+  });
+
   it('stores nothing when a new task links an unknown team', async () => {
     const ownerId = await newOwner();
     const task = aTask(ownerId, { teamIds: [randomUUID()] });
 
-    await expect(repository.insert(task)).rejects.toMatchObject({
-      code: 'P2003',
-    });
+    await expect(repository.insert(task)).rejects.toBeInstanceOf(UnknownTeams);
     await expect(prisma.task.count({ where: { id: task.id } })).resolves.toBe(
       0,
     );

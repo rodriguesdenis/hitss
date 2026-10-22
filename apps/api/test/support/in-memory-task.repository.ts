@@ -1,16 +1,26 @@
 import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
 import { Task, TaskProps } from '../../src/modules/tasks/domain/task';
-import { TaskNotFound } from '../../src/modules/tasks/domain/task.errors';
+import {
+  TaskNotFound,
+  UnknownTeams,
+} from '../../src/modules/tasks/domain/task.errors';
 import { TaskRepository } from '../../src/modules/tasks/domain/task.repository';
 
 /**
  * In-memory TaskRepository for handler unit tests. It passes the same contract suite as the
  * Prisma adapter (task-repository.contract.ts): snapshots in, fresh aggregates out, the same
  * version guard, owner scoping and errors. Team links are part of the snapshot, so a soft delete
- * keeps them, as the database does.
+ * keeps them, as the database does. Every team id is assumed to exist unless a test marks it
+ * missing (`simulateMissingTeam`), which mimics the database's team-link foreign key.
  */
 export class InMemoryTaskRepository extends TaskRepository {
   private readonly rows = new Map<string, TaskProps>();
+  private readonly missingTeams = new Set<string>();
+
+  /** Makes a team id fail like a team deleted after the directory check (UnknownTeams). */
+  simulateMissingTeam(teamId: string): void {
+    this.missingTeams.add(teamId);
+  }
 
   /** Stores a task as-is (its own version). For test setup. */
   seed(task: Task): void {
@@ -45,6 +55,10 @@ export class InMemoryTaskRepository extends TaskRepository {
     if (this.rows.has(task.id)) {
       return Promise.reject(new Error(`Duplicate task id ${task.id}`));
     }
+    const missing = this.missingOf(task);
+    if (missing.length > 0) {
+      return Promise.reject(new UnknownTeams(missing));
+    }
     this.rows.set(task.id, snapshot(task, 1));
     return Promise.resolve();
   }
@@ -57,9 +71,17 @@ export class InMemoryTaskRepository extends TaskRepository {
     if (row.version !== expectedVersion) {
       return Promise.reject(new ConcurrencyConflict(row.version));
     }
+    const missing = this.missingOf(task);
+    if (missing.length > 0) {
+      return Promise.reject(new UnknownTeams(missing));
+    }
     const version = expectedVersion + 1;
     this.rows.set(task.id, snapshot(task, version));
     return Promise.resolve(version);
+  }
+
+  private missingOf(task: Task): string[] {
+    return task.teamIds.values.filter((id) => this.missingTeams.has(id));
   }
 }
 

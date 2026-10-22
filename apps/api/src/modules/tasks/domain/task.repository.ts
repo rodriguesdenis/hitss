@@ -15,7 +15,10 @@ export abstract class TaskRepository {
   /** The owner's active tasks assigned to `teamId`, ordered by id (OnTeamDeleted reaction). */
   abstract findByTeam(ownerId: string, teamId: string): Promise<Task[]>;
 
-  /** Stores a new task at version 1 together with its team links, atomically. */
+  /**
+   * Stores a new task at version 1 together with its team links, atomically.
+   * @throws UnknownTeams with the ids of linked teams that no longer exist (nothing is stored).
+   */
   abstract insert(task: Task): Promise<void>;
 
   /**
@@ -26,6 +29,7 @@ export abstract class TaskRepository {
    * @returns the new version (`expectedVersion + 1`).
    * @throws TaskNotFound when the row is unknown, foreign or already deleted.
    * @throws ConcurrencyConflict with the current version when it differs from `expectedVersion`.
+   * @throws UnknownTeams with the ids of linked teams that no longer exist (nothing is written).
    */
   abstract update(task: Task, expectedVersion: number): Promise<number>;
 }
