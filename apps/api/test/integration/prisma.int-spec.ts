@@ -5,6 +5,7 @@ import { Client } from 'pg';
 import { DatabaseUnavailableError } from '../../src/shared/infrastructure/prisma/database-probe';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '../support/app';
+import { LogCapture } from '../support/logging/capture';
 import {
   createTestDatabase,
   postgresMajor,
@@ -105,37 +106,69 @@ describe('Prisma module (integration)', () => {
   const PROBE_MS = 2_000;
   const MARGIN_MS = 5_000;
 
+  // Low-entropy credentials, distinctive enough to scan the logs for.
+  const USER = 'tcuser';
+  const PASSWORD = 'tcpass';
+
   async function bootFailure(
     databaseUrl: string,
-  ): Promise<{ error: unknown; elapsedMs: number }> {
+  ): Promise<{ error: unknown; elapsedMs: number; logs: string }> {
+    const capture = new LogCapture();
     const started = Date.now();
     const error: unknown = await createTestApp(databaseUrl, {
       probeTimeoutMs: PROBE_MS,
+      logs: capture,
     }).catch((e: unknown) => e);
-    return { error, elapsedMs: Date.now() - started };
+    return { error, elapsedMs: Date.now() - started, logs: capture.raw };
+  }
+
+  /** Neither the error nor any log line may reveal where or as whom we tried to connect. */
+  function expectNoConnectionDetails(
+    text: string,
+    host: string,
+    port: string,
+  ): void {
+    for (const secret of [
+      host,
+      `${host}:${port}`,
+      USER,
+      PASSWORD,
+      'postgresql://',
+    ]) {
+      expect(text).not.toContain(secret);
+    }
   }
 
   it('VII.3 refuses to boot when the database is unreachable, naming DATABASE_URL only', async () => {
     // A closed port: refused at once on most hosts, may hang where loopback is mirrored.
-    const { error, elapsedMs } = await bootFailure(
-      'postgresql://probe:probe@127.0.0.1:1/none',
+    const { error, elapsedMs, logs } = await bootFailure(
+      `postgresql://${USER}:${PASSWORD}@127.0.0.1:1/none`,
     );
 
     expect(error).toBeInstanceOf(DatabaseUnavailableError);
     expect((error as Error).message).toContain('DATABASE_URL');
-    expect((error as Error).message).not.toContain('127.0.0.1');
+    expectNoConnectionDetails(
+      `${(error as Error).message}\n${logs}`,
+      '127.0.0.1',
+      '1',
+    );
     expect(elapsedMs).toBeLessThan(PROBE_MS + MARGIN_MS);
   }, 30_000);
 
   it('VII.3 refuses to boot within the probe bound when the database never answers', async () => {
     // 10.255.255.1 is not routable: the connection attempt hangs (black hole).
-    const { error, elapsedMs } = await bootFailure(
-      'postgresql://probe:probe@10.255.255.1:5432/none',
+    const { error, elapsedMs, logs } = await bootFailure(
+      `postgresql://${USER}:${PASSWORD}@10.255.255.1:5432/none`,
     );
 
     expect(error).toBeInstanceOf(DatabaseUnavailableError);
     expect((error as Error).message).toBe(
       'Database unreachable: no answer within 2 s. Check DATABASE_URL and that PostgreSQL is running.',
+    );
+    expectNoConnectionDetails(
+      `${(error as Error).message}\n${logs}`,
+      '10.255.255.1',
+      '5432',
     );
     expect(elapsedMs).toBeGreaterThanOrEqual(PROBE_MS - 100);
     expect(elapsedMs).toBeLessThan(PROBE_MS + MARGIN_MS);
