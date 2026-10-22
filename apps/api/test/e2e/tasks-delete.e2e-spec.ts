@@ -13,9 +13,9 @@ const NOW = new Date('2026-10-20T13:00:00.000Z');
 const EARLIER = new Date('2026-10-19T08:00:00.000Z');
 
 /**
- * DELETE /api/v1/tasks/:id on the full AppModule, only the clock fixed. Edit (PUT, T-003-10) and
- * the list endpoint (T-003-08b) extend the "gone everywhere" check when they land; the list read
- * model already ignores deleted tasks under every filter (prisma-task.list.int-spec.ts).
+ * DELETE /api/v1/tasks/:id on the full AppModule, only the clock fixed. The list endpoint
+ * (T-003-08b) extends the "gone everywhere" check when it lands; the list read model already
+ * ignores deleted tasks under every filter (prisma-task.list.int-spec.ts).
  */
 describe('DELETE /api/v1/tasks/:id (e2e)', () => {
   const db = useTestDatabase();
@@ -68,7 +68,7 @@ describe('DELETE /api/v1/tasks/:id (e2e)', () => {
       },
     });
 
-  it('AC-03.11.1 204 with no content; then view, status change and delete → 404; the row and its team links stay', async () => {
+  it('AC-03.11.1 204 with no content; then view, edit, status change and delete → 404; the row and its team links stay', async () => {
     const mobile = (
       (
         await http()
@@ -90,8 +90,12 @@ describe('DELETE /api/v1/tasks/:id (e2e)', () => {
       .patch(`${TASKS}/${id}/status`)
       .set('Authorization', bearerOf(marina))
       .send({ status: 'DONE' });
+    const edit = await http()
+      .put(`${TASKS}/${id}`)
+      .set('Authorization', bearerOf(marina))
+      .send({ title: 'Revived', status: 'PENDING', teamIds: [] });
     const again = await remove(marina, id);
-    for (const after of [view, status, again]) {
+    for (const after of [view, edit, status, again]) {
       expect(after.status).toBe(404);
       expect(codeOf(after)).toBe('TASK_NOT_FOUND');
     }

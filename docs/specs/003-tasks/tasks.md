@@ -135,6 +135,8 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-10 — Add `ReplaceTask` command and `PUT /tasks/:id`
 
+- **Status:** done
+- **Owner:** Strata (database specialist; reassigned by the Maestro).
 - **Goal:** edit and reassign teams.
 - **Changes:** `commands/replace-task/*`; `dto/replace-task.dto.ts`; controller PUT; specs.
 - **Covers:** @AC-03.9.1 – @AC-03.9.6, @AC-03.12.1 (edit), @AC-03.12.3 (edit), @AC-03.12.6 (edit), `@AC-01.6.6` (task update rows).
@@ -156,7 +158,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Goal:** archive tasks.
 - **Changes:** `commands/delete-task/*`; controller DELETE (`204`); specs.
 - **Covers:** @AC-03.11.1, @AC-03.11.2, @AC-03.12.1 (delete).
-- **Done when:** after delete, GET/PUT/PATCH/DELETE → 404 and the task is absent from list under every filter; `deleted_at` set, `task_teams` rows kept (history) but ignored by reads. PUT and the list endpoint don't exist yet: T-003-10 and T-003-08b add their after-delete checks to `tasks-delete.e2e-spec.ts`. The list read model already ignores deleted tasks under every filter (T-003-08a).
+- **Done when:** after delete, GET/PUT/PATCH/DELETE → 404 and the task is absent from list under every filter; `deleted_at` set, `task_teams` rows kept (history) but ignored by reads. PUT is checked since T-003-10. The list endpoint doesn't exist yet: T-003-08b adds its after-delete check to `tasks-delete.e2e-spec.ts`. The list read model already ignores deleted tasks under every filter (T-003-08a).
 
 ## T-003-13 — `OnTeamDeletedHandler` (in-transaction)
 

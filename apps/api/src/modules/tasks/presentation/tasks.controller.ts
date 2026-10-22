@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Res,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
@@ -23,11 +24,13 @@ import { ApiOkEnvelope } from '../../../shared/presentation/openapi/api-envelope
 import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
 import { ChangeTaskStatusCommand } from '../application/commands/change-task-status/change-task-status.command';
 import { CreateTaskCommand } from '../application/commands/create-task/create-task.command';
+import { ReplaceTaskCommand } from '../application/commands/replace-task/replace-task.command';
 import { DeleteTaskCommand } from '../application/commands/delete-task/delete-task.command';
 import { GetTaskQuery } from '../application/queries/get-task/get-task.query';
 import type { TaskView } from '../application/views/task.view';
 import { ChangeTaskStatusDto } from './dto/change-task-status.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { ReplaceTaskDto } from './dto/replace-task.dto';
 import { TaskResponseDto } from './dto/task.response.dto';
 import { toTaskResponse } from './task.presenter';
 
@@ -110,6 +113,37 @@ export class TasksController {
   ): Promise<TaskResponseDto> {
     await this.commands.execute<ChangeTaskStatusCommand, { id: string }>(
       new ChangeTaskStatusCommand(ownerId, id, body.status),
+    );
+    const task = await this.queries.execute<GetTaskQuery, TaskView>(
+      new GetTaskQuery(ownerId, id),
+    );
+    // Until the shared EtagInterceptor (T-002-07) takes over, in the same W/"<version>" form.
+    response.setHeader('ETag', `W/"${task.version}"`);
+    return toTaskResponse(task);
+  }
+
+  /**
+   * 200 with the replaced task read back and its version tag (AC-03.9.1). An identical
+   * replacement is a no-op: the unchanged task and the same tag (AC-03.9.5).
+   */
+  @Put(':id')
+  @ApiOkEnvelope(TaskResponseDto)
+  async replace(
+    @CurrentOwner() { ownerId }: Owner,
+    @Param('id', ParseUuidPipe) id: string,
+    @Body() body: ReplaceTaskDto,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ): Promise<TaskResponseDto> {
+    await this.commands.execute<ReplaceTaskCommand, { id: string }>(
+      new ReplaceTaskCommand(
+        ownerId,
+        id,
+        body.title,
+        body.status,
+        body.teamIds,
+        body.description,
+        body.dueDate,
+      ),
     );
     const task = await this.queries.execute<GetTaskQuery, TaskView>(
       new GetTaskQuery(ownerId, id),

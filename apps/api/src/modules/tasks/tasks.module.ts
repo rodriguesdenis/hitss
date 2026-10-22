@@ -7,6 +7,7 @@ import { SystemClock } from '../../shared/infrastructure/system-clock';
 import { UuidGenerator } from '../../shared/infrastructure/uuid-generator';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
 import { ChangeTaskStatusHandler } from './application/commands/change-task-status/change-task-status.handler';
+import { ReplaceTaskHandler } from './application/commands/replace-task/replace-task.handler';
 import { DeleteTaskHandler } from './application/commands/delete-task/delete-task.handler';
 import { CreateTaskHandler } from './application/commands/create-task/create-task.handler';
 import { TASK_METRICS_HANDLERS } from './application/events/record-task-metrics.handler';
@@ -35,6 +36,7 @@ import { TasksController } from './presentation/tasks.controller';
   controllers: [TasksController],
   providers: [
     CreateTaskHandler,
+    ReplaceTaskHandler,
     ChangeTaskStatusHandler,
     DeleteTaskHandler,
     GetTaskHandler,
