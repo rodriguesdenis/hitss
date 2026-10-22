@@ -13,7 +13,7 @@ Brief requirement → epic → story (priority) → acceptance criteria → scen
 | `MUST` ACs (with scenario / with task / total)   | 225 / 225 / 225 |
 | `SHOULD` ACs (with scenario / with task / total) | 38 / 38 / 38    |
 | `COULD` ACs (with scenario / with task / total)  | 138 / 138 / 138 |
-| Tasks                                            | 114             |
+| Tasks                                            | 115             |
 
 ## Gaps and findings
 
@@ -261,11 +261,11 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 **US-02.8 — See how many tasks a team has** (`COULD`) · epic EP-02
 
-| AC        | Scenarios (file › rule › scenario)                                                                                | Level    | Tasks              |
-| --------- | ----------------------------------------------------------------------------------------------------------------- | -------- | ------------------ |
-| AC-02.8.1 | `teams.feature` › Each team shows how many active tasks it has › Task count counts active tasks of any status     | e2e      | T-002-10, T-003-14 |
-| AC-02.8.2 | `teams.feature` › Each team shows how many active tasks it has › Task count decreases when a task leaves the team | unit+e2e | T-002-10, T-003-14 |
-| AC-02.8.3 | `teams.feature` › Each team shows how many active tasks it has › A new team has no tasks                          | e2e      | T-002-04           |
+| AC        | Scenarios (file › rule › scenario)                                                                                | Level    | Tasks                          |
+| --------- | ----------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------ |
+| AC-02.8.1 | `teams.feature` › Each team shows how many active tasks it has › Task count counts active tasks of any status     | e2e      | T-002-10, T-003-14a, T-003-14b |
+| AC-02.8.2 | `teams.feature` › Each team shows how many active tasks it has › Task count decreases when a task leaves the team | unit+e2e | T-002-10, T-003-14a, T-003-14b |
+| AC-02.8.3 | `teams.feature` › Each team shows how many active tasks it has › A new team has no tasks                          | e2e      | T-002-04                       |
 
 **US-02.9 — Edit safely when another device changed the team** (`COULD`) · epic EP-02
 
@@ -412,7 +412,7 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------ |
 | AC-03.11.1 | `tasks.feature` › Deleting archives a task; it vanishes from every read and write › Delete a task                                 | e2e      | T-003-04, T-003-12 |
 | AC-03.11.2 | `tasks.feature` › Deleting archives a task; it vanishes from every read and write › Deleting a missing task                       | unit+e2e | T-003-12           |
-| AC-03.11.3 | `tasks.feature` › Deleting archives a task; it vanishes from every read and write › A deleted task no longer counts for its teams | e2e      | T-003-14           |
+| AC-03.11.3 | `tasks.feature` › Deleting archives a task; it vanishes from every read and write › A deleted task no longer counts for its teams | e2e      | T-003-14a          |
 
 **US-03.12 — Keep my tasks private** (`MUST`) · epic EP-03
 

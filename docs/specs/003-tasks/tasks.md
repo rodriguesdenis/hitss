@@ -6,29 +6,30 @@ Prerequisites from other specs: authenticated `ownerId` decorator and guards (00
 
 **ACs of 002 verified here:** `AC-02.7.2` (T-003-13), `AC-02.8.1` and `AC-02.8.2` (T-003-14). 002 binds a zero-count placeholder until T-003-14 lands.
 
-| ID        | Task                                                                                 | Depends on                        | Size | Branch                           |
-| --------- | ------------------------------------------------------------------------------------ | --------------------------------- | ---- | -------------------------------- |
-| T-003-01  | Add `tasks`, `task_teams`, `task_status` schema, migration, indexes, CHECKs          | T-002-01                          | M    | `feat/003-tasks-schema`          |
-| T-003-02  | Implement task value objects (TDD)                                                   | —                                 | S    | `feat/003-task-value-objects`    |
-| T-003-03  | Implement `Task` aggregate, events, errors, overdue policy (TDD)                     | 02                                | M    | `feat/003-task-aggregate`        |
-| T-003-04  | Add `TaskRepository` port + Prisma adapter                                           | 01, 03                            | M    | `feat/003-task-repository`       |
-| T-003-05  | Add `TeamDirectory` port + `QueryBus` adapter (`GetTeamSummariesQuery`)              | T-002-10                          | S    | `feat/003-team-directory`        |
-| T-003-06a | Add task read model, team directory port and view assembler (query side)             | 04                                | S    | `feat/003-task-read-model`       |
-| T-003-06b | Add `GetTask` query, `GET /tasks/:id`, DTOs, error mapping, e2e and OpenAPI          | 06a, T-001-09, CQRS/Swagger setup | S    | `feat/003-get-task`              |
-| T-003-07  | Add `CreateTask` command and `POST /tasks`                                           | 06b                               | M    | `feat/003-create-task`           |
-| T-003-08a | `ListTasks` data side: read model `list` with `teamId` / `status` filters and paging | 06a, T-002-06a                    | S    | `feat/003-task-list-read-model`  |
-| T-003-08b | `ListTasks` endpoint: query, DTO (`teamId`, `status`, paging), page meta, e2e        | 08a, 06b                          | M    | `feat/003-list-filters`          |
-| T-003-09a | `ListTasks` data side: search, sorting and the query-plan check                      | 08a                               | S    | `feat/003-task-list-read-model`  |
-| T-003-09b | `ListTasks` endpoint: `search` / `sort` DTO and e2e                                  | 08b, 09a                          | S    | `feat/003-search-sort`           |
-| T-003-10  | Add `ReplaceTask` command and `PUT /tasks/:id`                                       | 07                                | M    | `feat/003-replace-task`          |
-| T-003-11  | Add `ChangeTaskStatus` command and `PATCH /tasks/:id/status`                         | 06b                               | S    | `feat/003-change-status`         |
-| T-003-12  | Add `DeleteTask` command and `DELETE /tasks/:id`                                     | 06b                               | S    | `feat/003-delete-task`           |
-| T-003-13  | `OnTeamDeletedHandler` in-transaction (unassign team, bump versions)                 | 04, 06a, T-002-09, T-002-10       | S    | `feat/003-team-deleted-reaction` |
-| T-003-14  | Expose `CountTasksByTeamQuery`; switch 002's `TeamTaskCounts` adapter to it          | 06a, T-002-10                     | S    | `feat/003-count-tasks-by-team`   |
-| T-003-15  | Seed 10 demo tasks                                                                   | 01, T-002-11                      | S    | `feat/003-seed-tasks`            |
-| T-003-16  | Emit task metrics and span attributes                                                | 07, 11, 12                        | S    | `feat/003-task-observability`    |
-| T-003-17  | Add ETag / If-Match optimistic concurrency (COULD)                                   | 10, 11, 12                        | M    | `feat/003-task-if-match`         |
-| T-003-18  | Add Idempotency-Key on `POST /tasks` (COULD)                                         | 07, T-002-05                      | S    | `feat/003-idempotent-create`     |
+| ID        | Task                                                                                 | Depends on                        | Size | Branch                            |
+| --------- | ------------------------------------------------------------------------------------ | --------------------------------- | ---- | --------------------------------- |
+| T-003-01  | Add `tasks`, `task_teams`, `task_status` schema, migration, indexes, CHECKs          | T-002-01                          | M    | `feat/003-tasks-schema`           |
+| T-003-02  | Implement task value objects (TDD)                                                   | —                                 | S    | `feat/003-task-value-objects`     |
+| T-003-03  | Implement `Task` aggregate, events, errors, overdue policy (TDD)                     | 02                                | M    | `feat/003-task-aggregate`         |
+| T-003-04  | Add `TaskRepository` port + Prisma adapter                                           | 01, 03                            | M    | `feat/003-task-repository`        |
+| T-003-05  | Add `TeamDirectory` port + `QueryBus` adapter (`GetTeamSummariesQuery`)              | T-002-10                          | S    | `feat/003-team-directory`         |
+| T-003-06a | Add task read model, team directory port and view assembler (query side)             | 04                                | S    | `feat/003-task-read-model`        |
+| T-003-06b | Add `GetTask` query, `GET /tasks/:id`, DTOs, error mapping, e2e and OpenAPI          | 06a, T-001-09, CQRS/Swagger setup | S    | `feat/003-get-task`               |
+| T-003-07  | Add `CreateTask` command and `POST /tasks`                                           | 06b                               | M    | `feat/003-create-task`            |
+| T-003-08a | `ListTasks` data side: read model `list` with `teamId` / `status` filters and paging | 06a, T-002-06a                    | S    | `feat/003-task-list-read-model`   |
+| T-003-08b | `ListTasks` endpoint: query, DTO (`teamId`, `status`, paging), page meta, e2e        | 08a, 06b                          | M    | `feat/003-list-filters`           |
+| T-003-09a | `ListTasks` data side: search, sorting and the query-plan check                      | 08a                               | S    | `feat/003-task-list-read-model`   |
+| T-003-09b | `ListTasks` endpoint: `search` / `sort` DTO and e2e                                  | 08b, 09a                          | S    | `feat/003-search-sort`            |
+| T-003-10  | Add `ReplaceTask` command and `PUT /tasks/:id`                                       | 07                                | M    | `feat/003-replace-task`           |
+| T-003-11  | Add `ChangeTaskStatus` command and `PATCH /tasks/:id/status`                         | 06b                               | S    | `feat/003-change-status`          |
+| T-003-12  | Add `DeleteTask` command and `DELETE /tasks/:id`                                     | 06b                               | S    | `feat/003-delete-task`            |
+| T-003-13  | `OnTeamDeletedHandler` in-transaction (unassign team, bump versions)                 | 04, 06a, T-002-09, T-002-10       | S    | `feat/003-team-deleted-reaction`  |
+| T-003-14a | `CountTasksByTeam` data side: read model `countByTeams` (one query for N teams)      | 06a                               | S    | `feat/003-task-counts-read-model` |
+| T-003-14b | Expose `CountTasksByTeamQuery`; switch 002's `TeamTaskCounts` adapter to it          | 14a, T-002-10                     | S    | `feat/003-count-tasks-by-team`    |
+| T-003-15  | Seed 10 demo tasks                                                                   | 01, T-002-11                      | S    | `feat/003-seed-tasks`             |
+| T-003-16  | Emit task metrics and span attributes                                                | 07, 11, 12                        | S    | `feat/003-task-observability`     |
+| T-003-17  | Add ETag / If-Match optimistic concurrency (COULD)                                   | 10, 11, 12                        | M    | `feat/003-task-if-match`          |
+| T-003-18  | Add Idempotency-Key on `POST /tasks` (COULD)                                         | 07, T-002-05                      | S    | `feat/003-idempotent-create`      |
 
 MUST work (01–15) is complete and demo-able before any COULD task (17–18) starts (constitution IX.1). 16 is cross-cutting and can run in parallel after 12.
 
@@ -156,17 +157,27 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Covers:** @AC-03.13.1 – @AC-03.13.4, @AC-03.2.5 (deleted teams not embedded), and **`@AC-02.7.2`** from 002.
 - **Done when:** affected tasks lose only that team (other assignments untouched) and gain +1 version and a new `updatedAt`; unaffected tasks untouched; replaying the event is a no-op; the handler joins 002's transaction, and a forced failure in it rolls back the team's soft delete (team still active, `task_teams` intact); e2e: a stale `PUT /tasks/:id` with the pre-delete `If-Match` → 412. There is no after-commit fallback or retry.
 
-## T-003-14 — Expose `CountTasksByTeamQuery`
+## T-003-14a — `CountTasksByTeam` data side
+
+- **Status:** done
+- **Goal:** the task counts per team that 002's `taskCount` needs, in one query.
+- **Changes:** `application/ports/task.read-model.ts` (`countByTeams(ownerId, teamIds) → ReadonlyMap<id, number>`); `infrastructure/prisma-task.read-model.ts` (one `GROUP BY` over `task_teams` joined to `tasks` with `tasks.deleted_at IS NULL`); integration specs.
+- **Covers:** @AC-03.11.3 (data level), and the counting rule of `@AC-02.8.1 @AC-02.8.2` at data level (their end-to-end proof is T-003-14b).
+- **Done when:** counts exclude deleted tasks (which keep their links), unassigned tasks and other owners' tasks; every task status counts; every distinct requested id is a key (0 when unknown, foreign, malformed or without tasks; requested spelling preserved); empty input → empty map without a query; one query for N teams.
+
+## T-003-14b — Expose `CountTasksByTeamQuery`
 
 - **Goal:** let 002 compute `taskCount` without touching task tables.
-- **Changes:** `modules/tasks/contracts/count-tasks-by-team.query.ts` (+ result type); `queries/count-tasks-by-team/*`; read model `countByTeams` (live tasks only); 002's `team-task-counts.adapter.ts` switched from the zero placeholder to sending the query on the `QueryBus` (placeholder deleted); integration + e2e specs.
-- **Covers:** @AC-03.11.3, and **`@AC-02.8.1 @AC-02.8.2`** from 002 (real task counts).
-- **Done when:** counts exclude deleted tasks and other owners; one query for N teams; e2e: `GET /teams` and `GET /teams/:id` show `taskCount` equal to the owner's active tasks per team (AC-02.8.1); deleting or unassigning a task decreases it by one (AC-02.8.2). `CountTasksByTeamQuery` joins `task_teams` to `tasks` with `tasks.deleted_at IS NULL`, so soft-deleted tasks (which keep their links) are never counted.
+- **Owner:** Forge (NestJS). **Depends on:** T-003-14a, T-002-10.
+- **Changes:** `modules/tasks/contracts/count-tasks-by-team.query.ts` (+ result type); `queries/count-tasks-by-team/*` (calls `countByTeams`); 002's `team-task-counts.adapter.ts` switched from the zero placeholder to sending the query on the `QueryBus` (placeholder deleted); e2e specs.
+- **Covers:** **`@AC-02.8.1 @AC-02.8.2`** from 002 (real task counts), end to end.
+- **Done when:** e2e: `GET /teams` and `GET /teams/:id` show `taskCount` equal to the owner's active tasks per team (AC-02.8.1); deleting or unassigning a task decreases it by one (AC-02.8.2).
 
 ## T-003-15 — Seed 10 demo tasks
 
+- **Status:** done
 - **Goal:** the brief's seed (10 tasks) for the demo user.
-- **Changes:** `apps/api/prisma/seed/tasks.seed.ts` (called by the `prisma/seed.ts` orchestrator of T-007-07): fixed literal fixtures (no faker), fixed UUIDs upserted by id, due dates relative to the seed day; skipped with the demo user (`SEED_DEMO=false` or `APP_ENV=production`); seed test.
+- **Changes:** delivered by T-007-07 (#51): `apps/api/src/seed/tasks.seed.ts` and `fixtures.ts`, run by `src/seed/seed-demo.ts` (container entrypoint and `pnpm db:seed`). Fixed literal fixtures (no faker), fixed UUIDs upserted by id, due dates relative to the seed day; skipped with the demo user (`SEED_DEMO=false` or `APP_ENV=production`); `test/integration/seed.int-spec.ts`.
 - **Covers:** brief seed requirement (EP-07 / 007), completes `@AC-01.8.3` with T-002-11.
 - **Done when:** running the seed twice yields exactly 10 tasks for `demo@teams-tasks.dev` with the plan's distribution (4 PENDING / 3 IN_PROGRESS / 3 DONE, two multi-team, one without team, one overdue, Done tasks with `completedAt`); `docker compose up` shows them via `GET /tasks`.
 
