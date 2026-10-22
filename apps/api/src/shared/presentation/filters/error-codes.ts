@@ -7,9 +7,7 @@ import { HttpStatus } from '@nestjs/common';
 export const ErrorCode = {
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   UNAUTHENTICATED: 'UNAUTHENTICATED',
-  CSRF_REJECTED: 'CSRF_REJECTED',
   ROUTE_NOT_FOUND: 'ROUTE_NOT_FOUND',
-  UNSUPPORTED_MEDIA_TYPE: 'UNSUPPORTED_MEDIA_TYPE',
   RATE_LIMITED: 'RATE_LIMITED',
   PRECONDITION_FAILED: 'PRECONDITION_FAILED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
@@ -28,10 +26,6 @@ const BY_STATUS: Partial<Record<number, CodeAndMessage>> = {
   },
   401: { code: ErrorCode.UNAUTHENTICATED, message: 'Authentication required.' },
   404: { code: ErrorCode.ROUTE_NOT_FOUND, message: 'Route not found.' },
-  415: {
-    code: ErrorCode.UNSUPPORTED_MEDIA_TYPE,
-    message: 'Unsupported media type.',
-  },
   429: { code: ErrorCode.RATE_LIMITED, message: 'Too many requests.' },
 };
 

@@ -222,18 +222,13 @@ describe('GlobalExceptionFilter', () => {
 
   it('our own ApiException keeps its code, message and details', () => {
     const { sent } = run(
-      new ApiException(
-        403,
-        ErrorCode.CSRF_REJECTED,
-        'Cookie-authenticated state-changing requests need a trusted origin.',
-      ),
+      new ApiException(429, ErrorCode.RATE_LIMITED, 'Slow down, please.'),
     );
 
-    expect(sent.status).toBe(403);
+    expect(sent.status).toBe(429);
     expect(sent.body?.error).toEqual({
-      code: 'CSRF_REJECTED',
-      message:
-        'Cookie-authenticated state-changing requests need a trusted origin.',
+      code: 'RATE_LIMITED',
+      message: 'Slow down, please.',
       traceId: REQUEST_ID,
     });
   });

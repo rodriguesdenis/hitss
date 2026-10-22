@@ -66,12 +66,10 @@ export class ApiErrorResponseDto {
 const DEFAULT_DESCRIPTIONS: Readonly<Record<number, string>> = {
   400: 'VALIDATION_FAILED: the request is invalid; `details` names each field.',
   401: 'UNAUTHENTICATED: no valid session (bearer token or session cookie).',
-  403: 'CSRF_REJECTED: a cookie-authenticated request from an untrusted origin.',
   404: 'Not found: unknown, deleted, or owned by another user (never revealed which).',
   409: 'Conflict with the current state.',
   412: 'PRECONDITION_FAILED: If-Match does not match the current version; `details.currentVersion`.',
   413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
-  415: 'UNSUPPORTED_MEDIA_TYPE: the body must be application/json.',
   422: 'The request is well formed but cannot be applied.',
   429: 'RATE_LIMITED: too many requests; retry after `Retry-After` seconds.',
 };

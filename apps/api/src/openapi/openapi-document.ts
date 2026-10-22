@@ -14,7 +14,7 @@ const PUBLIC_PATH_PREFIXES = ['/api/v1/health'];
 
 /**
  * The OpenAPI 3 document of the app (ADR-0005): the controllers' DTOs, the hand-written Better
- * Auth routes under the `Identity` tag, `bearer` and `session-cookie` security on every operation
+ * Auth routes under the `Identity` tag, `bearer` security on every operation
  * except health and sign-up/sign-in.
  */
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
@@ -23,21 +23,11 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     new DocumentBuilder()
       .setTitle('Teams & Tasks API')
       .setDescription(
-        'Teams and tasks REST API. Sign in at `/api/auth/sign-in/email`, then send the returned token as a bearer token (or rely on the session cookie).',
+        'Teams and tasks REST API. Sign in at `/api/auth/sign-in/email`, then send the returned token as `Authorization: Bearer <token>` (the API routes accept no session cookie).',
       )
       .setVersion('1.0')
       .addBearerAuth(undefined, 'bearer')
-      .addCookieAuth(
-        'better-auth.session_token',
-        {
-          type: 'apiKey',
-          description:
-            'Session cookie set by sign-in. Production (useSecureCookies) names it `__Secure-better-auth.session_token`.',
-        },
-        'session-cookie',
-      )
       .addSecurityRequirements('bearer')
-      .addSecurityRequirements('session-cookie')
       .addTag(
         IDENTITY_TAG,
         'Email and password sign-up, sign-in and sessions (Better Auth)',
