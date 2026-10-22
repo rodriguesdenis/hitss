@@ -11,17 +11,20 @@ describe('security baseline (e2e)', () => {
   const db = useTestDatabase();
   let allowlist: INestApplication;
   let wildcard: INestApplication;
+  let noCors: INestApplication;
 
   beforeAll(async () => {
     allowlist = await createTestApp(db.url, {
       config: { corsOrigins: [ALLOWED] },
     });
     wildcard = await createTestApp(db.url, { config: { corsOrigins: ['*'] } });
+    noCors = await createTestApp(db.url, { config: { corsOrigins: [] } });
   });
 
   afterAll(async () => {
     await allowlist.close();
     await wildcard.close();
+    await noCors.close();
   });
 
   const http = (app: INestApplication) => request(app.getHttpServer() as App);
@@ -82,6 +85,8 @@ describe('security baseline (e2e)', () => {
       expect(response.status).toBe(204);
       expect(response.headers['access-control-allow-origin']).toBe(ALLOWED);
       expect(response.headers['access-control-allow-methods']).toContain('PUT');
+      // PR #29: browsers may cache the preflight for 10 minutes.
+      expect(response.headers['access-control-max-age']).toBe('600');
     });
 
     it('T-001-04 a disallowed Origin gets no Access-Control-Allow-Origin', async () => {
@@ -97,6 +102,26 @@ describe('security baseline (e2e)', () => {
         // Allow-Origin, browsers ignore it.)
         expect(response.headers['access-control-allow-origin']).toBeUndefined();
       }
+    });
+  });
+
+  describe('empty CORS_ORIGINS', () => {
+    it('PR #29: no CORS at all, not even Allow-Credentials, and no preflight answer', async () => {
+      const simple = await http(noCors)
+        .get('/api/v1/does-not-exist')
+        .set('Origin', ALLOWED);
+      const preflight = await http(noCors)
+        .options('/api/v1/teams')
+        .set('Origin', ALLOWED)
+        .set('Access-Control-Request-Method', 'PUT');
+
+      for (const response of [simple, preflight]) {
+        const corsHeaders = Object.keys(response.headers).filter((name) =>
+          name.startsWith('access-control-'),
+        );
+        expect(corsHeaders).toEqual([]);
+      }
+      expect(preflight.status).toBe(404);
     });
   });
 

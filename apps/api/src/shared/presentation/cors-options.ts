@@ -10,18 +10,34 @@ export const EXPOSED_HEADERS = [
   'Idempotent-Replayed',
 ];
 
+/** Seconds browsers may cache a preflight answer (PR #29). */
+export const PREFLIGHT_MAX_AGE = 600;
+
 /**
  * CORS from CORS_ORIGINS (validated by the config; `*` is refused in production).
+ * - An empty list means no CORS at all: nothing is registered, so no `Access-Control-*` header
+ *   (not even Allow-Credentials) is sent and preflights are not answered (PR #29).
  * - An allowlist answers only listed origins, with credentials, so cookie sessions work.
  * - `*` (local only) answers a literal `*` without credentials: the request `Origin` is never
  *   reflected together with `Access-Control-Allow-Credentials: true` (PR #19 review).
  */
-export function corsOptions(origins: readonly string[]): CorsOptions {
+export function corsOptions(
+  origins: readonly string[],
+): CorsOptions | undefined {
+  if (origins.length === 0) {
+    return undefined;
+  }
   return origins.includes('*')
-    ? { origin: '*', credentials: false, exposedHeaders: EXPOSED_HEADERS }
+    ? {
+        origin: '*',
+        credentials: false,
+        exposedHeaders: EXPOSED_HEADERS,
+        maxAge: PREFLIGHT_MAX_AGE,
+      }
     : {
         origin: [...origins],
         credentials: true,
         exposedHeaders: EXPOSED_HEADERS,
+        maxAge: PREFLIGHT_MAX_AGE,
       };
 }
