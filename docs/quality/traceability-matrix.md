@@ -13,7 +13,7 @@ Brief requirement → epic → story (priority) → acceptance criteria → scen
 | `MUST` ACs (with scenario / with task / total)   | 225 / 225 / 225 |
 | `SHOULD` ACs (with scenario / with task / total) | 38 / 38 / 38    |
 | `COULD` ACs (with scenario / with task / total)  | 138 / 138 / 138 |
-| Tasks                                            | 110             |
+| Tasks                                            | 111             |
 
 ## Gaps and findings
 
@@ -59,14 +59,14 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 | B-10 | Explain migrations/seeding and local reproducibility                          | MUST   | US-07.1, US-07.2, US-07.4                                               | 23  | 21        | 8     | ✅     |
 | B-11 | Team CRUD                                                                     | MUST   | US-02.1, US-02.5, US-02.6, US-02.7, US-04.3                             | 32  | 42        | 10    | ✅     |
 | B-12 | Team listing returns metadata (total/pagination)                              | MUST   | US-02.2, US-02.3                                                        | 14  | 17        | 1     | ✅     |
-| B-13 | Task CRUD with Pending / In progress / Done                                   | MUST   | US-03.1, US-03.8, US-03.9, US-03.10, US-03.11                           | 26  | 39        | 10    | ✅     |
+| B-13 | Task CRUD with Pending / In progress / Done                                   | MUST   | US-03.1, US-03.8, US-03.9, US-03.10, US-03.11                           | 26  | 39        | 11    | ✅     |
 | B-14 | A task belongs to zero or more teams                                          | MUST   | US-03.1, US-03.9, US-03.13                                              | 18  | 30        | 7     | ✅     |
 | B-15 | Task listing filters teamId, status, search, sort, pagination                 | MUST   | US-03.2, US-03.3, US-03.4, US-03.5, US-03.6, US-03.7, US-04.5, US-04.14 | 31  | 31        | 7     | ✅     |
 | B-16 | Screen: teams list (tap filters tasks)                                        | MUST   | US-04.2                                                                 | 4   | 4         | 3     | ✅     |
 | B-17 | Screen: tasks list (global and per team)                                      | MUST   | US-04.4                                                                 | 6   | 7         | 2     | ✅     |
 | B-18 | Screen: create/edit task form with validation                                 | MUST   | US-04.7                                                                 | 8   | 11        | 2     | ✅     |
 | B-19 | Screen: view task with quick actions (status, delete)                         | MUST   | US-04.6                                                                 | 7   | 9         | 2     | ✅     |
-| B-20 | Team color as label/chip on the task                                          | MUST   | US-04.8, US-03.2, US-03.8                                               | 13  | 14        | 9     | ✅     |
+| B-20 | Team color as label/chip on the task                                          | MUST   | US-04.8, US-03.2, US-03.8                                               | 13  | 14        | 10    | ✅     |
 | B-22 | Contracts documented in the README (suggested endpoints and envelopes)        | MUST   | US-07.4                                                                 | 9   | 9         | 3     | ✅     |
 | B-23 | Status-change action updates backend and UI                                   | MUST   | US-03.10, US-04.6                                                       | 13  | 15        | 4     | ✅     |
 | B-24 | Title minimum 3 characters                                                    | MUST   | US-03.1, US-04.7                                                        | 16  | 30        | 6     | ✅     |
@@ -322,13 +322,13 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 **US-03.2 — List my tasks** (`MUST`) · epic EP-03
 
-| AC        | Scenarios (file › rule › scenario)                                                                                                                                                                                                    | Level | Tasks                        |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ---------------------------- |
-| AC-03.2.1 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Default listing is newest first with metadata                                                                                                      | e2e   | T-003-08                     |
-| AC-03.2.2 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Default listing is newest first with metadata                                                                                                      | e2e   | T-003-08                     |
-| AC-03.2.3 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Deleted tasks never appear                                                                                                                         | e2e   | T-003-08                     |
-| AC-03.2.4 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Empty list                                                                                                                                         | e2e   | T-003-08                     |
-| AC-03.2.5 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Embedded teams are ordered by name<br>`tasks.feature` › Deleting a team unassigns it; its tasks survive › Tasks survive the deletion of their team | e2e   | T-003-05, T-003-06, T-003-13 |
+| AC        | Scenarios (file › rule › scenario)                                                                                                                                                                                                    | Level | Tasks                         |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ----------------------------- |
+| AC-03.2.1 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Default listing is newest first with metadata                                                                                                      | e2e   | T-003-08                      |
+| AC-03.2.2 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Default listing is newest first with metadata                                                                                                      | e2e   | T-003-08                      |
+| AC-03.2.3 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Deleted tasks never appear                                                                                                                         | e2e   | T-003-08                      |
+| AC-03.2.4 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Empty list                                                                                                                                         | e2e   | T-003-08                      |
+| AC-03.2.5 | `tasks.feature` › Listing returns my live tasks as full task views with metadata › Embedded teams are ordered by name<br>`tasks.feature` › Deleting a team unassigns it; its tasks survive › Tasks survive the deletion of their team | e2e   | T-003-05, T-003-06a, T-003-13 |
 
 **US-03.3 — Filter tasks by team** (`MUST`) · epic EP-03
 
@@ -378,11 +378,11 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 **US-03.8 — View a task** (`MUST`) · epic EP-03
 
-| AC        | Scenarios (file › rule › scenario)                                                                           | Level    | Tasks    |
-| --------- | ------------------------------------------------------------------------------------------------------------ | -------- | -------- |
-| AC-03.8.1 | `tasks.feature` › A single task is viewed with everything needed to display it › View a task                 | e2e      | T-003-06 |
-| AC-03.8.2 | `tasks.feature` › A single task is viewed with everything needed to display it › Viewing a missing task      | unit+e2e | T-003-06 |
-| AC-03.8.3 | `tasks.feature` › A single task is viewed with everything needed to display it › Viewing with a malformed id | e2e      | T-003-06 |
+| AC        | Scenarios (file › rule › scenario)                                                                           | Level    | Tasks     |
+| --------- | ------------------------------------------------------------------------------------------------------------ | -------- | --------- |
+| AC-03.8.1 | `tasks.feature` › A single task is viewed with everything needed to display it › View a task                 | e2e      | T-003-06b |
+| AC-03.8.2 | `tasks.feature` › A single task is viewed with everything needed to display it › Viewing a missing task      | unit+e2e | T-003-06a |
+| AC-03.8.3 | `tasks.feature` › A single task is viewed with everything needed to display it › Viewing with a malformed id | e2e      | T-003-06b |
 
 **US-03.9 — Edit a task** (`MUST`) · epic EP-03
 
@@ -416,14 +416,14 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 **US-03.12 — Keep my tasks private** (`MUST`) · epic EP-03
 
-| AC         | Scenarios (file › rule › scenario)                                                                        | Level    | Tasks                                            |
-| ---------- | --------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------ |
-| AC-03.12.1 | `tasks.feature` › Tasks are private to their owner › Another user's task behaves as non-existent          | unit+e2e | T-003-04, T-003-06, T-003-10, T-003-11, T-003-12 |
-| AC-03.12.2 | `tasks.feature` › Tasks are private to their owner › Another user's tasks never appear in my lists        | e2e      | T-003-08                                         |
-| AC-03.12.3 | `tasks.feature` › Tasks are private to their owner › Another user's team cannot be assigned               | unit+e2e | T-003-05, T-003-07, T-003-10                     |
-| AC-03.12.4 | `tasks.feature` › Tasks are private to their owner › Filtering by another user's team returns nothing     | e2e      | T-003-08                                         |
-| AC-03.12.5 | `tasks.feature` › Tasks are private to their owner › Task operations require a session                    | unit+e2e | T-003-06, T-003-07                               |
-| AC-03.12.6 | `tasks.feature` › Tasks are private to their owner › The owner of a new task is always the signed-in user | e2e      | T-003-07, T-003-10                               |
+| AC         | Scenarios (file › rule › scenario)                                                                        | Level    | Tasks                                             |
+| ---------- | --------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------------- |
+| AC-03.12.1 | `tasks.feature` › Tasks are private to their owner › Another user's task behaves as non-existent          | unit+e2e | T-003-04, T-003-06a, T-003-10, T-003-11, T-003-12 |
+| AC-03.12.2 | `tasks.feature` › Tasks are private to their owner › Another user's tasks never appear in my lists        | e2e      | T-003-08                                          |
+| AC-03.12.3 | `tasks.feature` › Tasks are private to their owner › Another user's team cannot be assigned               | unit+e2e | T-003-05, T-003-07, T-003-10                      |
+| AC-03.12.4 | `tasks.feature` › Tasks are private to their owner › Filtering by another user's team returns nothing     | e2e      | T-003-08                                          |
+| AC-03.12.5 | `tasks.feature` › Tasks are private to their owner › Task operations require a session                    | unit+e2e | T-003-06b, T-003-07                               |
+| AC-03.12.6 | `tasks.feature` › Tasks are private to their owner › The owner of a new task is always the signed-in user | e2e      | T-003-07, T-003-10                                |
 
 **US-03.13 — Keep tasks when a team is deleted** (`MUST`) · epic EP-03
 
@@ -436,11 +436,11 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 **US-03.14 — See which tasks are overdue** (`COULD`) · epic EP-03
 
-| AC         | Scenarios (file › rule › scenario)                                                                                                                                                                                                                 | Level    | Tasks              |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------ |
-| AC-03.14.1 | `tasks.feature` › Overdue is derived from due date, status and today › Overdue flag                                                                                                                                                                | unit+e2e | T-003-03, T-003-06 |
-| AC-03.14.2 | `tasks.feature` › Overdue is derived from due date, status and today › Overdue flag                                                                                                                                                                | unit+e2e | T-003-03, T-003-06 |
-| AC-03.14.3 | `tasks.feature` › Overdue is derived from due date, status and today › Reopening a late Done task makes it overdue<br>`tasks.feature` › Overdue is derived from due date, status and today › A task becomes overdue as days pass, without changing | e2e      | T-003-03, T-003-11 |
+| AC         | Scenarios (file › rule › scenario)                                                                                                                                                                                                                 | Level    | Tasks               |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------- |
+| AC-03.14.1 | `tasks.feature` › Overdue is derived from due date, status and today › Overdue flag                                                                                                                                                                | unit+e2e | T-003-03, T-003-06a |
+| AC-03.14.2 | `tasks.feature` › Overdue is derived from due date, status and today › Overdue flag                                                                                                                                                                | unit+e2e | T-003-03, T-003-06a |
+| AC-03.14.3 | `tasks.feature` › Overdue is derived from due date, status and today › Reopening a late Done task makes it overdue<br>`tasks.feature` › Overdue is derived from due date, status and today › A task becomes overdue as days pass, without changing | e2e      | T-003-03, T-003-11  |
 
 **US-03.15 — Avoid overwriting a newer change** (`COULD`) · epic EP-03
 
