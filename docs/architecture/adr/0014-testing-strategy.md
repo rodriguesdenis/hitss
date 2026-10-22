@@ -62,6 +62,11 @@ Conventions:
 - Integration and E2E suites run with `--runInBand` and one container per worker; CI caches the Postgres image.
 - Maestro runs locally/nightly on an emulator; not a merge gate (emulators in CI are slow and flaky).
 
+**CI is the full gate (amended 2026-10-22).** Every PR runs, as required checks aggregated by `ci-success`: static (format, lint, typecheck, architecture rules + meta-tests, requirement traceability with `--require-tests`, doc checks), unit with the coverage gates (80 % overall, 90 % per domain layer), integration and e2e on Testcontainers, build, secrets scan and the compose smoke. Locally, contributors run light checks and the tests of the code they changed; the full suite and e2e are left to CI (decision CI-1).
+
+- **Traceability:** once every task covering a MUST acceptance criterion has `Status: done`, that criterion must be referenced by at least one automated test title (`@AC-…`), or CI fails.
+- **Timeouts:** Jest 30 ignores a per-project `testTimeout`, so each project sets its timeout with `jest.setTimeout()` in its setup file (unit default; database projects longer), and a spec per project asserts the effective value.
+
 ## Consequences
 
 **Positive**

@@ -44,10 +44,12 @@ Evaluators will read the git history as evidence of how the work was done. Const
 - **Format:** `type(scope): subject` — types `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `build`, `perf`; scopes `api`, `mobile`, `api-client`, `docs`, `adr`, `spec`, `ci`, `infra`, `deps`, `agents` (enforced by `commitlint.config.mjs`). Body explains _why_; footer references the task (`Refs: T-003-07`) and breaking changes (`BREAKING CHANGE:`).
 - **Hooks:** husky `commit-msg` → commitlint; `pre-commit` → lint-staged (prettier, eslint on staged files).
 - **Granularity:** one task (`T-NNN-nn`) = one branch (`<type>/<spec>-<slug>`, e.g. `feat/003-list-filters`) = one PR. Commits inside a PR are meaningful steps (e.g. `test:` failing scenarios → `feat:` implementation → `refactor:`), **each building and passing tests** so `git bisect` works; the "red" test commit is marked with `it.failing`/`test.todo` to stay green.
-- **Stacking:** dependent tasks are opened as stacked PRs (base = previous task branch) and retargeted to `main` when the base merges.
-- **Merge:** rebase-merge (or merge commit) to preserve the bisectable commits; no squash of meaningful history.
+- **Stacking:** dependent tasks are opened as stacked PRs (base = previous task branch). Retarget the stacked PR to `main` **before** merging its base, so GitHub does not close it when the base branch is deleted (amended 2026-10-22).
+- **Merge:** rebase-merge only, enforced by a `main` ruleset requiring linear history and the `ci-success` check (amended 2026-10-22); no squash of meaningful history.
 - **PR template:** links spec, scenarios (`@AC-…`) and ADRs; checklist from the Definition of Done; CI must be green ([ADR-0014](0014-testing-strategy.md)).
 - **Docs are code:** spec/ADR changes are their own commits/PRs with `docs`/`adr`/`spec` scopes.
+
+**Task status (amended 2026-10-22).** The PR that completes a spec task sets `- **Status:** done` on that task in `tasks.md`. From then on the traceability gate requires automated tests for the task's MUST acceptance criteria ([ADR-0014](0014-testing-strategy.md)).
 
 ## Consequences
 
