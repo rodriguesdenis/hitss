@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { AppConfigModule } from './config/config.module';
+import { IdentityModule } from './modules/identity/identity.module';
 import { PrismaModule } from './shared/infrastructure/prisma/prisma.module';
 import { ObservabilityModule } from './shared/observability/observability.module';
 import { HttpConventionsModule } from './shared/presentation/http-conventions.module';
@@ -14,6 +15,7 @@ import { HttpConventionsModule } from './shared/presentation/http-conventions.mo
     AppConfigModule.forRoot(),
     PrismaModule,
     HttpConventionsModule,
+    IdentityModule,
     ObservabilityModule,
   ],
   controllers: [],

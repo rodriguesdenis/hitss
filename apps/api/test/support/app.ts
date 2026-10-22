@@ -19,6 +19,8 @@ export interface TestAppOptions {
   logs?: LogCapture;
   /** Overrides of the validated config (e.g. CORS origins for one test file). */
   config?: Partial<AppConfig>;
+  /** Provider overrides (e.g. spies around the password hasher). */
+  providers?: { provide: unknown; useValue: unknown }[];
 }
 
 /**
@@ -40,6 +42,9 @@ export async function createTestApp(
   })
     .overrideProvider(APP_CONFIG)
     .useValue(config);
+  for (const { provide, useValue } of options.providers ?? []) {
+    builder = builder.overrideProvider(provide).useValue(useValue);
+  }
   if (options.logs) {
     builder = builder
       .overrideProvider(PARAMS_PROVIDER_TOKEN)
@@ -52,7 +57,9 @@ export async function createTestApp(
   }
   const moduleRef = await builder.compile();
 
-  const app = setupApp(moduleRef.createNestApplication({ bufferLogs: true }));
+  const app = setupApp(
+    moduleRef.createNestApplication({ bodyParser: false, bufferLogs: true }),
+  );
   await app.init();
   return app;
 }
