@@ -29,34 +29,21 @@ describe('OpenAPI document', () => {
     return buildOpenApiDocument(app);
   }
 
-  it('AC-01.5.4 declares the bearer and cookie security schemes', async () => {
+  it('AC-08.2 declares the bearer scheme only: no session-cookie scheme for the API routes', async () => {
     const document = await build();
 
-    expect(document.components?.securitySchemes).toMatchObject({
-      bearer: { type: 'http', scheme: 'bearer' },
-      'session-cookie': { type: 'apiKey', in: 'cookie' },
-    });
-  });
-
-  it('AC-01.5.4 the cookie scheme names the secure cookie used in production', async () => {
-    const document = await build();
-
-    expect(
-      document.components?.securitySchemes?.['session-cookie'],
-    ).toMatchObject({
-      description: expect.stringContaining(
-        '__Secure-better-auth.session_token',
-      ) as string,
+    expect(document.components?.securitySchemes).toEqual({
+      bearer: expect.objectContaining({
+        type: 'http',
+        scheme: 'bearer',
+      }) as object,
     });
   });
 
   it('AC-01.5.4 requires authentication globally but not on health', async () => {
     const document = await build();
 
-    expect(document.security).toEqual([
-      { bearer: [] },
-      { 'session-cookie': [] },
-    ]);
+    expect(document.security).toEqual([{ bearer: [] }]);
     const health = document.paths['/api/v1/health/live']?.get;
     expect(health?.security).toEqual([]);
     expect(document.paths['/api/v1/things']?.get?.security).toBeUndefined();
@@ -76,7 +63,7 @@ describe('OpenAPI document', () => {
       expect(operation?.tags).toEqual(['Identity']);
       expect(operation?.security).toEqual(
         path.endsWith('sign-out') || path.endsWith('get-session')
-          ? [{ bearer: [] }, { 'session-cookie': [] }]
+          ? [{ bearer: [] }]
           : [],
       );
     }

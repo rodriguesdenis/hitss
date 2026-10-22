@@ -46,8 +46,7 @@ import { toTaskResponse } from './task.presenter';
 
 /** `/api/v1/tasks`: private (global auth guard), always scoped to the signed-in owner. */
 @ApiTags('Tasks')
-// Every route needs a session and is rate limited; unsafe ones also run the CSRF check for
-// cookie sessions.
+// Every route needs a bearer token and is rate limited.
 @ApiErrorResponses([401, 429])
 @Controller('tasks')
 @ApiExtraModels(TaskResponseDto)
@@ -67,9 +66,7 @@ export class TasksController {
   @ApiCreatedEnvelope(TaskResponseDto)
   @ApiErrorResponses({
     400: 'VALIDATION_FAILED: an invalid or unknown field (teamIds malformed, duplicated or over 100 included); `details` names it.',
-    403: 'CSRF_REJECTED: a cookie-authenticated request from an untrusted origin.',
     413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
-    415: 'UNSUPPORTED_MEDIA_TYPE: the body must be application/json.',
     422: 'TOO_MANY_TEAMS (`details: { max, received }`, more than 10 distinct teams) or UNKNOWN_TEAMS (`details: { teamIds }`, the ids that are not your live teams).',
   })
   async create(
@@ -159,11 +156,9 @@ export class TasksController {
   @ApiOkEnvelope(TaskResponseDto)
   @ApiErrorResponses({
     400: 'VALIDATION_FAILED: `id` is not a UUID, `status` is missing or invalid, or another field is sent.',
-    403: 'CSRF_REJECTED: a cookie-authenticated request from an untrusted origin.',
     404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
     412: 'PRECONDITION_FAILED: rare; a concurrent write won twice in a row (the server retries once). Reload and retry; `details.currentVersion`.',
     413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
-    415: 'UNSUPPORTED_MEDIA_TYPE: the body must be application/json.',
   })
   async changeStatus(
     @CurrentOwner() { ownerId }: Owner,
@@ -188,11 +183,9 @@ export class TasksController {
   @ApiOkEnvelope(TaskResponseDto)
   @ApiErrorResponses({
     400: 'VALIDATION_FAILED: an invalid or unknown field, or `id` not a UUID; `details` names it.',
-    403: 'CSRF_REJECTED: a cookie-authenticated request from an untrusted origin.',
     404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which); wins over 422.',
     412: 'PRECONDITION_FAILED: rare; a concurrent write won twice in a row (the server retries once). Reload and retry; `details.currentVersion`.',
     413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
-    415: 'UNSUPPORTED_MEDIA_TYPE: the body must be application/json.',
     422: 'TOO_MANY_TEAMS (`details: { max, received }`, more than 10 distinct teams) or UNKNOWN_TEAMS (`details: { teamIds }`, the ids that are not your live teams).',
   })
   async replace(
@@ -223,7 +216,6 @@ export class TasksController {
   @ApiNoContentResponse({ description: 'The task was deleted.' })
   @ApiErrorResponses({
     400: 'VALIDATION_FAILED: `id` is not a UUID.',
-    403: 'CSRF_REJECTED: a cookie-authenticated request from an untrusted origin.',
     404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
     412: 'PRECONDITION_FAILED: rare; a concurrent write won twice in a row (the server retries once). Reload and retry; `details.currentVersion`.',
   })

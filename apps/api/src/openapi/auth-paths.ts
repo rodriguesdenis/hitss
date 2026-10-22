@@ -7,10 +7,7 @@ import type {
 type Paths = NonNullable<OpenAPIObject['paths']>;
 
 export const IDENTITY_TAG = 'Identity';
-const SESSION_SECURITY: SecurityRequirementObject[] = [
-  { bearer: [] },
-  { 'session-cookie': [] },
-];
+const SESSION_SECURITY: SecurityRequirementObject[] = [{ bearer: [] }];
 
 const credentials = {
   type: 'object',

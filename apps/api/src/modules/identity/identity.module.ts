@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import type { ServerResponse } from 'node:http';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { AuthGuard, AuthModule } from '@thallesp/nestjs-better-auth';
+import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
@@ -14,8 +14,7 @@ import {
   clientIpMiddleware,
 } from './middleware/client-ip.middleware';
 import { BetterAuthPasswordHasher, PasswordHasher } from './password-hasher';
-import { JsonBodyGuard } from '../../shared/presentation/guards/json-body.guard';
-import { CsrfGuard } from './presentation/csrf.guard';
+import { BearerAuthGuard } from './presentation/bearer-auth.guard';
 import { IpThrottlerGuard } from './presentation/ip-throttler.guard';
 import {
   IP_THROTTLER,
@@ -56,8 +55,9 @@ export class PasswordHasherModule {}
  * format (spec Q-01.1). Nest is created with `bodyParser: false`; this module re-adds the JSON
  * parser (100 kB, the API-wide limit) for every other route, with urlencoded bodies disabled.
  * CORS for auth routes is the app's own (setupApp), so the module's trusted-origins CORS is off,
- * and the global guards are registered here, in order: deny by default (AuthGuard), then CSRF
- * for cookie-authenticated mutations (CsrfGuard). A route opts out with `@Public()`.
+ * and the global guards are registered here, in order: per-IP throttler, Bearer-only
+ * authentication (deny by default; ADR-0020: a cookie never authenticates /api/v1, so there is no
+ * CSRF guard), per-user throttler. A route opts out of authentication with `@Public()`.
  */
 @Module({
   imports: [
@@ -99,15 +99,12 @@ export class PasswordHasherModule {}
       disableGlobalAuthGuard: true,
     }),
   ],
-  // Global guards run in registration order (plan 001 → Guards, in order). The slot before
-  // AuthGuard is the per-IP throttler of T-001-15; the per-user throttler follows CsrfGuard.
+  // Global guards run in registration order: anonymous floods are bounded before any session
+  // lookup, and the per-user limit needs the authenticated user.
   providers: [
     { provide: APP_GUARD, useClass: IpThrottlerGuard },
-    { provide: APP_GUARD, useClass: AuthGuard },
-    { provide: APP_GUARD, useClass: CsrfGuard },
+    { provide: APP_GUARD, useClass: BearerAuthGuard },
     { provide: APP_GUARD, useClass: OwnerThrottlerGuard },
-    // JSON bodies only, for every client (api-contracts → 415), after authentication.
-    { provide: APP_GUARD, useClass: JsonBodyGuard },
   ],
 })
 export class IdentityModule {}
