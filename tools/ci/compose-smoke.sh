@@ -56,7 +56,7 @@ log 'services: postgres and api healthy, migrate exited 0'
 
 log 'the API answers over HTTP on the default port (AC-07.6.8)'
 assert_http_up "$API_PORT"
-log 'ready, docs, demo sign-in and the seeded teams (AC-07.6.8, AC-07.2.1, AC-07.2.2)'
+log 'ready, docs, demo sign-in, then 3 teams and 10 tasks owned by the demo user (AC-07.6.8, AC-07.2.1, AC-07.2.2, AC-01.8.3)'
 base="http://127.0.0.1:$API_PORT"
 [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$base/api/v1/health/ready")" = 200 ] || fail 'readiness is not 200'
 [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$base/docs/openapi.json")" = 200 ] || fail '/docs/openapi.json is not 200'
