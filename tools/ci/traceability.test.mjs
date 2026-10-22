@@ -319,6 +319,109 @@ describe('traceability model', () => {
     assert.ok(tests.has('AC-99.3.1'));
   });
 
+  it('AC-07.6.5 reads the Status line of each task', () => {
+    const tasks = TASKS.replace(
+      '## T-099-01 — First task\n',
+      '## T-099-01 — First task\n- **Status:** done\n',
+    );
+    const model = loadModel(repo({ 'docs/specs/099-auth/tasks.md': tasks }));
+    assert.equal(model.taskStatus.get('T-099-01'), 'done');
+    assert.equal(model.taskStatus.get('T-099-02'), undefined);
+  });
+
+  describe('--require-tests', () => {
+    const done = (ids) =>
+      ids.reduce(
+        (text, id) =>
+          text
+            .replace(`## ${id} —`, `## ${id} —`)
+            .replace(
+              new RegExp(`(## ${id} — .*\\n)`),
+              '$1- **Status:** done\n',
+            ),
+        TASKS,
+      );
+    const strict = (tasksText, tests = new Map(), extra = {}) =>
+      checkTraceability(
+        loadModel(repo({ 'docs/specs/099-auth/tasks.md': tasksText })),
+        tests,
+        {
+          requireTests: true,
+          ...extra,
+        },
+      );
+
+    it('AC-07.6.5 fails a MUST AC covered only by done tasks that has no test, naming the AC and the task', () => {
+      const result = strict(done(['T-099-01']));
+      assert.match(
+        messages(result),
+        /AC-99\.1\.1.*T-099-01.*no automated test/,
+      );
+      assert.match(messages(result), /AC-99\.1\.3/);
+    });
+
+    it('AC-07.6.5 passes when the done task has a test for each of its MUST ACs', () => {
+      const tests = new Map(
+        ['AC-99.1.1', 'AC-99.1.2', 'AC-99.1.3'].map((ac) => [
+          ac,
+          new Set(['apps/api/src/a.spec.ts']),
+        ]),
+      );
+      assert.deepEqual(strict(done(['T-099-01']), tests).failures, []);
+    });
+
+    it('AC-07.6.5 does not fail an open task', () => {
+      assert.deepEqual(strict(TASKS).failures, []);
+    });
+
+    it('AC-07.6.5 does not fail while another task covering the AC is still open', () => {
+      const tasks =
+        done(['T-099-01']) +
+        '## T-099-03 — Third task\n- **Covers:** @AC-99.1.1\n';
+      const result = strict(tasks);
+      assert.ok(!/AC-99\.1\.1\b/.test(messages(result)), messages(result));
+      assert.match(messages(result), /AC-99\.1\.2/);
+    });
+
+    it('AC-07.6.5 only enforces MUST ACs', () => {
+      const result = strict(done(['T-099-01', 'T-099-02']));
+      assert.ok(!/AC-99\.2\.1/.test(messages(result)));
+    });
+
+    it('AC-07.6.5 a waiver downgrades the failure to a warning', () => {
+      const result = strict(done(['T-099-01']), new Map(), {
+        waivers: ['AC-99.1.1', 'AC-99.1.2', 'AC-99.1.3'].map((ac) => ({
+          ac,
+          reason: 'manual check',
+        })),
+      });
+      assert.deepEqual(result.failures, []);
+      assert.ok(
+        result.warnings.some(
+          (w) => w.includes('AC-99.1.1') && w.includes('waived'),
+        ),
+      );
+    });
+
+    it('AC-07.6.5 a waiver that downgrades a missing test is not reported as stale', () => {
+      const result = strict(done(['T-099-01']), new Map(), {
+        baseTests: new Map(),
+        waivers: [{ ac: 'AC-99.1.1', reason: 'manual check' }],
+      });
+      assert.ok(
+        !result.warnings.some((w) => w.includes('stale')),
+        result.warnings.join('\n'),
+      );
+    });
+
+    it('AC-07.6.5 is off by default', () => {
+      const model = loadModel(
+        repo({ 'docs/specs/099-auth/tasks.md': done(['T-099-01']) }),
+      );
+      assert.deepEqual(checkTraceability(model, new Map()).failures, []);
+    });
+  });
+
   it('AC-07.6.5 the job summary counts ACs with tests and lists MUST ACs without one', () => {
     const model = loadModel(repo());
     const tests = new Map([['AC-99.1.1', new Set(['apps/api/src/a.spec.ts'])]]);
