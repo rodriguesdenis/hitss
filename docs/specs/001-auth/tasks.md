@@ -142,6 +142,7 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 
 ## T-001-15 — API throttlers: per-IP before `AuthGuard`, per-user after
 
+- **Status:** done
 - **Goal:** `/api/v1/*` bounds anonymous and forged-token traffic per client address before any session lookup, and authenticated traffic per user.
 - **Changes:** `ThrottlerModule.forRootAsync` with two named throttlers: `ip` (`RATE_LIMIT_IP_MAX`, default 300/min, tracker = the same resolved client IP as `x-tt-client-ip`) and `user` (`RATE_LIMIT_MAX`, default 100/min, tracker `req.user?.id ?? clientIp`). `IpThrottlerGuard` registered as the **first** `APP_GUARD` (before `AuthGuard`), `OwnerThrottlerGuard` **after** `CsrfGuard`. Filter maps `ThrottlerException` → `429 RATE_LIMITED` + `Retry-After`. Health `@SkipThrottle()` for both.
 - **Covers:** `@AC-01.7.3 @AC-01.7.4 @AC-01.7.5 @AC-01.7.9`
