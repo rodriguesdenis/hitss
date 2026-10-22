@@ -36,14 +36,21 @@ test: ## Unit tests on the host (needs Node 24 and pnpm)
 test-all: ## Every suite: unit, integration and e2e on the host (needs Docker for Testcontainers)
 	pnpm test:all
 
-# Best effort (OQ-07.1): runs the suite in a throwaway Node 24 container on a copy of the
-# repository (node_modules and .git are not copied), so the host stays untouched.
-# TARGET=test:all also runs the Testcontainers suites through the host's Docker socket.
+# Best effort (OQ-07.1): runs the suite in a throwaway container on a copy of the repository
+# (node_modules and .git are not copied), so the host stays untouched. The image is the one the API
+# Dockerfile pins (a single source of truth: ARG NODE_IMAGE there). The unit tests need no Docker, so
+# the Docker socket (root-equivalent on the host) is mounted only for TARGET=test:all/test:integration/
+# test:e2e, which run Testcontainers through the host's Docker.
 TARGET ?= test
-test-docker: ## Run the unit tests in a throwaway Node 24 container (TARGET=test:all for every suite)
-	docker run --rm -v "$(CURDIR)":/src:ro -v /var/run/docker.sock:/var/run/docker.sock \
-		-e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal --add-host host.docker.internal:host-gateway \
-		node:24 sh -c 'mkdir /repo && cd /src && tar --exclude=node_modules --exclude=.git -cf - . | tar -xf - -C /repo \
+NODE_IMAGE ?= $(shell sed -n 's/^ARG NODE_IMAGE=//p' apps/api/Dockerfile)
+ifeq ($(TARGET),test)
+TEST_DOCKER_SOCKET :=
+else
+TEST_DOCKER_SOCKET := -v /var/run/docker.sock:/var/run/docker.sock -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal --add-host host.docker.internal:host-gateway
+endif
+test-docker: ## Run the unit tests in a throwaway container (TARGET=test:all for every suite)
+	docker run --rm -v "$(CURDIR)":/src:ro $(TEST_DOCKER_SOCKET) \
+		$(NODE_IMAGE) sh -c 'mkdir /repo && cd /src && tar --exclude=node_modules --exclude=.git -cf - . | tar -xf - -C /repo \
 		&& cd /repo && corepack enable && pnpm install --frozen-lockfile && pnpm $(TARGET)'
 
 smoke: ## Fresh-stack smoke test: the evaluator's one command and its failure modes

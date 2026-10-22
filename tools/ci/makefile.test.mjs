@@ -53,6 +53,28 @@ describe('Makefile', { skip: !hasMake && 'make is not installed' }, () => {
     );
   });
 
+  it('AC-07.3.2 test-docker uses the same pinned Node image as the API Dockerfile', () => {
+    const dockerfile = readFileSync(`${root}apps/api/Dockerfile`, 'utf8');
+    const pinned = /^ARG NODE_IMAGE=(\S+)$/m.exec(dockerfile)?.[1];
+    assert.ok(
+      pinned && pinned.includes('@sha256:'),
+      'the Dockerfile pins NODE_IMAGE by digest',
+    );
+    const recipe = make('-n', 'test-docker').stdout;
+    assert.ok(recipe.includes(pinned), `test-docker must use ${pinned}`);
+    assert.ok(!/node:24\s/.test(recipe), 'no floating node:24');
+  });
+
+  it('AC-07.3.2 test-docker mounts the Docker socket only for the suites that need it', () => {
+    assert.ok(
+      !make('-n', 'test-docker').stdout.includes('docker.sock'),
+      'unit tests need no socket',
+    );
+    const all = make('-n', 'test-docker', 'TARGET=test:all').stdout;
+    assert.ok(all.includes('/var/run/docker.sock'));
+    assert.ok(all.includes('TESTCONTAINERS_HOST_OVERRIDE'));
+  });
+
   it('AC-07.3.2 the smoke alias runs the compose smoke script', () => {
     assert.match(make('-n', 'smoke').stdout, /tools\/ci\/compose-smoke\.sh/);
   });
