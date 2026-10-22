@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
 import { TaskMetrics } from './application/ports/task-metrics';
 import { TaskReadModel } from './application/ports/task.read-model';
+import { TaskRepository } from './domain/task.repository';
 import { TaskCreated } from './domain/task.events';
 import { TaskStatus } from './domain/value-objects/task-status';
 import { OtelTaskMetrics } from './infrastructure/adapters/otel-task-metrics.adapter';
@@ -25,6 +26,8 @@ describe('TasksModule', () => {
       imports: [CqrsModule.forRoot(), GlobalsStub, TasksModule],
     })
       .overrideProvider(TaskReadModel)
+      .useValue({})
+      .overrideProvider(TaskRepository)
       .useValue({})
       .compile();
     await moduleRef.init();
