@@ -165,7 +165,7 @@ Base URL `http://localhost:3000`; business routes under `/api/v1`, authenticatio
 | Success     | `{ "data": <resource or array>, "meta"?: { total, limit, offset, hasNextPage } }`                                                                                                                                        |
 | Errors      | `{ "error": { "code": "VALIDATION_FAILED", "message": "…", "details"?: […], "traceId": "…" } }`: 400, 401, 403, 404, 409, 412, 415, 422, 429, 500                                                                        |
 | Concurrency | Today `ETag: W/"<version>"` on `POST /teams` and `GET /tasks/:id`. **Planned** (rest of the teams and tasks tasks): the same on every single-resource response, and `If-Match` on `PUT`/`PATCH`/`DELETE` (stale → `412`) |
-| Retries     | `POST` accepts `Idempotency-Key`: the same key and body replays the first response                                                                                                                                       |
+| Retries     | **Planned** (T-002-05, deferred): `POST` accepts `Idempotency-Key` and replays the first response for the same key and body                                                                                              |
 | Limits      | Per client address before authentication and per user after (`429 RATE_LIMITED` + `Retry-After`); `/api/auth/*` bodies over 16 kB → `413`                                                                                |
 | Correlation | Every response has `X-Request-Id`; error envelopes carry the `traceId` of the request's trace                                                                                                                            |
 
@@ -187,9 +187,9 @@ TOKEN=$(curl -si -X POST $API/api/auth/sign-in/email \
 # List teams
 curl -s "$API/api/v1/teams?limit=10" -H "Authorization: Bearer $TOKEN"
 
-# Create a team (idempotent: retrying with the same key replays the first response)
+# Create a team (an Idempotency-Key header that makes retries safe is planned, T-002-05)
 curl -s -X POST $API/api/v1/teams -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -H "Idempotency-Key: $(uuidgen)" \
+  -H 'Content-Type: application/json' \
   -d '{"name":"Platform","colorHex":"#0EA5E9","description":"Infra & tooling"}'
 
 # Pending or in-progress tasks of a team, matching "login", by due date
@@ -210,7 +210,7 @@ curl -s -X PATCH $API/api/v1/tasks/<taskId>/status -H "Authorization: Bearer $TO
 curl -s -X DELETE $API/api/v1/tasks/<taskId> -H "Authorization: Bearer $TOKEN" -o /dev/null -w '%{http_code}\n'
 ```
 
-⚠️ Ready-made requests (planned): a [Bruno](https://www.usebruno.com/) collection in `tools/bruno/` and `.http` files in `tools/http/`. These folders do not exist yet.
+Ready-made requests: a [Bruno](https://www.usebruno.com/) collection in `tools/bruno/` and `.http` files in `tools/http/`. The authentication requests exist today (`tools/bruno/auth/`, `tools/http/auth.http`); the teams and tasks requests are planned with their endpoints.
 
 ## What I'd do differently in production
 
