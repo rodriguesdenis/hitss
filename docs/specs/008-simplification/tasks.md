@@ -89,7 +89,9 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 - **Goal:** fewer files per module with the same behaviour (AC-08.10); teams ~18 source files.
 - **Changes:** (f) `tasks/presentation/http/validators/is-calendar-date.ts` → `shared/presentation/validators/`; (h) `@ApiExtraModels` registered inside `ApiOkEnvelope` / `ApiCreatedEnvelope` / `ApiPageEnvelope`, removed from the controllers; (d) `TeamLookup` gains the precise unknown-teams check (replaces `tasks/application/use-cases/shared/precise-unknown-teams.ts`; tasks switch to it in this PR or in 10b, agreed with Strata); teams side of (b) `TeamDescription` folded into `Team` validation (keeps `TeamName`, `ColorHex`); teams side of (e) one team DTO base where create and update are equal; teams side of (g) `team.persistence-mapper.ts` → private functions in `team.prisma-repository.ts`. Unit tests of removed files move to the entity / repository / lookup tests; nothing they assert changes.
+- **Status:** done
 - **Done when:** unit, integration and e2e green; `pnpm arch` green; OpenAPI document unchanged (snapshot or diff); overview §6 tree updated for teams and shared.
+- **Note:** (d) is `TeamLookup.assertAllLive(ownerId, ids, toError)`; the caller passes its own error because teams knows nothing of tasks. The tasks use cases switched to it in this PR. (f): the shared validator keeps its own calendar check (shared code may not import a module); `DueDate` still re-checks in the domain. OpenAPI: same content before and after, with only the `components.schemas` order changed. Teams has 22 source files; 10b and 11 shrink both modules further.
 
 ## T-008-10b — Fewer files: the tasks side
 
