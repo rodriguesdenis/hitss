@@ -1,4 +1,6 @@
 import { ChildProcess, execFileSync, spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { request as httpRequest } from 'node:http';
 import { join } from 'node:path';
 import { useTestDatabase } from '../support/postgres';
 import { OtlpReceiver, ReceivedSpan } from './otlp-receiver';
@@ -254,8 +256,25 @@ describe('OpenTelemetry bootstrap', () => {
   it('AC-06.4.1 AC-06.4.4 exports the request duration by method, route template and status only', async () => {
     receiver.bodies.clear();
     const app = await launch({ OTEL_EXPORTER_OTLP_ENDPOINT: endpoint });
+    // A client-chosen Host header must not become a metric dimension (server.address).
+    const host = `host-${randomUUID()}.example.test`;
     expect(
-      (await get(app, {}, '?token=secret-value&search=marina')).status,
+      await new Promise<number>((resolve, reject) => {
+        httpRequest(
+          {
+            host: '127.0.0.1',
+            port: app.port,
+            path: '/ping?token=secret-value&search=marina',
+            headers: { host },
+          },
+          (res) => {
+            res.resume();
+            res.on('end', () => resolve(res.statusCode ?? 0));
+          },
+        )
+          .on('error', reject)
+          .end();
+      }),
     ).toBe(200);
     app.child.kill('SIGTERM');
     expect(await app.exit).toBe(0);
@@ -271,6 +290,13 @@ describe('OpenTelemetry bootstrap', () => {
       .flatMap((m) => m.histogram.dataPoints);
     expect(durations.length).toBeGreaterThan(0);
 
+    for (const point of durations) {
+      expect(point.attributes.map((a) => a.key).sort()).toEqual([
+        'http.request.method',
+        'http.response.status_code',
+        'http.route',
+      ]);
+    }
     const attributes = Object.fromEntries(
       durations[0]!.attributes.map((a) => [a.key, a.value]),
     );
@@ -280,6 +306,7 @@ describe('OpenTelemetry bootstrap', () => {
     expect(attributes['http.response.status_code']).toEqual({ intValue: 200 });
 
     const exported = JSON.stringify(payloads);
+    expect(exported).not.toContain(host);
     expect(exported).not.toContain('secret-value');
     expect(exported).not.toContain('marina');
     expect(exported).not.toContain('token=');
