@@ -29,6 +29,7 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 ## T-008-03 — Slim observability
 
+- **Status:** done
 - **Goal:** pino JSON logs + optional OTLP auto-instrumentation only (AC-08.7).
 - **Changes:** `instrumentation.ts` starts the NodeSDK with auto-instrumentations only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (and `OTEL_SDK_DISABLED` is not `true`); remove the sanitizing exporter, metric views, `@Traced` + its guard spec, diag logger, telemetry lifecycle/shutdown, the task metrics port/adapter/handlers and unused OTel packages; keep logger config, request id, redaction, trace id in logs; compose smoke checks "no export without the endpoint".
 - **Done when:** unit/e2e green; logs carry `reqId` and `traceId`; with the endpoint set, the smoke sink receives a trace.
