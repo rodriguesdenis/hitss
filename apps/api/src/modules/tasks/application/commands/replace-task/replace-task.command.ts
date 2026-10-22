@@ -1,4 +1,4 @@
-import type { TaskStatus } from '../../../domain/value-objects/task-status';
+import type { TaskStatus } from '../../../domain/value-objects/task-status.vo';
 
 /**
  * Replace one of the owner's tasks (AC-03.9.x). Values are the DTO's, already trimmed; an

@@ -1,5 +1,5 @@
 import { InMemoryTeamDirectory } from '../../../../../test/support/in-memory-team-directory';
-import { TaskNotFound, UnknownTeams } from '../../domain/task.errors';
+import { TaskNotFound, UnknownTeams } from '../../domain/errors/task.errors';
 import { preciseUnknownTeams } from './precise-unknown-teams';
 
 const OWNER = 'owner-1';

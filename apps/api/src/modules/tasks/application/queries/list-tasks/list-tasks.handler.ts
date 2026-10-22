@@ -1,7 +1,7 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/domain/clock';
 import type { Page } from '../../../../../shared/application/page';
-import { DueDate } from '../../../domain/value-objects/due-date';
+import { DueDate } from '../../../domain/value-objects/due-date.vo';
 import { TaskReadModel } from '../../ports/task.read-model';
 import { TeamDirectory } from '../../ports/team-directory';
 import { assembleTaskView } from '../../views/task-view.assembler';

@@ -1,5 +1,5 @@
-import { DueDate } from '../../domain/value-objects/due-date';
-import { TaskStatus } from '../../domain/value-objects/task-status';
+import { DueDate } from '../../domain/value-objects/due-date.vo';
+import { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import type { TaskRecord } from '../ports/task.read-model';
 import type { TeamSummary } from '../ports/team-directory';
 import { assembleTaskView } from './task-view.assembler';

@@ -1,14 +1,14 @@
 import { EventBus } from '@nestjs/cqrs';
 import { InMemoryTaskRepository } from '../../../../../../test/support/in-memory-task.repository';
 import { Clock } from '../../../../../shared/domain/clock';
-import { Task } from '../../../domain/task';
+import { Task } from '../../../domain/entities/task.entity';
 import { TaskStatusChanged } from '../../../domain/task.events';
-import { TaskNotFound } from '../../../domain/task.errors';
-import { DueDate } from '../../../domain/value-objects/due-date';
-import { TaskDescription } from '../../../domain/value-objects/task-description';
-import { TaskStatus } from '../../../domain/value-objects/task-status';
-import { TaskTeamIds } from '../../../domain/value-objects/task-team-ids';
-import { TaskTitle } from '../../../domain/value-objects/task-title';
+import { TaskNotFound } from '../../../domain/errors/task.errors';
+import { DueDate } from '../../../domain/value-objects/due-date.vo';
+import { TaskDescription } from '../../../domain/value-objects/task-description.vo';
+import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
+import { TaskTeamIds } from '../../../domain/value-objects/task-team-ids.vo';
+import { TaskTitle } from '../../../domain/value-objects/task-title.vo';
 import { ChangeTaskStatusCommand } from './change-task-status.command';
 import { ChangeTaskStatusHandler } from './change-task-status.handler';
 

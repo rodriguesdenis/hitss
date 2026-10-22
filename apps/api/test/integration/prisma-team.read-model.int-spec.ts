@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status';
+import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status.vo';
 import { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import type { Sort } from '../../src/shared/application/page';

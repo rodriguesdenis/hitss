@@ -1,7 +1,7 @@
 import { Clock } from '../../../../../shared/domain/clock';
 import { InMemoryTeamDirectory } from '../../../../../../test/support/in-memory-team-directory';
-import { TaskNotFound } from '../../../domain/task.errors';
-import { TaskStatus } from '../../../domain/value-objects/task-status';
+import { TaskNotFound } from '../../../domain/errors/task.errors';
+import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
 import type { TaskReadModel, TaskRecord } from '../../ports/task.read-model';
 import { GetTaskHandler } from './get-task.handler';
 import { GetTaskQuery } from './get-task.query';

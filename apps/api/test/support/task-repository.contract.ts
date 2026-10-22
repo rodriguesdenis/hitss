@@ -1,15 +1,15 @@
 import { randomUUID } from 'node:crypto';
-import { Task } from '../../src/modules/tasks/domain/task';
+import { Task } from '../../src/modules/tasks/domain/entities/task.entity';
 import {
   TaskNotFound,
   UnknownTeams,
-} from '../../src/modules/tasks/domain/task.errors';
-import { TaskRepository } from '../../src/modules/tasks/domain/task.repository';
-import { DueDate } from '../../src/modules/tasks/domain/value-objects/due-date';
-import { TaskDescription } from '../../src/modules/tasks/domain/value-objects/task-description';
-import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status';
-import { TaskTeamIds } from '../../src/modules/tasks/domain/value-objects/task-team-ids';
-import { TaskTitle } from '../../src/modules/tasks/domain/value-objects/task-title';
+} from '../../src/modules/tasks/domain/errors/task.errors';
+import { TaskRepository } from '../../src/modules/tasks/domain/repositories/task.repository';
+import { DueDate } from '../../src/modules/tasks/domain/value-objects/due-date.vo';
+import { TaskDescription } from '../../src/modules/tasks/domain/value-objects/task-description.vo';
+import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status.vo';
+import { TaskTeamIds } from '../../src/modules/tasks/domain/value-objects/task-team-ids.vo';
+import { TaskTitle } from '../../src/modules/tasks/domain/value-objects/task-title.vo';
 
 export interface TaskRepositoryHarness {
   repository: TaskRepository;

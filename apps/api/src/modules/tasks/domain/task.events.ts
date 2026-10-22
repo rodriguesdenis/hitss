@@ -1,5 +1,5 @@
 import { DomainEvent } from '../../../shared/domain/domain-event';
-import { TaskStatus } from './value-objects/task-status';
+import { TaskStatus } from './value-objects/task-status.vo';
 
 /** Raised by `Task.create`; a task created as DONE also counts as completed. */
 export class TaskCreated extends DomainEvent {

@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
-import { UnknownTeams } from '../../src/modules/tasks/domain/task.errors';
+import { UnknownTeams } from '../../src/modules/tasks/domain/errors/task.errors';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
-import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status';
-import { TaskTeamIds } from '../../src/modules/tasks/domain/value-objects/task-team-ids';
-import { PrismaTaskRepository } from '../../src/modules/tasks/infrastructure/prisma-task.repository';
+import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status.vo';
+import { TaskTeamIds } from '../../src/modules/tasks/domain/value-objects/task-team-ids.vo';
+import { PrismaTaskRepository } from '../../src/modules/tasks/infrastructure/persistence/task.prisma-repository';
 import { createTestApp } from '../support/app';
 import { expectProbePassed, runProbeInTimeZone } from '../support/in-time-zone';
 import { useTestDatabase } from '../support/postgres';

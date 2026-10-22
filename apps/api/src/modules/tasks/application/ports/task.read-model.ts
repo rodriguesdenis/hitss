@@ -3,7 +3,7 @@ import type {
   PageRequest,
   Sort,
 } from '../../../../shared/application/page';
-import type { TaskStatus } from '../../domain/value-objects/task-status';
+import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 
 /** A task as the read side stores it: flat, no aggregate, team links as ids. */
 export interface TaskRecord {

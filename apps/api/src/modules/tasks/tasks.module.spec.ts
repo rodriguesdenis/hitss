@@ -6,7 +6,7 @@ import { UnitOfWork } from '../../shared/application/ports/unit-of-work';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
 import { CreateTaskHandler } from './application/commands/create-task/create-task.handler';
 import { TaskReadModel } from './application/ports/task.read-model';
-import { TaskRepository } from './domain/task.repository';
+import { TaskRepository } from './domain/repositories/task.repository';
 import { TeamReadModel } from '../teams/application/ports/team.read-model';
 import { TeamRepository } from '../teams/domain/repositories/team.repository';
 import { TeamLookupDirectory } from './infrastructure/adapters/team-directory.adapter';

@@ -1,12 +1,12 @@
 import { EventBus } from '@nestjs/cqrs';
 import { InMemoryTaskRepository } from '../../../../../../test/support/in-memory-task.repository';
 import { Clock } from '../../../../../shared/domain/clock';
-import { Task } from '../../../domain/task';
+import { Task } from '../../../domain/entities/task.entity';
 import { TaskDeleted } from '../../../domain/task.events';
-import { TaskNotFound } from '../../../domain/task.errors';
-import { TaskDescription } from '../../../domain/value-objects/task-description';
-import { TaskTeamIds } from '../../../domain/value-objects/task-team-ids';
-import { TaskTitle } from '../../../domain/value-objects/task-title';
+import { TaskNotFound } from '../../../domain/errors/task.errors';
+import { TaskDescription } from '../../../domain/value-objects/task-description.vo';
+import { TaskTeamIds } from '../../../domain/value-objects/task-team-ids.vo';
+import { TaskTitle } from '../../../domain/value-objects/task-title.vo';
 import { DeleteTaskCommand } from './delete-task.command';
 import { DeleteTaskHandler } from './delete-task.handler';
 

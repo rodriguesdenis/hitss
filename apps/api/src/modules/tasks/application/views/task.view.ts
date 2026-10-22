@@ -1,4 +1,4 @@
-import type { TaskStatus } from '../../domain/value-objects/task-status';
+import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import type { TeamSummary } from '../ports/team-directory';
 
 /** The task as every API response shows it (api-contracts "Task resource"). */

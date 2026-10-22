@@ -1,6 +1,6 @@
 import { ColorHex } from '../modules/teams/domain/value-objects/color-hex.vo';
 import { TeamName } from '../modules/teams/domain/value-objects/team-name.vo';
-import { TaskTitle } from '../modules/tasks/domain/value-objects/task-title';
+import { TaskTitle } from '../modules/tasks/domain/value-objects/task-title.vo';
 import {
   DEMO_EMAIL,
   DEMO_PASSWORD,
