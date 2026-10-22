@@ -341,6 +341,56 @@ describe('Better Auth at /api/auth (e2e)', () => {
     });
   });
 
+  describe('only the four spec routes are served (Lynx MUST 1)', () => {
+    it.each([
+      ['POST', '/update-user'],
+      ['POST', '/change-password'],
+      ['POST', '/change-email'],
+      ['POST', '/delete-user'],
+      ['GET', '/delete-user/callback'],
+      ['GET', '/list-sessions'],
+      ['POST', '/revoke-session'],
+      ['POST', '/revoke-sessions'],
+      ['POST', '/revoke-other-sessions'],
+      ['POST', '/update-session'],
+      ['POST', '/request-password-reset'],
+      ['POST', '/reset-password'],
+      ['GET', '/reset-password/some-token'],
+      ['GET', '/verify-email'],
+      ['POST', '/send-verification-email'],
+      ['POST', '/verify-password'],
+      ['GET', '/list-accounts'],
+      ['POST', '/link-social'],
+      ['POST', '/unlink-account'],
+      ['POST', '/get-access-token'],
+      ['POST', '/refresh-token'],
+      ['GET', '/account-info'],
+      ['POST', '/sign-in/social'],
+      ['GET', '/callback/github'],
+      ['POST', '/callback/github'],
+      ['GET', '/expo-authorization-proxy'],
+      ['GET', '/ok'],
+      ['GET', '/error'],
+      ['POST', '/sign-in/email/../../update-user'],
+    ])('%s /api/auth%s → 404, even when signed in', async (method, path) => {
+      const email = freshEmail();
+      await signUp(email);
+      const bearer = bearerOf(await signIn(email));
+
+      const call =
+        method === 'GET'
+          ? http().get(`/api/auth${path}`)
+          : http()
+              .post(`/api/auth${path}`)
+              .send({ newPassword: 'another-password-99' });
+      const response = await call.set('Authorization', `Bearer ${bearer}`);
+
+      expect(response.status).toBe(404);
+      expect(response.headers['set-cookie']).toBeUndefined();
+      expect(response.headers['set-auth-token']).toBeUndefined();
+    });
+  });
+
   describe('body parsers re-added for other routes (T-001-06)', () => {
     it('a JSON POST to a non-auth route is parsed', async () => {
       const response = await http()

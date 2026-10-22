@@ -5,6 +5,7 @@ import { bearer } from 'better-auth/plugins';
 import type { AppConfig } from '../../config/app-config';
 import type { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
 import { createAuthLogger } from '../../shared/observability/logging/pino-bridge';
+import { DISABLED_AUTH_PATHS } from './auth-routes';
 import type { PasswordHasher } from './password-hasher';
 
 type AuthLoggerTarget = Parameters<typeof createAuthLogger>[0];
@@ -57,6 +58,8 @@ export function createAuth(
     baseURL: config.betterAuthUrl,
     secret: config.betterAuthSecret,
     basePath: AUTH_BASE_PATH,
+    // Only sign-up, sign-in, sign-out and get-session are served (auth-routes.ts).
+    disabledPaths: [...DISABLED_AUTH_PATHS],
     database: prismaAdapter(prisma, { provider: 'postgresql' }),
     emailAndPassword: {
       enabled: true,

@@ -3,7 +3,8 @@ import { AuthModule } from '@thallesp/nestjs-better-auth';
 import { PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
-import { createAuth } from './auth.factory';
+import { AUTH_BASE_PATH, createAuth } from './auth.factory';
+import { authRouteAllowlist } from './auth-routes';
 import { BetterAuthPasswordHasher, PasswordHasher } from './password-hasher';
 
 /** Provides the password hasher to the auth factory; e2e tests override it to observe calls. */
@@ -33,6 +34,8 @@ export class PasswordHasherModule {}
       ) => ({
         auth: createAuth(config, prisma, logger.logger, passwordHasher),
         disableTrustedOriginsCors: true,
+        // In front of the handler: any auth path outside the allowlist answers 404.
+        middleware: authRouteAllowlist(AUTH_BASE_PATH),
         bodyParser: {
           json: { limit: '100kb' },
           urlencoded: { enabled: false },
