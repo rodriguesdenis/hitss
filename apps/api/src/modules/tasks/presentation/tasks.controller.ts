@@ -10,6 +10,7 @@ import {
   Put,
   Query,
   Res,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
@@ -29,6 +30,7 @@ import {
 import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
 import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
+import { EtagInterceptor } from '../../../shared/presentation/interceptors/etag.interceptor';
 import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
 import { ChangeTaskStatusCommand } from '../application/commands/change-task-status/change-task-status.command';
 import { CreateTaskCommand } from '../application/commands/create-task/create-task.command';
@@ -59,6 +61,7 @@ export class TasksController {
    * response), `Location` and the version tag (AC-03.1.1).
    */
   @Post()
+  @UseInterceptors(EtagInterceptor)
   @HttpCode(201)
   @ApiCreatedResponse({
     schema: {
@@ -89,9 +92,7 @@ export class TasksController {
       new GetTaskQuery(ownerId, id),
     );
     response.setHeader('Location', `/api/v1/tasks/${task.id}`);
-    // Until the shared EtagInterceptor (T-002-07) takes over, in the same W/"<version>" form.
-    response.setHeader('ETag', `W/"${task.version}"`);
-    return toTaskResponse(task);
+    return toTaskResponse(task); // ETag: EtagInterceptor
   }
 
   /**
@@ -128,18 +129,16 @@ export class TasksController {
 
   /** 200 with the task view and its version tag (AC-03.8.1); unknown → 404 TASK_NOT_FOUND. */
   @Get(':id')
+  @UseInterceptors(EtagInterceptor)
   @ApiOkEnvelope(TaskResponseDto)
   async get(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
-    @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<TaskResponseDto> {
     const task = await this.queries.execute<GetTaskQuery, TaskView>(
       new GetTaskQuery(ownerId, id),
     );
-    // Until the shared EtagInterceptor (T-002-07) takes over, in the same W/"<version>" form.
-    response.setHeader('ETag', `W/"${task.version}"`);
-    return toTaskResponse(task);
+    return toTaskResponse(task); // ETag: EtagInterceptor
   }
 
   /**
@@ -147,12 +146,12 @@ export class TasksController {
    * the unchanged task and the same tag (AC-03.10.3).
    */
   @Patch(':id/status')
+  @UseInterceptors(EtagInterceptor)
   @ApiOkEnvelope(TaskResponseDto)
   async changeStatus(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
     @Body() body: ChangeTaskStatusDto,
-    @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<TaskResponseDto> {
     await this.commands.execute<ChangeTaskStatusCommand, { id: string }>(
       new ChangeTaskStatusCommand(ownerId, id, body.status),
@@ -160,9 +159,7 @@ export class TasksController {
     const task = await this.queries.execute<GetTaskQuery, TaskView>(
       new GetTaskQuery(ownerId, id),
     );
-    // Until the shared EtagInterceptor (T-002-07) takes over, in the same W/"<version>" form.
-    response.setHeader('ETag', `W/"${task.version}"`);
-    return toTaskResponse(task);
+    return toTaskResponse(task); // ETag: EtagInterceptor
   }
 
   /**
@@ -170,12 +167,12 @@ export class TasksController {
    * replacement is a no-op: the unchanged task and the same tag (AC-03.9.5).
    */
   @Put(':id')
+  @UseInterceptors(EtagInterceptor)
   @ApiOkEnvelope(TaskResponseDto)
   async replace(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
     @Body() body: ReplaceTaskDto,
-    @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<TaskResponseDto> {
     await this.commands.execute<ReplaceTaskCommand, { id: string }>(
       new ReplaceTaskCommand(
@@ -191,9 +188,7 @@ export class TasksController {
     const task = await this.queries.execute<GetTaskQuery, TaskView>(
       new GetTaskQuery(ownerId, id),
     );
-    // Until the shared EtagInterceptor (T-002-07) takes over, in the same W/"<version>" form.
-    response.setHeader('ETag', `W/"${task.version}"`);
-    return toTaskResponse(task);
+    return toTaskResponse(task); // ETag: EtagInterceptor
   }
 
   /** 204 with no content; afterwards every read and write of the task → 404 (AC-03.11.1). */
