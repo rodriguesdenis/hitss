@@ -275,7 +275,8 @@ describe('OpenTelemetry bootstrap', () => {
       durations[0]!.attributes.map((a) => [a.key, a.value]),
     );
     expect(attributes['http.request.method']).toEqual({ stringValue: 'GET' });
-    expect(attributes['http.route']).toEqual({ stringValue: '/ping' });
+    // The global prefix and version of setupApp() are part of the template: /api/v1/ping.
+    expect(attributes['http.route']).toEqual({ stringValue: '/api/v1/ping' });
     expect(attributes['http.response.status_code']).toEqual({ intValue: 200 });
 
     const exported = JSON.stringify(payloads);
