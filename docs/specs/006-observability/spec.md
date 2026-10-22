@@ -45,11 +45,11 @@ As an operator, I want every request traced from entry through the use case to t
 
 **Acceptance criteria**
 
-- **AC-06.2.1** Given the telemetry backend is running, when an authenticated user lists tasks, then exactly one trace is recorded containing an entry span named after the method and route template, a use-case span as its descendant, and at least one database span as a descendant of the use-case span.
+- **AC-06.2.1** Given the telemetry backend is running, when an authenticated user lists tasks, then exactly one trace is recorded containing an entry span named after the method and route template, a use-case span as its descendant, and at least one database span as a descendant of the use-case span. _Superseded by 008: the use-case span is gone; the HTTP and database spans remain (AC-08.7)._
 - **AC-06.2.2** Given a caller sends standard trace context, when the request is handled, then the recorded trace continues the caller's trace (same trace id).
 - **AC-06.2.3** Every response carries a request id; given the caller sent a well-formed request id, then the same value is returned; given none or a malformed one, then a new one is generated.
 - **AC-06.2.4** Given a request fails with an error envelope, then the envelope contains the trace id of that request's trace.
-- **AC-06.2.5** Spans never contain passwords, session tokens, authorization or cookie values, request or response bodies, email addresses, or database parameter values.
+- **AC-06.2.5** Spans never contain passwords, session tokens, authorization or cookie values, request or response bodies, email addresses, or database parameter values. _Superseded by 008: span sanitizing was removed; telemetry is off unless an endpoint is set (AC-08.7)._
 - **AC-06.2.6** All telemetry identifies the service as `teams-tasks-api`, with its version and deployment environment.
 
 ### US-06.3 — Structured, correlated, redacted logs (`COULD`)
@@ -73,11 +73,11 @@ As an operator, I want request rate, errors and duration per route plus business
 
 **Acceptance criteria**
 
-- **AC-06.4.1** Given requests are served, then their duration is recorded as a distribution dimensioned by method, route template and status code, from which rate, error rate and latency percentiles can be derived.
-- **AC-06.4.2** Given a task is created successfully, then the "tasks created" counter increases by exactly 1; given the same creation is replayed with the same idempotency key, then it does not increase again; given creation is rejected by validation, then it does not increase.
-- **AC-06.4.3** Given a task's status changes to Done, then the "tasks completed" counter increases by exactly 1; given the status is set to the value it already has, or changes between non-Done statuses, then it does not increase.
-- **AC-06.4.4** Metric dimensions never include user ids, emails, resource ids, search terms or raw URLs.
-- **AC-06.4.5** Given a task is deleted, then the "tasks deleted" counter increases by exactly 1.
+- **AC-06.4.1** Given requests are served, then their duration is recorded as a distribution dimensioned by method, route template and status code, from which rate, error rate and latency percentiles can be derived. _Superseded by 008: metrics are no longer exported (AC-08.7)._
+- **AC-06.4.2** Given a task is created successfully, then the "tasks created" counter increases by exactly 1; given the same creation is replayed with the same idempotency key, then it does not increase again; given creation is rejected by validation, then it does not increase. _Superseded by 008: task counters were removed (AC-08.7)._
+- **AC-06.4.3** Given a task's status changes to Done, then the "tasks completed" counter increases by exactly 1; given the status is set to the value it already has, or changes between non-Done statuses, then it does not increase. _Superseded by 008: task counters were removed (AC-08.7)._
+- **AC-06.4.4** Metric dimensions never include user ids, emails, resource ids, search terms or raw URLs. _Superseded by 008: metrics are no longer exported (AC-08.7)._
+- **AC-06.4.5** Given a task is deleted, then the "tasks deleted" counter increases by exactly 1. _Superseded by 008: task counters were removed (AC-08.7)._
 
 ### US-06.5 — Telemetry is optional at runtime (`COULD`, Constitution VII.2–3)
 
@@ -86,9 +86,9 @@ As an evaluator, I want the API to work normally when no telemetry backend is ru
 **Acceptance criteria**
 
 - **AC-06.5.1** Given no telemetry backend is reachable, when the API starts, then it becomes ready within its normal start-up time and serves requests with normal results.
-- **AC-06.5.2** Given the telemetry backend stops while the API is running, then requests keep succeeding with no added latency attributable to telemetry, and at most one telemetry-export warning is logged per minute.
+- **AC-06.5.2** Given the telemetry backend stops while the API is running, then requests keep succeeding with no added latency attributable to telemetry, and at most one telemetry-export warning is logged per minute. _Superseded by 008: the de-duplicated export warning was removed (AC-08.7)._
 - **AC-06.5.3** Given telemetry is disabled by configuration, then no telemetry is produced or exported, and logs are still written (without span ids).
-- **AC-06.5.4** Given the API receives a termination signal, then it stops accepting requests, flushes buffered telemetry for at most 5 seconds, and exits with code 0.
+- **AC-06.5.4** Given the API receives a termination signal, then it stops accepting requests, flushes buffered telemetry for at most 5 seconds, and exits with code 0. _Superseded by 008: telemetry is no longer flushed on shutdown; the process still exits with code 0 (AC-08.7)._
 - **AC-06.5.5** Given an invalid configuration value (e.g. malformed telemetry endpoint, unknown log level), when the API starts, then it exits with a non-zero code and a message naming the offending setting.
 
 ### US-06.6 — One-command local telemetry backend (`COULD`)
