@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
 import { APP_CONFIG, AppConfig } from './config/app-config';
+import { setupDocs } from './openapi/openapi-document';
 import { requestIdMiddleware } from './shared/observability/logging/request-id';
 import { corsOptions } from './shared/presentation/cors-options';
 import { GlobalExceptionFilter } from './shared/presentation/filters/global-exception.filter';
@@ -19,7 +20,8 @@ import { AppValidationPipe } from './shared/presentation/pipes/validation.pipe';
  *    all when the list is empty), before routing, so every response, 404s and parse errors
  *    included, carries them;
  * 5. `/api` prefix and URI versioning v1;
- * 6. validation pipe, `{ data }` envelope interceptor, `{ error }` exception filter.
+ * 6. validation pipe, `{ data }` envelope interceptor, `{ error }` exception filter;
+ * 7. `/docs` and `/docs/openapi.json`, only while DOCS_ENABLED (never in production).
  */
 export function setupApp<T extends INestApplication>(app: T): T {
   app.useLogger(app.get(Logger));
@@ -47,5 +49,9 @@ export function setupApp<T extends INestApplication>(app: T): T {
   app.useGlobalInterceptors(new EnvelopeInterceptor(app.get(Reflector)));
   // From the container: built with the domain-error registry and the pino logger.
   app.useGlobalFilters(app.get(GlobalExceptionFilter));
+  // Never in production: docsEnabled is already false there (toAppConfig).
+  if (config.docsEnabled) {
+    setupDocs(app);
+  }
   return app;
 }

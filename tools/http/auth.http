@@ -1,0 +1,37 @@
+### Auth requests (VS Code REST Client / JetBrains HTTP Client).
+### Run the sign-in request first; the token is reused below.
+@baseUrl = http://localhost:3000
+@demoEmail = demo@teams-tasks.dev
+# The documented demo password (README); the seed creates this account.
+@demoPassword = Demo@1234
+
+### Sign up (throwaway account)
+POST {{baseUrl}}/api/auth/sign-up/email
+Content-Type: application/json
+
+{
+  "name": "Http Evaluator",
+  "email": "http-{{$timestamp}}@example.test",
+  "password": "Evaluator@1234"
+}
+
+### Sign in as the demo user
+# @name signIn
+POST {{baseUrl}}/api/auth/sign-in/email
+Content-Type: application/json
+
+{
+  "email": "{{demoEmail}}",
+  "password": "{{demoPassword}}"
+}
+
+###
+@token = {{signIn.response.headers.set-auth-token}}
+
+### Get the session
+GET {{baseUrl}}/api/auth/get-session
+Authorization: Bearer {{token}}
+
+### Sign out
+POST {{baseUrl}}/api/auth/sign-out
+Authorization: Bearer {{token}}
