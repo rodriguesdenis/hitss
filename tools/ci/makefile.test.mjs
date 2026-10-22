@@ -22,7 +22,8 @@ const TARGETS = [
   'test-docker',
   'smoke',
 ];
-const PENDING = ['observability', 'observability-down', 'mobile', 'load'];
+/** Aliases for things that are not in the repository: `make help` must not advertise them. */
+const ABSENT = ['observability', 'observability-down', 'mobile', 'load'];
 
 const make = (...args) =>
   spawnSync('make', args, { cwd: root, encoding: 'utf8' });
@@ -86,17 +87,21 @@ describe('Makefile', { skip: !hasMake && 'make is not installed' }, () => {
     }
   });
 
-  it('AC-07.3.2 make help names the aliases that are not available yet', () => {
+  it('AC-07.3.2 make help lists only aliases that exist: nothing for the telemetry backend, Metro or k6', () => {
     const { stdout } = make('help');
-    assert.match(stdout, /not available yet/i);
-    for (const target of PENDING) assert.match(stdout, new RegExp(target));
+    assert.doesNotMatch(stdout, /not available yet/i);
+    for (const target of ABSENT) {
+      assert.doesNotMatch(stdout, new RegExp(`^\\s+${target}\\b`, 'm'));
+    }
+    const listed = [...stdout.matchAll(/^ {2}([a-z-]+) /gm)].map((m) => m[1]);
+    assert.deepEqual(listed.sort(), [...TARGETS].sort());
   });
 
-  it('AC-07.3.2 pending aliases are not defined as targets', () => {
-    for (const target of PENDING) {
+  it('AC-07.3.2 aliases for things that do not exist are not defined as targets', () => {
+    for (const target of ABSENT) {
       assert.ok(
         !new RegExp(`^${target}:`, 'm').test(makefile),
-        `${target} must not be a target yet`,
+        `${target} must not be a target`,
       );
     }
   });
