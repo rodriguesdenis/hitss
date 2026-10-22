@@ -512,13 +512,13 @@ describe('Better Auth at /api/auth (e2e)', () => {
       expect(response.status).toBe(413);
     });
 
-    it('urlencoded bodies are refused: JSON only (415)', async () => {
+    it('urlencoded bodies are not parsed: the probe sees no fields (400)', async () => {
       const response = await http()
         .post('/api/v1/probe')
         .type('form')
         .send('name=Platform');
 
-      expect(response.status).toBe(415);
+      expect(response.status).toBe(400);
     });
   });
 });

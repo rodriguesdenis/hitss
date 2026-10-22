@@ -38,12 +38,10 @@ tests {
 }
 
 docs {
-  The `Origin` header is required once a session cookie is present (Bruno keeps cookies between
-  requests): the API checks the origin of cookie-authenticated calls, and it must be one the API trusts
-  (`BETTER_AUTH_URL`), hence the separate `origin` variable.
-  The `Origin` header is required once a session cookie is present (Bruno keeps cookies between
-  requests): the API checks the origin of cookie-authenticated calls, and it must be one the API trusts
-  (`BETTER_AUTH_URL`), hence the separate `origin` variable.
+  The `Origin` header is required on the `/api/auth` calls once a session cookie is present (Bruno
+  keeps cookies between requests): Better Auth checks the origin of cookie-carrying calls, and it must
+  be one the API trusts (`BETTER_AUTH_URL`), hence the separate `origin` variable. The `/api/v1`
+  requests authenticate with the bearer token only (ADR-0020); a cookie is never used there.
   Set the `demoPassword` secret of the `local` environment to the documented demo password
   (README) before running. The token is saved to the `token` variable.
 }

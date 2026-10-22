@@ -50,10 +50,11 @@ describe('API documentation (e2e, T-001-13)', () => {
       security: unknown[];
       paths: Record<string, Record<string, { security?: unknown[] }>>;
     };
-    expect(Object.keys(document.components.securitySchemes)).toEqual(
-      expect.arrayContaining(['bearer', 'session-cookie']),
-    );
-    expect(document.security).toHaveLength(2);
+    // AC-08.2: Bearer only; no session-cookie scheme for the API routes.
+    expect(Object.keys(document.components.securitySchemes)).toEqual([
+      'bearer',
+    ]);
+    expect(document.security).toEqual([{ bearer: [] }]);
     expect(document.paths['/api/v1/health/live']?.get?.security).toEqual([]);
     expect(Object.keys(document.paths)).toEqual(
       expect.arrayContaining([
