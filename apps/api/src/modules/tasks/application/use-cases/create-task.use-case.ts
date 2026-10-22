@@ -9,7 +9,6 @@ import { TaskDescription } from '../../domain/value-objects/task-description.vo'
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import { TaskTeamIds } from '../../domain/value-objects/task-team-ids.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
-import { preciseUnknownTeams } from './shared/precise-unknown-teams';
 
 export interface CreateTaskInput {
   readonly ownerId: string;
@@ -46,19 +45,16 @@ export class CreateTaskUseCase {
       teamIds,
       now: this.clock.now(),
     });
-    const missing = await this.teams.findMissing(input.ownerId, teamIds.values);
-    if (missing.length > 0) {
-      throw new UnknownTeams(missing);
-    }
+    const unknown = (missing: string[]) => new UnknownTeams(missing);
+    await this.teams.assertAllLive(input.ownerId, teamIds.values, unknown);
     try {
       await this.tasks.insert(task);
     } catch (error) {
-      throw await preciseUnknownTeams(
-        error,
-        this.teams,
-        input.ownerId,
-        teamIds.values,
-      );
+      // A team deleted after the check: the FK violation carries no ids, so ask again (AC-03.1.6).
+      if (error instanceof UnknownTeams && error.teamIds.length === 0) {
+        await this.teams.assertAllLive(input.ownerId, teamIds.values, unknown);
+      }
+      throw error;
     }
     return task.id;
   }

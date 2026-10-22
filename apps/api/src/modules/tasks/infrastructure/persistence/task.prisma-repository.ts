@@ -13,9 +13,9 @@ const WITH_TEAMS = { teams: { select: { teamId: true } } } as const;
 /**
  * Write-side persistence of the Task aggregate: the tasks row and its task_teams links, always
  * written together in one transaction. Every statement filters by owner_id; reads only see
- * active rows. Unknown team ids are the application's check (TeamLookup.findMissing). A
+ * active rows. Unknown team ids are the application's check (TeamLookup.assertAllLive). A
  * violation of the task_teams team foreign key becomes UnknownTeams without ids (422, not 500);
- * the use case then asks TeamLookup again for the precise ids (preciseUnknownTeams). This
+ * the use case then asks TeamLookup again for the precise ids (TeamLookup.assertAllLive). This
  * repository never reads Team Management's tables.
  *
  * A team soft-deleted between the TeamLookup check and the write still satisfies the foreign key

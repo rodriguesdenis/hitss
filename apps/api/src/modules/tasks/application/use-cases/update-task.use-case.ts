@@ -8,7 +8,6 @@ import { TaskDescription } from '../../domain/value-objects/task-description.vo'
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import { TaskTeamIds } from '../../domain/value-objects/task-team-ids.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
-import { preciseUnknownTeams } from './shared/precise-unknown-teams';
 
 export interface UpdateTaskInput {
   readonly ownerId: string;
@@ -52,10 +51,8 @@ export class UpdateTaskUseCase {
       description: TaskDescription.create(input.description),
       dueDate: input.dueDate ? DueDate.create(input.dueDate) : null,
     };
-    const missing = await this.teams.findMissing(ownerId, teamIds.values);
-    if (missing.length > 0) {
-      throw new UnknownTeams(missing);
-    }
+    const unknown = (missing: string[]) => new UnknownTeams(missing);
+    await this.teams.assertAllLive(ownerId, teamIds.values, unknown);
 
     const now = this.clock.now();
     // Each method touches updatedAt only when it changes something; no short-circuit, all run.
@@ -70,12 +67,11 @@ export class UpdateTaskUseCase {
     try {
       await this.tasks.update(task);
     } catch (error) {
-      throw await preciseUnknownTeams(
-        error,
-        this.teams,
-        ownerId,
-        teamIds.values,
-      );
+      // A team deleted after the check: the FK violation carries no ids, so ask again (AC-03.1.6).
+      if (error instanceof UnknownTeams && error.teamIds.length === 0) {
+        await this.teams.assertAllLive(ownerId, teamIds.values, unknown);
+      }
+      throw error;
     }
   }
 }
