@@ -1,0 +1,20 @@
+meta {
+  name: Sign out
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/auth/sign-out
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+}

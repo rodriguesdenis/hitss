@@ -10,7 +10,7 @@ import { OwnerProbeModule } from './owner-probe.module';
 
 /**
  * The only public Nest routes (AC-01.5.4). `/api/auth/*` is served by Better Auth outside Nest
- * routing; the API docs join this list when DOCS_ENABLED gets its route.
+ * routing; `/docs` is served by Swagger outside Nest routing (docs.e2e-spec.ts).
  */
 const PUBLIC_ALLOWLIST = ['GET /api/v1/health/live'];
 
