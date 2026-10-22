@@ -59,14 +59,4 @@ export abstract class TaskReadModel {
     ownerId: string,
     criteria: ListTasksCriteria,
   ): Promise<Page<TaskRecord>>;
-
-  /**
-   * The number of the owner's active tasks assigned to each team, in one query. Every distinct
-   * requested id is a key: 0 when it has no active task or is unknown, foreign or malformed.
-   * A soft-deleted task keeps its links but never counts (AC-03.11.3).
-   */
-  abstract countByTeams(
-    ownerId: string,
-    teamIds: readonly string[],
-  ): Promise<ReadonlyMap<string, number>>;
 }

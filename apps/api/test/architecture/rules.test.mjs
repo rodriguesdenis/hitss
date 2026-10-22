@@ -360,12 +360,12 @@ const VIOLATIONS = [
   ],
   [
     'contexts-isolated',
-    'tasks.module imports teams.module (DI cycle risk, ADR-0002)',
+    'tasks imports a teams file at the module root that is neither its lookup service nor its module',
     {
-      'src/modules/tasks/tasks.module.ts': importOf('../teams/teams.module'),
-      'src/modules/teams/teams.module.ts': 'export {};\n',
+      'src/modules/tasks/tasks.module.ts': importOf('../teams/teams.helpers'),
+      'src/modules/teams/teams.helpers.ts': 'export {};\n',
     },
-    ['src/modules/tasks/tasks.module.ts', 'src/modules/teams/teams.module.ts'],
+    ['src/modules/tasks/tasks.module.ts', 'src/modules/teams/teams.helpers.ts'],
   ],
   [
     'not-to-dev-dep',
@@ -447,10 +447,18 @@ const COMPLIANT = {
     importOf('../domain/task') + importOf('@prisma/client'),
   'src/modules/tasks/presentation/controller.ts':
     importOf('../application/handler') + importOf('@nestjs/common'),
+  // ADR-0020: another module is reached only through its lookup service and its module.
+  'src/modules/teams/team-lookup.service.ts': 'export {};\n',
+  'src/modules/teams/teams.module.ts': importOf('./team-lookup.service'),
+  'src/modules/tasks/infrastructure/directory.ts': importOf(
+    '../../teams/team-lookup.service',
+  ),
   'src/modules/tasks/tasks.module.ts':
     importOf('./application/handler') +
     importOf('./infrastructure/repo') +
-    importOf('./presentation/controller'),
+    importOf('./infrastructure/directory') +
+    importOf('./presentation/controller') +
+    importOf('../teams/teams.module'),
   'src/modules/tasks/application/handler.spec.ts': importOf('./handler'),
   'src/modules/identity/auth.factory.ts': importOf('better-auth'),
   'src/modules/identity/identity.module.ts':

@@ -1,5 +1,5 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { Clock } from '../../../../../shared/application/ports/clock';
+import { Clock } from '../../../../../shared/domain/clock';
 import { TaskNotFound } from '../../../domain/task.errors';
 import { DueDate } from '../../../domain/value-objects/due-date';
 import { TaskReadModel } from '../../ports/task.read-model';

@@ -1,5 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
-import { Clock } from '../../../../../shared/application/ports/clock';
+import { Clock } from '../../../../../shared/domain/clock';
 import { DomainEventPublisher } from '../../../../../shared/application/ports/domain-event-publisher';
 import { IdGenerator } from '../../../../../shared/application/ports/id-generator';
 import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';

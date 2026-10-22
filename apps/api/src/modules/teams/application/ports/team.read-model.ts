@@ -3,8 +3,6 @@ import type {
   PageRequest,
   Sort,
 } from '../../../../shared/application/page';
-import type { TeamSummary } from '../../contracts/team-summary';
-import type { TeamView } from '../views/team.view';
 
 /** BR-02.10: the sortable fields; the default is `-createdAt`, ties are broken by id. */
 export const TEAM_SORT_FIELDS = ['name', 'createdAt', 'updatedAt'] as const;
@@ -18,9 +16,29 @@ export interface ListTeamsCriteria {
 }
 
 /**
- * Query side of Team Management (CQRS): views straight from SQL, never aggregates. Owner-scoped
- * and active teams only.
+ * A team as the read side returns it, for lists and for a single team. `taskCount` is the number
+ * of the owner's active tasks assigned to it, counted in the same SQL. The presenter serializes
+ * the dates.
  */
+export interface TeamView {
+  readonly id: string;
+  readonly name: string;
+  readonly colorHex: string;
+  readonly description: string | null;
+  readonly taskCount: number;
+  readonly version: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
+
+/** A live team as other modules may see it (TeamLookup). */
+export interface TeamSummary {
+  readonly id: string;
+  readonly name: string;
+  readonly colorHex: string;
+}
+
+/** Read side of Team Management: views straight from SQL, never aggregates. Owner-scoped. */
 export abstract class TeamReadModel {
   /** The owner's active team, or `null` when it is unknown, foreign or soft-deleted. */
   abstract findById(ownerId: string, id: string): Promise<TeamView | null>;
@@ -35,8 +53,8 @@ export abstract class TeamReadModel {
   ): Promise<Page<TeamView>>;
 
   /**
-   * The owner's live teams among `ids` (GetTeamSummariesQuery). Deleted, foreign, unknown and
-   * malformed ids are omitted, duplicates appear once, and no order is promised.
+   * The owner's live teams among `ids`. Deleted, foreign, unknown and malformed ids are omitted,
+   * duplicates appear once, and no order is promised.
    */
   abstract summaries(
     ownerId: string,
