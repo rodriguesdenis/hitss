@@ -24,6 +24,8 @@ import { pathToFileURL } from 'node:url';
 
 const MATRIX = 'docs/quality/traceability-matrix.md';
 const WAIVERS = 'tools/ci/traceability-waivers.json';
+/** Values of a task's `- **Status:**` line; anything else fails (an unknown value must not read as not done). */
+const TASK_STATUSES = ['todo', 'in-progress', 'done'];
 const PRIORITIES = ['must', 'should', 'could'];
 const KINDS = [
   'api',
@@ -88,6 +90,7 @@ export function loadModel(root) {
   const tasks = new Map();
   const taskTitle = new Map();
   const taskStatus = new Map();
+  const invalidStatus = new Map();
   const acTasks = new Map();
   const acScen = new Map();
 
@@ -155,8 +158,12 @@ export function loadModel(root) {
         tasks.set(current, new Set());
         continue;
       }
-      const status = /^- \*\*Status:\*\*\s*(\S+)/.exec(line);
-      if (current && status) taskStatus.set(current, status[1].toLowerCase());
+      const status = /^- \*\*Status:\*\*(.*)$/.exec(line);
+      if (current && status) {
+        const value = status[1].trim().toLowerCase();
+        if (TASK_STATUSES.includes(value)) taskStatus.set(current, value);
+        else invalidStatus.set(current, status[1].trim());
+      }
       if (current && line.startsWith('- **Covers:**')) {
         for (const ac of expandCovers(line)) {
           tasks.get(current).add(ac);
@@ -183,6 +190,7 @@ export function loadModel(root) {
     tasks,
     taskTitle,
     taskStatus,
+    invalidStatus,
     acTasks,
     acScen,
   };
@@ -710,7 +718,14 @@ export function validateWaivers(waivers) {
 export function checkTraceability(
   model,
   tests,
-  { committed, generated, baseTests, waivers = [], requireTests = false } = {},
+  {
+    committed,
+    generated,
+    baseTests,
+    waivers = [],
+    requireTests = false,
+    reportStaleWaivers = baseTests !== undefined || requireTests,
+  } = {},
 ) {
   const gaps = analyze(model);
   const failures = [];
@@ -737,6 +752,11 @@ export function checkTraceability(
   }
   for (const [task, ac] of gaps.taskAcNotInSpec) {
     failures.push(`${task} Covers: names ${ac}, which is not in a spec`);
+  }
+  for (const [task, value] of model.invalidStatus) {
+    failures.push(
+      `${task} has an unknown Status '${value}' in tasks.md: use todo, in-progress or done`,
+    );
   }
   failures.push(...validateWaivers(waivers));
   const usedWaivers = new Set();
@@ -781,13 +801,14 @@ export function checkTraceability(
       } else failures.push(message);
     }
   }
-  if (baseTests || requireTests) {
-    for (const waiver of Array.isArray(waivers) ? waivers : []) {
-      if (waiver?.ac && !usedWaivers.has(waiver.ac)) {
-        warnings.push(
-          `waiver for ${waiver.ac} is stale: that AC neither lost a test nor lacks one in a done task; remove it from ${WAIVERS}`,
-        );
-      }
+  for (const waiver of Array.isArray(waivers) ? waivers : []) {
+    if (!waiver?.ac) continue;
+    const hasTest = Boolean(tests.get(waiver.ac)?.size);
+    if (usedWaivers.has(waiver.ac)) continue;
+    if (reportStaleWaivers || hasTest) {
+      warnings.push(
+        `waiver for ${waiver.ac} is stale: that AC ${hasTest ? 'has a test now' : 'neither lost a test nor lacks one in a done task'}; remove it from ${WAIVERS}`,
+      );
     }
   }
   return { failures, warnings };
@@ -864,6 +885,8 @@ async function main() {
     baseTests,
     waivers,
     requireTests: process.argv.includes('--require-tests'),
+    // A waiver for a lost test only has a meaning while a pull request is compared with its base.
+    reportStaleWaivers: required && baseTests !== undefined,
   });
   const failures = [...baseFailures, ...result.failures];
   const { warnings } = result;

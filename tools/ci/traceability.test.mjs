@@ -329,6 +329,80 @@ describe('traceability model', () => {
     assert.equal(model.taskStatus.get('T-099-02'), undefined);
   });
 
+  describe('task Status values fail closed', () => {
+    const withStatus = (value) =>
+      loadModel(
+        repo({
+          'docs/specs/099-auth/tasks.md': TASKS.replace(
+            '## T-099-01 — First task\n',
+            `## T-099-01 — First task\n- **Status:** ${value}\n`,
+          ),
+        }),
+      );
+
+    it('AC-07.6.5 accepts todo, in-progress and done in any case', () => {
+      for (const value of ['todo', 'in-progress', 'done', 'Done', 'DONE']) {
+        const model = withStatus(value);
+        assert.deepEqual(
+          checkTraceability(model, new Map()).failures,
+          [],
+          value,
+        );
+      }
+      assert.equal(withStatus('Done').taskStatus.get('T-099-01'), 'done');
+    });
+
+    it('AC-07.6.5 fails an unknown value naming the task, instead of treating the task as not done', () => {
+      for (const value of ['finished', 'done.', 'done (merged)', 'wip', '']) {
+        const result = checkTraceability(withStatus(value), new Map());
+        assert.match(messages(result), /T-099-01.*Status/, `'${value}'`);
+        assert.match(messages(result), /todo, in-progress or done/);
+      }
+    });
+
+    it('AC-07.6.5 an unknown Status never silently counts as not done under --require-tests', () => {
+      const result = checkTraceability(withStatus('done.'), new Map(), {
+        requireTests: true,
+      });
+      assert.match(messages(result), /T-099-01/);
+    });
+  });
+
+  describe('stale waivers', () => {
+    const lostBase = new Map([
+      ['AC-99.1.1', new Set(['apps/api/src/a.spec.ts'])],
+    ]);
+
+    it('AC-07.6.5 a waiver whose AC now has a test is reported stale', () => {
+      const model = loadModel(repo());
+      const head = new Map([
+        ['AC-99.1.1', new Set(['apps/api/src/b.spec.ts'])],
+      ]);
+      const result = checkTraceability(model, head, {
+        baseTests: lostBase,
+        waivers: [{ ac: 'AC-99.1.1', reason: 'moved' }],
+      });
+      assert.ok(
+        result.warnings.some(
+          (w) => w.includes('AC-99.1.1') && w.includes('stale'),
+        ),
+      );
+    });
+
+    it('AC-07.6.5 stale waivers are not reported when there is no pull request base to compare with', () => {
+      const model = loadModel(repo());
+      const result = checkTraceability(model, new Map(), {
+        baseTests: new Map(),
+        reportStaleWaivers: false,
+        waivers: [{ ac: 'AC-99.1.1', reason: 'moved' }],
+      });
+      assert.deepEqual(
+        result.warnings.filter((w) => w.includes('stale')),
+        [],
+      );
+    });
+  });
+
   describe('--require-tests', () => {
     const done = (ids) =>
       ids.reduce(
