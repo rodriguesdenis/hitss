@@ -47,16 +47,8 @@ jobs:
       - run: pnpm turbo run lint typecheck
       - name: Architecture rules and their meta-tests
         run: pnpm arch
-      - name: Requirement traceability (gaps, stale matrix, tests lost since the base)
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          if [ -n "$BASE_SHA" ]; then git fetch --no-tags --depth=1 origin "$BASE_SHA"; fi
-          pnpm traceability:check
       - name: Makefile syntax (dry run of every alias)
         run: make -n help up down logs reset seed test test-all test-docker smoke
-      - name: README sections and relative links
-        run: pnpm doc-check
       - name: CI tooling tests
         run: pnpm test:tools
       - name: No tracked .env files
@@ -151,6 +143,28 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm turbo run build
+
+  # Not part of the required gate (ADR-0020, AC-08.8): process documents are checked here for
+  # information, and `pnpm traceability:check`, `pnpm doc-check` and `pnpm test:docs` run locally.
+  docs-checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Requirement traceability (gaps, stale matrix, tests lost since the base)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then git fetch --no-tags --depth=1 origin "$BASE_SHA"; fi
+          pnpm traceability:check
+      - name: README sections and relative links
+        run: pnpm doc-check
+      - name: Tests of the document checks
+        run: pnpm test:docs
 
   ci-success:
     if: always()
