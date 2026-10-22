@@ -116,6 +116,7 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 ## T-008-12 — Remove explanatory code comments
 
+- **Status:** done
 - **Goal:** code reads without commentary; the why lives in the ADRs and README (AC-08.12).
 - **Changes:** remove comments in `apps/api/src` and `apps/api/test` (and the module `tests/` folders), keeping only functional ones: `eslint-disable*`, `@ts-expect-error` / `@ts-ignore`, triple-slash directives and tool pragmas (`istanbul`, `prettier-ignore`, `webpackIgnore`-style). OpenAPI descriptions passed as decorator arguments are strings, not comments, and stay. A reasoning that only a comment held and that matters moves to the ADR, README or the operations docs in the same PR.
 - **Done when:** a check (script or grep in the PR description) shows no `//` or `/* */` comments beyond the allowed kinds; lint, typecheck, all test projects and `pnpm arch` green; no behaviour change.
