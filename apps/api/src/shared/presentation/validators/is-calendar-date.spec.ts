@@ -13,7 +13,7 @@ const errorsFor = async (dueDate: unknown) => {
 };
 
 describe('IsCalendarDate', () => {
-  it.each(['2026-10-31', '2020-01-15', '2028-02-29'])(
+  it.each(['2026-10-31', '2020-01-15', '2028-02-29', '0099-12-31'])(
     'AC-03.1.5 accepts the real date %s',
     async (value) => {
       expect(await errorsFor(value)).toEqual([]);
@@ -22,6 +22,7 @@ describe('IsCalendarDate', () => {
 
   it.each([
     '2026-02-29',
+    '0000-01-01',
     '2026-13-01',
     '2026-04-31',
     '31/10/2026',

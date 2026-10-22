@@ -14,7 +14,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
-import { IsCalendarDate } from '../validators/is-calendar-date';
+import { IsCalendarDate } from '../../../../../shared/presentation/validators/is-calendar-date';
 
 const CONTROL = /\p{Cc}/u;
 const CONTROL_EXCEPT_LINE_BREAK = /(?![\n\r])\p{Cc}/u;

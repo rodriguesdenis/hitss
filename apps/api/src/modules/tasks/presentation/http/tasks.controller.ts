@@ -11,7 +11,7 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
-import { ApiExtraModels, ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
+import { ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
 import type { ServerResponse } from 'node:http';
 import type { Owner } from '../../../../shared/domain/owner';
 import { CurrentOwner } from '../../../../shared/presentation/decorators/current-owner.decorator';
@@ -44,7 +44,6 @@ import { toTaskResponse } from './presenters/task.presenter';
 // Every route needs a bearer token and is rate limited.
 @ApiErrorResponses([401, 429])
 @Controller('tasks')
-@ApiExtraModels(TaskResponseDto)
 export class TasksController {
   constructor(
     private readonly createTask: CreateTaskUseCase,
