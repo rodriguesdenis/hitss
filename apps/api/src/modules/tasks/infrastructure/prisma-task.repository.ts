@@ -1,7 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '../../../generated/prisma/client';
-import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
 import type { PrismaTransactionHost } from '../../../shared/infrastructure/transactions/cls-unit-of-work';
 import { Task } from '../domain/task';
 import { TaskNotFound, UnknownTeams } from '../domain/task.errors';
@@ -75,30 +74,22 @@ export class PrismaTaskRepository extends TaskRepository {
     );
   }
 
-  async update(task: Task, expectedVersion: number): Promise<number> {
-    return this.withUnknownTeams(() => this.updateRow(task, expectedVersion));
+  async update(task: Task): Promise<void> {
+    return this.withUnknownTeams(() => this.updateRow(task));
   }
 
-  private updateRow(task: Task, expectedVersion: number): Promise<number> {
+  private updateRow(task: Task): Promise<void> {
     return this.transaction(async (tx) => {
       const { count } = await tx.task.updateMany({
         where: {
           id: task.id,
           ownerId: task.ownerId,
-          version: expectedVersion,
           deletedAt: null,
         },
         data: { ...TaskMapper.toUpdate(task), version: { increment: 1 } },
       });
       if (count === 0) {
-        // Nothing matched: tell a version conflict apart from a missing row.
-        const current = await tx.task.findFirst({
-          where: { id: task.id, ownerId: task.ownerId, deletedAt: null },
-          select: { version: true },
-        });
-        throw current
-          ? new ConcurrencyConflict(current.version)
-          : new TaskNotFound();
+        throw new TaskNotFound();
       }
       // Diff-sync the links: unchanged ones keep their row (and created_at).
       const teamIds = task.teamIds.values;
@@ -106,7 +97,6 @@ export class PrismaTaskRepository extends TaskRepository {
         where: { taskId: task.id, teamId: { notIn: teamIds } },
       });
       await this.addLinks(tx, task.id, teamIds);
-      return expectedVersion + 1;
     });
   }
 

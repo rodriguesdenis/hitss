@@ -29,13 +29,9 @@ export class ApiErrorBodyDto {
 
   @ApiPropertyOptional({
     description:
-      'Validation problems (400); `{ currentVersion }` on 412 PRECONDITION_FAILED; `{ max, received }` on 422 TOO_MANY_TEAMS; `{ teamIds }` on 422 UNKNOWN_TEAMS.',
+      'Validation problems (400); `{ max, received }` on 422 TOO_MANY_TEAMS; `{ teamIds }` on 422 UNKNOWN_TEAMS.',
     oneOf: [
       { type: 'array', items: { $ref: getSchemaPath(ApiValidationDetailDto) } },
-      {
-        type: 'object',
-        properties: { currentVersion: { type: 'integer', example: 2 } },
-      },
       {
         type: 'object',
         properties: {
@@ -51,7 +47,7 @@ export class ApiErrorBodyDto {
       },
     ],
   })
-  details?: ApiValidationDetailDto[] | { currentVersion: number };
+  details?: ApiValidationDetailDto[] | Record<string, unknown>;
 
   @ApiProperty({ description: 'Trace id to quote when reporting the error' })
   traceId!: string;
@@ -68,7 +64,6 @@ const DEFAULT_DESCRIPTIONS: Readonly<Record<number, string>> = {
   401: 'UNAUTHENTICATED: no valid session (bearer token or session cookie).',
   404: 'Not found: unknown, deleted, or owned by another user (never revealed which).',
   409: 'Conflict with the current state.',
-  412: 'PRECONDITION_FAILED: If-Match does not match the current version; `details.currentVersion`.',
   413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
   422: 'The request is well formed but cannot be applied.',
   429: 'RATE_LIMITED: too many requests; retry after `Retry-After` seconds.',

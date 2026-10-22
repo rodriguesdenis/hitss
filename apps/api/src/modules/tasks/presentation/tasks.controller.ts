@@ -10,7 +10,6 @@ import {
   Put,
   Query,
   Res,
-  UseInterceptors,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { ApiExtraModels, ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
@@ -27,7 +26,6 @@ import { ApiErrorResponses } from '../../../shared/presentation/openapi/api-erro
 import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
 import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
-import { EtagInterceptor } from '../../../shared/presentation/interceptors/etag.interceptor';
 import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
 import { ChangeTaskStatusCommand } from '../application/commands/change-task-status/change-task-status.command';
 import { CreateTaskCommand } from '../application/commands/create-task/create-task.command';
@@ -61,7 +59,6 @@ export class TasksController {
    * response), `Location` and the version tag (AC-03.1.1).
    */
   @Post()
-  @UseInterceptors(EtagInterceptor)
   @HttpCode(201)
   @ApiCreatedEnvelope(TaskResponseDto)
   @ApiErrorResponses({
@@ -91,7 +88,7 @@ export class TasksController {
       new GetTaskQuery(ownerId, id),
     );
     response.setHeader('Location', `/api/v1/tasks/${task.id}`);
-    return toTaskResponse(task); // ETag: EtagInterceptor
+    return toTaskResponse(task);
   }
 
   /**
@@ -131,7 +128,6 @@ export class TasksController {
 
   /** 200 with the task view and its version tag (AC-03.8.1); unknown → 404 TASK_NOT_FOUND. */
   @Get(':id')
-  @UseInterceptors(EtagInterceptor)
   @ApiOkEnvelope(TaskResponseDto)
   @ApiErrorResponses({
     400: 'VALIDATION_FAILED: `id` is not a UUID.',
@@ -144,7 +140,7 @@ export class TasksController {
     const task = await this.queries.execute<GetTaskQuery, TaskView>(
       new GetTaskQuery(ownerId, id),
     );
-    return toTaskResponse(task); // ETag: EtagInterceptor
+    return toTaskResponse(task);
   }
 
   /**
@@ -152,12 +148,10 @@ export class TasksController {
    * the unchanged task and the same tag (AC-03.10.3).
    */
   @Patch(':id/status')
-  @UseInterceptors(EtagInterceptor)
   @ApiOkEnvelope(TaskResponseDto)
   @ApiErrorResponses({
     400: 'VALIDATION_FAILED: `id` is not a UUID, `status` is missing or invalid, or another field is sent.',
     404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
-    412: 'PRECONDITION_FAILED: rare; a concurrent write won twice in a row (the server retries once). Reload and retry; `details.currentVersion`.',
     413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
   })
   async changeStatus(
@@ -171,7 +165,7 @@ export class TasksController {
     const task = await this.queries.execute<GetTaskQuery, TaskView>(
       new GetTaskQuery(ownerId, id),
     );
-    return toTaskResponse(task); // ETag: EtagInterceptor
+    return toTaskResponse(task);
   }
 
   /**
@@ -179,12 +173,10 @@ export class TasksController {
    * replacement is a no-op: the unchanged task and the same tag (AC-03.9.5).
    */
   @Put(':id')
-  @UseInterceptors(EtagInterceptor)
   @ApiOkEnvelope(TaskResponseDto)
   @ApiErrorResponses({
     400: 'VALIDATION_FAILED: an invalid or unknown field, or `id` not a UUID; `details` names it.',
     404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which); wins over 422.',
-    412: 'PRECONDITION_FAILED: rare; a concurrent write won twice in a row (the server retries once). Reload and retry; `details.currentVersion`.',
     413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
     422: 'TOO_MANY_TEAMS (`details: { max, received }`, more than 10 distinct teams) or UNKNOWN_TEAMS (`details: { teamIds }`, the ids that are not your live teams).',
   })
@@ -207,7 +199,7 @@ export class TasksController {
     const task = await this.queries.execute<GetTaskQuery, TaskView>(
       new GetTaskQuery(ownerId, id),
     );
-    return toTaskResponse(task); // ETag: EtagInterceptor
+    return toTaskResponse(task);
   }
 
   /** 204 with no content; afterwards every read and write of the task → 404 (AC-03.11.1). */
@@ -217,7 +209,6 @@ export class TasksController {
   @ApiErrorResponses({
     400: 'VALIDATION_FAILED: `id` is not a UUID.',
     404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
-    412: 'PRECONDITION_FAILED: rare; a concurrent write won twice in a row (the server retries once). Reload and retry; `details.currentVersion`.',
   })
   async delete(
     @CurrentOwner() { ownerId }: Owner,

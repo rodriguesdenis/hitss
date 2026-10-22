@@ -1,6 +1,5 @@
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
-import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import { TaskNotFound } from '../../../domain/task.errors';
 import { TaskRepository } from '../../../domain/task.repository';
 import { ChangeTaskStatusCommand } from './change-task-status.command';
@@ -21,16 +20,7 @@ export class ChangeTaskStatusHandler implements ICommandHandler<
     private readonly events: EventBus,
     private readonly clock: Clock,
   ) {}
-  async execute(command: ChangeTaskStatusCommand): Promise<{ id: string }> {
-    try {
-      return await this.attempt(command);
-    } catch (error) {
-      if (!(error instanceof ConcurrencyConflict)) throw error;
-      return this.attempt(command);
-    }
-  }
-
-  private async attempt({
+  async execute({
     ownerId,
     id,
     status,
@@ -40,7 +30,7 @@ export class ChangeTaskStatusHandler implements ICommandHandler<
       throw new TaskNotFound();
     }
     if (task.changeStatus(status, this.clock.now())) {
-      await this.tasks.update(task, task.version);
+      await this.tasks.update(task);
       this.events.publishAll(task.pullEvents());
     }
     return { id: task.id };

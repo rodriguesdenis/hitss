@@ -2,9 +2,7 @@ import { InMemoryTeamRepository } from '../../../../../../test/support/in-memory
 import { Clock } from '../../../../../shared/application/ports/clock';
 import { DomainEventPublisher } from '../../../../../shared/application/ports/domain-event-publisher';
 import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
-import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import type { DomainEvent } from '../../../../../shared/domain/domain-event';
-import { ExpectedVersion } from '../../../../../shared/domain/expected-version';
 import { Team } from '../../../domain/team';
 import { TeamNotFound } from '../../../domain/team.errors';
 import { TeamDeleted } from '../../../domain/team.events';
@@ -90,14 +88,11 @@ describe('DeleteTeamHandler', () => {
     );
   });
 
-  const remove = (
-    expected = ExpectedVersion.any(),
-    ownerId = MARINA,
-    id = ID,
-  ) => handler.execute(new DeleteTeamCommand(ownerId, id, expected));
+  const remove = (ownerId = MARINA, id = ID) =>
+    handler.execute(new DeleteTeamCommand(ownerId, id));
 
   it('AC-02.7.1 AC-02.9.1 soft-deletes the team, publishes TeamDeleted in the transaction, then after commit', async () => {
-    await remove(ExpectedVersion.exact(1));
+    await remove();
 
     expect(await repository.findById(MARINA, ID)).toBeNull();
     expect(repository.all()[0]?.deletedAt).toEqual(LATER);
@@ -122,11 +117,9 @@ describe('DeleteTeamHandler', () => {
     ['unknown', MARINA, '00000000-0000-4000-8000-000000000099'],
     ['foreign', 'owner-rafael', ID],
   ])(
-    'AC-02.9.8 a %s team → 404 whatever the If-Match, nothing published',
+    'AC-02.9.8 a %s team → 404, nothing published',
     async (_label, ownerId, id) => {
-      await expect(
-        remove(ExpectedVersion.exact(7), ownerId, id),
-      ).rejects.toBeInstanceOf(TeamNotFound);
+      await expect(remove(ownerId, id)).rejects.toBeInstanceOf(TeamNotFound);
       expect(publisher.inTransaction).toEqual([]);
     },
   );
@@ -135,22 +128,5 @@ describe('DeleteTeamHandler', () => {
     await remove();
 
     await expect(remove()).rejects.toBeInstanceOf(TeamNotFound);
-  });
-
-  it('AC-02.9.3 a stale If-Match → 412, the team kept', async () => {
-    await expect(remove(ExpectedVersion.exact(2))).rejects.toEqual(
-      new ConcurrencyConflict(1),
-    );
-    expect(await repository.findById(MARINA, ID)).not.toBeNull();
-  });
-
-  it('AC-02.9.4 without If-Match a lost race is retried once', async () => {
-    const update = jest.spyOn(repository, 'update');
-    update.mockRejectedValueOnce(new ConcurrencyConflict(2));
-
-    await remove();
-
-    expect(update).toHaveBeenCalledTimes(2);
-    expect(await repository.findById(MARINA, ID)).toBeNull();
   });
 });

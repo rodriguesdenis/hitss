@@ -1,6 +1,5 @@
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
-import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import { TaskNotFound } from '../../../domain/task.errors';
 import { TaskRepository } from '../../../domain/task.repository';
 import { DeleteTaskCommand } from './delete-task.command';
@@ -21,22 +20,13 @@ export class DeleteTaskHandler implements ICommandHandler<
     private readonly events: EventBus,
     private readonly clock: Clock,
   ) {}
-  async execute(command: DeleteTaskCommand): Promise<void> {
-    try {
-      await this.attempt(command);
-    } catch (error) {
-      if (!(error instanceof ConcurrencyConflict)) throw error;
-      await this.attempt(command);
-    }
-  }
-
-  private async attempt({ ownerId, id }: DeleteTaskCommand): Promise<void> {
+  async execute({ ownerId, id }: DeleteTaskCommand): Promise<void> {
     const task = await this.tasks.findById(ownerId, id);
     if (!task) {
       throw new TaskNotFound();
     }
     task.delete(this.clock.now());
-    await this.tasks.update(task, task.version);
+    await this.tasks.update(task);
     this.events.publishAll(task.pullEvents());
   }
 }

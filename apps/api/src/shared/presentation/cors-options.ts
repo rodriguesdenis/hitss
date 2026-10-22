@@ -1,9 +1,8 @@
 import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 
-/** Response headers the mobile app and web clients read (ETag, Location, auth token, …). */
+/** Response headers the mobile app and web clients read (Location, auth token, …). */
 export const EXPOSED_HEADERS = [
   'set-auth-token',
-  'ETag',
   'Location',
   'X-Request-Id',
   'Retry-After',
@@ -19,7 +18,6 @@ export const EXPOSED_HEADERS = [
 export const ALLOWED_HEADERS = [
   'Content-Type',
   'Authorization',
-  'If-Match',
   'Idempotency-Key',
   'X-Request-Id',
 ];

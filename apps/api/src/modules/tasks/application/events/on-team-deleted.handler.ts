@@ -23,7 +23,7 @@ export class OnTeamDeletedHandler implements InTransactionEventHandler<TeamDelet
     await this.tasks.lockTeamLinks([teamId]);
     for (const task of await this.tasks.findByTeam(ownerId, teamId)) {
       if (task.unassignTeam(teamId, occurredAt)) {
-        await this.tasks.update(task, task.version);
+        await this.tasks.update(task);
       }
     }
   }

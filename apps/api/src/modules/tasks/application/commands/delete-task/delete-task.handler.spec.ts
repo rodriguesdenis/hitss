@@ -1,7 +1,6 @@
 import { EventBus } from '@nestjs/cqrs';
 import { InMemoryTaskRepository } from '../../../../../../test/support/in-memory-task.repository';
 import { Clock } from '../../../../../shared/application/ports/clock';
-import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import { Task } from '../../../domain/task';
 import { TaskDeleted } from '../../../domain/task.events';
 import { TaskNotFound } from '../../../domain/task.errors';
@@ -67,16 +66,5 @@ describe('DeleteTaskHandler', () => {
   it("AC-03.12.1 another user's task → TaskNotFound and it stays active", async () => {
     await expect(remove('someone-else')).rejects.toBeInstanceOf(TaskNotFound);
     expect(tasks.all()[0]?.deletedAt).toBeNull();
-  });
-
-  it('reloads and reapplies once when a concurrent write wins', async () => {
-    const update = jest
-      .spyOn(tasks, 'update')
-      .mockRejectedValueOnce(new ConcurrencyConflict(2));
-
-    await remove();
-
-    expect(update).toHaveBeenCalledTimes(2);
-    expect(tasks.all()[0]?.deletedAt).toEqual(NOW);
   });
 });

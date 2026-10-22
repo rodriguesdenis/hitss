@@ -1,9 +1,4 @@
 import { AggregateRoot } from '../../../shared/domain/aggregate-root';
-import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
-import {
-  ExpectedVersion,
-  matchesVersion,
-} from '../../../shared/domain/expected-version';
 import { DueDate } from './value-objects/due-date';
 import { TaskCreated, TaskDeleted, TaskStatusChanged } from './task.events';
 import { TaskDescription } from './value-objects/task-description';
@@ -34,9 +29,9 @@ export interface TaskEdit {
 
 /**
  * Task aggregate root. Each change method returns whether anything changed
- * and then touches `updatedAt`; persistence increments `version` with a
- * guarded `UPDATE … SET version = version + 1 WHERE version = expected`
- * (ADR-0015). A no-op returns `false` and changes nothing (BR-03.12).
+ * and then touches `updatedAt`; persistence increments `version` on every
+ * write and keeps it as data (last write wins, ADR-0020). A no-op returns
+ * `false` and changes nothing (BR-03.12).
  */
 export class Task extends AggregateRoot {
   private constructor(private props: TaskProps) {
@@ -192,12 +187,6 @@ export class Task extends AggregateRoot {
     }
     this.props = { ...this.props, deletedAt: new Date(now) };
     this.raise(new TaskDeleted(this.props.id, new Date(now)));
-  }
-
-  assertVersion(expected: ExpectedVersion): void {
-    if (!matchesVersion(expected, this.props.version)) {
-      throw new ConcurrencyConflict(this.props.version);
-    }
   }
 
   /** Records a change time; the version is incremented by persistence. */

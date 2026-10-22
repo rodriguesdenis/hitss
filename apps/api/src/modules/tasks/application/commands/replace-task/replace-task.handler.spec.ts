@@ -3,7 +3,6 @@ import { InMemoryTeamDirectory } from '../../../../../../test/support/in-memory-
 import { Clock } from '../../../../../shared/application/ports/clock';
 import { DomainEventPublisher } from '../../../../../shared/application/ports/domain-event-publisher';
 import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
-import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import { Task } from '../../../domain/task';
 import { TaskStatusChanged } from '../../../domain/task.events';
 import {
@@ -161,17 +160,6 @@ describe('ReplaceTaskHandler', () => {
     expect((error as UnknownTeams).teamIds).toEqual([never]);
     expect(stored()?.version).toBe(1);
     expect(stored()?.teamIds.values).toEqual([MOBILE, BACKEND].sort());
-  });
-
-  it('a write lost to a concurrent one is reloaded and reapplied once', async () => {
-    const update = jest
-      .spyOn(tasks, 'update')
-      .mockRejectedValueOnce(new ConcurrencyConflict(2));
-
-    await replace({ title: 'Final' });
-
-    expect(update).toHaveBeenCalledTimes(2);
-    expect(stored()?.title.value).toBe('Final');
   });
 
   it('AC-03.9.3 a team gone between the check and the write (FK violation) → UnknownTeams with its id, nothing changed', async () => {

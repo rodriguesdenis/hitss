@@ -30,7 +30,6 @@ describe('corsOptions', () => {
     expect(ALLOWED_HEADERS.map((header) => header.toLowerCase())).toEqual([
       'content-type',
       'authorization',
-      'if-match',
       'idempotency-key',
       'x-request-id',
     ]);
@@ -47,7 +46,6 @@ describe('corsOptions', () => {
   it('exposes the headers the app reads', () => {
     expect(EXPOSED_HEADERS).toEqual([
       'set-auth-token',
-      'ETag',
       'Location',
       'X-Request-Id',
       'Retry-After',

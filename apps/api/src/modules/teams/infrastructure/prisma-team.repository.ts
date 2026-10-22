@@ -1,6 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma/client';
-import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
 import type { PrismaTransactionHost } from '../../../shared/infrastructure/transactions/cls-unit-of-work';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { Team } from '../domain/team';
@@ -66,30 +65,17 @@ export class PrismaTeamRepository extends TeamRepository {
     }
   }
 
-  async update(team: Team, expectedVersion: number): Promise<number> {
+  async update(team: Team): Promise<void> {
     let count: number;
     try {
       ({ count } = await this.prisma.team.updateMany({
-        where: {
-          id: team.id,
-          ownerId: team.ownerId,
-          version: expectedVersion,
-          deletedAt: null,
-        },
+        where: { id: team.id, ownerId: team.ownerId, deletedAt: null },
         data: { ...TeamMapper.toUpdate(team), version: { increment: 1 } },
       }));
     } catch (error) {
       throw translateNameCollision(error);
     }
-    if (count === 1) return expectedVersion + 1;
-
-    // Nothing matched: tell a version conflict apart from a missing row.
-    const current = await this.prisma.team.findFirst({
-      where: { id: team.id, ownerId: team.ownerId, deletedAt: null },
-      select: { version: true },
-    });
-    if (!current) throw new TeamNotFound();
-    throw new ConcurrencyConflict(current.version);
+    if (count === 0) throw new TeamNotFound();
   }
 }
 

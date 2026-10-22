@@ -1,5 +1,3 @@
-import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
-import { ExpectedVersion } from '../../../shared/domain/expected-version';
 import { DueDate } from './value-objects/due-date';
 import { TaskCreated, TaskDeleted, TaskStatusChanged } from './task.events';
 import { isOverdue } from './overdue.policy';
@@ -281,30 +279,6 @@ describe('Task', () => {
       expect(iso(task.deletedAt)).toBe(NOW);
       expect(task.pullEvents()).toStrictEqual([]);
     });
-  });
-
-  describe('assertVersion', () => {
-    it.each([ExpectedVersion.any(), ExpectedVersion.exact(3)])(
-      'accepts %j',
-      (expected) => {
-        expect(() => stored().assertVersion(expected)).not.toThrow();
-      },
-    );
-
-    it.each([ExpectedVersion.exact(2), ExpectedVersion.unmatchable()])(
-      'rejects %j with the current version',
-      (expected) => {
-        let error: unknown;
-        try {
-          stored().assertVersion(expected);
-        } catch (e) {
-          error = e;
-        }
-
-        expect(error).toBeInstanceOf(ConcurrencyConflict);
-        expect(error).toMatchObject({ currentVersion: 3 });
-      },
-    );
   });
 
   it('AC-03.14.3 reopening a late Done task makes it overdue', () => {

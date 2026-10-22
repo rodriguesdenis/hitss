@@ -8,10 +8,3 @@ export abstract class DomainError extends Error {
     this.name = new.target.name;
   }
 }
-
-/** The expected version (`If-Match`) does not match the current one (ADR-0015). */
-export class ConcurrencyConflict extends DomainError {
-  constructor(readonly currentVersion: number) {
-    super(`The resource was modified (current version ${currentVersion}).`);
-  }
-}

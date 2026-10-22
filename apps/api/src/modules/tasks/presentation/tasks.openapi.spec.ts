@@ -41,20 +41,15 @@ describe('Tasks in the OpenAPI document', () => {
       'put',
       '/api/v1/tasks/{id}',
       '200',
-      ['400', '401', '404', '412', '413', '422', '429'],
+      ['400', '401', '404', '413', '422', '429'],
     ],
     [
       'patch',
       '/api/v1/tasks/{id}/status',
       '200',
-      ['400', '401', '404', '412', '413', '429'],
+      ['400', '401', '404', '413', '429'],
     ],
-    [
-      'delete',
-      '/api/v1/tasks/{id}',
-      '204',
-      ['400', '401', '404', '412', '429'],
-    ],
+    ['delete', '/api/v1/tasks/{id}', '204', ['400', '401', '404', '429']],
   ] as const)(
     'AC-03.1.1 %s %s documents its %s and exactly the error responses %j with the shared { error } schema',
     async (method, path, success, errors) => {

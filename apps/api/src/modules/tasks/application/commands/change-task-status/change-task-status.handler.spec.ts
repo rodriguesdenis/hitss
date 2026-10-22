@@ -1,7 +1,6 @@
 import { EventBus } from '@nestjs/cqrs';
 import { InMemoryTaskRepository } from '../../../../../../test/support/in-memory-task.repository';
 import { Clock } from '../../../../../shared/application/ports/clock';
-import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import { Task } from '../../../domain/task';
 import { TaskStatusChanged } from '../../../domain/task.events';
 import { TaskNotFound } from '../../../domain/task.errors';
@@ -96,17 +95,5 @@ describe('ChangeTaskStatusHandler', () => {
       change(TaskStatus.DONE, 'someone-else'),
     ).rejects.toBeInstanceOf(TaskNotFound);
     expect(stored()?.version).toBe(1);
-  });
-
-  it('reloads and reapplies once when a concurrent write wins (last write wins)', async () => {
-    seed(TaskStatus.PENDING);
-    const update = jest
-      .spyOn(tasks, 'update')
-      .mockRejectedValueOnce(new ConcurrencyConflict(2));
-
-    await change(TaskStatus.DONE);
-
-    expect(update).toHaveBeenCalledTimes(2);
-    expect(stored()?.status).toBe(TaskStatus.DONE);
   });
 });

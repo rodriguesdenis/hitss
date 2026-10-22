@@ -98,7 +98,7 @@ describe('CreateTeamHandler', () => {
     const { id } = await create(MARINA, 'Mobile');
     const deleted = await repository.findById(MARINA, id);
     deleted?.delete(NOW);
-    await repository.update(deleted!, 1);
+    await repository.update(deleted!);
 
     await expect(create(MARINA, 'Mobile')).resolves.toEqual({
       id: expect.any(String) as string,

@@ -1,6 +1,4 @@
-import type { ExpectedVersion } from '../../../../../shared/domain/expected-version';
-
-/** Full replacement of one of the owner's teams (AC-02.6.x), guarded by `If-Match` (AC-02.9.x). */
+/** Full replacement of one of the owner's teams (AC-02.6.x); last write wins (ADR-0020). */
 export class ReplaceTeamCommand {
   constructor(
     readonly ownerId: string,
@@ -8,6 +6,5 @@ export class ReplaceTeamCommand {
     readonly name: string,
     readonly colorHex: string,
     readonly description: string | null | undefined,
-    readonly expected: ExpectedVersion,
   ) {}
 }
