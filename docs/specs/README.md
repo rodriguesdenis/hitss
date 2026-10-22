@@ -13,15 +13,16 @@ A task is **Ready** when its spec, scenarios and plan are approved. It is **Done
 
 ## Index
 
-| Spec                                           | Epic                                     | Scope                                                                    |
-| ---------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
-| [001-auth](001-auth/spec.md)                   | EP-01 Identity & Access                  | Sign up / sign in / sign out, sessions, route protection, ownership      |
-| [002-teams](002-teams/spec.md)                 | EP-02 Team Management                    | Team CRUD, listing with metadata                                         |
-| [003-tasks](003-tasks/spec.md)                 | EP-03 Task Management                    | Task CRUD, status, multi-team assignment, filters/search/sort/pagination |
-| [004-mobile-app](004-mobile-app/spec.md)       | EP-04 Mobile Experience                  | Screens, navigation, forms, chips, theming, a11y, i18n                   |
-| [005-offline-sync](005-offline-sync/spec.md)   | EP-05 Offline & Responsiveness           | Offline cache, optimistic updates, mutation queue                        |
-| [006-observability](006-observability/spec.md) | EP-06 Observability & Operations         | Traces, metrics, logs, health, load test                                 |
-| [007-ci-and-dx](007-ci-and-dx/spec.md)         | EP-07 Quality, CI & Developer Experience | Docker one-command run, seeds, CI, architecture rules, contract drift    |
+| Spec                                             | Epic                                     | Scope                                                                                               |
+| ------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [001-auth](001-auth/spec.md)                     | EP-01 Identity & Access                  | Sign up / sign in / sign out, sessions, route protection, ownership                                 |
+| [002-teams](002-teams/spec.md)                   | EP-02 Team Management                    | Team CRUD, listing with metadata                                                                    |
+| [003-tasks](003-tasks/spec.md)                   | EP-03 Task Management                    | Task CRUD, status, multi-team assignment, filters/search/sort/pagination                            |
+| [004-mobile-app](004-mobile-app/spec.md)         | EP-04 Mobile Experience                  | Screens, navigation, forms, chips, theming, a11y, i18n                                              |
+| [005-offline-sync](005-offline-sync/spec.md)     | EP-05 Offline & Responsiveness           | Offline cache, optimistic updates, mutation queue                                                   |
+| [006-observability](006-observability/spec.md)   | EP-06 Observability & Operations         | Traces, metrics, logs, health, load test                                                            |
+| [007-ci-and-dx](007-ci-and-dx/spec.md)           | EP-07 Quality, CI & Developer Experience | Docker one-command run, seeds, CI, architecture rules, contract drift                               |
+| [008-simplification](008-simplification/spec.md) | ADR-0020                                 | Simplify the backend for the hiring test: Bearer-only, no CQRS/CLS/ETag, slim telemetry, fewer docs |
 
 ## ID conventions
 

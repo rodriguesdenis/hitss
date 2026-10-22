@@ -8,12 +8,12 @@ Brief requirement → epic → story (priority) → acceptance criteria → scen
 
 | Metric                                           | Value           |
 | ------------------------------------------------ | --------------- |
-| Specs / stories / acceptance criteria            | 7 / 76 / 401    |
+| Specs / stories / acceptance criteria            | 8 / 76 / 401    |
 | Scenarios                                        | 456             |
 | `MUST` ACs (with scenario / with task / total)   | 225 / 225 / 225 |
 | `SHOULD` ACs (with scenario / with task / total) | 38 / 38 / 38    |
 | `COULD` ACs (with scenario / with task / total)  | 138 / 138 / 138 |
-| Tasks                                            | 116             |
+| Tasks                                            | 125             |
 
 ## Gaps and findings
 
@@ -874,3 +874,5 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 | AC-07.10.2 | `ci-and-dx.feature` › Commit and pull-request conventions are enforced › The local hook rejects bad messages and formats staged files       | ci/compose-smoke | T-007-03 |
 | AC-07.10.3 | `ci-and-dx.feature` › Commit and pull-request conventions are enforced › Pull requests start from the template and protection is documented | review           | T-007-03 |
 | AC-07.10.4 | `ci-and-dx.feature` › Commit and pull-request conventions are enforced › Pull requests start from the template and protection is documented | review           | T-007-15 |
+
+### 008-simplification
