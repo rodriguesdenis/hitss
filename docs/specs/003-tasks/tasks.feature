@@ -372,7 +372,7 @@ Feature: Task management
         | Alpha   | PENDING     |            | 2026-10-02T10:00:00Z | 2026-10-02T10:00:00Z |
         | charlie | IN_PROGRESS | 2026-10-21 | 2026-10-03T10:00:00Z | 2026-10-04T10:00:00Z |
         | Delta   | PENDING     | 2026-10-21 | 2026-10-04T10:00:00Z | 2026-10-06T10:00:00Z |
-        | echo    | PENDING     |            | 2026-10-05T10:00:00Z | 2026-10-03T10:00:00Z |
+        | echo    | PENDING     |            | 2026-10-05T10:00:00Z | 2026-10-05T11:00:00Z |
 
     @US-03.6 @AC-03.6.1 @AC-03.6.2 @AC-03.6.3 @must
     Scenario Outline: Sort by an allowed field
@@ -384,7 +384,7 @@ Feature: Task management
         |            | echo, Delta, charlie, Alpha, bravo         |
         | -createdAt | echo, Delta, charlie, Alpha, bravo         |
         | createdAt  | bravo, Alpha, charlie, Delta, echo         |
-        | -updatedAt | Delta, bravo, charlie, echo, Alpha         |
+        | -updatedAt | Delta, echo, bravo, charlie, Alpha         |
         | title      | Alpha, bravo, charlie, Delta, echo         |
         | -title     | echo, Delta, charlie, bravo, Alpha         |
         | dueDate    | charlie or Delta (tie), the other, bravo, then Alpha and echo (no due date) |
