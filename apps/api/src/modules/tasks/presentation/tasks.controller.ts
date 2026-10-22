@@ -4,6 +4,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Res,
 } from '@nestjs/common';
@@ -18,9 +19,11 @@ import type { Owner } from '../../../shared/domain/owner';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
 import { ApiOkEnvelope } from '../../../shared/presentation/openapi/api-envelope';
 import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
+import { ChangeTaskStatusCommand } from '../application/commands/change-task-status/change-task-status.command';
 import { CreateTaskCommand } from '../application/commands/create-task/create-task.command';
 import { GetTaskQuery } from '../application/queries/get-task/get-task.query';
 import type { TaskView } from '../application/views/task.view';
+import { ChangeTaskStatusDto } from './dto/change-task-status.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { TaskResponseDto } from './dto/task.response.dto';
 import { toTaskResponse } from './task.presenter';
@@ -82,6 +85,29 @@ export class TasksController {
     @Param('id', ParseUuidPipe) id: string,
     @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<TaskResponseDto> {
+    const task = await this.queries.execute<GetTaskQuery, TaskView>(
+      new GetTaskQuery(ownerId, id),
+    );
+    // Until the shared EtagInterceptor (T-002-07) takes over, in the same W/"<version>" form.
+    response.setHeader('ETag', `W/"${task.version}"`);
+    return toTaskResponse(task);
+  }
+
+  /**
+   * 200 with the task read back and its version tag (AC-03.10.1). The same status is a no-op:
+   * the unchanged task and the same tag (AC-03.10.3).
+   */
+  @Patch(':id/status')
+  @ApiOkEnvelope(TaskResponseDto)
+  async changeStatus(
+    @CurrentOwner() { ownerId }: Owner,
+    @Param('id', ParseUuidPipe) id: string,
+    @Body() body: ChangeTaskStatusDto,
+    @Res({ passthrough: true }) response: ServerResponse,
+  ): Promise<TaskResponseDto> {
+    await this.commands.execute<ChangeTaskStatusCommand, { id: string }>(
+      new ChangeTaskStatusCommand(ownerId, id, body.status),
+    );
     const task = await this.queries.execute<GetTaskQuery, TaskView>(
       new GetTaskQuery(ownerId, id),
     );
