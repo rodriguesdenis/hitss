@@ -2,22 +2,23 @@
 
 Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth config, Prisma, HTTP conventions, security baseline, identity schema, auth and CSRF guards, `CurrentOwner`, two-user helper). Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi). Cross-context collaboration uses only the `QueryBus`, the in-transaction event publisher and each module's `contracts/` folder ([ADR-0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md)). The order below lets each PR ship a working, tested increment.
 
-| ID        | Task                                                                                              | Depends on          | Size | Branch                          |
-| --------- | ------------------------------------------------------------------------------------------------- | ------------------- | ---- | ------------------------------- |
-| T-002-01  | Prisma `Team` model and migration with partial indexes                                            | T-001-05            | S    | `feat/002-team-schema`          |
-| T-002-02  | Domain: `TeamName`, `ColorHex`, `TeamDescription`, `Team` aggregate, `TeamDeleted`, errors        | —                   | M    | `feat/002-team-domain`          |
-| T-002-03  | `TeamRepository` port + Prisma adapter + mapper, with integration tests                           | T-002-01, T-002-02  | M    | `feat/002-team-repository`      |
-| T-002-04  | `CreateTeam` command + `POST /teams` + DTOs + read-back `GetTeam` view                            | T-002-03, T-001-09  | M    | `feat/002-create-team`          |
-| T-002-05  | Idempotency keys (shared): table, store, interceptor on `POST /teams`                             | T-002-04            | M    | `feat/002-idempotency-keys`     |
-| T-002-06a | List teams, data side: page types, LIKE escape, `TeamReadModel.page` + Prisma adapter             | T-002-04            | S    | `feat/002-team-list-read-model` |
-| T-002-06b | List teams, endpoint: `ListTeams` query, DTOs, sort parser, page envelope, e2e                    | 06a, T-002-04       | S    | `feat/002-list-teams`           |
-| T-002-07  | `GetTeam` endpoint + ETag (shared `EtagInterceptor`, `@IfMatch`)                                  | T-002-04            | S    | `feat/002-get-team`             |
-| T-002-08  | `ReplaceTeam` command + `PUT /teams/:id` with `If-Match` → 412                                    | T-002-07            | M    | `feat/002-replace-team`         |
-| T-002-09  | Unit of work + two-phase domain-event publisher (shared); `DeleteTeam` + `DELETE /teams/:id`      | T-002-08            | M    | `feat/002-delete-team`          |
-| T-002-10  | Cross-context seams: `contracts/` (`GetTeamSummariesQuery`, `TeamDeleted`), `TeamTaskCounts` port | T-002-06a, T-002-09 | S    | `feat/002-team-contracts`       |
-| T-002-11  | Seed 3 teams for the demo user                                                                    | T-002-01, T-001-11  | S    | `feat/002-seed-teams`           |
-| T-002-12  | Teams telemetry (span attributes, logs; no team domain counters)                                  | T-002-09            | S    | `feat/002-teams-telemetry`      |
-| T-002-13  | Teams requests in Bruno/.http, OpenAPI review, contract-doc clarifications                        | T-002-09            | S    | `docs/002-teams-requests`       |
+| ID        | Task                                                                                         | Depends on          | Size | Branch                          |
+| --------- | -------------------------------------------------------------------------------------------- | ------------------- | ---- | ------------------------------- |
+| T-002-01  | Prisma `Team` model and migration with partial indexes                                       | T-001-05            | S    | `feat/002-team-schema`          |
+| T-002-02  | Domain: `TeamName`, `ColorHex`, `TeamDescription`, `Team` aggregate, `TeamDeleted`, errors   | —                   | M    | `feat/002-team-domain`          |
+| T-002-03  | `TeamRepository` port + Prisma adapter + mapper, with integration tests                      | T-002-01, T-002-02  | M    | `feat/002-team-repository`      |
+| T-002-04  | `CreateTeam` command + `POST /teams` + DTOs + read-back `GetTeam` view                       | T-002-03, T-001-09  | M    | `feat/002-create-team`          |
+| T-002-05  | Idempotency keys (shared): table, store, interceptor on `POST /teams`                        | T-002-04            | M    | `feat/002-idempotency-keys`     |
+| T-002-06a | List teams, data side: page types, LIKE escape, `TeamReadModel.page` + Prisma adapter        | T-002-04            | S    | `feat/002-team-list-read-model` |
+| T-002-06b | List teams, endpoint: `ListTeams` query, DTOs, sort parser, page envelope, e2e               | 06a, T-002-04       | S    | `feat/002-list-teams`           |
+| T-002-07  | `GetTeam` endpoint + ETag (shared `EtagInterceptor`, `@IfMatch`)                             | T-002-04            | S    | `feat/002-get-team`             |
+| T-002-08  | `ReplaceTeam` command + `PUT /teams/:id` with `If-Match` → 412                               | T-002-07            | M    | `feat/002-replace-team`         |
+| T-002-09  | Unit of work + two-phase domain-event publisher (shared); `DeleteTeam` + `DELETE /teams/:id` | T-002-08            | M    | `feat/002-delete-team`          |
+| T-002-10a | Cross-context seam: `GetTeamSummariesQuery` contract, handler and `TeamReadModel.summaries`  | T-002-06a           | S    | `feat/002-team-summaries`       |
+| T-002-10b | Cross-context seams: `TeamDeleted` contract, `TeamTaskCounts` port                           | T-002-06a, T-002-09 | S    | `feat/002-team-contracts`       |
+| T-002-11  | Seed 3 teams for the demo user                                                               | T-002-01, T-001-11  | S    | `feat/002-seed-teams`           |
+| T-002-12  | Teams telemetry (span attributes, logs; no team domain counters)                             | T-002-09            | S    | `feat/002-teams-telemetry`      |
+| T-002-13  | Teams requests in Bruno/.http, OpenAPI review, contract-doc clarifications                   | T-002-09            | S    | `docs/002-teams-requests`       |
 
 ---
 
@@ -96,12 +97,21 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 - **Covers:** `@AC-02.7.1 @AC-02.7.3 @AC-02.7.4 @AC-02.9.3 @AC-02.9.8 @AC-02.11.1`, `@AC-01.6.3` (team delete row). `@AC-02.7.2` is verified in **T-003-13** with Task Management's `OnTeamDeletedHandler`.
 - **Done when:** Integration: `PrismaTeamRepository` and every repository read and write through `TransactionHost` (`txHost.tx`), and a failing fake in-transaction handler rolls the team soft delete back (team still active); a succeeding one commits both; after-commit handlers run only after commit. E2E: 204, then get → 404 and the list excludes it; delete again / unknown / foreign → 404; a foreign team with any `If-Match` → 404 identical to an unknown id, Rafael's team unchanged (AC-02.9.8); stale `If-Match` → 412 and the team is still present. Ownership outline (AC-02.11.1): with `twoUsers()`, list, search, get, replace and delete never expose or change Rafael's teams, and by-id operations return byte-identical 404 bodies apart from `traceId`. Stale-link fix from T-003-04: a team soft-deleted between Task Management's `TeamDirectory.findMissing` and a task write still satisfies the `task_teams` foreign key; in one CLS transaction, either re-validate through `TeamDirectory` inside the transaction or order `DeleteTeam`'s reaction after the task write, with an integration test of that race. Never `FOR SHARE` on `teams` from the tasks repository.
 
-## T-002-10 — Cross-context seams
+## T-002-10a — Cross-context seam: team summaries
 
-- **Goal:** Give Task Management a stable public contract, and give Team Management a port for task counts, with no provider imported across modules.
-- **Changes:** `modules/teams/contracts/{get-team-summaries.query.ts,team-summary.ts,team-deleted.event.ts}` (query, result type, re-exported event; plain TypeScript). `application/queries/get-team-summaries/` handler (`TeamReadModel.summaries(ownerId, ids)`: live teams of that owner only). `application/ports/team-task-counts.ts` (`TeamTaskCounts.countByTeam(ownerId, teamIds)`) and `infrastructure/adapters/team-task-counts.adapter.ts` returning zeros as a placeholder, with a `// replaced by CountTasksByTeamQuery in T-003-14` note. `TeamsModule` exports **no** providers. `depcruise` rule: outside `modules/teams/**`, only `modules/teams/contracts/**` may be imported.
-- **Covers:** prerequisite for `@AC-01.6.5`, `@AC-02.7.2`, `@AC-02.8.1`, `@AC-02.8.2`. These are verified in 003: AC-02.7.2 in **T-003-13**, AC-02.8.1 and AC-02.8.2 in **T-003-14** (real counts through `CountTasksByTeamQuery`), AC-01.6.5 in T-003-05/07/08.
-- **Done when:** Integration: `GetTeamSummariesQuery` through the `QueryBus` returns only active teams of that owner, makes no ordering assumptions, and handles empty and duplicate ids. Unit: the placeholder adapter returns 0 for every id. The `depcruise` rule fails on a fixture that imports `modules/teams/domain` or `teams.module.ts` from another module.
+- **Status:** done
+- **Goal:** Give Task Management a stable public query for the teams it embeds, with no provider imported across modules.
+- **Changes:** `modules/teams/contracts/{get-team-summaries.query.ts,team-summary.ts}` (query and result type; plain TypeScript plus the CQRS marker). `application/queries/get-team-summaries/` handler (`@Traced()`, `TeamReadModel.summaries(ownerId, ids)`: live teams of that owner only, one SELECT). Registered in `teams.module.ts` once T-002-04 creates it. The existing `depcruise` rule A5 already limits other modules to `modules/teams/contracts/**`.
+- **Covers:** prerequisite for `@AC-01.6.5` (verified in T-003-05/07/08).
+- **Done when:** Integration: `GetTeamSummariesQuery` through a real `QueryBus` returns only live teams of that owner (deleted, foreign, unknown and malformed ids omitted), makes no ordering assumptions, and handles empty and duplicate ids. Unit: the handler passes owner and ids to the read model.
+
+## T-002-10b — Cross-context seams: team deletion and task counts
+
+- **Goal:** Publish `TeamDeleted` to Task Management and give Team Management a port for task counts.
+- **Owner:** Forge (NestJS).
+- **Changes:** `modules/teams/contracts/team-deleted.event.ts` (re-exported event). `application/ports/team-task-counts.ts` (`TeamTaskCounts.countByTeam(ownerId, teamIds)`) and `infrastructure/adapters/team-task-counts.adapter.ts` returning zeros as a placeholder, with a `// replaced by CountTasksByTeamQuery in T-003-14b` note. `TeamsModule` exports **no** providers.
+- **Covers:** prerequisite for `@AC-02.7.2`, `@AC-02.8.1`, `@AC-02.8.2`. These are verified in 003: AC-02.7.2 in **T-003-13**, AC-02.8.1 and AC-02.8.2 in **T-003-14b** (real counts through `CountTasksByTeamQuery`).
+- **Done when:** Unit: the placeholder adapter returns 0 for every id. The `depcruise` rule fails on a fixture that imports `modules/teams/domain` or `teams.module.ts` from another module.
 
 ## T-002-11 — Seed teams
 
