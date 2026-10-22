@@ -15,7 +15,7 @@ import {
   renderTestReport,
   scanTests,
   scanTestsAt,
-} from './traceability.mjs';
+} from '../ci/traceability.mjs';
 
 const dirs = [];
 
@@ -708,7 +708,9 @@ describe('brief requirement parsing', () => {
 });
 
 describe('traceability command line', () => {
-  const script = fileURLToPath(new URL('./traceability.mjs', import.meta.url));
+  const script = fileURLToPath(
+    new URL('../ci/traceability.mjs', import.meta.url),
+  );
   const cwd = fileURLToPath(new URL('../../', import.meta.url));
   const run = (env) =>
     spawnSync(process.execPath, [script], {

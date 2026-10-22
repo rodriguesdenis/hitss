@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { checkReadme, githubSlug } from './doc-check.mjs';
+import { checkReadme, githubSlug } from '../ci/doc-check.mjs';
 import { readFileSync } from 'node:fs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));

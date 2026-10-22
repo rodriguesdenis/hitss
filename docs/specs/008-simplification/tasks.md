@@ -61,6 +61,8 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 - **Goal:** the gate checks code, not documents (AC-08.8).
 - **Changes:** `ci-success` needs lint, typecheck, unit, integration, e2e, build, compose smoke, gitleaks, audit; traceability, README doc-check and production-readiness checks move out (optional local scripts or a non-required job).
 - **Done when:** a PR that changes only docs or removes AC-tagged tests passes the gate when the code checks pass.
+- **Status:** done
+- **Delivered:** `docs-checks` is a separate non-required job (`continue-on-error`) running `traceability:check`, `doc-check` and `test:docs`; the four document-check test files moved to `tools/docs-checks/`, so `test:tools` (in the gate) no longer exercises them; `tools/ci/ci-gate.test.mjs` pins the gate.
 
 ## T-008-09 — Docs reduction
 
