@@ -12,7 +12,10 @@ import { OwnerProbeModule } from './owner-probe.module';
  * The only public Nest routes (AC-01.5.4). `/api/auth/*` is served by Better Auth outside Nest
  * routing; the API docs join this list when DOCS_ENABLED gets its route.
  */
-const PUBLIC_ALLOWLIST = ['GET /api/v1/health/live'];
+const PUBLIC_ALLOWLIST = [
+  'GET /api/v1/health/live',
+  'GET /api/v1/health/ready',
+];
 
 const SAMPLE_UUID = '7d0c5e2a-3f1b-4c8e-9a6d-2b4f8e1c0a93';
 
