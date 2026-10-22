@@ -69,8 +69,9 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-05 — Add `TeamDirectory` port + adapter to Teams
 
+- **Status:** done
 - **Goal:** Task Management learns about teams only through a port.
-- **Changes:** `application/ports/team-directory.ts` (`findMissing`, `summaries`); `infrastructure/adapters/team-directory.adapter.ts` sending `GetTeamSummariesQuery` (from `teams/contracts/`) on the `QueryBus`; `tasks.module.ts` imports **no** Teams module or provider; in-memory fake for handler tests.
+- **Changes:** `application/ports/team-directory.ts` (`findMissing`, `summaries`; added in T-003-06a); `infrastructure/adapters/team-directory.adapter.ts` (`QueryBusTeamDirectory`) sending `GetTeamSummariesQuery` (from `teams/contracts/`) on the `QueryBus`; `tasks.module.ts` imports **no** Teams module or provider; in-memory fake for handler tests.
 - **Covers:** prerequisite for @AC-03.1.6 @AC-03.2.5 @AC-03.12.3, `@AC-01.6.5`.
 - **Done when:** integration test through the real `QueryBus`: live own team → found; deleted, foreign and unknown ids → reported missing and excluded from `summaries`; dependency-cruiser forbids `tasks/**` importing anything in `modules/teams/**` except `contracts/**`.
 
