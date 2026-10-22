@@ -81,6 +81,51 @@ API_PORT=3100 docker compose up -d --build --wait
 assert_http_up 3100
 docker compose down -v --remove-orphans
 
+if [ "${OTEL_SDK_DISABLED:-false}" = true ]; then
+  echo "skipped: OTEL_SDK_DISABLED=true"
+else
+  log 'the built image exports a trace to an OTLP sink: the --import telemetry hand-off works (AC-06.2.1, AC-06.2.6)'
+  # The sink runs on the Node image the API Dockerfile pins (ARG NODE_IMAGE).
+  SINK_IMAGE="$(sed -n 's/^ARG NODE_IMAGE=//p' apps/api/Dockerfile)"
+  cat > "$TMP/otlp-sink.yml" << YAML
+services:
+  otlp-sink:
+    image: $SINK_IMAGE
+    command: ["node", "/sink.mjs"]
+    volumes:
+      - $PWD/tools/ci/otlp-sink.mjs:/sink.mjs:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4318/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+  api:
+    depends_on:
+      otlp-sink:
+        condition: service_healthy
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otlp-sink:4318
+      OTEL_BSP_SCHEDULE_DELAY: "500"
+YAML
+  export COMPOSE_FILE="docker-compose.yml:$TMP/otlp-sink.yml"
+  docker compose up -d --wait
+  assert_http_up "$API_PORT"
+  TRACE_SEEN=no
+  for _ in $(seq 1 30); do
+    curl -s -o /dev/null --max-time 5 "http://127.0.0.1:$API_PORT/api/v1/" || true
+    if docker compose logs --no-color otlp-sink 2> /dev/null | grep -q 'TRACE_RECEIVED service=teams-tasks-api'; then
+      TRACE_SEEN=yes
+      break
+    fi
+    sleep 1
+  done
+  [ "$TRACE_SEEN" = yes ] || fail 'the sink received no trace for teams-tasks-api: the image does not export telemetry (is the entrypoint still loading dist/instrumentation.js with --import?)'
+  echo "the sink received a trace for teams-tasks-api"
+  summary "| Telemetry hand-off: the sink received a trace for \`teams-tasks-api\` | passed |"
+  docker compose down -v --remove-orphans
+  unset COMPOSE_FILE
+fi
+
 log 'a failing migration stops the stack: migrate exits non-zero, the API never starts (AC-07.1.7)'
 mkdir -p "$TMP/migrations/20260101000000_not_sql"
 printf 'provider = "postgresql"\n' > "$TMP/migrations/migration_lock.toml"

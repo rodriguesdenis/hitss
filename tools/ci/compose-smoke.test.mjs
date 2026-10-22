@@ -63,4 +63,16 @@ describe('compose smoke script', () => {
     assert.ok(calls.includes('migrate'), 'migrate case missing');
     assert.ok(calls.includes('api'), 'api case missing');
   });
+
+  it('AC-06.2.6 proves the telemetry hand-off: the built image exports a trace to an OTLP sink', () => {
+    assert.match(source, /otlp-sink\.mjs/);
+    assert.match(source, /OTEL_EXPORTER_OTLP_ENDPOINT/);
+    assert.match(source, /TRACE_RECEIVED service=teams-tasks-api/);
+    assert.match(source, /OTEL_SDK_DISABLED/);
+  });
+
+  it('AC-06.2.1 starts the sink from the Node image pinned in the API Dockerfile', () => {
+    assert.match(source, /ARG NODE_IMAGE/);
+    assert.ok(!/image:\s*node:24\b/.test(source), 'no floating node image');
+  });
 });

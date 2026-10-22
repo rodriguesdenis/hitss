@@ -157,6 +157,7 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 
 ## T-007-18 — Compose smoke asserts the telemetry hand-off
 
+- **Status:** done
 - **Goal:** prove that the built image really starts through `node --import ./dist/instrumentation.js` and exports telemetry: the smoke fails if the container entrypoint stops loading the instrumentation.
 - **Changes:** `tools/ci/compose-smoke.sh` starts a small OTLP/HTTP sink on the compose network (a throwaway container or a compose override with a tiny receiver), runs the API with `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at it, sends one request and asserts that the sink received at least one trace for service `teams-tasks-api`; the case is skipped when `OTEL_SDK_DISABLED=true`.
 - **Covers:** @AC-06.2.1, @AC-06.2.6
