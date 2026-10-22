@@ -1,5 +1,6 @@
 import { applyDecorators, Type } from '@nestjs/common';
 import {
+  ApiCreatedResponse,
   ApiExtraModels,
   ApiOkResponse,
   ApiProperty,
@@ -19,6 +20,20 @@ export function ApiOkEnvelope<T extends Type>(model: T) {
   return applyDecorators(
     ApiExtraModels(model),
     ApiOkResponse({
+      schema: {
+        type: 'object',
+        required: ['data'],
+        properties: { data: { $ref: getSchemaPath(model) } },
+      },
+    }),
+  );
+}
+
+/** Documents the `201 { data: T }` envelope of a create handler (ADR-0005). */
+export function ApiCreatedEnvelope<T extends Type>(model: T) {
+  return applyDecorators(
+    ApiExtraModels(model),
+    ApiCreatedResponse({
       schema: {
         type: 'object',
         required: ['data'],
