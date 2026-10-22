@@ -329,6 +329,48 @@ describe('traceability model', () => {
     assert.equal(model.taskStatus.get('T-099-02'), undefined);
   });
 
+  it('AC-07.6.5 keeps split tasks (letter suffix) apart, with their own Covers and Status', () => {
+    const model = loadModel(
+      repo({
+        'docs/specs/099-auth/tasks.md': [
+          '# Tasks',
+          '## T-099-01 — First task',
+          '- **Covers:** @AC-99.1.1',
+          '## T-099-02a — Query side',
+          '- **Status:** done',
+          '- **Covers:** @AC-99.1.2',
+          '## T-099-02b — Endpoint',
+          '- **Covers:** @AC-99.1.3 @AC-99.2.1',
+          '',
+        ].join('\n'),
+      }),
+    );
+    assert.deepEqual([...model.acTasks.get('AC-99.1.1')], ['T-099-01']);
+    assert.deepEqual([...model.acTasks.get('AC-99.1.2')], ['T-099-02a']);
+    assert.deepEqual([...model.acTasks.get('AC-99.1.3')], ['T-099-02b']);
+    assert.equal(model.taskStatus.get('T-099-02a'), 'done');
+    assert.equal(model.taskStatus.get('T-099-01'), undefined);
+    assert.equal(model.taskStatus.get('T-099-02b'), undefined);
+  });
+
+  it('AC-07.6.5 never attributes lines under an unrecognised heading to the previous task', () => {
+    const model = loadModel(
+      repo({
+        'docs/specs/099-auth/tasks.md': [
+          '# Tasks',
+          '## T-099-01 — First task',
+          '- **Covers:** @AC-99.1.1 – @AC-99.1.3',
+          '## T-099-XX — Malformed id',
+          '- **Status:** done',
+          '- **Covers:** @AC-99.2.1',
+          '',
+        ].join('\n'),
+      }),
+    );
+    assert.equal(model.taskStatus.get('T-099-01'), undefined);
+    assert.equal(model.acTasks.get('AC-99.2.1'), undefined);
+  });
+
   describe('task Status values fail closed', () => {
     const withStatus = (value) =>
       loadModel(
