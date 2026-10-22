@@ -23,10 +23,8 @@ export interface AppConfig {
   otel: {
     sdkDisabled: boolean;
     serviceName: string;
-    exporterEndpoint: string;
-    exporterProtocol: string;
-    resourceAttributes: string;
-    tracesSampler: string;
+    /** Absent: nothing is exported. */
+    exporterEndpoint?: string;
   };
 }
 
@@ -52,9 +50,6 @@ export function toAppConfig(env: EnvironmentVariables): AppConfig {
       sdkDisabled: env.OTEL_SDK_DISABLED,
       serviceName: env.OTEL_SERVICE_NAME,
       exporterEndpoint: env.OTEL_EXPORTER_OTLP_ENDPOINT,
-      exporterProtocol: env.OTEL_EXPORTER_OTLP_PROTOCOL,
-      resourceAttributes: env.OTEL_RESOURCE_ATTRIBUTES,
-      tracesSampler: env.OTEL_TRACES_SAMPLER,
     },
   };
 }

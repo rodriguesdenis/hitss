@@ -66,10 +66,16 @@ export function createLoggerParams(
       trackRouteTemplate(request);
       return requestId(request, response);
     },
-    customProps: (request: IncomingMessage) => ({
-      reqId: (request as UserRequest).id,
-      userId: userIdOf(request),
-    }),
+    customProps: (request: IncomingMessage) => {
+      const reqId = (request as UserRequest).id;
+      return {
+        reqId,
+        userId: userIdOf(request),
+        // Without telemetry there is no trace: the request id stands in as the trace id, as in
+        // the error envelope (AC-08.7). With a span the mixin below supplies the real one.
+        ...(traceFields().traceId ? {} : { traceId: reqId }),
+      };
+    },
     autoLogging: { ignore: (request: IncomingMessage) => isProbe(request) },
     mixin: traceFields,
     // 5xx stay at warn here: the exception filter writes the single error-level entry (AC-06.3.4).
