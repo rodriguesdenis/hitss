@@ -134,6 +134,11 @@ export class PrismaTaskRepository extends TaskRepository {
     });
   }
 
+  /**
+   * Must stay READ COMMITTED; the TeamDeleted/link lock relies on it: after waiting for the lock,
+   * the next statement must see what the other transaction committed meanwhile. Under REPEATABLE
+   * READ the reaction would keep its older snapshot and miss links committed while it waited.
+   */
   async lockTeamLinks(teamIds: readonly string[]): Promise<void> {
     if (!this.txHost.isTransactionActive()) {
       throw new Error('lockTeamLinks needs a transaction (UnitOfWork.run)');
