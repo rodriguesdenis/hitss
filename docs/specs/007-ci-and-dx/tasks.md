@@ -83,6 +83,7 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 
 - **Goal:** brief scripts `start`, `test`, `seed` and the Docker-only aliases.
 - **Changes:** root `package.json` scripts (`start`, `stop`, `test`, `seed`, `db:reset`, `arch`, `api-client:generate`), `Makefile` (`up`, `down`, `logs`, `seed`, `reset`, `test`, `test-docker`, `observability`, `observability-down`, `mobile`, `smoke`, `load`, `help`).
+- **Delivered now:** scripts `start`, `stop`, `test` (unit), `test:all` (unit + integration + e2e); Makefile `help`, `up`, `down`, `logs`, `reset`, `test`, `test-all`, `test-docker`, `smoke`. **Pending** (listed by `make help`, added with the task that creates what they run): `seed` and the `seed`/`db:reset` scripts (T-007-07), `observability`/`observability-down` (SigNoz profile, spec 006), `mobile` (T-007-13), `load` (k6), `api-client:generate` (T-007-10).
 - **Covers:** @AC-07.3.1, @AC-07.3.2
 - **Done when:** each target works on a clean clone (`make help` lists them); CI runs `make -n` for syntax.
 
