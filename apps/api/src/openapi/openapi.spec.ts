@@ -38,6 +38,18 @@ describe('OpenAPI document', () => {
     });
   });
 
+  it('AC-01.5.4 the cookie scheme names the secure cookie used in production', async () => {
+    const document = await build();
+
+    expect(
+      document.components?.securitySchemes?.['session-cookie'],
+    ).toMatchObject({
+      description: expect.stringContaining(
+        '__Secure-better-auth.session_token',
+      ) as string,
+    });
+  });
+
   it('AC-01.5.4 requires authentication globally but not on health', async () => {
     const document = await build();
 
