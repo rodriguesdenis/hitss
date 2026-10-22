@@ -14,7 +14,6 @@ import { useTestDatabase } from '../support/postgres';
 
 const SIGN_IN = '/api/auth/sign-in/email';
 
-/** A sign-in JSON body of exactly `bytes` bytes (padding in the password field). */
 function bodyOfSize(bytes: number): string {
   const frame = JSON.stringify({ email: 'size@example.test', password: '' });
   return JSON.stringify({
@@ -111,8 +110,6 @@ describe('Auth endpoint hardening (e2e)', () => {
       expect(status).toBe(413);
       expect(hashSpy).not.toHaveBeenCalled();
 
-      // The same app still answers: a normal sign-in is judged on its merits and so is
-      // get-session (no session, no crash).
       const signIn = await request(app.getHttpServer() as App)
         .post(SIGN_IN)
         .send({ email: 'nobody@example.test', password: 'a-valid-password-1' });
@@ -122,7 +119,6 @@ describe('Auth endpoint hardening (e2e)', () => {
       );
       expect(session.status).toBe(200);
 
-      // Let any late event from the aborted request surface before judging the logs.
       await new Promise((resolve) => setTimeout(resolve, 200));
       expect(unhandled).not.toHaveBeenCalled();
       expect(logs.raw).not.toContain('"level":50');
@@ -141,7 +137,6 @@ describe('Auth endpoint hardening (e2e)', () => {
         .send({ email: 'nobody@example.test', password: 'a-valid-password-1' });
 
       expect(response.status).toBeGreaterThanOrEqual(500);
-      // The body: nothing about the driver, the schema or the code.
       for (const leaked of [
         'Prisma',
         'prisma',
@@ -153,7 +148,6 @@ describe('Auth endpoint hardening (e2e)', () => {
       ]) {
         expect(response.text).not.toContain(leaked);
       }
-      // The logs keep the error class and code (a summary), never the driver message.
       for (const leaked of [
         'SQL',
         'relation',
@@ -163,7 +157,7 @@ describe('Auth endpoint hardening (e2e)', () => {
       ]) {
         expect(logs.raw).not.toContain(leaked);
       }
-      expect(logs.raw).not.toMatch(/\bat \S+ \(/); // no stack frames
+      expect(logs.raw).not.toMatch(/\bat \S+ \(/);
       expect(logs.raw).toContain('auth.request.failed');
     } finally {
       await sql.query('ALTER TABLE users_broken RENAME TO users');

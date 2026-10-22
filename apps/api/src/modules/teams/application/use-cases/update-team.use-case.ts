@@ -13,15 +13,9 @@ export interface UpdateTeamInput {
   readonly id: string;
   readonly name: string;
   readonly colorHex: string;
-  /** Omitted means none: `PUT` is a full replacement (AC-02.6.3). */
   readonly description?: string | null;
 }
 
-/**
- * Load (404) → no-op (AC-02.6.7, nothing written) → name taken by another active team (409) →
- * update. Last write wins (ADR-0020): there is no precondition; the repository still increments
- * `version` as data.
- */
 @Injectable()
 export class UpdateTeamUseCase {
   constructor(
@@ -43,7 +37,6 @@ export class UpdateTeamUseCase {
     if (!changed) {
       return;
     }
-    // Excluding itself, so a letter-case-only rename passes (AC-02.6.5); the index decides races.
     if (
       await this.teams.existsActiveByName(input.ownerId, team.name, input.id)
     ) {

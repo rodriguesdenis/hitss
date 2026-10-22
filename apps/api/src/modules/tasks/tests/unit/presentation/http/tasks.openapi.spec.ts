@@ -10,12 +10,10 @@ import { ListTasksUseCase } from '../../../../application/use-cases/list-tasks.u
 import { UpdateTaskUseCase } from '../../../../application/use-cases/update-task.use-case';
 import { TasksController } from '../../../../presentation/http/tasks.controller';
 
-/** The schemas the generated client (orval, T-007-10) is built from. */
 describe('Tasks in the OpenAPI document', () => {
   async function document() {
     const moduleRef = await Test.createTestingModule({
       controllers: [TasksController],
-      // The document only needs the routes: the use cases are never called.
       providers: [
         CreateTaskUseCase,
         UpdateTaskUseCase,

@@ -45,7 +45,6 @@ describe('GET /api/v1/teams (e2e)', () => {
 
   const http = () => request(app.getHttpServer() as App);
 
-  /** Creates the teams in order through the API; returns their ids. */
   const seed = async (user: TestUser, names: string[]): Promise<string[]> => {
     const ids: string[] = [];
     for (const name of names) {
@@ -59,7 +58,6 @@ describe('GET /api/v1/teams (e2e)', () => {
     return ids;
   };
 
-  /** Spreads the teams' timestamps one minute apart, oldest first, in the given order. */
   const spreadCreatedAt = async (ids: string[]) => {
     for (const [index, id] of ids.entries()) {
       await sql.query(
@@ -317,7 +315,7 @@ describe('GET /api/v1/teams (e2e)', () => {
           data: [],
           meta: { total: 0, limit: 20, offset: 0, hasNextPage: false },
         });
-        expect(page(await list(user)).meta.total).toBe(1); // the table is still there
+        expect(page(await list(user)).meta.total).toBe(1);
       },
     );
 
@@ -361,7 +359,6 @@ describe('GET /api/v1/teams (e2e)', () => {
       const user = await signUpAndSignIn(app);
       const ids = await seed(user, ['Old', 'Mid', 'New']);
       await spreadCreatedAt(ids);
-      // Updated in the opposite order: Old was touched last.
       await sql.query(
         `UPDATE teams SET updated_at = '2026-06-01T00:00:00Z' WHERE id = $1`,
         [ids[0]],

@@ -28,7 +28,6 @@ type Middleware = (
   next: () => void,
 ) => void;
 
-/** Runs middleware in order; each one calls `next` to continue or answers to stop. */
 function chain(...middleware: Middleware[]): Middleware {
   return (request, response, next) => {
     const run = (index: number): void => {
@@ -43,25 +42,14 @@ function chain(...middleware: Middleware[]): Middleware {
   };
 }
 
-/** Provides the password hasher to the auth factory; e2e tests override it to observe calls. */
 @Module({
   providers: [{ provide: PasswordHasher, useClass: BetterAuthPasswordHasher }],
   exports: [PasswordHasher],
 })
 export class PasswordHasherModule {}
 
-/**
- * Identity context (generic subdomain): Better Auth mounted at /api/auth, answering in its native
- * format (spec Q-01.1). Nest is created with `bodyParser: false`; this module re-adds the JSON
- * parser (100 kB, the API-wide limit) for every other route, with urlencoded bodies disabled.
- * CORS for auth routes is the app's own (setupApp), so the module's trusted-origins CORS is off,
- * and the global guards are registered here, in order: per-IP throttler, Bearer-only
- * authentication (deny by default; ADR-0020: a cookie never authenticates /api/v1, so there is no
- * CSRF guard), per-user throttler. A route opts out of authentication with `@Public()`.
- */
 @Module({
   imports: [
-    // Two named throttlers, one window of a minute each; the guards below pick theirs by name.
     ThrottlerModule.forRootAsync({
       inject: [APP_CONFIG],
       useFactory: (config: AppConfig) => ({
@@ -82,9 +70,6 @@ export class PasswordHasherModule {}
       ) => ({
         auth: createAuth(config, prisma, logger.logger, passwordHasher),
         disableTrustedOriginsCors: true,
-        // In front of the Better Auth handler (Nest middleware would run after it): any auth path
-        // outside the allowlist answers 404, an oversized body 413 (before any hashing), then the client
-        // address is set for the limiter.
         middleware: chain(
           authRouteAllowlist(AUTH_BASE_PATH),
           authBodyLimit(),
@@ -95,12 +80,9 @@ export class PasswordHasherModule {}
           urlencoded: { enabled: false },
         },
       }),
-      // Registered below instead, so the global guards run in the documented order.
       disableGlobalAuthGuard: true,
     }),
   ],
-  // Global guards run in registration order: anonymous floods are bounded before any session
-  // lookup, and the per-user limit needs the authenticated user.
   providers: [
     { provide: APP_GUARD, useClass: IpThrottlerGuard },
     { provide: APP_GUARD, useClass: BearerAuthGuard },

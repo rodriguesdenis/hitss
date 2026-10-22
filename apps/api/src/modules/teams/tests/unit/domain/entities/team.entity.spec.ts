@@ -107,7 +107,7 @@ describe('Team', () => {
         expect(team.description).toBe(next.description);
         expect(team.updatedAt).toEqual(LATER);
         expect(team.createdAt).toEqual(CREATED_AT);
-        expect(team.version).toBe(1); // persistence bumps the version
+        expect(team.version).toBe(1);
       },
     );
 

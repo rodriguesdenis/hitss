@@ -162,7 +162,6 @@ describe('Team schema (integration, T-002-01)', () => {
       await insertTeam(ownerId, 'Design', {}, first);
       const racing = sqlError(() => insertTeam(ownerId, 'design', {}, second));
 
-      // Commit only once the second insert is provably blocked on the first's index entry.
       await waitForLockWait(pid[0]!.pid);
       await first.query('COMMIT');
 
@@ -179,7 +178,6 @@ describe('Team schema (integration, T-002-01)', () => {
     }
   });
 
-  /** Polls pg_stat_activity (bounded, no fixed sleep) until the backend waits on a lock. */
   async function waitForLockWait(pid: number): Promise<void> {
     for (let attempt = 0; attempt < 500; attempt++) {
       const { rows } = await sql.query<{ wait_event_type: string | null }>(
@@ -290,8 +288,6 @@ describe('Team schema (integration, T-002-01)', () => {
       [owners],
     );
     await sql.query('ANALYZE teams');
-    // Without sequential scans the planner must pick an index; the assertion is about which
-    // one and whether it still has to sort.
     await sql.query('SET enable_seqscan = off');
 
     const { rows } = await sql.query<{ 'QUERY PLAN': unknown }>(

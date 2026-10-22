@@ -1,31 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { DomainError } from '../../domain/domain-error';
 
-/** How a module's domain error becomes an HTTP error. */
 export interface DomainErrorMapping {
   error: abstract new (...args: never[]) => DomainError;
   status: number;
   code: string;
-  /**
-   * Fixed text sent to the client. The exception's own message is never used: domain messages
-   * are for logs and may one day carry values (Lynx S2).
-   */
   message: string;
   details?: (error: DomainError) => unknown;
 }
 
-/**
- * Registry the exception filter reads. Each bounded-context module registers its own table
- * from `onModuleInit` (e.g. `TEAM_ERROR_MAPPINGS`), so the shared layer never imports modules.
- */
 @Injectable()
 export class DomainErrorMappings {
   private readonly byError = new Map<object, DomainErrorMapping>();
 
-  /**
-   * Fails at boot when a class is mapped twice (two modules must not disagree on one error) or
-   * when a mapping has no fixed code or message.
-   */
   register(mappings: readonly DomainErrorMapping[]): void {
     for (const mapping of mappings) {
       if (mapping.code.trim() === '' || mapping.message.trim() === '') {
@@ -38,7 +25,6 @@ export class DomainErrorMappings {
     }
   }
 
-  /** The mapping of the error's class, or of its closest mapped ancestor. */
   find(error: unknown): DomainErrorMapping | undefined {
     if (!(error instanceof DomainError)) {
       return undefined;

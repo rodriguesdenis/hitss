@@ -117,7 +117,6 @@ describe('PrismaService.onModuleInit', () => {
     await expect(prisma.onModuleInit()).rejects.toBeInstanceOf(
       DatabaseUnavailableError,
     );
-    // A failing disconnect does not mask the probe error.
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
 

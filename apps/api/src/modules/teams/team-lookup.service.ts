@@ -6,15 +6,10 @@ import {
 
 export type { TeamSummary };
 
-/**
- * The one door other modules use to reach Team Management (ADR-0020): `TeamsModule` exports it
- * and `TasksModule` injects it. Owner-scoped, live teams only.
- */
 @Injectable()
 export class TeamLookup {
   constructor(private readonly readModel: TeamReadModel) {}
 
-  /** The owner's live teams among `ids`; deleted, foreign, unknown and malformed ids are omitted. */
   async summaries(
     ownerId: string,
     ids: readonly string[],
@@ -23,7 +18,6 @@ export class TeamLookup {
     return this.readModel.summaries(ownerId, ids);
   }
 
-  /** The ids that are not live teams of the owner, in input order (letter case ignored). */
   async findMissing(
     ownerId: string,
     ids: readonly string[],
@@ -35,10 +29,6 @@ export class TeamLookup {
     return ids.filter((id) => !live.has(id.toLowerCase()));
   }
 
-  /**
-   * Throws `toError(missing)` when any of `ids` is not a live team of the owner, so the caller
-   * keeps its own error type (Team Management knows nothing of tasks).
-   */
   async assertAllLive(
     ownerId: string,
     ids: readonly string[],

@@ -15,11 +15,6 @@ type SessionRequest = ClientRequest & {
   session?: { user?: { id?: unknown } } | null;
 };
 
-/**
- * Per-user limit on the business API (`RATE_LIMIT_MAX`), registered after authentication and CSRF
- * so the user is known: one user's traffic never counts against another's (AC-01.7.3, AC-01.7.4).
- * A public route has no user and falls back to the client address.
- */
 @Injectable()
 export class OwnerThrottlerGuard extends NamedThrottlerGuard {
   protected readonly throttlerName = USER_THROTTLER;

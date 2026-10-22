@@ -1,30 +1,3 @@
-/**
- * PostgreSQL for integration and e2e tests (ADR-0014).
- *
- * One container per Jest run: `globalSetup` starts it, applies the migrations once into a
- * template database and publishes its coordinates through environment variables. Each test file
- * then gets its own database cloned from that template (`CREATE DATABASE ... TEMPLATE`), which
- * takes milliseconds and isolates files completely.
- *
- * Usage in a test file:
- *
- *   const db = useTestDatabase();               // at describe level
- *   beforeAll(async () => { app = await createTestApp(db.url); });
- *   afterAll(async () => { await app.close(); });
- *
- * or, for an extra database inside a test: `const other = await createTestDatabase()`.
- *
- * Every database created in a file is dropped automatically by a root-level `afterAll`
- * (test/support/after-env.ts, `setupFilesAfterEnv`). Root hooks run after all of the file's own
- * hooks, so apps and clients are closed before the drop terminates their connections. Call
- * `drop()` only to remove a database in the middle of a file.
- *
- * Caveat: the registry is module state. A test that calls `jest.resetModules()` or
- * `jest.isolateModules()` and then creates a database gets a fresh copy of this module, whose
- * registry the root hook never sees, so that database is not dropped. The leak is harmless (the
- * container is discarded at the end of the run), but prefer creating databases outside such
- * blocks.
- */
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -39,27 +12,21 @@ import { getContainerRuntimeClient } from 'testcontainers';
 const API_DIR = join(__dirname, '../..');
 const COMPOSE_FILE = join(API_DIR, '../../docker-compose.yml');
 
-/** Environment variables through which globalSetup hands the server to the test files. */
 const ADMIN_URL_ENV = 'TEST_DATABASE_ADMIN_URL';
 const TEMPLATE_ENV = 'TEST_DATABASE_TEMPLATE';
 const TEMPLATE_DATABASE = 'app_template';
 
 export interface TestDatabase {
-  /** Database name, unique per call. */
   readonly name: string;
-  /** Connection URL to pass to `createTestApp()` or a Prisma/pg client. */
   readonly url: string;
-  /** Drops the database, terminating any connection still open. */
   drop(): Promise<void>;
 }
 
 export interface StartedTestServer {
   container: StartedPostgreSqlContainer;
-  /** Output of `prisma migrate deploy` on the template database. */
   migrateOutput: string;
 }
 
-/** The PostgreSQL image of docker-compose.yml, so tests and the local stack never drift apart. */
 export function postgresImage(composeFile = COMPOSE_FILE): string {
   const match = /^\s*image:\s*(postgres:\S+)\s*$/m.exec(
     readFileSync(composeFile, 'utf8'),
@@ -70,7 +37,6 @@ export function postgresImage(composeFile = COMPOSE_FILE): string {
   return match[1];
 }
 
-/** Major version from the image tag, e.g. `postgres:17.11-alpine` → 17. */
 export function postgresMajor(image = postgresImage()): number {
   const major = /^postgres:(\d+)/.exec(image)?.[1];
   if (!major) {
@@ -79,7 +45,6 @@ export function postgresMajor(image = postgresImage()): number {
   return Number(major);
 }
 
-/** Applies the committed migrations exactly as the container entrypoint does. */
 export function migrateDeploy(databaseUrl: string): string {
   const prismaCli = require.resolve('prisma/build/index.js', {
     paths: [API_DIR],
@@ -122,7 +87,6 @@ function requireEnv(name: string): string {
   return value;
 }
 
-/** Fails with an actionable message when no container runtime is reachable. */
 async function assertDockerAvailable(): Promise<void> {
   try {
     await getContainerRuntimeClient();
@@ -135,10 +99,6 @@ async function assertDockerAvailable(): Promise<void> {
   }
 }
 
-/**
- * Starts the container, migrates the template database and exports its coordinates.
- * Called once per Jest run by `test/support/global-setup.ts`.
- */
 export async function startTestServer(): Promise<StartedTestServer> {
   await assertDockerAvailable();
   const container = await new PostgreSqlContainer(postgresImage()).start();
@@ -149,7 +109,6 @@ export async function startTestServer(): Promise<StartedTestServer> {
     const migrateOutput = migrateDeploy(
       withDatabase(adminUrl, TEMPLATE_DATABASE),
     );
-    // Nobody may connect to the template: an open connection would make cloning fail.
     await query(
       adminUrl,
       `ALTER DATABASE ${template} WITH IS_TEMPLATE true ALLOW_CONNECTIONS false`,
@@ -163,10 +122,8 @@ export async function startTestServer(): Promise<StartedTestServer> {
   }
 }
 
-/** Databases created by this test file and not dropped yet. */
 const created = new Map<string, TestDatabase>();
 
-/** A fresh, migrated database cloned from the template; dropped automatically after the file. */
 export async function createTestDatabase(): Promise<TestDatabase> {
   const adminUrl = requireEnv(ADMIN_URL_ENV);
   const template = requireEnv(TEMPLATE_ENV);
@@ -191,16 +148,10 @@ export async function createTestDatabase(): Promise<TestDatabase> {
   return database;
 }
 
-/** Drops every database this file created. Registered once, at root level, by after-env.ts. */
 export async function dropTestDatabases(): Promise<void> {
   await Promise.all([...created.values()].map((database) => database.drop()));
 }
 
-/**
- * Registers a `beforeAll` that creates a database for the current test file (or describe block).
- * It is dropped after the file (see the module comment). Read `url` inside hooks or tests, not at
- * definition time.
- */
 export function useTestDatabase(): {
   readonly url: string;
   readonly name: string;

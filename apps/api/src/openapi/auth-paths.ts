@@ -62,10 +62,6 @@ const SET_AUTH_TOKEN: HeadersObject = {
   },
 };
 
-/**
- * The `/api/auth/*` routes. Better Auth serves them outside Nest routing and answers in its own
- * format (spec Q-01.1), so they are documented by hand (plan 001 → OpenAPI).
- */
 export const AUTH_PATHS: Paths = {
   '/api/auth/sign-up/email': {
     post: {

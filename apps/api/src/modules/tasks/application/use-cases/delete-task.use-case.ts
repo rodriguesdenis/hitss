@@ -8,11 +8,6 @@ export interface DeleteTaskInput {
   readonly id: string;
 }
 
-/**
- * Soft delete: load, `delete(now)`, write `deleted_at`. The row and its task_teams links stay
- * (history); every read ignores them. Unknown, foreign or already deleted → TaskNotFound
- * (AC-03.11.2).
- */
 @Injectable()
 export class DeleteTaskUseCase {
   constructor(

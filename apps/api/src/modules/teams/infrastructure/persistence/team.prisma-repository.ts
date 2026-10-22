@@ -16,12 +16,6 @@ import { TeamName } from '../../domain/value-objects/team-name.vo';
 const NAME_UNIQUE_INDEX = 'teams_owner_id_lower_name_key';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * Write-side persistence of the Team aggregate. Every statement filters by owner_id, and
- * reads only see active rows (deleted_at IS NULL). `delete` also unassigns the team from its
- * tasks in the same transaction: one database, so the shared task_teams and tasks tables are
- * written here directly (ADR-0020).
- */
 @Injectable()
 export class PrismaTeamRepository extends TeamRepository {
   constructor(private readonly prisma: PrismaService) {
@@ -29,7 +23,6 @@ export class PrismaTeamRepository extends TeamRepository {
   }
 
   async findById(ownerId: string, id: string): Promise<Team | null> {
-    // A malformed id cannot exist; skip the query (the uuid column would reject the cast).
     if (!UUID.test(id)) return null;
     const row = await this.prisma.team.findFirst({
       where: { id, ownerId, deletedAt: null },
@@ -42,9 +35,7 @@ export class PrismaTeamRepository extends TeamRepository {
     name: TeamName,
     excludingId?: string,
   ): Promise<boolean> {
-    // A malformed id matches no row, so there is nothing to exclude.
     const excluded = excludingId && UUID.test(excludingId) ? excludingId : null;
-    // Same expression as the unique index, so the database decides what "same name" means.
     const [row] = await this.prisma.$queryRaw<{ taken: boolean }[]>`
       SELECT EXISTS (
         SELECT 1 FROM teams
@@ -85,7 +76,6 @@ export class PrismaTeamRepository extends TeamRepository {
         data: { ...toUpdate(team), version: { increment: 1 } },
       });
       if (count === 0) throw new TeamNotFound();
-      // One statement for every affected task (AC-03.13.4), before their links go.
       await tx.$executeRaw`
         UPDATE tasks SET version = version + 1, updated_at = ${deletedAt}
         WHERE owner_id = ${team.ownerId} AND deleted_at IS NULL
@@ -95,7 +85,6 @@ export class PrismaTeamRepository extends TeamRepository {
   }
 }
 
-/** Maps a violation of the name index to the domain error; anything else passes through. */
 function translateNameCollision(error: unknown): unknown {
   const isNameCollision =
     error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -104,7 +93,6 @@ function translateNameCollision(error: unknown): unknown {
   return isNameCollision ? new TeamNameAlreadyExists() : error;
 }
 
-/** Re-validates through the entity's rules: tightening one needs a data migration (ADR-0004). */
 function toDomain(row: TeamRow): Team {
   return Team.restore({
     id: row.id,
@@ -119,7 +107,6 @@ function toDomain(row: TeamRow): Team {
   });
 }
 
-/** A full row for a new team; persistence starts every team at version 1. */
 function toInsert(team: Team): TeamRow {
   return {
     ...toUpdate(team),
@@ -130,7 +117,6 @@ function toInsert(team: Team): TeamRow {
   };
 }
 
-/** The columns a write sets; id, owner, version and createdAt are never written. */
 function toUpdate(team: Team) {
   return {
     name: team.name.value,

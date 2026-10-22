@@ -65,7 +65,6 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
     return ifMatch === undefined ? call : call.set('If-Match', ifMatch);
   };
 
-  /** The stored row, straight from the database. */
   const row = async (id: string) =>
     (
       await sql.query<{
@@ -118,7 +117,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
       expect(Date.parse(after.updatedAt)).toBeGreaterThan(
         Date.parse(team.updatedAt),
       );
-      expect(response.headers.etag).toBeUndefined(); // AC-08.3
+      expect(response.headers.etag).toBeUndefined();
     });
 
     it('AC-02.6.3 omitting the description clears it (full replacement)', async () => {
@@ -163,7 +162,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
         version: 1,
         updatedAt: team.updatedAt,
       });
-      expect(response.headers.etag).toBeUndefined(); // AC-08.3
+      expect(response.headers.etag).toBeUndefined();
       expect(await row(team.id)).toEqual(before);
     });
 
@@ -375,7 +374,6 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
       ]);
 
       const statuses = responses.map((response) => response.status).sort();
-      // The unique index on the owner's active names decides: the loser is a name collision.
       expect(statuses).toEqual([200, 409]);
       const names = [(await row(a.id))?.name, (await row(b.id))?.name];
       expect(

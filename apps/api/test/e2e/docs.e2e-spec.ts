@@ -50,7 +50,6 @@ describe('API documentation (e2e, T-001-13)', () => {
       security: unknown[];
       paths: Record<string, Record<string, { security?: unknown[] }>>;
     };
-    // AC-08.2: Bearer only; no session-cookie scheme for the API routes.
     expect(Object.keys(document.components.securitySchemes)).toEqual([
       'bearer',
     ]);

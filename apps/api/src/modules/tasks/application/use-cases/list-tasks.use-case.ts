@@ -13,12 +13,6 @@ export interface ListTasksInput {
   readonly criteria: ListTasksCriteria;
 }
 
-/**
- * A team filter that is not one of the owner's live teams (unknown, deleted, foreign) is an empty
- * page, and the tasks are not queried (AC-03.3.2). Otherwise one read-model call for the page and
- * its total, and one TeamLookup call for every team on the page, so the query count does not grow
- * with the page size.
- */
 @Injectable()
 export class ListTasksUseCase {
   constructor(

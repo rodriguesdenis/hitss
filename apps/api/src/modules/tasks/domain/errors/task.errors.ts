@@ -36,7 +36,6 @@ export class InvalidDueDate extends DomainError {
   }
 }
 
-/** More distinct teams than a task may have (`422 TOO_MANY_TEAMS`). */
 export class TooManyTeams extends DomainError {
   constructor(
     readonly max: number,
@@ -46,10 +45,6 @@ export class TooManyTeams extends DomainError {
   }
 }
 
-/**
- * Some team ids are not live teams of the owner (`422 UNKNOWN_TEAMS`). Foreign
- * and never-existing ids are reported alike, so ownership is not revealed.
- */
 export class UnknownTeams extends DomainError {
   readonly teamIds: readonly string[];
 
@@ -59,7 +54,6 @@ export class UnknownTeams extends DomainError {
   }
 }
 
-/** The id is unknown, deleted or owned by another user (never revealed which). */
 export class TaskNotFound extends DomainError {
   constructor() {
     super('Task not found.');

@@ -4,12 +4,10 @@ const MIN_LENGTH = 3;
 const MAX_LENGTH = 120;
 const CONTROL_CHARACTER = /\p{Cc}/u;
 
-/** A task's title: trimmed, 3–120 code points, no control characters. */
 export class TaskTitle {
   private constructor(readonly value: string) {}
 
   static create(raw: string): TaskTitle {
-    // Checked before trimming: trim() would silently drop a trailing "\n".
     if (CONTROL_CHARACTER.test(raw)) {
       throw new InvalidTaskTitle();
     }

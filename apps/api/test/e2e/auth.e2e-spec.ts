@@ -11,7 +11,6 @@ import { useTestDatabase } from '../support/postgres';
 import { ProbeModule } from './probe.module';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
-// Built at runtime with low entropy so secret scanners never mistake a fixture for a secret.
 const PASSWORD = ['correct', 'horse', 'battery', '42'].join('-');
 const TRUSTED = 'https://app.example.test';
 const UNTRUSTED = 'https://evil.example.test';
@@ -31,7 +30,6 @@ interface SessionBody {
 
 describe('Better Auth at /api/auth (e2e)', () => {
   const db = useTestDatabase();
-  // The real hasher, observed: production behavior with call tracking (AC-01.2.7).
   const hasher = new BetterAuthPasswordHasher();
   const hashSpy = jest.spyOn(hasher, 'hash');
   let app: INestApplication;
@@ -41,7 +39,6 @@ describe('Better Auth at /api/auth (e2e)', () => {
   beforeAll(async () => {
     app = await createTestApp(db.url, {
       imports: [ProbeModule],
-      // Rate limits have their own fresh-app e2e (T-001-10); here they would cut the suite short.
       config: {
         corsOrigins: [TRUSTED],
         appEnv: 'test',
@@ -103,8 +100,8 @@ describe('Better Auth at /api/auth (e2e)', () => {
       expect(response.status).toBe(200);
       const body = response.body as { user: AuthUser; token: string };
       expect(body.user).toMatchObject({ name: 'Marina', email });
-      expect(body.user.id).toMatch(UUID); // generateId: 'uuid'
-      expect(bearerOf(response)).toContain('.'); // signed token
+      expect(body.user.id).toMatch(UUID);
+      expect(bearerOf(response)).toContain('.');
       expect(response.text).not.toContain(PASSWORD);
       expect(JSON.stringify(response.body)).not.toMatch(/password|scrypt/i);
       expect(await count('sessions', 'user_id = $1', [body.user.id])).toBe(1);
@@ -386,7 +383,6 @@ describe('Better Auth at /api/auth (e2e)', () => {
 
     it('AC-01.4.4 a session last renewed over a day ago slides to 7 days from now', async () => {
       const { email, bearer } = await signedIn();
-      // Renewed 2 days ago: expiry = renewal + 7 days = now + 5 days.
       await sql.query(
         `UPDATE sessions SET expires_at = now() + interval '5 days',
                              updated_at = now() - interval '2 days'

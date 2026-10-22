@@ -24,23 +24,12 @@ interface TeamRow {
   updated_at: Date;
 }
 
-/**
- * The owner's active tasks assigned to the team (AC-02.8.x, AC-03.11.3): a soft-deleted task
- * keeps its links but never counts. One correlated subquery per returned row, served by the
- * task_teams team index; a page holds at most 100 teams.
- */
 const COLUMNS = Prisma.sql`
   id, name, color_hex, description, version, created_at, updated_at,
   (SELECT count(*)::int FROM task_teams tt JOIN tasks t ON t.id = tt.task_id
    WHERE tt.team_id = teams.id AND t.owner_id = teams.owner_id AND t.deleted_at IS NULL
   ) AS task_count`;
 
-/**
- * ORDER BY comes only from this whitelist (never from input). Every order is total, so equal keys
- * page deterministically (ADR-0006): timestamps end with id; lower(name) needs no tie-break,
- * because teams_owner_id_lower_name_key makes it unique among the owner's active teams (exactly
- * this query's filter), and an id there would add an Incremental Sort on top of that index.
- */
 const ORDER: Record<TeamSortField, Record<SortDirection, Prisma.Sql>> = {
   name: {
     asc: Prisma.sql`lower(name) ASC`,
@@ -56,11 +45,6 @@ const ORDER: Record<TeamSortField, Record<SortDirection, Prisma.Sql>> = {
   },
 };
 
-/**
- * Read side of Team Management: parameterized SQL, owner-scoped, active teams only, with each
- * team's task count. The page and the total are read in one REPEATABLE READ transaction, so they
- * come from one snapshot.
- */
 @Injectable()
 export class PrismaTeamReadModel extends TeamReadModel {
   constructor(private readonly prisma: PrismaService) {
@@ -68,7 +52,6 @@ export class PrismaTeamReadModel extends TeamReadModel {
   }
 
   async findById(ownerId: string, id: string): Promise<TeamView | null> {
-    // A malformed id cannot exist; skip the query (the uuid column would reject the cast).
     if (!UUID.test(id)) {
       return null;
     }
@@ -109,7 +92,6 @@ export class PrismaTeamReadModel extends TeamReadModel {
     ownerId: string,
     ids: readonly string[],
   ): Promise<TeamSummary[]> {
-    // Malformed ids cannot exist (and would fail the uuid cast); duplicates are asked once.
     const wanted = [
       ...new Set(
         ids.filter((id) => UUID.test(id)).map((id) => id.toLowerCase()),

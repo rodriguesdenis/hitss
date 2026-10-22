@@ -11,11 +11,9 @@ export interface TaskProps {
   id: string;
   ownerId: string;
   title: TaskTitle;
-  /** Trimmed, at most 2000 code points, no control characters but line breaks; blank → `null`. */
   description: string | null;
   status: TaskStatus;
   dueDate: DueDate | null;
-  /** At most 10 distinct ids, kept sorted (order is never meaningful). */
   teamIds: readonly string[];
   completedAt: Date | null;
   version: number;
@@ -26,21 +24,13 @@ export interface TaskProps {
 
 export interface TaskEdit {
   title: TaskTitle;
-  /** Raw input; omitted means none (a `PUT` is a full replacement). */
   description?: string | null;
   dueDate: DueDate | null;
 }
 
-/**
- * Task aggregate root. Each change method returns whether anything changed
- * and then touches `updatedAt`; persistence increments `version` on every
- * write and keeps it as data (last write wins, ADR-0020). A no-op returns
- * `false` and changes nothing (BR-03.12).
- */
 export class Task {
   private constructor(private props: TaskProps) {}
 
-  /** A new task at version 1, with a fresh id (the global Web Crypto API, no import). */
   static create(
     p: TaskEdit & {
       ownerId: string;
@@ -49,7 +39,6 @@ export class Task {
       now: Date;
     },
   ): Task {
-    // The team count first: TOO_MANY_TEAMS precedes every other domain check (BR-03.8).
     const teamIds = normalizeTeamIds(p.teamIds);
     const status = p.status ?? TaskStatus.PENDING;
     return new Task({
@@ -68,7 +57,6 @@ export class Task {
     });
   }
 
-  /** Rebuilds a persisted task; description and teams are re-validated like on create. */
   static restore(props: TaskProps): Task {
     return new Task({
       ...props,
@@ -81,10 +69,6 @@ export class Task {
     });
   }
 
-  /**
-   * A task is overdue when it has a due date before today (UTC) and is not Done (BR-03.9).
-   * Derived on every read, never stored; static so read rows use the same rule.
-   */
   static isOverdue(
     status: TaskStatus,
     dueDate: DueDate | null,
@@ -127,7 +111,6 @@ export class Task {
     return this.props.version;
   }
 
-  // Dates are mutable: copies in and out keep the aggregate's timestamps private.
   get completedAt(): Date | null {
     return copyDate(this.props.completedAt);
   }
@@ -148,7 +131,6 @@ export class Task {
     return Task.isOverdue(this.props.status, this.props.dueDate, today);
   }
 
-  /** Replaces title, description and due date. */
   edit(p: TaskEdit & { now: Date }): boolean {
     const description = normalizeDescription(p.description);
     if (
@@ -168,7 +150,6 @@ export class Task {
     return true;
   }
 
-  /** Replaces the whole set of teams; the same ids in any order is a no-op. */
   assignTo(ids: readonly string[], now: Date): boolean {
     const teamIds = normalizeTeamIds(ids);
     const current = this.props.teamIds;
@@ -183,11 +164,6 @@ export class Task {
     return true;
   }
 
-  /**
-   * Any status may change to any other (BR-03.4). Entering DONE sets the
-   * completion time, leaving it clears it (BR-03.5); the same status is a
-   * no-op that keeps the original completion time.
-   */
   changeStatus(to: TaskStatus, now: Date): boolean {
     const from = this.props.status;
     if (to === from) {
@@ -202,7 +178,6 @@ export class Task {
     return true;
   }
 
-  /** Archives the task; deleting again is a no-op. */
   delete(now: Date): void {
     if (this.props.deletedAt !== null) {
       return;
@@ -210,18 +185,15 @@ export class Task {
     this.props = { ...this.props, deletedAt: new Date(now) };
   }
 
-  /** Records a change time; the version is incremented by persistence. */
   private touch(now: Date): void {
     this.props = { ...this.props, updatedAt: new Date(now) };
   }
 }
 
-/** Trimmed; blank → `null`; at most 2000 code points; no control characters but line breaks. */
 function normalizeDescription(raw: string | null | undefined): string | null {
   if (raw === undefined || raw === null) {
     return null;
   }
-  // Checked before trimming: trim() would silently drop a trailing "\t".
   if (CONTROL_CHARACTER_EXCEPT_LINE_BREAK.test(raw)) {
     throw new InvalidTaskDescription();
   }
@@ -235,10 +207,6 @@ function normalizeDescription(raw: string | null | undefined): string | null {
   return value;
 }
 
-/**
- * Distinct and sorted; at most 10 (TooManyTeams). The DTO rejects duplicates and malformed ids;
- * whether the teams exist is the application's check (UnknownTeams).
- */
 function normalizeTeamIds(ids: readonly string[]): string[] {
   const distinct = [...new Set(ids)];
   if (distinct.length > MAX_TEAMS_PER_TASK) {

@@ -35,10 +35,6 @@ interface ErrorBody {
   };
 }
 
-/**
- * POST /api/v1/tasks on the full AppModule (teams checked through TeamLookup), only the clock
- * fixed. Every rejection also asserts that no task row was written for the user.
- */
 describe('POST /api/v1/tasks (e2e)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
@@ -133,7 +129,7 @@ describe('POST /api/v1/tasks (e2e)', () => {
         updatedAt: NOW.toISOString(),
       });
       expect(response.headers.location).toBe(`${TASKS}/${task.id}`);
-      expect(response.headers.etag).toBeUndefined(); // AC-08.3
+      expect(response.headers.etag).toBeUndefined();
       const { rows } = await sql.query<{ owner_id: string }>(
         'SELECT owner_id FROM tasks WHERE id = $1',
         [task.id],
@@ -371,7 +367,6 @@ describe('POST /api/v1/tasks (e2e)', () => {
       'AC-03.1.7 AC-01.6.6 a %s key → 400 naming it, nothing created',
       async (field) => {
         const user = await signUpAndSignIn(app);
-        // A raw JSON body: an object literal would not carry __proto__ as an own key.
         const response = await http()
           .post(TASKS)
           .set('Authorization', bearerOf(user))

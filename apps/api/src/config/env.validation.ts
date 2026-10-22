@@ -7,7 +7,6 @@ import { ProductionRule, productionRules } from './production-rules';
 
 export { ConfigValidationError };
 
-/** Builds a validator running the decorator pass, then `rules` when APP_ENV=production. */
 export function validateWith(rules: ProductionRule[]) {
   return (config: Record<string, unknown>): EnvironmentVariables => {
     const env = plainToInstance(EnvironmentVariables, config, {

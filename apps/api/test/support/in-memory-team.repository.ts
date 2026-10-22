@@ -9,21 +9,13 @@ import {
 import { TeamRepository } from '../../src/modules/teams/domain/repositories/team.repository';
 import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name.vo';
 
-/**
- * In-memory TeamRepository for handler unit tests. It passes the same contract suite as the
- * Prisma adapter (team-repository.contract.ts): snapshots in, fresh aggregates out, the same
- * version increment, owner scoping and errors. Names are compared with TeamName.equals, the domain
- * approximation of the database's lower(name) index.
- */
 export class InMemoryTeamRepository extends TeamRepository {
   private readonly rows = new Map<string, TeamProps>();
 
-  /** Stores a team as-is (its own version), bypassing the name check. For test setup. */
   seed(team: Team): void {
     this.rows.set(team.id, snapshot(team, team.version));
   }
 
-  /** Every stored team, deleted ones included, as fresh aggregates. */
   all(): Team[] {
     return [...this.rows.values()].map((row) => Team.restore(row));
   }
@@ -53,7 +45,6 @@ export class InMemoryTeamRepository extends TeamRepository {
     return Promise.resolve();
   }
 
-  /** The soft delete only: task links live in another module's store (proven in integration). */
   delete(team: Team): Promise<void> {
     return this.update(team);
   }

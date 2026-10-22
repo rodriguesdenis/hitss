@@ -6,11 +6,6 @@ import {
   demoTaskFixtures,
 } from './fixtures';
 
-/**
- * Upserts the 10 demo tasks by their fixed ids with their full seeded values, and rewrites the team
- * links of exactly those tasks. Tasks and links the evaluator created are never touched
- * (AC-07.2.4). Due dates are relative to `seedDay`.
- */
 export async function seedTasks(
   prisma: Pick<PrismaService, 'task' | 'team' | 'taskTeam' | '$transaction'>,
   seedDay: Date,
@@ -35,7 +30,6 @@ export async function seedTasks(
       update: values,
     });
   }
-  // A seeded team that could not be restored may not exist at all: link only existing teams.
   const existingTeams = new Set(
     (
       await prisma.team.findMany({

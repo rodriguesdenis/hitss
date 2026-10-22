@@ -12,11 +12,6 @@ const TASKS = '/api/v1/tasks';
 const NOW = new Date('2026-10-20T13:00:00.000Z');
 const EARLIER = new Date('2026-10-19T08:00:00.000Z');
 
-/**
- * DELETE /api/v1/tasks/:id on the full AppModule, only the clock fixed. After a delete the task
- * is gone from every read and write, lists included; the list read model ignores deleted tasks
- * under every filter combination (prisma-task.list.int-spec.ts).
- */
 describe('DELETE /api/v1/tasks/:id (e2e)', () => {
   const db = useTestDatabase();
   let app: INestApplication;

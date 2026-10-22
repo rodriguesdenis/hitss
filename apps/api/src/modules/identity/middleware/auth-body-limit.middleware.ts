@@ -1,6 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-/** Largest `/api/auth/*` request body: credentials are tiny, hashing a huge one is a DoS lever. */
 export const AUTH_BODY_LIMIT_BYTES = 16 * 1024;
 
 function reject(response: ServerResponse): void {
@@ -16,12 +15,6 @@ function reject(response: ServerResponse): void {
   );
 }
 
-/**
- * Rejects an oversized `/api/auth/*` body with 413 before Better Auth reads it, so no password is
- * hashed (AC-01.7.10): by the declared `Content-Length`, and for bodies without one (chunked) by
- * the bytes counted as they arrive. The count wraps the request's `push` instead of listening to
- * `data`, which would start the stream before the handler attaches and lose chunks.
- */
 export function authBodyLimit(limit: number = AUTH_BODY_LIMIT_BYTES) {
   return (
     request: IncomingMessage,

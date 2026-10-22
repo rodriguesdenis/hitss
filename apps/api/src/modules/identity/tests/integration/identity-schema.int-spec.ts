@@ -35,7 +35,6 @@ describe('Identity schema (integration, T-001-05)', () => {
     await app?.close();
   });
 
-  /** Raw insert, as any writer other than Better Auth would do it (no updated_at given). */
   const insertUser = (name: string, email: string) =>
     sql.query<{ id: string }>(
       'INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id',

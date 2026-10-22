@@ -12,7 +12,6 @@ const failedFields = async (query: Record<string, unknown>) => {
   try {
     await parse(query);
   } catch (error) {
-    // One detail per failed constraint: compare the distinct fields.
     return [
       ...new Set(
         (error as RequestValidationException).details.map(

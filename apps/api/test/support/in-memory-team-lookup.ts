@@ -9,25 +9,17 @@ interface KnownTeam extends TeamSummary {
   readonly deleted: boolean;
 }
 
-/**
- * In-memory TeamLookup for Task Management's use-case tests. Same semantics as the real one:
- * only the owner's live teams are summarised or found; deleted, foreign, unknown and malformed
- * ids are missing.
- */
 export class InMemoryTeamLookup extends TeamLookup {
   private readonly teams = new Map<string, KnownTeam>();
 
   constructor() {
-    // Every public method is overridden below; the read model is never reached.
     super(undefined as unknown as TeamReadModel);
   }
 
-  /** Registers a live team of `ownerId`. */
   add(ownerId: string, team: TeamSummary): void {
     this.teams.set(team.id, { ...team, ownerId, deleted: false });
   }
 
-  /** Marks a known team as soft-deleted (it stops being live). */
   remove(teamId: string): void {
     const team = this.teams.get(teamId);
     if (team) this.teams.set(teamId, { ...team, deleted: true });

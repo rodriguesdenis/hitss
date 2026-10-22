@@ -9,7 +9,6 @@ import {
 const check = (env: Record<string, string>, variable: string) =>
   expectInvalid(validate, env, variable);
 
-/** `https://<user>:<x>@<host>` built at runtime, low entropy, so scanners never flag a fixture. */
 const withUserinfo = (host: string): string =>
   ['https://', 'demo', ':', 'x', '@', host].join('');
 
@@ -157,8 +156,6 @@ describe('rate limits (every environment)', () => {
 });
 
 describe('APP_SCHEME reserved schemes (every environment)', () => {
-  // The scheme becomes a Better Auth trusted origin matched by prefix: `http` would trust
-  // every http:// origin. Expo Go's exp:// is added by the auth module, never through here.
   it.each([
     'http',
     'https',

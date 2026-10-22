@@ -193,7 +193,6 @@ describe('HTTP conventions (e2e)', () => {
         .send({ name: 'x'.repeat(200_000) });
 
       expect(response.status).toBe(413);
-      // The request-id middleware runs before the body parser, so parse errors carry the id.
       expect(response.headers['x-request-id']).toMatch(UUID);
       expect(errorOf(response).traceId).toBe(response.headers['x-request-id']);
       expect(errorOf(response)).toMatchObject({
@@ -222,8 +221,6 @@ describe('HTTP conventions (e2e)', () => {
         },
       });
 
-      // pino levels: 50 = error. The filter writes the only error entry; pino-http's completion
-      // line for a 5xx is a warning.
       const errors = logs.lines.filter((line) => line.level === 50);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toMatchObject({

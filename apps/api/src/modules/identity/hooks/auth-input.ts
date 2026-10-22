@@ -6,15 +6,6 @@ const NAME_MAX = 100;
 export type AuthInputResult =
   { ok: true; body: Record<string, unknown> } | { ok: false; field: 'name' };
 
-/**
- * Input rules Better Auth does not enforce itself (BR-01.3, AC-01.1.5, AC-01.2.6), applied before
- * its own validation:
- * - sign-up and sign-in: the email is trimmed (Better Auth lower-cases it); the password is never
- *   touched, so surrounding spaces are part of it;
- * - sign-up: the name must be a string with no control characters (checked before trimming, so
- *   none hides at an edge), 1–100 code points after trimming, and is stored trimmed.
- * Returns `undefined` for routes and bodies it does not handle.
- */
 export function normalizeAuthInput(
   path: string,
   body: unknown,

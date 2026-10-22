@@ -13,11 +13,6 @@ export interface CreateTeamInput {
   readonly description?: string | null;
 }
 
-/**
- * Builds the value objects (the domain re-validates what the DTO checked), rejects a name the
- * owner already uses on an active team, and inserts the team at version 1. Returns the new id;
- * the controller reads the team back through GetTeamUseCase.
- */
 @Injectable()
 export class CreateTeamUseCase {
   constructor(
@@ -33,7 +28,6 @@ export class CreateTeamUseCase {
       description: input.description,
       now: this.clock.now(),
     });
-    // Fast path for the common case; the unique index settles races in insert (AC-02.1.9).
     if (await this.teams.existsActiveByName(input.ownerId, team.name)) {
       throw new TeamNameAlreadyExists();
     }

@@ -2,7 +2,6 @@ import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const API_DIR = join(__dirname, '../..');
-/** A hung child must fail the test instead of blocking the run. */
 const PROBE_TIMEOUT_MS = 90_000;
 
 export interface ProbeResult {
@@ -10,11 +9,6 @@ export interface ProbeResult {
   output: string;
 }
 
-/**
- * Runs one `test/probes/*.tz-probe.ts` file in a child Jest process whose TZ is `zone` from
- * the start. Setting process.env.TZ inside a test has no effect (Jest sandboxes process.env),
- * so time-zone behaviour can only be proven in a process started in that zone.
- */
 export function runProbeInTimeZone(
   probe: string,
   zone: string,
@@ -45,7 +39,6 @@ export function runProbeInTimeZone(
   };
 }
 
-/** Fails with the child's output, so a broken zone shows its actual assertion. */
 export function expectProbePassed(result: ProbeResult): void {
   if (result.status !== 0) {
     throw new Error(

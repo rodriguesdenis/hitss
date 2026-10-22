@@ -10,11 +10,6 @@ export interface ChangeTaskStatusInput {
   readonly status: TaskStatus;
 }
 
-/**
- * Load, `changeStatus`, write unless it is a no-op: the same status writes nothing and keeps the
- * version, updated time and completion time (AC-03.10.3). Unknown, foreign and deleted →
- * TaskNotFound. Last write wins (ADR-0020).
- */
 @Injectable()
 export class ChangeTaskStatusUseCase {
   constructor(

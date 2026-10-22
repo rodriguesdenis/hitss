@@ -13,8 +13,6 @@ import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// team_ids: ordered by the uuid itself, so task_teams_pkey (task_id, team_id) returns them sorted
-// with no Sort node; for canonical lower-case uuids that is also their text order.
 interface TaskListRow {
   id: string;
   title: string;
@@ -28,13 +26,6 @@ interface TaskListRow {
   team_ids: string[];
 }
 
-/**
- * ORDER BY comes only from this whitelist (never from input) and always ends with id in the same
- * direction (AC-03.6.4). dueDate keeps tasks without a date last in both directions (AC-03.6.3);
- * title ignores case; status follows the enum, i.e. the lifecycle order (AC-03.6.2). The default
- * -createdAt, one status and dueDate ASC follow tasks_owner_created_idx,
- * tasks_owner_status_created_idx and tasks_owner_due_idx.
- */
 const ORDER: Record<TaskSortField, Record<SortDirection, Prisma.Sql>> = {
   createdAt: {
     asc: Prisma.sql`t.created_at ASC, t.id ASC`,
@@ -58,11 +49,6 @@ const ORDER: Record<TaskSortField, Record<SortDirection, Prisma.Sql>> = {
   },
 };
 
-/**
- * Query side of Task Management: flat records straight from the tables, never aggregates.
- * Every query is owner-scoped and sees active tasks only (deleted_at IS NULL). Team links are
- * returned as ids; names and colors come from TeamLookup (ADR-0020).
- */
 @Injectable()
 export class PrismaTaskReadModel extends TaskReadModel {
   constructor(private readonly prisma: PrismaService) {
@@ -70,7 +56,6 @@ export class PrismaTaskReadModel extends TaskReadModel {
   }
 
   async findById(ownerId: string, id: string): Promise<TaskRecord | null> {
-    // A malformed id cannot exist; skip the query (the uuid column would reject the cast).
     if (!UUID.test(id)) return null;
     const row = await this.prisma.task.findFirst({
       where: { id, ownerId, deletedAt: null },
@@ -91,7 +76,6 @@ export class PrismaTaskReadModel extends TaskReadModel {
     const { teams, dueDate, ...columns } = row;
     return {
       ...columns,
-      // A `date` column travels as midnight UTC: the UTC day is the calendar day.
       dueDate: dueDate ? dueDate.toISOString().slice(0, 10) : null,
       teamIds: teams.map((link) => link.teamId),
     };
@@ -101,7 +85,6 @@ export class PrismaTaskReadModel extends TaskReadModel {
     ownerId: string,
     { page, teamId, statuses, search, sort }: ListTasksCriteria,
   ): Promise<Page<TaskRecord>> {
-    // A malformed team id cannot match a link; skip the queries (the uuid cast would fail).
     if (teamId !== undefined && !UUID.test(teamId))
       return { items: [], total: 0 };
     const where = Prisma.sql`t.owner_id = ${ownerId} AND t.deleted_at IS NULL${
@@ -132,10 +115,6 @@ export class PrismaTaskReadModel extends TaskReadModel {
   }
 }
 
-/**
- * One status is an equality, so tasks_owner_status_created_idx can return rows already in order;
- * `= ANY(...)` never uses it, even with one element (plan 003, verified on the compose image).
- */
 function statusFilter(statuses: readonly TaskStatus[] | undefined): Prisma.Sql {
   if (!statuses || statuses.length === 0) return Prisma.empty;
   if (statuses.length === 1)

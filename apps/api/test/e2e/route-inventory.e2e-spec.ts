@@ -8,10 +8,6 @@ import { createTestApp } from '../support/app';
 import { useTestDatabase } from '../support/postgres';
 import { OwnerProbeModule } from './owner-probe.module';
 
-/**
- * The only public Nest routes (AC-01.5.4). `/api/auth/*` is served by Better Auth outside Nest
- * routing; `/docs` is served by Swagger outside Nest routing (docs.e2e-spec.ts).
- */
 const PUBLIC_ALLOWLIST = [
   'GET /api/v1/health/live',
   'GET /api/v1/health/ready',
@@ -25,7 +21,6 @@ interface Route {
   isPublic: boolean;
 }
 
-/** Every handler of the app with its HTTP method, full path and public flag. */
 function routesOf(app: INestApplication): Route[] {
   const discovery = app.get(DiscoveryService);
   const scanner = app.get(MetadataScanner);

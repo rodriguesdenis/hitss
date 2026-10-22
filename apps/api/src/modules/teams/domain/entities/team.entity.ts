@@ -10,7 +10,6 @@ export interface TeamProps {
   ownerId: string;
   name: TeamName;
   color: ColorHex;
-  /** Trimmed, at most 280 code points, no control characters but line breaks; blank → `null`. */
   description: string | null;
   version: number;
   createdAt: Date;
@@ -21,20 +20,12 @@ export interface TeamProps {
 export interface TeamValues {
   name: TeamName;
   color: ColorHex;
-  /** Raw input; omitted means none (a `PUT` is a full replacement). */
   description?: string | null;
 }
 
-/**
- * Team aggregate root. The `version` is incremented by persistence on every
- * write and kept as data (last write wins, ADR-0020); the aggregate only
- * reports whether anything changed.
- * Name uniqueness per owner is enforced by the application and the database.
- */
 export class Team {
   private constructor(private props: TeamProps) {}
 
-  /** A new team at version 1, with a fresh id (the global Web Crypto API, no import). */
   static create(p: TeamValues & { ownerId: string; now: Date }): Team {
     return new Team({
       id: crypto.randomUUID(),
@@ -49,7 +40,6 @@ export class Team {
     });
   }
 
-  /** Rebuilds a persisted team; the description is re-validated like on create (ADR-0004). */
   static restore(props: TeamProps): Team {
     return new Team({
       ...props,
@@ -84,7 +74,6 @@ export class Team {
     return this.props.version;
   }
 
-  // Dates are mutable: copies in and out keep the aggregate's timestamps private.
   get createdAt(): Date {
     return new Date(this.props.createdAt);
   }
@@ -97,10 +86,6 @@ export class Team {
     return copyDate(this.props.deletedAt);
   }
 
-  /**
-   * Full replacement. Returns `false` (and leaves `updatedAt` untouched) when
-   * every value is already equal; a letter-case-only rename is a change.
-   */
   replace(p: TeamValues & { now: Date }): boolean {
     const description = normalizeDescription(p.description);
     const changed =
@@ -120,7 +105,6 @@ export class Team {
     return true;
   }
 
-  /** Archives the team; deleting again is a no-op. */
   delete(now: Date): void {
     if (this.props.deletedAt !== null) {
       return;
@@ -133,7 +117,6 @@ function normalizeDescription(raw: string | null | undefined): string | null {
   if (raw === undefined || raw === null) {
     return null;
   }
-  // Checked before trimming: trim() would silently drop a trailing "\t".
   if (CONTROL_CHARACTER_EXCEPT_LINE_BREAK.test(raw)) {
     throw new InvalidTeamDescription();
   }

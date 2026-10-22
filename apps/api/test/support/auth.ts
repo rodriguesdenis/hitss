@@ -2,26 +2,18 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
-/** A signed-in test user, with both credentials a client can present. */
 export interface TestUser {
   id: string;
   name: string;
   email: string;
-  /** Signed bearer token from `set-auth-token` (`Authorization: Bearer <token>`). */
   bearer: string;
-  /** `name=value` of the session cookie, as a browser sends it back. */
   cookie: string;
 }
 
-// Built at runtime with low entropy so secret scanners never mistake a fixture for a secret.
 export const TEST_PASSWORD = ['correct', 'horse', 'battery', '42'].join('-');
 
 let sequence = 0;
 
-/**
- * Signs up a fresh user through the real `/api/auth` routes (sign-up also signs in) and returns
- * its credentials. Emails are unique per call, so tests never collide on a shared database.
- */
 export async function signUpAndSignIn(
   app: INestApplication,
   name = 'Marina',
@@ -50,7 +42,6 @@ export async function signUpAndSignIn(
   };
 }
 
-/** Two independent owners for isolation tests (AC-01.6.x): Marina and Rafael. */
 export async function twoUsers(
   app: INestApplication,
 ): Promise<{ marina: TestUser; rafael: TestUser }> {
@@ -59,6 +50,5 @@ export async function twoUsers(
   return { marina, rafael };
 }
 
-/** `Authorization` header value for a user's bearer token. */
 export const bearerOf = (user: Pick<TestUser, 'bearer'>): string =>
   `Bearer ${user.bearer}`;

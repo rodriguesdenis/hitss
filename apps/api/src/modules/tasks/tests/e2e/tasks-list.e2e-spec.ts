@@ -37,15 +37,10 @@ interface Seed {
   deleted?: boolean;
 }
 
-/**
- * GET /api/v1/tasks: filters (`teamId`, `status`) and paging (T-003-08b) on the full AppModule,
- * only the clock fixed. Teams are created through POST /teams and resolved through TeamLookup.
- */
 describe('GET /api/v1/tasks — filters and paging (e2e)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
   let prisma: PrismaService;
-  /** SQL statements Prisma ran while `recording` is on. */
   const statements: string[] = [];
   let recording = false;
 
@@ -95,7 +90,6 @@ describe('GET /api/v1/tasks — filters and paging (e2e)', () => {
       ).body as { data: { id: string } }
     ).data.id;
 
-  /** Inserts tasks one minute apart, the first oldest; returns their ids in order. */
   async function seed(owner: TestUser, tasks: Seed[]): Promise<string[]> {
     const ids = tasks.map(() => randomUUID());
     await prisma.task.createMany({
@@ -142,7 +136,6 @@ describe('GET /api/v1/tasks — filters and paging (e2e)', () => {
       const response = await list(user);
 
       expect(response.status).toBe(200);
-      // No ETag anywhere (AC-08.3).
       expect(response.headers.etag).toBeUndefined();
       const { data, meta } = pageOf(response);
       expect(data.map((task) => task.title)).toEqual(
@@ -262,7 +255,6 @@ describe('GET /api/v1/tasks — filters and paging (e2e)', () => {
     });
 
     it('AC-03.3.2 AC-03.12.4 an unknown team, a team without tasks, a deleted team or another user’s team → empty page, total 0', async () => {
-      // Its own owner, so the deleted team's task does not leak into the other filter rows.
       const owner = await signUpAndSignIn(app);
       const infra = await createTeam(owner, 'Infra');
       const gone = await createTeam(owner, 'Gone');

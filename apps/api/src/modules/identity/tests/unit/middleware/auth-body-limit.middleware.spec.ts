@@ -86,7 +86,7 @@ describe('authBodyLimit', () => {
     expect(accepted).toBe(false);
     expect(state.status).toBe(413);
     expect(request.destroyed).toBe(true);
-    expect(request.chunks).toHaveLength(1); // the offending chunk is not delivered
+    expect(request.chunks).toHaveLength(1);
   });
 
   it('AC-01.7.10 passes bodiless requests through', () => {

@@ -7,7 +7,6 @@ export interface GetTeamInput {
   readonly id: string;
 }
 
-/** One of the owner's active teams, with its task count, or TeamNotFound (AC-02.5.x). */
 @Injectable()
 export class GetTeamUseCase {
   constructor(private readonly readModel: TeamReadModel) {}

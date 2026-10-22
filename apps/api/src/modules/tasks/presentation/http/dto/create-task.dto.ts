@@ -22,11 +22,6 @@ import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
 const CONTROL = /\p{Cc}/u;
 const CONTROL_EXCEPT_LINE_BREAK = /(?![\n\r])\p{Cc}/u;
 
-/**
- * Trims a string unless it holds a forbidden control character: trimming first would erase a
- * leading or trailing one ("\tShip") and let it pass (AC-03.1.8). The untouched value then
- * fails the `@Matches` rule.
- */
 const trimUnless =
   (forbidden: RegExp) =>
   ({ value }: TransformFnParams): unknown =>
@@ -43,12 +38,7 @@ export const TEAM_IDS_DOC: ApiPropertyOptions = {
   description: 'At most 10 distinct ids of your teams.',
 };
 
-/**
- * Body of `POST /api/v1/tasks` (plan 003 → DTOs). Any other field, owner fields included,
- * → 400 naming it (global pipe, AC-03.1.7, AC-03.12.6). UpdateTaskDto reuses these rules.
- */
 export class CreateTaskDto {
-  /** 3–120 characters after trimming, no control characters (AC-03.1.2, AC-03.1.8). */
   @ApiProperty({ minLength: 3, maxLength: 120, example: 'Write release notes' })
   @Transform(trimUnless(CONTROL))
   @IsString()
@@ -58,7 +48,6 @@ export class CreateTaskDto {
   })
   title!: string;
 
-  /** Optional, at most 2000 characters after trimming; blank means none (AC-03.1.3). */
   @ApiPropertyOptional({ type: String, maxLength: 2000, nullable: true })
   @Transform(trimUnless(CONTROL_EXCEPT_LINE_BREAK))
   @IsOptional()
@@ -70,13 +59,11 @@ export class CreateTaskDto {
   })
   description?: string | null;
 
-  /** Exact upper case (AC-03.1.4); defaults to PENDING. */
   @ApiPropertyOptional({ enum: TaskStatus, enumName: 'TaskStatus' })
   @IsOptional()
   @IsIn(Object.values(TaskStatus), STATUS_RULE)
   status?: TaskStatus;
 
-  /** A real calendar date, past dates allowed (AC-03.1.5). */
   @ApiPropertyOptional({
     type: String,
     format: 'date',
@@ -87,10 +74,6 @@ export class CreateTaskDto {
   @IsCalendarDate()
   dueDate?: string | null;
 
-  /**
-   * Distinct team ids. 11–100 pass here and the domain answers `422 TOO_MANY_TEAMS`; above 100
-   * is a payload guard (400). Unknown or foreign ids → `422 UNKNOWN_TEAMS` (AC-03.1.6).
-   */
   @ApiPropertyOptional(TEAM_IDS_DOC)
   @IsOptional()
   @IsArray()

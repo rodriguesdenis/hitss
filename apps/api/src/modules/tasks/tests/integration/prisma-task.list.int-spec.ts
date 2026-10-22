@@ -457,7 +457,6 @@ describe('PrismaTaskReadModel.list (integration, T-003-08a, T-003-09a)', () => {
         'breaks ties by id and walks every page exactly once ($field $direction)',
         async (sort) => {
           const ownerId = await newOwner();
-          // Twelve tasks equal on every sort key (time, title, status, due date): only ids differ.
           const ids: string[] = [];
           for (let i = 0; i < 12; i++) {
             ids.push(
@@ -515,9 +514,6 @@ describe('PrismaTaskReadModel.list (integration, T-003-08a, T-003-09a)', () => {
       for (let i = 0; i < 5; i++) others.push(await newOwner());
       ownerId = await newOwner();
       teamId = await newTeam(ownerId, 'Hot team');
-      // A realistic backlog: 5 % PENDING, 5 % IN_PROGRESS, the rest DONE; every 10th
-      // soft-deleted; every 500th mentions "login"; every 4th has a due date; every 50th of the
-      // hot owner is in the team. Other owners get 1,000 tasks each.
       await sql.query(
         `INSERT INTO tasks (id, owner_id, title, description, status, due_date, completed_at,
                             created_at, updated_at, deleted_at)
@@ -545,7 +541,6 @@ describe('PrismaTaskReadModel.list (integration, T-003-08a, T-003-09a)', () => {
       await sql.query('ANALYZE task_teams');
     });
 
-    /** Runs the read model, captures its page query, and EXPLAINs it with seqscan off. */
     async function planOf(
       criteria: Partial<ListTasksCriteria>,
       without: string[] = [],
@@ -606,10 +601,6 @@ describe('PrismaTaskReadModel.list (integration, T-003-08a, T-003-09a)', () => {
       expect(plan).toContain('"Index Name":"task_teams_team_id_task_id_idx"');
     });
 
-    // Even at 10,000 tasks the planner prefers walking tasks_owner_created_idx and filtering
-    // until it has 20 matches: it cannot estimate how rare the term is. That is a cost decision;
-    // what the schema must guarantee is that the trigram index can serve both ILIKE arms, proven
-    // with the owner indexes dropped inside the rolled-back transaction.
     it('search can be served by tasks_search_trgm_idx (BitmapOr over title and description)', async () => {
       const plan = await planOf({ search: 'login' }, [
         'tasks_owner_created_idx',

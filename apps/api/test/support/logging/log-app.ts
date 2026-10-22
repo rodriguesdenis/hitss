@@ -37,10 +37,6 @@ export class FixtureController {
   }
 }
 
-/**
- * One app per test file: nestjs-pino keeps its root logger in module state, so a second app in
- * the same file would keep writing to the first app's destination.
- */
 export async function bootLogApp(level: string) {
   const out = new LogCapture();
   @Module({
@@ -57,7 +53,6 @@ export async function bootLogApp(level: string) {
     bufferLogs: true,
   });
   app.useLogger(app.get(Logger));
-  // A real listening socket and fetch: no per-request listen/close of a shared server.
   await app.listen(0, '127.0.0.1');
   const base = await app.getUrl();
   const call = (path: string, init?: RequestInit) =>

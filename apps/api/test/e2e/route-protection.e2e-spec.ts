@@ -81,11 +81,10 @@ describe('route protection: deny by default, Bearer only (e2e)', () => {
 
       for (const authorization of [
         'Bearer not-a-token',
-        `Bearer ${value}.${'A'.repeat(43)}`, // forged signature
-        `Bearer ${raw}`, // the raw sessions.token, unsigned (AC-01.5.6)
+        `Bearer ${value}.${'A'.repeat(43)}`,
+        `Bearer ${raw}`,
         'Bearer ',
         '',
-        // Built at runtime from low-entropy parts: never a credential-shaped literal.
         `Basic ${Buffer.from('user:pass').toString('base64')}`,
       ]) {
         expectUnauthenticated(await withAuth(http().get(PROBE), authorization));

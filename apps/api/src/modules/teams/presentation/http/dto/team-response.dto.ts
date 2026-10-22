@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-/** A team in responses (api-contracts → Teams). */
 export class TeamResponseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ example: 'Mobile', minLength: 2, maxLength: 50 })

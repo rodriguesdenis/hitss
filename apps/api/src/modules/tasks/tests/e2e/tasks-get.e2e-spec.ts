@@ -9,7 +9,6 @@ import { bearerOf, TestUser, twoUsers } from '@test/support/auth';
 import { useTestDatabase } from '@test/support/postgres';
 
 const TASKS = '/api/v1/tasks';
-/** 01:00 UTC on 2026-10-22: still the 21st in São Paulo, already the 22nd in UTC (BR-03.9). */
 const NOW = new Date('2026-10-22T01:00:00.000Z');
 const CREATED = new Date('2026-10-20T13:00:00.000Z');
 
@@ -27,10 +26,6 @@ interface TaskBody {
   updatedAt: string;
 }
 
-/**
- * GET /api/v1/tasks/:id on the full AppModule: TasksModule and TeamsModule wired as in
- * production, teams resolved through TeamsModule's TeamLookup, only the clock fixed.
- */
 describe('GET /api/v1/tasks/:id (e2e)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
@@ -55,7 +50,6 @@ describe('GET /api/v1/tasks/:id (e2e)', () => {
   const get = (user: TestUser, id: string) =>
     http().get(`${TASKS}/${id}`).set('Authorization', bearerOf(user));
 
-  /** Teams through the real endpoint, so they carry Team Management's own normalization. */
   const createTeam = async (user: TestUser, name: string, colorHex: string) =>
     (
       (
@@ -124,7 +118,7 @@ describe('GET /api/v1/tasks/:id (e2e)', () => {
     const response = await get(marina, id);
 
     expect(response.status).toBe(200);
-    expect(response.headers.etag).toBeUndefined(); // AC-08.3
+    expect(response.headers.etag).toBeUndefined();
     expect((response.body as { data: TaskBody }).data).toEqual({
       id,
       title: 'Implement login screen',
@@ -133,7 +127,6 @@ describe('GET /api/v1/tasks/:id (e2e)', () => {
       dueDate: '2026-10-21',
       completedAt: null,
       isOverdue: true,
-      // Ordered by name case-insensitively; the deleted team is not embedded (AC-03.2.5).
       teams: [
         { id: backend, name: 'backend', colorHex: '#0EA5E9' },
         { id: mobile, name: 'Mobile', colorHex: '#7C3AED' },

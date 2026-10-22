@@ -9,7 +9,6 @@ import { CreateTaskUseCase } from '../../application/use-cases/create-task.use-c
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { TasksModule } from '../../tasks.module';
 
-/** What AppModule's global modules give TasksModule; the database is not needed here. */
 @Global()
 @Module({
   providers: [
@@ -36,7 +35,6 @@ describe('TasksModule', () => {
     await moduleRef.init();
 
     expect(moduleRef.get(CreateTaskUseCase)).toBeInstanceOf(CreateTaskUseCase);
-    // Teams come through TeamsModule's exported TeamLookup (ADR-0020).
     expect(moduleRef.get(TeamLookup, { strict: false })).toBeInstanceOf(
       TeamLookup,
     );

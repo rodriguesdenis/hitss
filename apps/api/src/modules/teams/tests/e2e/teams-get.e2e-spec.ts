@@ -46,7 +46,6 @@ describe('GET /api/v1/teams/:id (e2e)', () => {
   const get = (user: TestUser, id: string) =>
     http().get(`${TEAMS}/${id}`).set('Authorization', bearerOf(user));
 
-  /** The body without its per-request traceId, to compare 404s byte for byte. */
   const withoutTraceId = (response: Response): string => {
     const body = response.body as { error: Record<string, unknown> };
     const { traceId, ...rest } = body.error;
@@ -106,7 +105,6 @@ describe('GET /api/v1/teams/:id (e2e)', () => {
     expect(JSON.parse(bodies[0] ?? '')).toEqual({
       error: { code: 'TEAM_NOT_FOUND', message: 'Team not found.' },
     });
-    // Rafael still sees his own team.
     expect((await get(rafael, foreign)).status).toBe(200);
   });
 

@@ -1,7 +1,3 @@
-// Meta-tests for apps/api/.dependency-cruiser.cjs (AC-07.7.1, 07.7.2, 07.7.6, 07.7.7, 07.7.9, AC-08.6).
-// Each case is a miniature project with the real folder names and one violating import; the
-// suite asserts the rule name, the offending file and the import. Written as node:test because
-// dependency-cruiser is ESM-only and cannot be loaded by Jest's CommonJS runtime.
 import { strict as assert } from 'node:assert';
 import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -15,7 +11,6 @@ const apiDir = fileURLToPath(new URL('../../', import.meta.url));
 const require = createRequire(import.meta.url);
 const config = require(join(apiDir, '.dependency-cruiser.cjs'));
 
-/** Packages the fixtures import; each is created as an empty module in the fixture's node_modules. */
 const PACKAGES = [
   '@nestjs/common',
   '@prisma/client',
@@ -27,7 +22,6 @@ const DEV_PACKAGES = ['some-dev-tool'];
 
 const roots = [];
 
-/** Materializes `files` (path -> source) as a project and returns its root. */
 function project(files) {
   const root = mkdtempSync(join(tmpdir(), 'arch-'));
   roots.push(root);
@@ -47,7 +41,6 @@ function project(files) {
         paths: { '@test/*': ['test/*'] },
       },
     }),
-    // Type-only package, as installed by the real project (express itself is not a direct dependency).
     'node_modules/@types/express/package.json': JSON.stringify({
       name: '@types/express',
       types: 'index.d.ts',
@@ -71,11 +64,6 @@ function project(files) {
   return root;
 }
 
-/**
- * Runs the real rule set over a project; returns the violations of severity "error". The cruise
- * runs from the fixture's directory because dependency-cruiser resolves tsconfig paths (@test/*)
- * against the working directory.
- */
 async function violationsOf(root) {
   const previous = process.cwd();
   process.chdir(root);
@@ -96,7 +84,6 @@ async function violationsOf(root) {
 
 const importOf = (target) => `import '${target}';\n`;
 
-/** [rule, description, files, expected {from, to}] — every config rule needs at least one row. */
 const VIOLATIONS = [
   [
     'domain-no-third-party',
@@ -439,7 +426,6 @@ VIOLATIONS.push(
   ],
 );
 
-/** A5: one violating import per source layer into the same layer of another context. */
 const LAYERS = ['domain', 'application', 'infrastructure', 'presentation'];
 for (const layer of LAYERS) {
   VIOLATIONS.push([
@@ -453,7 +439,6 @@ for (const layer of LAYERS) {
   ]);
 }
 
-/** Compliant code in the ADR-0020 layout, including every allowed edge. */
 const COMPLIANT = {
   'src/shared/domain/clock.ts': 'export {};\n',
   'src/modules/tasks/domain/entities/task.entity.ts': importOf(
@@ -472,7 +457,6 @@ const COMPLIANT = {
   'src/modules/tasks/presentation/http/tasks.controller.ts':
     importOf('../../application/use-cases/create-task.use-case') +
     importOf('@nestjs/common'),
-  // ADR-0020: another module is reached only through its lookup service and its module.
   'src/modules/teams/team-lookup.service.ts': 'export {};\n',
   'src/modules/teams/teams.module.ts': importOf('./team-lookup.service'),
   'src/modules/tasks/infrastructure/persistence/team-directory.ts': importOf(

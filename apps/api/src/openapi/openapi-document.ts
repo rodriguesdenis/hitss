@@ -9,14 +9,8 @@ import { AUTH_PATHS, IDENTITY_TAG } from './auth-paths';
 export const DOCS_PATH = 'docs';
 export const OPENAPI_JSON_PATH = 'docs/openapi.json';
 
-/** Routes that need no session: the health probes. */
 const PUBLIC_PATH_PREFIXES = ['/api/v1/health'];
 
-/**
- * The OpenAPI 3 document of the app (ADR-0005): the controllers' DTOs, the hand-written Better
- * Auth routes under the `Identity` tag, `bearer` security on every operation
- * except health and sign-up/sign-in.
- */
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const document = SwaggerModule.createDocument(
     app,
@@ -48,7 +42,6 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   return document;
 }
 
-/** Serves `/docs` and `/docs/openapi.json` (outside the `/api` prefix and the auth guard). */
 export function setupDocs(app: INestApplication): void {
   SwaggerModule.setup(DOCS_PATH, app, buildOpenApiDocument(app), {
     jsonDocumentUrl: OPENAPI_JSON_PATH,

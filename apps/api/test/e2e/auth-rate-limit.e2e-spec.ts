@@ -9,15 +9,9 @@ import {
 import { createTestApp } from '../support/app';
 import { useTestDatabase } from '../support/postgres';
 
-// Built at runtime with low entropy so secret scanners never mistake a fixture for a secret.
 const PASSWORD = ['correct', 'horse', 'battery', '42'].join('-');
 const WRONG = ['wrong', 'password', '1'].join('-');
 
-/**
- * A fresh loopback address per client (Linux routes all of 127.0.0.0/8 to lo). Never 127.0.0.1:
- * that is Better Auth's fallback when it finds no client IP under NODE_ENV=test, so a test that
- * passes with these addresses cannot be relying on the fallback (AC-01.7.8).
- */
 let lastOctet = 10;
 const nextLoopback = () => `127.0.0.${++lastOctet}`;
 let lastForwarded = 10;
@@ -31,7 +25,6 @@ interface Reply {
   body: string;
 }
 
-/** One HTTP request from a chosen local address (supertest cannot bind one). */
 function send(
   port: number,
   from: string,
@@ -82,10 +75,6 @@ describe('Better Auth rate limiter by client address (e2e)', () => {
 
   afterAll(() => sql.end());
 
-  /**
-   * The distinct addresses Better Auth resolved for this user's sessions (sign-up signs in too),
-   * as it stored them.
-   */
   const sessionIp = async (email: string): Promise<string[]> =>
     (
       await sql.query<{ ip_address: string }>(
@@ -95,7 +84,6 @@ describe('Better Auth rate limiter by client address (e2e)', () => {
       )
     ).rows.map((row) => row.ip_address);
 
-  /** A fresh app with the limiter on, listening on loopback, with the real hasher observed. */
   const startApp = async (trustedProxies: string[] = []) => {
     const hasher = new BetterAuthPasswordHasher();
     const verify = jest.spyOn(hasher, 'verify');
@@ -155,7 +143,6 @@ describe('Better Auth rate limiter by client address (e2e)', () => {
       jest.useRealTimers();
     });
 
-    /** Uses up `from`'s 10 sign-ins on `email` (the first succeeds, so its session shows the IP). */
     const useUpSignIns = async (from: string, email: string) => {
       expect((await api.signIn(from, email)).status).toBe(200);
       for (let attempt = 2; attempt <= 10; attempt++) {
@@ -168,7 +155,7 @@ describe('Better Auth rate limiter by client address (e2e)', () => {
       const email = freshEmail();
       await api.signUp(client, email);
       await useUpSignIns(client, email);
-      expect(await sessionIp(email)).toEqual([client]); // resolved from the socket, not 127.0.0.1
+      expect(await sessionIp(email)).toEqual([client]);
       api.verify.mockClear();
 
       const eleventh = await api.signIn(client, email);
@@ -205,7 +192,6 @@ describe('Better Auth rate limiter by client address (e2e)', () => {
     it('AC-01.7.2 once the window has passed, the address is accepted again', async () => {
       jest.useFakeTimers({
         now: Date.now(),
-        // Only the clock moves: sockets, the pg driver and Nest keep their real timers.
         doNotFake: [
           'hrtime',
           'nextTick',

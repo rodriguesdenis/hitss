@@ -15,10 +15,6 @@ import { TeamsController } from './presentation/http/teams.controller';
 import { TEAM_ERROR_MAPPINGS } from './presentation/http/team-error.mapping';
 import { TeamLookup } from './team-lookup.service';
 
-/**
- * Team Management's composition root: binds its ports to adapters and registers its error
- * table. It exports only TeamLookup, the door other modules use (ADR-0020).
- */
 @Module({
   controllers: [TeamsController],
   providers: [

@@ -6,7 +6,6 @@ import {
   settleWithin,
 } from '../../../../../src/shared/infrastructure/prisma/database-probe';
 
-// Built at runtime, low entropy: only used to prove it never leaks into the error.
 const URL_FIXTURE = `postgresql://probe-user:${'x'.repeat(12)}@db.internal:5432/app`;
 
 async function failure(run: () => Promise<unknown>): Promise<Error> {

@@ -2,7 +2,6 @@ import { normalizeAuthInput } from '../../../hooks/auth-input';
 
 const SIGN_UP = '/sign-up/email';
 const SIGN_IN = '/sign-in/email';
-// Built at runtime with low entropy so secret scanners never mistake a fixture for a secret.
 const PASSWORD = ['plain', 'value', '42'].join('-');
 
 describe('normalizeAuthInput', () => {

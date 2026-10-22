@@ -49,7 +49,6 @@ describe('UpdateTaskUseCase', () => {
     useCase = new UpdateTaskUseCase(tasks, directory, clock);
   });
 
-  /** The current state of "Draft", with the given changes. */
   const replace = (
     changes: Partial<Omit<UpdateTaskInput, 'ownerId' | 'id'>> = {},
     ownerId = OWNER,

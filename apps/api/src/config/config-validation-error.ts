@@ -5,7 +5,6 @@ export interface Violation {
   message: string;
 }
 
-/** Names every offending variable and the rule broken; never contains a value (secrets). */
 export class ConfigValidationError extends Error {
   constructor(readonly violations: Violation[]) {
     super(

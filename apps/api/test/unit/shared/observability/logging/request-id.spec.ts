@@ -71,7 +71,6 @@ describe('requestIdMiddleware', () => {
     expect(request.id).toMatch(/^[0-9a-f-]{36}$/);
     expect(headers['X-Request-Id']).toBe(request.id);
     expect(next).toHaveBeenCalledTimes(1);
-    // pino's genReqId runs later on the same request and gets the same id.
     expect(
       requestId(
         request as unknown as IncomingMessage,

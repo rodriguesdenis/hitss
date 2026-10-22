@@ -90,7 +90,7 @@ describe('POST /api/v1/teams (e2e)', () => {
         updatedAt: team.createdAt,
       });
       expect(response.headers.location).toBe(`${TEAMS}/${team.id}`);
-      expect(response.headers.etag).toBeUndefined(); // AC-08.3
+      expect(response.headers.etag).toBeUndefined();
     });
 
     it('AC-02.1.4 a blank description is stored as none; it is optional', async () => {
@@ -305,7 +305,6 @@ describe('POST /api/v1/teams (e2e)', () => {
       'AC-02.1.8 AC-01.6.6 a %s key → 400 naming it, nothing created',
       async (field) => {
         const user = await signUpAndSignIn(app);
-        // A raw JSON body: an object literal would not carry __proto__ as an own key.
         const response = await request(app.getHttpServer() as App)
           .post(TEAMS)
           .set('Authorization', bearerOf(user))
