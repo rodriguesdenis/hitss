@@ -10,6 +10,10 @@ post {
   auth: none
 }
 
+headers {
+  Origin: {{origin}}
+}
+
 body:json {
   {
     "email": "{{demoEmail}}",
@@ -34,6 +38,12 @@ tests {
 }
 
 docs {
+  The `Origin` header is required once a session cookie is present (Bruno keeps cookies between
+  requests): the API checks the origin of cookie-authenticated calls, and it must be one the API trusts
+  (`BETTER_AUTH_URL`), hence the separate `origin` variable.
+  The `Origin` header is required once a session cookie is present (Bruno keeps cookies between
+  requests): the API checks the origin of cookie-authenticated calls, and it must be one the API trusts
+  (`BETTER_AUTH_URL`), hence the separate `origin` variable.
   Set the `demoPassword` secret of the `local` environment to the documented demo password
   (README) before running. The token is saved to the `token` variable.
 }

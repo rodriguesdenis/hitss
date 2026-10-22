@@ -22,15 +22,15 @@ assert {
   res.status: eq 201
   res.body.data.id: isString
   res.body.data.colorHex: eq #10B981
+  res.body.data.taskCount: eq 0
   res.headers.location: contains /api/v1/teams/
 }
 
 script:post-response {
-  // Later requests of this run (and the clean-up) refer to the team by id.
   bru.setVar("teamId", res.body.data.id);
+  bru.setVar("etag", res.headers.etag);
 }
 
 docs {
-  The team name starts with `[bruno]`. The delete request that removes it lands with
-  DELETE /api/v1/teams/:id (T-002-09).
+  The team name starts with `[bruno]`; `98-cleanup` deletes it at the end of the run.
 }

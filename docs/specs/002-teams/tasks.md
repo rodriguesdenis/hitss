@@ -139,6 +139,7 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 ## T-002-13 — Requests and contract docs
 
 - **Goal:** Evaluators can exercise teams from Bruno, `.http` or cURL, and the contract doc reflects the clarified behavior.
-- **Changes:** `tools/bruno/teams/*.bru` (list with search, sort and paging; create with `Idempotency-Key`; get; update with `If-Match`; delete), `tools/http/teams.http`, and the remaining clarifications proposed to the architect for `docs/architecture/api-contracts.md` (`-field` sorts, literal wildcards; blank search → 400 is already in the contract). ETag on POST/PUT, `Idempotent-Replayed` and `409 IDEMPOTENCY_REQUEST_IN_PROGRESS` are already in the contract.
+- **Changes:** `tools/bruno/teams-tasks/02-teams/*.bru` (one collection with auth and tasks, T-007-14; list with search, sort and paging; create with `Idempotency-Key`; get; update with `If-Match`; delete), `tools/http/teams.http`, and the remaining clarifications proposed to the architect for `docs/architecture/api-contracts.md` (`-field` sorts, literal wildcards; blank search → 400 is already in the contract). ETag on POST/PUT, `Idempotent-Replayed` and `409 IDEMPOTENCY_REQUEST_IN_PROGRESS` are already in the contract.
 - **Covers:** brief "exemplos de requisições" (teams).
-- **Done when:** `bru run tools/bruno/teams` is green against `docker compose up`. The OpenAPI contract-drift check (007) passes and the regenerated client compiles.
+- **Done when:** `bru run 02-teams --env local` (inside `tools/bruno/teams-tasks`) is green against `docker compose up`. The OpenAPI contract-drift check (007) passes and the regenerated client compiles.
+- **Status:** done

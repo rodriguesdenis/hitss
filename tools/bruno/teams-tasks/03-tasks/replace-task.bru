@@ -1,0 +1,30 @@
+meta {
+  name: Replace task
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/api/v1/tasks/{{taskId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "title": "[bruno] Write release notes (final)",
+    "status": "IN_PROGRESS",
+    "dueDate": "2030-12-31",
+    "teamIds": ["{{teamId}}"]
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.status: eq IN_PROGRESS
+  res.body.data.completedAt: isNull
+}
+
+docs {
+  Full replacement: an omitted description is cleared.
+}

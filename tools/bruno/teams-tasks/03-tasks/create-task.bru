@@ -1,0 +1,36 @@
+meta {
+  name: Create task
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tasks
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "title": "[bruno] Write release notes",
+    "description": "Created by the request collection.",
+    "dueDate": "2030-12-31",
+    "teamIds": ["{{teamId}}"]
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.data.status: eq PENDING
+  res.body.data.isOverdue: eq false
+  res.body.data.teams.length: eq 1
+  res.headers.location: contains /api/v1/tasks/
+}
+
+script:post-response {
+  bru.setVar("taskId", res.body.data.id);
+}
+
+docs {
+  A task can belong to up to 10 of your teams. Deleted in `98-cleanup`.
+}

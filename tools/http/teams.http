@@ -1,4 +1,4 @@
-# Teams requests (VS Code REST Client / JetBrains HTTP Client).
+# Teams requests (VS Code REST Client / JetBrains HTTP Client). Run top to bottom.
 @baseUrl = http://localhost:3000
 @demoEmail = demo@teams-tasks.dev
 # The documented demo password (README); the seed creates this account.
@@ -7,6 +7,7 @@
 ### Sign in (demo user)
 # @name signIn
 POST {{baseUrl}}/api/auth/sign-in/email
+Origin: {{baseUrl}}
 Content-Type: application/json
 
 {
@@ -15,6 +16,7 @@ Content-Type: application/json
 }
 
 ### Create team
+# @name createTeam
 POST {{baseUrl}}/api/v1/teams
 Authorization: Bearer {{signIn.response.headers.set-auth-token}}
 Content-Type: application/json
@@ -24,3 +26,34 @@ Content-Type: application/json
   "colorHex": "#10B981",
   "description": "Created by the request files."
 }
+
+### List teams
+GET {{baseUrl}}/api/v1/teams?search=http&sort=-createdAt&limit=10&offset=0
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+
+### Get team
+# @name getTeam
+GET {{baseUrl}}/api/v1/teams/{{createTeam.response.body.data.id}}
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+
+### Replace team
+# @name replaceTeam
+PUT {{baseUrl}}/api/v1/teams/{{createTeam.response.body.data.id}}
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+If-Match: {{getTeam.response.headers.etag}}
+Content-Type: application/json
+
+{
+  "name": "[http] Platform renamed {{$timestamp}}",
+  "colorHex": "#0EA5E9",
+  "description": "Replaced by the request files."
+}
+
+### Delete team
+DELETE {{baseUrl}}/api/v1/teams/{{createTeam.response.body.data.id}}
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+If-Match: {{replaceTeam.response.headers.etag}}
+
+### Get deleted team
+GET {{baseUrl}}/api/v1/teams/{{createTeam.response.body.data.id}}
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}

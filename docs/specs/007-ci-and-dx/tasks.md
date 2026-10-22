@@ -96,6 +96,7 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 - **Changes:** `tools/ci/compose-smoke.sh`, CI job `compose-smoke` (up `--wait`, health/docs/sign-in/3 teams/10 tasks, non-root and image-content checks, unreachable-DB exit check, `API_PORT=3100` variant, logs on failure, `down -v` always).
 - **Covers:** @AC-07.6.8, @AC-07.1.1, @AC-07.1.5, @AC-07.1.8 (duration recorded)
 - **Done when:** job green on main; a PR breaking the entrypoint fails it.
+- **Status:** done
 
 ## T-007-10 — Contract drift check
 
@@ -132,6 +133,7 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 - **Changes:** `tools/bruno/teams-tasks/**` (environment `local`, sign-in script setting `token`, tests per request, self-cleaning), `tools/http/*.http` + `http-client.env.json`, parity script, Bruno CLI step in `compose-smoke`.
 - **Covers:** @AC-07.4.2, @AC-07.4.3, @AC-07.4.4
 - **Done when:** `bru run --env local` passes against a fresh stack in CI; the parity script finds every Bruno request in the `.http` files; demo data unchanged after the run.
+- **Status:** done
 
 ## T-007-15 — README final
 
