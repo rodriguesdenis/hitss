@@ -70,4 +70,15 @@ describe('.github/dependabot.yml', () => {
     assert.equal(docker.directory, '/apps/api');
     assert.equal(docker['commit-message'].prefix, 'build(infra)');
   });
+
+  it('AC-07.9.3 ignores PostgreSQL major updates (ADR-0003 pins PostgreSQL 17) but keeps minor and patch', () => {
+    for (const ecosystem of ['docker', 'docker-compose']) {
+      const update = updates.find((u) => u['package-ecosystem'] === ecosystem);
+      const rule = (update.ignore ?? []).find(
+        (i) => i['dependency-name'] === 'postgres',
+      );
+      assert.ok(rule, `${ecosystem} has no postgres ignore rule`);
+      assert.deepEqual(rule['update-types'], ['version-update:semver-major']);
+    }
+  });
 });
