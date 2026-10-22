@@ -13,7 +13,7 @@ Brief requirement → epic → story (priority) → acceptance criteria → scen
 | `MUST` ACs (with scenario / with task / total)   | 225 / 225 / 225 |
 | `SHOULD` ACs (with scenario / with task / total) | 38 / 38 / 38    |
 | `COULD` ACs (with scenario / with task / total)  | 138 / 138 / 138 |
-| Tasks                                            | 109             |
+| Tasks                                            | 110             |
 
 ## Gaps and findings
 
@@ -698,14 +698,14 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 **US-06.2 — End-to-end request tracing** (`COULD`) · epic EP-06
 
-| AC        | Scenarios (file › rule › scenario)                                                                                                                                                                                                                                                             | Level           | Tasks              |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------ |
-| AC-06.2.1 | `observability.feature` › Every request is one trace, from entry through the use case to the database › Listing tasks produces a single trace with entry, use-case and database spans                                                                                                          | integration+e2e | T-006-01, T-006-04 |
-| AC-06.2.2 | `observability.feature` › Every request is one trace, from entry through the use case to the database › An incoming trace context is continued<br>`observability.feature` › Every request is one trace, from entry through the use case to the database › A malformed trace context is ignored | integration+e2e | T-006-01           |
-| AC-06.2.3 | `observability.feature` › Every request is one trace, from entry through the use case to the database › The request id is echoed when well formed, generated otherwise                                                                                                                         | integration+e2e | T-006-02           |
-| AC-06.2.4 | `observability.feature` › Every request is one trace, from entry through the use case to the database › Error envelopes carry the trace id                                                                                                                                                     | integration+e2e | T-006-04           |
-| AC-06.2.5 | `observability.feature` › Every request is one trace, from entry through the use case to the database › Spans contain no credentials, bodies or personal data                                                                                                                                  | integration+e2e | T-006-01           |
-| AC-06.2.6 | `observability.feature` › Every request is one trace, from entry through the use case to the database › Telemetry identifies the service                                                                                                                                                       | integration+e2e | T-006-01           |
+| AC        | Scenarios (file › rule › scenario)                                                                                                                                                                                                                                                             | Level           | Tasks                        |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ---------------------------- |
+| AC-06.2.1 | `observability.feature` › Every request is one trace, from entry through the use case to the database › Listing tasks produces a single trace with entry, use-case and database spans                                                                                                          | integration+e2e | T-006-01, T-006-04, T-007-18 |
+| AC-06.2.2 | `observability.feature` › Every request is one trace, from entry through the use case to the database › An incoming trace context is continued<br>`observability.feature` › Every request is one trace, from entry through the use case to the database › A malformed trace context is ignored | integration+e2e | T-006-01                     |
+| AC-06.2.3 | `observability.feature` › Every request is one trace, from entry through the use case to the database › The request id is echoed when well formed, generated otherwise                                                                                                                         | integration+e2e | T-006-02                     |
+| AC-06.2.4 | `observability.feature` › Every request is one trace, from entry through the use case to the database › Error envelopes carry the trace id                                                                                                                                                     | integration+e2e | T-006-04                     |
+| AC-06.2.5 | `observability.feature` › Every request is one trace, from entry through the use case to the database › Spans contain no credentials, bodies or personal data                                                                                                                                  | integration+e2e | T-006-01                     |
+| AC-06.2.6 | `observability.feature` › Every request is one trace, from entry through the use case to the database › Telemetry identifies the service                                                                                                                                                       | integration+e2e | T-006-01, T-007-18           |
 
 **US-06.3 — Structured, correlated, redacted logs** (`COULD`) · epic EP-06
 

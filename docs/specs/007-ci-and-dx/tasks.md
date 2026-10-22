@@ -21,6 +21,7 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 | T-007-15 | README final: how to run, scripts, request examples, links                              | all above, T-006-08, T-007-16          | M    | `docs/007-readme-final`           |
 | T-007-16 | README doc-check: required sections and relative links, in CI                           | T-007-03                               | S    | `ci/007-readme-doc-check`         |
 | T-007-17 | Traceability `--require-tests`: every MUST AC of a done task has an automated test      | T-007-06                               | S    | `ci/007-require-tests`            |
+| T-007-18 | Compose smoke: the built image exports a trace to an OTLP sink                          | T-007-09, T-006-02                     | S    | `ci/007-smoke-otlp`               |
 
 ## T-007-01 — Compose with PostgreSQL and `.env.example`
 
@@ -153,3 +154,10 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 - **Changes:** a task records completion with a `- **Status:** done` line, added by the PR that completes it; `tools/ci/traceability.mjs --require-tests` (now part of `pnpm traceability:check`, hence of the `static` job) fails on a MUST AC whose covering tasks are **all** done and that has no automated test (a waiver in `tools/ci/traceability-waivers.json`, with a reason, downgrades it to a warning); unit tests with fixture specs.
 - **Covers:** @AC-07.6.5
 - **Done when:** unit tests: a done task whose MUST AC has no test fails naming the AC and the task; an open task does not; a waiver downgrades it to a warning; the current repo passes with the statuses set honestly.
+
+## T-007-18 — Compose smoke asserts the telemetry hand-off
+
+- **Goal:** prove that the built image really starts through `node --import ./dist/instrumentation.js` and exports telemetry: the smoke fails if the container entrypoint stops loading the instrumentation.
+- **Changes:** `tools/ci/compose-smoke.sh` starts a small OTLP/HTTP sink on the compose network (a throwaway container or a compose override with a tiny receiver), runs the API with `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at it, sends one request and asserts that the sink received at least one trace for service `teams-tasks-api`; the case is skipped when `OTEL_SDK_DISABLED=true`.
+- **Covers:** @AC-06.2.1, @AC-06.2.6
+- **Done when:** the smoke passes with the sink; pointing the entrypoint at `dist/main.js` without `--import` makes it fail; the sink container is removed on every exit path.
