@@ -77,35 +77,60 @@ describe('Auth endpoint hardening (e2e)', () => {
     expect(response.status).toBeLessThan(500);
   });
 
-  it('AC-01.7.10 rejects an oversized chunked body (no Content-Length) with 413', async () => {
-    await app.listen(0, '127.0.0.1');
-    const port = Number(new URL(await app.getUrl()).port);
-    const status = await new Promise<number>((resolve, reject) => {
-      const req = httpRequest(
-        {
-          host: '127.0.0.1',
-          port,
-          path: SIGN_IN,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Transfer-Encoding': 'chunked',
+  it('AC-01.7.10 rejects an oversized chunked body (no Content-Length) with 413 and the API keeps serving', async () => {
+    const unhandled = jest.fn();
+    process.on('unhandledRejection', unhandled);
+    process.on('uncaughtException', unhandled);
+    try {
+      await app.listen(0, '127.0.0.1');
+      const port = Number(new URL(await app.getUrl()).port);
+      const status = await new Promise<number>((resolve, reject) => {
+        const req = httpRequest(
+          {
+            host: '127.0.0.1',
+            port,
+            path: SIGN_IN,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Transfer-Encoding': 'chunked',
+            },
           },
-        },
-        (res) => {
-          res.resume();
-          resolve(res.statusCode ?? 0);
-        },
-      );
-      req.on('error', reject);
-      const body = bodyOfSize(AUTH_BODY_LIMIT_BYTES + 100);
-      req.write(body.slice(0, 8000));
-      req.write(body.slice(8000));
-      req.end();
-    });
+          (res) => {
+            res.resume();
+            resolve(res.statusCode ?? 0);
+          },
+        );
+        req.on('error', reject);
+        const body = bodyOfSize(AUTH_BODY_LIMIT_BYTES + 100);
+        req.write(body.slice(0, 8000));
+        req.write(body.slice(8000));
+        req.end();
+      });
 
-    expect(status).toBe(413);
-    expect(hashSpy).not.toHaveBeenCalled();
+      expect(status).toBe(413);
+      expect(hashSpy).not.toHaveBeenCalled();
+
+      // The same app still answers: a normal sign-in is judged on its merits and so is
+      // get-session (no session, no crash).
+      const signIn = await request(app.getHttpServer() as App)
+        .post(SIGN_IN)
+        .send({ email: 'nobody@example.test', password: 'a-valid-password-1' });
+      expect(signIn.status).toBe(401);
+      const session = await request(app.getHttpServer() as App).get(
+        '/api/auth/get-session',
+      );
+      expect(session.status).toBe(200);
+
+      // Let any late event from the aborted request surface before judging the logs.
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      expect(unhandled).not.toHaveBeenCalled();
+      expect(logs.raw).not.toContain('"level":50');
+      expect(logs.raw).not.toContain('ERR_HTTP_HEADERS_SENT');
+    } finally {
+      process.off('unhandledRejection', unhandled);
+      process.off('uncaughtException', unhandled);
+    }
   });
 
   it('AC-01.4.5 a database failure answers a generic error with no driver text in the body or the logs', async () => {
