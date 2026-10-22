@@ -116,6 +116,8 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 - **Owner:** Forge (NestJS).
 - **Changes:** `modules/teams/contracts/team-deleted.event.ts` (re-exported event). `application/ports/team-task-counts.ts` (`TeamTaskCounts.countByTeam(ownerId, teamIds)`) and `infrastructure/adapters/team-task-counts.adapter.ts` returning zeros as a placeholder, with a `// replaced by CountTasksByTeamQuery in T-003-14b` note. `TeamsModule` exports **no** providers.
 - **Covers:** prerequisite for `@AC-02.7.2`, `@AC-02.8.1`, `@AC-02.8.2`. These are verified in 003: AC-02.7.2 in **T-003-13**, AC-02.8.1 and AC-02.8.2 in **T-003-14b** (real counts through `CountTasksByTeamQuery`).
+- **Status:** done
+- **Note:** The port and its zero placeholder shipped with T-002-04 (`ZeroTeamTaskCounts`, now with its unit test). The `depcruise` checks are the existing `contexts-isolated` meta-tests (`test/architecture/rules.test.mjs`: another context's `domain/` and `tasks.module imports teams.module`). `TeamDeleted` in `contracts/` re-exports the domain class rather than copying it, because the publisher finds in-transaction handlers by `event.constructor` (Trestle).
 - **Done when:** Unit: the placeholder adapter returns 0 for every id. The `depcruise` rule fails on a fixture that imports `modules/teams/domain` or `teams.module.ts` from another module.
 
 ## T-002-11 — Seed teams
