@@ -297,10 +297,56 @@ describe('route protection: deny by default, CSRF for cookies (e2e)', () => {
       expect(
         (await bearerPost().set('Origin', UNTRUSTED).send({})).status,
       ).toBe(201);
-      expect(
-        (await bearerPost().set('Content-Type', 'text/plain').send('{}'))
-          .status,
-      ).toBe(201);
     });
+
+    it('AC-01.5.9 a bearer client sending text/plain → 415 too (JSON bodies only, for every client)', async () => {
+      const user = await signIn();
+      const before = writes.count;
+
+      const response = await http()
+        .post(PROBE)
+        .set('Authorization', `Bearer ${user.bearer}`)
+        .set('Content-Type', 'text/plain')
+        .send('{}');
+
+      expectRejected(response, 415, 'UNSUPPORTED_MEDIA_TYPE');
+      expect(writes.count).toBe(before);
+    });
+
+    it('AC-01.5.8 a cross-site cookie POST to an upper-cased path → 403 (the path is not inspected)', async () => {
+      const user = await signIn();
+      const before = writes.count;
+
+      const response = await http()
+        .post('/API/V1/OWNER-PROBE')
+        .set('Cookie', user.cookie)
+        .set('Origin', UNTRUSTED)
+        .send({});
+
+      expectRejected(response, 403, 'CSRF_REJECTED');
+      expect(writes.count).toBe(before);
+    });
+
+    it.each([
+      ['garbage', 'Bearer garbage'],
+      // Built at runtime with low entropy: a fixture must never look like a real token.
+      ['an unsigned token', `Bearer ${'x'.repeat(32)}`],
+    ])(
+      'AC-01.5.8 a bearer header with %s, a valid session cookie and an untrusted Origin → never 2xx (Lynx)',
+      async (_label, authorization) => {
+        const user = await signIn();
+        const before = writes.count;
+
+        const response = await http()
+          .post(PROBE)
+          .set('Authorization', authorization)
+          .set('Cookie', user.cookie)
+          .set('Origin', UNTRUSTED)
+          .send({});
+
+        expectRejected(response, 403, 'CSRF_REJECTED');
+        expect(writes.count).toBe(before);
+      },
+    );
   });
 });
