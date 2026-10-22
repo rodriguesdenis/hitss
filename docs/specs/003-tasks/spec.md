@@ -105,7 +105,7 @@ As Marina, I want the list to load in pages, so that it is fast on a mobile netw
 
 As Marina, I want to open a task and see everything about it, so that I can decide what to do next.
 
-- **AC-03.8.1** Given one of my tasks, when I view it, I receive its task view (with its teams' names and colors for chips, completion time, overdue flag, version) and its version tag.
+- **AC-03.8.1** Given one of my tasks, when I view it, I receive its task view (with its teams' names and colors for chips, completion time, overdue flag, version) and its version tag. **Version-tag part superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: no `ETag` is sent; `version` stays in the body).
 - **AC-03.8.2** An unknown or deleted task id → not found.
 - **AC-03.8.3** A malformed task id → validation error on `id`.
 
@@ -171,11 +171,11 @@ As Marina, I want overdue tasks flagged, so that I notice late work at a glance.
 
 As Marina, using the app on two devices, I want a stale edit to be rejected, so that I don't silently overwrite a newer change.
 
-- **AC-03.15.1** Every single-task response carries the task's version tag.
-- **AC-03.15.2** Edit, status change and delete accept an optional expected version tag; when it matches, the operation proceeds.
-- **AC-03.15.3** When it does not match (or is malformed), the operation fails with `PRECONDITION_FAILED` including the current version, and nothing changes.
-- **AC-03.15.4** Without an expected version tag, the operation proceeds (last write wins).
-- **AC-03.15.5** Another user's task (or an unknown or deleted one) with any expected version tag on edit, status change or delete → not found (not found wins over the precondition).
+- **AC-03.15.1** Every single-task response carries the task's version tag. **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-03.15.2** Edit, status change and delete accept an optional expected version tag; when it matches, the operation proceeds. **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-03.15.3** When it does not match (or is malformed), the operation fails with `PRECONDITION_FAILED` including the current version, and nothing changes. **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-03.15.4** Without an expected version tag, the operation proceeds (last write wins). **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
+- **AC-03.15.5** Another user's task (or an unknown or deleted one) with any expected version tag on edit, status change or delete → not found (not found wins over the precondition). **Superseded by 008** ([ADR-0020](../../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), T-008-04: last write wins; no `ETag`, `If-Match` is ignored, no `412`).
 
 ### US-03.16 — Retry task creation safely (`COULD`)
 
