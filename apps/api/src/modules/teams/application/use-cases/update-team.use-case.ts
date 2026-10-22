@@ -6,7 +6,6 @@ import {
 } from '../../domain/errors/team.errors';
 import { TeamRepository } from '../../domain/repositories/team.repository';
 import { ColorHex } from '../../domain/value-objects/color-hex.vo';
-import { TeamDescription } from '../../domain/value-objects/team-description.vo';
 import { TeamName } from '../../domain/value-objects/team-name.vo';
 
 export interface UpdateTeamInput {
@@ -38,7 +37,7 @@ export class UpdateTeamUseCase {
     const changed = team.replace({
       name: TeamName.create(input.name),
       color: ColorHex.create(input.colorHex),
-      description: TeamDescription.create(input.description),
+      description: input.description,
       now: this.clock.now(),
     });
     if (!changed) {

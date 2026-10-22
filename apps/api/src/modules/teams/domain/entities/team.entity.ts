@@ -1,13 +1,17 @@
+import { InvalidTeamDescription } from '../errors/team.errors';
 import { ColorHex } from '../value-objects/color-hex.vo';
-import { TeamDescription } from '../value-objects/team-description.vo';
 import { TeamName } from '../value-objects/team-name.vo';
+
+const DESCRIPTION_MAX_LENGTH = 280;
+const CONTROL_CHARACTER_EXCEPT_LINE_BREAK = /(?![\n\r])\p{Cc}/u;
 
 export interface TeamProps {
   id: string;
   ownerId: string;
   name: TeamName;
   color: ColorHex;
-  description: TeamDescription;
+  /** Trimmed, at most 280 code points, no control characters but line breaks; blank → `null`. */
+  description: string | null;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -17,7 +21,8 @@ export interface TeamProps {
 export interface TeamValues {
   name: TeamName;
   color: ColorHex;
-  description: TeamDescription;
+  /** Raw input; omitted means none (a `PUT` is a full replacement). */
+  description?: string | null;
 }
 
 /**
@@ -36,7 +41,7 @@ export class Team {
       ownerId: p.ownerId,
       name: p.name,
       color: p.color,
-      description: p.description,
+      description: normalizeDescription(p.description),
       version: 1,
       createdAt: new Date(p.now),
       updatedAt: new Date(p.now),
@@ -44,10 +49,11 @@ export class Team {
     });
   }
 
-  /** Rebuilds a persisted team. */
+  /** Rebuilds a persisted team; the description is re-validated like on create (ADR-0004). */
   static restore(props: TeamProps): Team {
     return new Team({
       ...props,
+      description: normalizeDescription(props.description),
       createdAt: new Date(props.createdAt),
       updatedAt: new Date(props.updatedAt),
       deletedAt: copyDate(props.deletedAt),
@@ -70,7 +76,7 @@ export class Team {
     return this.props.color;
   }
 
-  get description(): TeamDescription {
+  get description(): string | null {
     return this.props.description;
   }
 
@@ -96,10 +102,11 @@ export class Team {
    * every value is already equal; a letter-case-only rename is a change.
    */
   replace(p: TeamValues & { now: Date }): boolean {
+    const description = normalizeDescription(p.description);
     const changed =
       p.name.value !== this.props.name.value ||
       !p.color.equals(this.props.color) ||
-      !p.description.equals(this.props.description);
+      description !== this.props.description;
     if (!changed) {
       return false;
     }
@@ -107,7 +114,7 @@ export class Team {
       ...this.props,
       name: p.name,
       color: p.color,
-      description: p.description,
+      description,
       updatedAt: new Date(p.now),
     };
     return true;
@@ -120,6 +127,24 @@ export class Team {
     }
     this.props = { ...this.props, deletedAt: new Date(now) };
   }
+}
+
+function normalizeDescription(raw: string | null | undefined): string | null {
+  if (raw === undefined || raw === null) {
+    return null;
+  }
+  // Checked before trimming: trim() would silently drop a trailing "\t".
+  if (CONTROL_CHARACTER_EXCEPT_LINE_BREAK.test(raw)) {
+    throw new InvalidTeamDescription();
+  }
+  const value = raw.trim();
+  if (value === '') {
+    return null;
+  }
+  if ([...value].length > DESCRIPTION_MAX_LENGTH) {
+    throw new InvalidTeamDescription();
+  }
+  return value;
 }
 
 function copyDate(date: Date | null): Date | null {

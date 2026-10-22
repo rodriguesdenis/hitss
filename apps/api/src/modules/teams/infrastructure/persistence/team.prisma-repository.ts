@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '../../../../generated/prisma/client';
+import {
+  Prisma,
+  type Team as TeamRow,
+} from '../../../../generated/prisma/client';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
 import { Team } from '../../domain/entities/team.entity';
 import {
@@ -7,8 +10,8 @@ import {
   TeamNotFound,
 } from '../../domain/errors/team.errors';
 import { TeamRepository } from '../../domain/repositories/team.repository';
+import { ColorHex } from '../../domain/value-objects/color-hex.vo';
 import { TeamName } from '../../domain/value-objects/team-name.vo';
-import { TeamMapper } from './team.persistence-mapper';
 
 const NAME_UNIQUE_INDEX = 'teams_owner_id_lower_name_key';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,7 +34,7 @@ export class PrismaTeamRepository extends TeamRepository {
     const row = await this.prisma.team.findFirst({
       where: { id, ownerId, deletedAt: null },
     });
-    return row ? TeamMapper.toDomain(row) : null;
+    return row ? toDomain(row) : null;
   }
 
   async existsActiveByName(
@@ -55,7 +58,7 @@ export class PrismaTeamRepository extends TeamRepository {
 
   async insert(team: Team): Promise<void> {
     try {
-      await this.prisma.team.create({ data: TeamMapper.toInsert(team) });
+      await this.prisma.team.create({ data: toInsert(team) });
     } catch (error) {
       throw translateNameCollision(error);
     }
@@ -66,7 +69,7 @@ export class PrismaTeamRepository extends TeamRepository {
     try {
       ({ count } = await this.prisma.team.updateMany({
         where: { id: team.id, ownerId: team.ownerId, deletedAt: null },
-        data: { ...TeamMapper.toUpdate(team), version: { increment: 1 } },
+        data: { ...toUpdate(team), version: { increment: 1 } },
       }));
     } catch (error) {
       throw translateNameCollision(error);
@@ -79,7 +82,7 @@ export class PrismaTeamRepository extends TeamRepository {
     await this.prisma.$transaction(async (tx) => {
       const { count } = await tx.team.updateMany({
         where: { id: team.id, ownerId: team.ownerId, deletedAt: null },
-        data: { ...TeamMapper.toUpdate(team), version: { increment: 1 } },
+        data: { ...toUpdate(team), version: { increment: 1 } },
       });
       if (count === 0) throw new TeamNotFound();
       // One statement for every affected task (AC-03.13.4), before their links go.
@@ -99,4 +102,41 @@ function translateNameCollision(error: unknown): unknown {
     error.code === 'P2002' &&
     JSON.stringify(error.meta ?? {}).includes(NAME_UNIQUE_INDEX);
   return isNameCollision ? new TeamNameAlreadyExists() : error;
+}
+
+/** Re-validates through the entity's rules: tightening one needs a data migration (ADR-0004). */
+function toDomain(row: TeamRow): Team {
+  return Team.restore({
+    id: row.id,
+    ownerId: row.ownerId,
+    name: TeamName.create(row.name),
+    color: ColorHex.create(row.colorHex),
+    description: row.description,
+    version: row.version,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    deletedAt: row.deletedAt,
+  });
+}
+
+/** A full row for a new team; persistence starts every team at version 1. */
+function toInsert(team: Team): TeamRow {
+  return {
+    ...toUpdate(team),
+    id: team.id,
+    ownerId: team.ownerId,
+    version: 1,
+    createdAt: team.createdAt,
+  };
+}
+
+/** The columns a write sets; id, owner, version and createdAt are never written. */
+function toUpdate(team: Team) {
+  return {
+    name: team.name.value,
+    colorHex: team.color.value,
+    description: team.description,
+    updatedAt: team.updatedAt,
+    deletedAt: team.deletedAt,
+  };
 }

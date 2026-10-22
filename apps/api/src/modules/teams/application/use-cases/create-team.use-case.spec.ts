@@ -40,7 +40,7 @@ describe('CreateTeamUseCase', () => {
     expect(team).toMatchObject({ id, ownerId: MARINA, version: 1 });
     expect(team?.name.value).toBe('Mobile');
     expect(team?.color.value).toBe('#7C3AED');
-    expect(team?.description.value).toBe('Apps');
+    expect(team?.description).toBe('Apps');
     expect(team?.createdAt).toEqual(NOW);
     expect(team?.updatedAt).toEqual(NOW);
   });
@@ -48,7 +48,7 @@ describe('CreateTeamUseCase', () => {
   it('AC-02.1.4 a blank description is stored as none', async () => {
     await create(MARINA, 'Mobile', '#7C3AED', '   ');
 
-    expect(repository.all()[0]?.description.value).toBeNull();
+    expect(repository.all()[0]?.description).toBeNull();
   });
 
   it.each(['mobile', 'MOBILE', ' Mobile '])(

@@ -4,7 +4,6 @@ import { Team } from '../../domain/entities/team.entity';
 import { TeamNameAlreadyExists } from '../../domain/errors/team.errors';
 import { TeamRepository } from '../../domain/repositories/team.repository';
 import { ColorHex } from '../../domain/value-objects/color-hex.vo';
-import { TeamDescription } from '../../domain/value-objects/team-description.vo';
 import { TeamName } from '../../domain/value-objects/team-name.vo';
 
 export interface CreateTeamInput {
@@ -31,7 +30,7 @@ export class CreateTeamUseCase {
       ownerId: input.ownerId,
       name: TeamName.create(input.name),
       color: ColorHex.create(input.colorHex),
-      description: TeamDescription.create(input.description),
+      description: input.description,
       now: this.clock.now(),
     });
     // Fast path for the common case; the unique index settles races in insert (AC-02.1.9).
