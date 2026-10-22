@@ -142,6 +142,8 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-11 — Add `ChangeTaskStatus` command and `PATCH /tasks/:id/status`
 
+- **Status:** done
+- **Owner:** Strata (database specialist; reassigned by the Maestro).
 - **Goal:** one-tap status change.
 - **Changes:** `commands/change-task-status/*`; `dto/change-task-status.dto.ts`; controller PATCH; specs.
 - **Covers:** @AC-03.10.1 – @AC-03.10.6, @AC-03.12.1 (status), @AC-03.14.3.
