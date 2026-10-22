@@ -13,7 +13,7 @@ Brief requirement → epic → story (priority) → acceptance criteria → scen
 | `MUST` ACs (with scenario / with task / total)   | 225 / 225 / 225 |
 | `SHOULD` ACs (with scenario / with task / total) | 38 / 38 / 38    |
 | `COULD` ACs (with scenario / with task / total)  | 138 / 138 / 138 |
-| Tasks                                            | 125             |
+| Tasks                                            | 129             |
 
 ## Gaps and findings
 

@@ -69,7 +69,24 @@ T-008-01 (ADR + spec)
    ├── T-008-03 (observability)┘
    └── T-008-04 → T-008-05 → T-008-06 → T-008-07
 T-008-09 (docs) last
+T-008-10a → T-008-10b → T-008-11 → T-008-12   (addendum)
 ```
+
+## Addendum (user-approved 2026-10-22): T-008-10 to T-008-12
+
+Three more steps after T-008-09, one PR each, in this order. The brief's e2e contract stays green on every PR; none of them changes behaviour.
+
+| Step            | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Why                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| T-008-10a / 10b | Fewer files per module: overdue rule on the `Task` entity; `TaskDescription`, `TaskTeamIds`, `TeamDescription` folded into entity validation; `application/views/` gone (view type in the read-model port, assembly in the presenter); precise unknown-teams check on `TeamLookup`; `UpdateTaskDto extends CreateTaskDto`, team chip in the task response DTO; calendar-date validator in `shared/presentation`; mappers as private functions of the Prisma repositories; `@ApiExtraModels` inside the envelope decorators | A file per tiny concept cost more navigation than it bought. Target: tasks ~22 source files, teams ~18 |
+| T-008-11        | `src/modules/<m>/tests/{unit,integration,e2e}/`; cross-cutting suites and `test/support` stay in `apps/api/test`                                                                                                                                                                                                                                                                                                                                                                                                           | A module is readable as one folder, code and proof together                                            |
+| T-008-12        | No explanatory comments in `src` and tests; functional ones stay                                                                                                                                                                                                                                                                                                                                                                                                                                                           | The why belongs to ADRs and README; comments drift from code                                           |
+
+**Split of T-008-10.** 10a (nestjs-specialist) does the shared pieces (f, h, the `TeamLookup` method of d) and the teams side of b, e and g; 10b (database-specialist) does the tasks side (a, b, c, e, g) and switches tasks to the new `TeamLookup` method if 10a did not. 10b starts after 10a merges.
+
+**Rules impact.** T-008-11 changes dependency-cruiser: `no-tests-in-production` must treat `src/modules/*/tests/**` as tests, and the layer rules (`domain-is-pure`, …) must not match files under `tests/`. Jest projects select by folder (`tests/unit` → unit, `tests/integration` → integration, `tests/e2e` → e2e); coverage keeps measuring domain, application and shared code only. The build excludes `tests/`.
+
+**Comment removal.** Allowed after T-008-12: `eslint-disable*`, `@ts-expect-error`, `@ts-ignore`, triple-slash directives, coverage and formatter pragmas. A comment holding a reason that still matters (a security or concurrency trade-off) moves to the ADR, README or operations docs in the same PR, so nothing important is lost.
 
 ## Test approach
 
