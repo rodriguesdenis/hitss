@@ -179,6 +179,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Changes:** `application/ports/task.read-model.ts` (`countByTeams(ownerId, teamIds) → ReadonlyMap<id, number>`); `infrastructure/prisma-task.read-model.ts` (one `GROUP BY` over `task_teams` joined to `tasks` with `tasks.deleted_at IS NULL`); integration specs.
 - **Covers:** @AC-03.11.3 (data level), and the counting rule of `@AC-02.8.1 @AC-02.8.2` at data level (their end-to-end proof is T-003-14b).
 - **Done when:** counts exclude deleted tasks (which keep their links), unassigned tasks and other owners' tasks; every task status counts; every distinct requested id is a key (0 when unknown, foreign, malformed or without tasks; requested spelling preserved); empty input → empty map without a query; one query for N teams.
+- **Note:** replaced by 008 (T-008-05, ADR-0020): `taskCount` is now counted in the teams read SQL, so `countByTeams` and its integration spec were removed. The data-level cases (deleted tasks keep their links but never count, unassigned and other owners' tasks are ignored, every status counts) moved to `prisma-team.read-model.int-spec.ts`. Unknown and foreign teams now have no count at all: they are not found or not listed.
 
 ## T-003-14b — Expose `CountTasksByTeamQuery`
 
@@ -188,6 +189,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Covers:** **`@AC-02.8.1 @AC-02.8.2`** from 002 (real task counts), end to end.
 - **Status:** done
 - **Done when:** e2e: `GET /teams` and `GET /teams/:id` show `taskCount` equal to the owner's active tasks per team (AC-02.8.1); deleting or unassigning a task decreases it by one (AC-02.8.2).
+- **Note:** replaced by 008 (T-008-05, ADR-0020): `CountTasksByTeamQuery`, its handler, `tasks/contracts/` and 002's `QueryBusTeamTaskCounts` were removed. AC-02.8.1 and AC-02.8.2 are unchanged and still proven end to end.
 
 ## T-003-15 — Seed 10 demo tasks
 

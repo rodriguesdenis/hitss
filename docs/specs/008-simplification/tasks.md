@@ -45,7 +45,9 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 - **Goal:** teams follows ADR-0020's layout with use cases (no CQRS inside teams).
 - **Changes:** `domain/{entities,value-objects,errors,repositories}`, `application/use-cases/*`, `presentation/http/{controller,dto,presenters}`, `infrastructure/persistence/*`; `Team.create()` / `Team.restore()`; `TeamLookup` service exported by `TeamsModule` (summaries, missing ids), and tasks' `TeamDirectory` adapter switched to it (replacing `GetTeamSummariesQuery`); `taskCount` computed in the teams read SQL (replacing `CountTasksByTeamQuery`). The `TeamDeleted` contract and its in-transaction reaction stay until T-008-06.
+- **Status:** done
 - **Done when:** teams unit/integration/e2e green; tasks reach teams only through `TeamLookup`; `teams/contracts/` holds only `team-deleted.event.ts` (removed in T-008-06); `TeamsModule` imports nothing from tasks.
+- **Note:** Clock moved to `shared/domain/clock.ts`. `Team.create()` draws its id with the global `crypto.randomUUID()` (no import, so the domain stays dependency-free), and `IdGenerator` stays for tasks until T-008-06. `DeleteTeamUseCase` keeps the unit of work, the publisher and the in-transaction `TeamDeleted` reaction until T-008-06 (agreed with Strata). dependency-cruiser `contexts-isolated` also allows `<b>-lookup.service.ts` and `<b>s.module.ts`; T-008-07 rewrites the rest. The architecture overview and domain-model docs still describe the QueryBus seams; they belong to T-008-09.
 
 ## T-008-06 — Tasks module, new layout, single-transaction delete
 
