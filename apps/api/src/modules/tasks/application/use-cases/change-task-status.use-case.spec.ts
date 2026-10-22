@@ -3,9 +3,7 @@ import { Clock } from '../../../../shared/domain/clock';
 import { Task } from '../../domain/entities/task.entity';
 import { TaskNotFound } from '../../domain/errors/task.errors';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
-import { TaskDescription } from '../../domain/value-objects/task-description.vo';
 import { TaskStatus } from '../../domain/value-objects/task-status.vo';
-import { TaskTeamIds } from '../../domain/value-objects/task-team-ids.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
 import { ChangeTaskStatusUseCase } from './change-task-status.use-case';
 
@@ -22,10 +20,10 @@ describe('ChangeTaskStatusUseCase', () => {
     const task = Task.create({
       ownerId: OWNER,
       title: TaskTitle.create('Ship it'),
-      description: TaskDescription.create('notes'),
+      description: 'notes',
       dueDate: DueDate.create('2026-10-31'),
       status,
-      teamIds: TaskTeamIds.of(['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa']),
+      teamIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
       now: CREATED,
     });
     tasks.seed(task);
@@ -60,9 +58,9 @@ describe('ChangeTaskStatusUseCase', () => {
 
     const after = stored();
     expect(after?.title.value).toBe(before?.title.value);
-    expect(after?.description.value).toBe(before?.description.value);
+    expect(after?.description).toBe(before?.description);
     expect(after?.dueDate?.value).toBe(before?.dueDate?.value);
-    expect(after?.teamIds.values).toEqual(before?.teamIds.values);
+    expect(after?.teamIds).toEqual(before?.teamIds);
   });
 
   it('AC-03.10.3 the current status is a no-op: no update, same version', async () => {

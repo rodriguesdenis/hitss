@@ -4,9 +4,7 @@ import { TeamLookup } from '../../../teams/team-lookup.service';
 import { TaskNotFound, UnknownTeams } from '../../domain/errors/task.errors';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
-import { TaskDescription } from '../../domain/value-objects/task-description.vo';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
-import { TaskTeamIds } from '../../domain/value-objects/task-team-ids.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
 
 export interface UpdateTaskInput {
@@ -25,10 +23,10 @@ export interface UpdateTaskInput {
  * Full replacement (`PUT`):
  * 1. Load the owner's active task; unknown, foreign or deleted → TaskNotFound. Not found wins
  *    over every other error.
- * 2. The create checks: the team count first (TooManyTeams), the value objects, then
- *    UnknownTeams for ids that are not the owner's live teams.
- * 3. `edit`, `assignTo` and `changeStatus` all run, then one write (version + 1) unless nothing
- *    changed: an identical replacement (team order ignored) is a no-op (AC-03.9.5).
+ * 2. `assignTo` (the team count first, TooManyTeams), `edit` and `changeStatus` all run on the
+ *    loaded aggregate, then UnknownTeams for ids that are not the owner's live teams.
+ * 3. One write (version + 1) unless nothing changed: an identical replacement (team order
+ *    ignored) is a no-op (AC-03.9.5).
  * Last write wins (ADR-0020).
  */
 @Injectable()
@@ -45,22 +43,24 @@ export class UpdateTaskUseCase {
     if (!task) {
       throw new TaskNotFound();
     }
-    const teamIds = TaskTeamIds.of(input.teamIds);
-    const fields = {
-      title: TaskTitle.create(input.title),
-      description: TaskDescription.create(input.description),
-      dueDate: input.dueDate ? DueDate.create(input.dueDate) : null,
-    };
-    const unknown = (missing: string[]) => new UnknownTeams(missing);
-    await this.teams.assertAllLive(ownerId, teamIds.values, unknown);
-
     const now = this.clock.now();
     // Each method touches updatedAt only when it changes something; no short-circuit, all run.
+    // assignTo first: the team count (TooManyTeams) precedes every other check (BR-03.8).
     const changes = [
-      task.edit({ ...fields, now }),
-      task.assignTo(teamIds, now),
+      task.assignTo(input.teamIds, now),
+      task.edit({
+        title: TaskTitle.create(input.title),
+        description: input.description,
+        dueDate: input.dueDate ? DueDate.create(input.dueDate) : null,
+        now,
+      }),
       task.changeStatus(input.status, now),
     ];
+    const teamIds = task.teamIds;
+    const unknown = (missing: string[]) => new UnknownTeams(missing);
+    // Nothing is written yet, so an unknown team leaves the stored task unchanged.
+    await this.teams.assertAllLive(ownerId, teamIds, unknown);
+
     if (!changes.includes(true)) {
       return;
     }
@@ -69,7 +69,7 @@ export class UpdateTaskUseCase {
     } catch (error) {
       // A team deleted after the check: the FK violation carries no ids, so ask again (AC-03.1.6).
       if (error instanceof UnknownTeams && error.teamIds.length === 0) {
-        await this.teams.assertAllLive(ownerId, teamIds.values, unknown);
+        await this.teams.assertAllLive(ownerId, teamIds, unknown);
       }
       throw error;
     }

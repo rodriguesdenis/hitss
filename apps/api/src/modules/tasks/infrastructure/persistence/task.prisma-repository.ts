@@ -1,10 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../../../generated/prisma/client';
+import type { Task as TaskRow } from '../../../../generated/prisma/client';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
 import { Task } from '../../domain/entities/task.entity';
 import { TaskNotFound, UnknownTeams } from '../../domain/errors/task.errors';
 import { TaskRepository } from '../../domain/repositories/task.repository';
-import { TaskMapper } from './task.persistence-mapper';
+import { DueDate } from '../../domain/value-objects/due-date.vo';
+import { parseTaskStatus } from '../../domain/value-objects/task-status.vo';
+import { TaskTitle } from '../../domain/value-objects/task-title.vo';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TEAM_LINK_FK = 'task_teams_team_id_fkey';
@@ -35,14 +38,14 @@ export class PrismaTaskRepository extends TaskRepository {
       where: { id, ownerId, deletedAt: null },
       include: WITH_TEAMS,
     });
-    return row ? TaskMapper.toDomain(row) : null;
+    return row ? toDomain(row) : null;
   }
 
   async insert(task: Task): Promise<void> {
     await this.withUnknownTeams(() =>
       this.transaction(async (tx) => {
-        await tx.task.create({ data: TaskMapper.toInsert(task) });
-        await this.addLinks(tx, task.id, task.teamIds.values);
+        await tx.task.create({ data: toInsert(task) });
+        await this.addLinks(tx, task.id, task.teamIds);
       }),
     );
   }
@@ -59,13 +62,13 @@ export class PrismaTaskRepository extends TaskRepository {
           ownerId: task.ownerId,
           deletedAt: null,
         },
-        data: { ...TaskMapper.toUpdate(task), version: { increment: 1 } },
+        data: { ...toUpdate(task), version: { increment: 1 } },
       });
       if (count === 0) {
         throw new TaskNotFound();
       }
       // Diff-sync the links: unchanged ones keep their row (and created_at).
-      const teamIds = task.teamIds.values;
+      const teamIds = task.teamIds;
       await tx.taskTeam.deleteMany({
         where: { taskId: task.id, teamId: { notIn: teamIds } },
       });
@@ -112,4 +115,59 @@ function isTeamLinkViolation(error: unknown): boolean {
     error.code === 'P2003' &&
     JSON.stringify(error.meta ?? {}).includes(TEAM_LINK_FK)
   );
+}
+
+/** A tasks row with its team links, as the repository loads it. */
+type TaskRowWithTeams = TaskRow & { teams: { teamId: string }[] };
+
+/** Re-validates through the entity and its value objects: tightening a rule needs a data migration (ADR-0004). */
+function toDomain(row: TaskRowWithTeams): Task {
+  return Task.restore({
+    id: row.id,
+    ownerId: row.ownerId,
+    title: TaskTitle.create(row.title),
+    description: row.description,
+    status: parseTaskStatus(row.status),
+    dueDate: row.dueDate ? DueDate.create(toCalendarDay(row.dueDate)) : null,
+    teamIds: row.teams.map((link) => link.teamId),
+    completedAt: row.completedAt,
+    version: row.version,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    deletedAt: row.deletedAt,
+  });
+}
+
+/** A full tasks row for a new task (links are written separately); version starts at 1. */
+function toInsert(task: Task): TaskRow {
+  return {
+    ...toUpdate(task),
+    id: task.id,
+    ownerId: task.ownerId,
+    version: 1,
+    createdAt: task.createdAt,
+  };
+}
+
+/** The columns an update writes; id, owner, version and createdAt are never written. */
+function toUpdate(task: Task) {
+  return {
+    title: task.title.value,
+    description: task.description,
+    status: task.status,
+    dueDate: task.dueDate ? fromCalendarDay(task.dueDate.value) : null,
+    completedAt: task.completedAt,
+    updatedAt: task.updatedAt,
+    deletedAt: task.deletedAt,
+  };
+}
+
+// A `date` column travels as midnight UTC; reading and writing in UTC keeps the calendar day
+// independent of the server's time zone.
+function toCalendarDay(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function fromCalendarDay(day: string): Date {
+  return new Date(`${day}T00:00:00.000Z`);
 }

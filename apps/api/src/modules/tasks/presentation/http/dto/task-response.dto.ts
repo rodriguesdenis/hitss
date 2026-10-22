@@ -1,6 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
-import { TeamChipDto } from './team-chip.dto';
+
+/** A team embedded in a task, enough to render its color chip (api-contracts → Task resource). */
+export class TeamChipDto {
+  @ApiProperty({ format: 'uuid' }) id!: string;
+  @ApiProperty({ example: 'Mobile' }) name!: string;
+  @ApiProperty({ example: '#7C3AED', description: '`#RRGGBB`, upper case.' })
+  colorHex!: string;
+}
 
 /** A task in responses (api-contracts → Task resource). */
 export class TaskResponseDto {

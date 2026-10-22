@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import type { Page } from '../../../../shared/application/page';
 import { Clock } from '../../../../shared/domain/clock';
 import { TeamLookup } from '../../../teams/team-lookup.service';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
-import { ListTasksCriteria, TaskReadModel } from '../ports/task.read-model';
-import { assembleTaskView } from '../views/task-view.assembler';
-import type { TaskView } from '../views/task.view';
+import {
+  ListTasksCriteria,
+  TaskPageView,
+  TaskReadModel,
+} from '../ports/task.read-model';
 
 export interface ListTasksInput {
   readonly ownerId: string;
@@ -26,23 +27,20 @@ export class ListTasksUseCase {
     private readonly clock: Clock,
   ) {}
 
-  async execute({
-    ownerId,
-    criteria,
-  }: ListTasksInput): Promise<Page<TaskView>> {
+  async execute({ ownerId, criteria }: ListTasksInput): Promise<TaskPageView> {
+    const today = DueDate.todayFrom(this.clock.now());
     if (
       criteria.teamId !== undefined &&
       (await this.teams.findMissing(ownerId, [criteria.teamId])).length > 0
     ) {
-      return { items: [], total: 0 };
+      return { page: { items: [], total: 0 }, teams: [], today };
     }
-    const { items, total } = await this.readModel.list(ownerId, criteria);
-    const teamIds = [...new Set(items.flatMap((record) => record.teamIds))];
-    const summaries = await this.teams.summaries(ownerId, teamIds);
-    const today = DueDate.todayFrom(this.clock.now());
+    const page = await this.readModel.list(ownerId, criteria);
+    const teamIds = [...new Set(page.items.flatMap((task) => task.teamIds))];
     return {
-      items: items.map((record) => assembleTaskView(record, summaries, today)),
-      total,
+      page,
+      teams: await this.teams.summaries(ownerId, teamIds),
+      today,
     };
   }
 }

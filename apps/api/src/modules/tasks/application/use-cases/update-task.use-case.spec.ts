@@ -8,9 +8,7 @@ import {
   UnknownTeams,
 } from '../../domain/errors/task.errors';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
-import { TaskDescription } from '../../domain/value-objects/task-description.vo';
 import { TaskStatus } from '../../domain/value-objects/task-status.vo';
-import { TaskTeamIds } from '../../domain/value-objects/task-team-ids.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
 import { UpdateTaskInput, UpdateTaskUseCase } from './update-task.use-case';
 
@@ -36,10 +34,10 @@ describe('UpdateTaskUseCase', () => {
     const draft = Task.create({
       ownerId: OWNER,
       title: TaskTitle.create('Draft'),
-      description: TaskDescription.create('v1'),
+      description: 'v1',
       dueDate: DueDate.create('2026-10-30'),
       status: TaskStatus.PENDING,
-      teamIds: TaskTeamIds.of([MOBILE, BACKEND]),
+      teamIds: [MOBILE, BACKEND],
       now: CREATED,
     });
     tasks.seed(draft);
@@ -76,10 +74,10 @@ describe('UpdateTaskUseCase', () => {
 
     const task = stored();
     expect(task?.title.value).toBe('Final');
-    expect(task?.description.value).toBe('v2');
+    expect(task?.description).toBe('v2');
     expect(task?.status).toBe(TaskStatus.IN_PROGRESS);
     expect(task?.dueDate?.value).toBe('2026-11-02');
-    expect(task?.teamIds.values).toEqual([DESIGN]);
+    expect(task?.teamIds).toEqual([DESIGN]);
     expect(task?.version).toBe(2);
     expect(task?.updatedAt).toEqual(NOW);
     expect(task?.createdAt).toEqual(CREATED);
@@ -88,9 +86,9 @@ describe('UpdateTaskUseCase', () => {
   it('AC-03.9.2 omitted description and due date are cleared, and an empty team list unassigns all', async () => {
     await replace({ description: undefined, dueDate: undefined, teamIds: [] });
 
-    expect(stored()?.description.value).toBeNull();
+    expect(stored()?.description).toBeNull();
     expect(stored()?.dueDate).toBeNull();
-    expect(stored()?.teamIds.values).toEqual([]);
+    expect(stored()?.teamIds).toEqual([]);
   });
 
   it('AC-03.9.4 editing into DONE sets the completion time, out of DONE clears it', async () => {
@@ -139,7 +137,7 @@ describe('UpdateTaskUseCase', () => {
     expect(error).toBeInstanceOf(UnknownTeams);
     expect((error as UnknownTeams).teamIds).toEqual([never]);
     expect(stored()?.version).toBe(1);
-    expect(stored()?.teamIds.values).toEqual([MOBILE, BACKEND].sort());
+    expect(stored()?.teamIds).toEqual([MOBILE, BACKEND].sort());
   });
 
   it('AC-03.9.3 a team gone between the check and the write (FK violation) → UnknownTeams with its id, nothing changed', async () => {

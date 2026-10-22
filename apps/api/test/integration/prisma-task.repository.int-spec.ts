@@ -3,7 +3,6 @@ import { INestApplication } from '@nestjs/common';
 import { UnknownTeams } from '../../src/modules/tasks/domain/errors/task.errors';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status.vo';
-import { TaskTeamIds } from '../../src/modules/tasks/domain/value-objects/task-team-ids.vo';
 import { PrismaTaskRepository } from '../../src/modules/tasks/infrastructure/persistence/task.prisma-repository';
 import { createTestApp } from '../support/app';
 import { expectProbePassed, runProbeInTimeZone } from '../support/in-time-zone';
@@ -91,7 +90,7 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     const gone = randomUUID(); // no teams row: the link insert trips the foreign key
 
     task.changeStatus(TaskStatus.DONE, LATER);
-    task.assignTo(TaskTeamIds.of([team, gone]), LATER);
+    task.assignTo([team, gone], LATER);
 
     const error: unknown = await repository
       .update(task)
@@ -100,7 +99,7 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     const stored = (await repository.findById(ownerId, task.id))!;
     expect(stored.version).toBe(1);
     expect(stored.status).toBe('PENDING');
-    expect(stored.teamIds.values).toEqual([team]);
+    expect(stored.teamIds).toEqual([team]);
   });
 
   it('translates only the team-link foreign key: an unknown owner fails as it is', async () => {
@@ -134,7 +133,7 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     const link = { taskId_teamId: { taskId: task.id, teamId: kept } };
     await prisma.taskTeam.update({ where: link, data: { createdAt: pinned } });
 
-    task.assignTo(TaskTeamIds.of([kept, added]), LATER);
+    task.assignTo([kept, added], LATER);
     await repository.update(task);
 
     const after = await prisma.taskTeam.findUniqueOrThrow({ where: link });

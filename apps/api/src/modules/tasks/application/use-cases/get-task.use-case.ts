@@ -3,9 +3,7 @@ import { Clock } from '../../../../shared/domain/clock';
 import { TeamLookup } from '../../../teams/team-lookup.service';
 import { TaskNotFound } from '../../domain/errors/task.errors';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
-import { TaskReadModel } from '../ports/task.read-model';
-import { assembleTaskView } from '../views/task-view.assembler';
-import type { TaskView } from '../views/task.view';
+import { TaskReadModel, TaskView } from '../ports/task.read-model';
 
 export interface GetTaskInput {
   readonly ownerId: string;
@@ -13,8 +11,8 @@ export interface GetTaskInput {
 }
 
 /**
- * Reads the task, resolves its teams through TeamLookup and judges `isOverdue` against today's
- * UTC day from the Clock. Unknown, foreign and deleted → TaskNotFound (AC-03.8.2).
+ * Reads the task, its live teams through TeamLookup and today's UTC day from the Clock.
+ * Unknown, foreign and deleted → TaskNotFound (AC-03.8.2).
  */
 @Injectable()
 export class GetTaskUseCase {
@@ -25,15 +23,14 @@ export class GetTaskUseCase {
   ) {}
 
   async execute({ ownerId, id }: GetTaskInput): Promise<TaskView> {
-    const record = await this.readModel.findById(ownerId, id);
-    if (!record) {
+    const task = await this.readModel.findById(ownerId, id);
+    if (!task) {
       throw new TaskNotFound();
     }
-    const summaries = await this.teams.summaries(ownerId, record.teamIds);
-    return assembleTaskView(
-      record,
-      summaries,
-      DueDate.todayFrom(this.clock.now()),
-    );
+    return {
+      task,
+      teams: await this.teams.summaries(ownerId, task.teamIds),
+      today: DueDate.todayFrom(this.clock.now()),
+    };
   }
 }

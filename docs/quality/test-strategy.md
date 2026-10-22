@@ -38,7 +38,7 @@ Proportions are a guide, reviewed in PRs: a feature PR whose tests are mostly E2
 
 ### 1. API unit — Jest (`apps/api`, `*.spec.ts` next to the code)
 
-- **Domain:** entities (`Team`, `Task`), value objects (`TeamName`, `ColorHex`, `TaskTitle`, `TaskStatus`, `DueDate`), the overdue policy, domain errors. Pure TypeScript, no Nest testing module, no mocks needed.
+- **Domain:** entities (`Team`, `Task`), value objects (`TeamName`, `ColorHex`, `TaskTitle`, `TaskStatus`, `DueDate`), `Task.isOverdue`, domain errors. Pure TypeScript, no Nest testing module, no mocks needed.
 - **Application:** use cases with **in-memory fakes** of the repositories and read models (`InMemoryTaskRepository`, `InMemoryTeamRepository`, a fixed `Clock`). The in-memory and Prisma repositories run the same contract suite. Asserts outcomes, not calls.
 - **Presentation units:** DTO validation (`class-validator` `validate()` on DTO instances — boundaries via `it.each`), error-code mapping in the exception filter, presenters.
 - **Infrastructure units:** config schema and production rules, request-id generator, logger configuration, OTel SDK options.
