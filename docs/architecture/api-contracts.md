@@ -123,10 +123,10 @@ Validation: `title` 3–120 chars · `description` ≤ 2000 · `status` enum · 
 
 ## Health — `/api/v1/health`
 
-| Endpoint            | Purpose                                         |
-| ------------------- | ----------------------------------------------- |
-| `GET /health/live`  | Process is up (no dependencies).                |
-| `GET /health/ready` | Database reachable. Used by Docker healthcheck. |
+| Endpoint                  | Purpose                                         |
+| ------------------------- | ----------------------------------------------- |
+| `GET /api/v1/health/live` | Process is up (no dependencies).                |
+| `GET /health/ready`       | Database reachable. Used by Docker healthcheck. |
 
 Health endpoints return Terminus' native format (not the envelope) for tool compatibility.
 

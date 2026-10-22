@@ -47,7 +47,7 @@ apps/api/src/
     │       ├── ip-throttler.guard.ts         # RATE_LIMIT_IP_MAX per client IP, BEFORE AuthGuard
     │       ├── csrf.guard.ts                 # cookie-authenticated unsafe methods: Origin / Sec-Fetch-Site / Content-Type
     │       └── owner-throttler.guard.ts      # RATE_LIMIT_MAX per ownerId (IP fallback), AFTER AuthGuard
-    └── health/                     # GET /health/live only (@AllowAnonymous @SkipThrottle @RawResponse); T-006-03 extends it with readiness
+    └── health/                     # GET /api/v1/health/live only (@Public @RawResponse; T-001-15 adds @SkipThrottle); T-006-03 extends it with readiness
 ```
 
 Identity is a **generic subdomain**. It has no `domain/` layer of its own, because Better Auth owns users, sessions and accounts. Other contexts see Identity only through the `Owner` type in `shared/domain` and the `@CurrentOwner()` decorator in `shared/presentation` (decision CO-1). Teams and tasks never import `modules/identity` (rule A5): the guards stay in Identity and are registered globally, and the decorator reads the authenticated request structurally, with no Better Auth types.
@@ -165,7 +165,7 @@ All guards are registered as `APP_GUARD` providers in `IdentityModule`, in this 
 
 1. **`IpThrottlerGuard`** (`ThrottlerGuard` subclass, throttler `ip`). Tracker = the resolved client IP (same source as `x-tt-client-ip`). `RATE_LIMIT_IP_MAX` req/min (default 300). Runs **before** authentication, so anonymous and forged-token floods are bounded without a session lookup (AC-01.7.9, S-M3).
 2. **`AuthGuard`** (from `@thallesp/nestjs-better-auth`). It resolves the session from `Authorization: Bearer` (signed tokens only; bearer wins over a cookie) or the cookie, sets `req.session` and `req.user`, and throws `UnauthorizedException` unless the route has `@AllowAnonymous()`.
-3. **`CsrfGuard`** (S-M2). Applies only to unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`) on `/api/v1` authenticated by **cookie** (no `Authorization` header). If `Origin` (or else `Referer`) is present and not in `trustedOrigins`, or `Sec-Fetch-Site: cross-site` → `403 CSRF_REJECTED` (AC-01.5.8). A body whose `Content-Type` is not `application/json` → `415 UNSUPPORTED_MEDIA_TYPE` (AC-01.5.9). Native clients send no `Origin` and bearer clients skip the guard.
+3. **`CsrfGuard`** (S-M2). Applies only to unsafe methods (`POST`, `PUT`, `PATCH`, `DELETE`) on `/api/v1` with a session that came with no `Authorization: Bearer` header, i.e. by **cookie** (a browser cannot add `Authorization` cross-origin without a CORS preflight the allowlist refuses; anonymous requests to public routes carry no credential and are not checked). If `Origin` (or else `Referer`) is present and not in `trustedOrigins`, or `Sec-Fetch-Site: cross-site` → `403 CSRF_REJECTED` (AC-01.5.8). A body whose `Content-Type` is not `application/json` → `415 UNSUPPORTED_MEDIA_TYPE` (AC-01.5.9). Native clients send no `Origin` and bearer clients skip the guard.
 4. **`OwnerThrottlerGuard`** (throttler `user`). `getTracker` returns `req.user?.id ?? clientIp`, so the limit is `RATE_LIMIT_MAX` (default 100/min) per user (AC-01.7.3, AC-01.7.4).
 
 Health uses `@SkipThrottle()` for both throttlers (AC-01.7.5). The global exception filter maps `UnauthorizedException` → `401 UNAUTHENTICATED`, `ThrottlerException` → `429 RATE_LIMITED`, the CSRF errors → `403 CSRF_REJECTED` / `415 UNSUPPORTED_MEDIA_TYPE` (codes in `error-codes.ts`, matching [api-contracts](../../architecture/api-contracts.md#error-codes)). `Retry-After` is set by the throttler. Because the guards run before routing to handlers and pipes, AC-01.5.5 holds: authentication is checked before `ParseUUIDPipe` or any lookup.
@@ -271,7 +271,7 @@ The config module, its validation library, `APP_ENV` (`local` \| `test` \| `prod
 - Business endpoints: `401 UNAUTHENTICATED`, `403 CSRF_REJECTED`, `415 UNSUPPORTED_MEDIA_TYPE` and `429 RATE_LIMITED` per [error codes](../../architecture/api-contracts.md#error-codes).
 - OpenAPI: a global `bearer` security scheme plus a `cookie` scheme. Every operation except health gets `security`. The `/api/auth/*` routes are documented by a hand-written OpenAPI fragment (or Better Auth's `openAPI()` plugin output merged under an "Identity" tag) so the generated client and Bruno stay complete. `/docs` and `/docs/openapi.json` are served only when `DOCS_ENABLED` is true, which is never the case with `APP_ENV=production` (the 007 OpenAPI export script builds the document without serving it).
 - Public inventory (AC-01.5.4, BR-01.6): health, `/api/auth/*`, and `/docs` only while `DOCS_ENABLED`. Nothing else.
-- Health: only `GET /api/v1/health/live` is created here, with `@AllowAnonymous()`, `@SkipThrottle()` and `@RawResponse()`. Readiness and the Terminus checks are added by [T-006-03](../006-observability/tasks.md), which extends this controller.
+- Health: only `GET /api/v1/health/live` is created here, with `@Public()` (`shared/presentation/decorators`: the `PUBLIC` metadata key the Better Auth guard reads, so no context imports the auth library) and `@RawResponse()`; `@SkipThrottle()` comes with the throttlers (T-001-15). Readiness and the Terminus checks are added by [T-006-03](../006-observability/tasks.md), which extends this controller.
 
 ## Data
 
