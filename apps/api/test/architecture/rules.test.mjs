@@ -21,6 +21,8 @@ const PACKAGES = [
   '@nestjs/cqrs',
   '@prisma/client',
   'class-validator',
+  'better-auth',
+  '@thallesp/nestjs-better-auth',
 ];
 const DEV_PACKAGES = ['some-dev-tool'];
 
@@ -377,6 +379,34 @@ const VIOLATIONS = [
     { 'src/shared/application/a.ts': importOf('./missing') },
     ['src/shared/application/a.ts', './missing'],
   ],
+  [
+    'auth-library-in-identity',
+    'a context controller imports the auth library guard decorators',
+    {
+      'src/modules/teams/presentation/a.ts': importOf(
+        '@thallesp/nestjs-better-auth',
+      ),
+    },
+    [
+      'src/modules/teams/presentation/a.ts',
+      'node_modules/@thallesp/nestjs-better-auth/index.js',
+    ],
+  ],
+  [
+    'auth-library-in-identity',
+    'shared code imports Better Auth types',
+    { 'src/shared/presentation/a.ts': importOf('better-auth') },
+    ['src/shared/presentation/a.ts', 'node_modules/better-auth/index.js'],
+  ],
+  [
+    'auth-library-in-identity',
+    'a context spec imports Better Auth',
+    { 'src/modules/tasks/application/a.spec.ts': importOf('better-auth') },
+    [
+      'src/modules/tasks/application/a.spec.ts',
+      'node_modules/better-auth/index.js',
+    ],
+  ],
 ];
 
 /** A5: one violating import per source layer into the same layer of another context. */
@@ -422,7 +452,12 @@ const COMPLIANT = {
     importOf('./infrastructure/repo') +
     importOf('./presentation/controller'),
   'src/modules/tasks/application/handler.spec.ts': importOf('./handler'),
-  'src/main.ts': importOf('./modules/tasks/tasks.module'),
+  'src/modules/identity/auth.factory.ts': importOf('better-auth'),
+  'src/modules/identity/identity.module.ts':
+    importOf('./auth.factory') + importOf('@thallesp/nestjs-better-auth'),
+  'src/main.ts':
+    importOf('./modules/tasks/tasks.module') +
+    importOf('./modules/identity/identity.module'),
 };
 
 describe('architecture rules', () => {
