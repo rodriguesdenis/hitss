@@ -90,7 +90,7 @@ app.set(
   });
   ```
 
-- Better Auth, `@better-auth/expo` and `@thallesp/nestjs-better-auth` are ESM-only. Node 24 loads them from the CommonJS build with `require(esm)`. Jest needs `NODE_OPTIONS=--experimental-vm-modules` for the same, so the API's Jest scripts set it.
+- Better Auth, `@better-auth/expo` and `@thallesp/nestjs-better-auth` are ESM-only. Node 24 loads them from the CommonJS build with `require(esm)`. Jest needs `NODE_OPTIONS=--experimental-vm-modules` for the same, so the API's Jest scripts set it, through `cross-env` for Windows shells. [ADR-0014](../../architecture/adr/0014-testing-strategy.md#consequences) records why and when to drop it.
 - The auth routes are mounted by the library at Better Auth's `basePath: '/api/auth'`, outside the URI versioning and outside our envelope and filter. This is the documented exception (spec Q-01.1).
 
 ### Better Auth configuration

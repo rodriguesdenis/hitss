@@ -74,6 +74,7 @@ Conventions:
 
 - Testcontainers requires Docker in CI and locally (already required to run the project).
 - Stryker runs are slow; limited to the domain folder and to CI on `main` / nightly plus on PRs touching `domain/`.
+- The API's Jest scripts run with `NODE_OPTIONS=--experimental-vm-modules` (set through `cross-env`, so they also work in Windows shells; added with T-001-06). `better-auth`, `@better-auth/expo` and `@thallesp/nestjs-better-auth` ship ESM only. Node 24 loads them from the CommonJS build at runtime (`require(esm)`), but Jest's module loader needs VM modules to do the same. **Drop the flag** once those packages ship CommonJS, Jest loads ESM from CommonJS without it, or the API moves to ESM. Nothing else depends on the flag.
 
 **Neutral**
 
