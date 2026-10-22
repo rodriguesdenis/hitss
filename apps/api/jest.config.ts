@@ -120,6 +120,15 @@ const config: Config = {
       displayName: 'e2e',
       testRegex: '.*\\.e2e-spec\\.ts$',
     },
+    {
+      // Never selected by a script: test/support/in-time-zone.ts runs these files in a child
+      // process started with TZ set, because a test cannot change the zone of its own process
+      // (Jest's sandboxed process.env does not reach the real one).
+      ...base,
+      displayName: 'tz-probe',
+      roots: ['<rootDir>/test/probes'],
+      testRegex: '.*\\.tz-probe\\.ts$',
+    },
   ],
 };
 
