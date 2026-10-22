@@ -108,7 +108,7 @@ describe('demo seed (integration, T-007-07)', () => {
     expect(after.accounts).toHaveLength(1);
   });
 
-  it('AC-07.2.2 the demo account owns exactly 3 teams and 10 tasks with the planned spread', async () => {
+  it('AC-07.2.2 AC-01.8.3 the demo account owns exactly 3 teams and 10 tasks with the planned spread', async () => {
     await run();
 
     const teams = await prisma.team.findMany({

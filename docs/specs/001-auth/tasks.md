@@ -82,8 +82,9 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 ## T-001-07 — Sign-up name rule, password policy, email trimming
 
 - **Goal:** Enforce BR-01.2 and BR-01.3 at sign-up, and trim emails on sign-in and sign-up.
-- **Changes:** `modules/identity/hooks/auth-input.hook.ts` (`hooks.before`: name trimmed, 1–100 code points, no `\p{Cc}` control characters; `email` trimmed on `/sign-in/email` and `/sign-up/email`; passwords never trimmed), password min/max asserted in the factory.
+- **Changes:** `modules/identity/hooks/auth-input.ts` (pure rules, unit-tested) and `auth-input.hook.ts` (`hooks.before` via `createAuthMiddleware`, running before Better Auth validates the body: name checked for `\p{Cc}` before trimming, then 1–100 code points and stored trimmed, else `400 INVALID_NAME` in Better Auth's native format; `email` trimmed on `/sign-in/email` and `/sign-up/email`; passwords never trimmed), password min/max asserted in the factory (T-001-06).
 - **Covers:** `@AC-01.1.3 @AC-01.1.5 @AC-01.2.6`
+- **Status:** done
 - **Done when:** Unit tests for the hook (blank, 1, 100, 101 code points, trimmed, a name with `\n` or NUL → 400; `"  Demo@Teams-Tasks.dev "` trimmed; a password with leading/trailing spaces passed through unchanged). E2E: outline rows for name and password boundaries pass; sign-in with a space-padded, mixed-case email succeeds; sign-in with the password plus a trailing space fails.
 
 ## T-001-08 — Global auth guard, CSRF guard, public liveness, route inventory
@@ -115,6 +116,8 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 - **Goal:** `demo@teams-tasks.dev` / `Demo@1234` exists after every seed (when enabled), with a stable id, and never in production.
 - **Changes:** `prisma/seed/identity.seed.ts` (fixed literal fixture, no faker; `DEMO_USER_ID` fixed UUID; skipped unless `SEED_DEMO=true` and never when `APP_ENV=production`; if absent, created via `auth.api.signUpEmail` with `databaseHooks.user.create.before` setting `DEMO_USER_ID`; if present, untouched), called from the `prisma/seed.ts` orchestrator (T-007-07 owns it; this task adds a minimal one if it has not landed), `package.json` `prisma.seed` / `db:seed` script if missing.
 - **Covers:** `@AC-01.8.1 @AC-01.8.2 @AC-01.8.4` (`@AC-01.8.3` is completed by T-002-11 and T-003-15)
+- **Status:** done
+- **Note:** Delivered by the T-007-07 demo seed (#51; Maestro): `src/seed/identity.seed.ts`, `fixtures.ts` and `gate.ts` instead of `prisma/seed/`. Its ACs are traced there: AC-01.8.1 in `src/seed/fixtures.spec.ts`, AC-01.8.2 in `test/integration/seed.int-spec.ts` (fixed id, a second run keeps the same id, password hash and `updated_at`), AC-01.8.4 in `src/seed/gate.spec.ts` and `seed.int-spec.ts` (`SEED_DEMO=false`, and `APP_ENV=production` even when forced). The demo sign-in is covered by `seed.int-spec.ts` (AC-07.2.1).
 - **Done when:** Integration: seed twice → one user, same id (`DEMO_USER_ID`), same account row and password hash, `updated_at` unchanged on the second run; `SEED_DEMO=false` → no demo user; `APP_ENV=production` → no demo user even if the flag is forced in the test. E2E: sign-in with the demo credentials succeeds.
 
 ## T-001-12 — Auth observability
