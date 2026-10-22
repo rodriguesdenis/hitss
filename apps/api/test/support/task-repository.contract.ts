@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
 import { Task } from '../../src/modules/tasks/domain/task';
-import { TaskNotFound } from '../../src/modules/tasks/domain/task.errors';
+import {
+  TaskNotFound,
+  UnknownTeams,
+} from '../../src/modules/tasks/domain/task.errors';
 import { TaskRepository } from '../../src/modules/tasks/domain/task.repository';
 import { DueDate } from '../../src/modules/tasks/domain/value-objects/due-date';
 import { TaskDescription } from '../../src/modules/tasks/domain/value-objects/task-description';
@@ -15,6 +18,8 @@ export interface TaskRepositoryHarness {
   newOwner(): Promise<string>;
   /** A team of that owner (the Prisma adapter needs an existing team for the links). */
   newTeam(ownerId: string): Promise<string>;
+  /** A team id that does not exist (e.g. deleted after the directory check). */
+  unknownTeam(): Promise<string>;
 }
 
 const CREATED = new Date('2026-10-21T09:00:00.000Z');
@@ -75,6 +80,7 @@ export function describeTaskRepositoryContract(
   const repo = () => harness().repository;
   const owner = () => harness().newOwner();
   const team = (ownerId: string) => harness().newTeam(ownerId);
+  const unknownTeam = () => harness().unknownTeam();
 
   describe('TaskRepository contract', () => {
     it('stores a new task with its teams at version 1 and loads every field back', async () => {
@@ -257,6 +263,43 @@ export function describeTaskRepositoryContract(
         await expect(repo().update(task, 2)).rejects.toBeInstanceOf(
           TaskNotFound,
         );
+      });
+    });
+
+    describe('a team that no longer exists (TOCTOU after the directory check)', () => {
+      it('insert fails with UnknownTeams naming it and stores nothing', async () => {
+        const ownerId = await owner();
+        const [live, gone] = [await team(ownerId), await unknownTeam()];
+        const task = aTask(ownerId, { teamIds: [live, gone] });
+
+        const error: unknown = await repo()
+          .insert(task)
+          .catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(UnknownTeams);
+        expect((error as UnknownTeams).teamIds).toEqual([gone]);
+        await expect(repo().findById(ownerId, task.id)).resolves.toBeNull();
+      });
+
+      it('update fails with UnknownTeams naming it and writes nothing', async () => {
+        const ownerId = await owner();
+        const live = await team(ownerId);
+        const task = aTask(ownerId, { teamIds: [live] });
+        await repo().insert(task);
+        const gone = await unknownTeam();
+
+        task.changeStatus(TaskStatus.DONE, LATER);
+        task.assignTo(TaskTeamIds.of([live, gone]), LATER);
+        const error: unknown = await repo()
+          .update(task, 1)
+          .catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(UnknownTeams);
+        expect((error as UnknownTeams).teamIds).toEqual([gone]);
+        const stored = (await repo().findById(ownerId, task.id))!;
+        expect(stored.version).toBe(1);
+        expect(stored.status).toBe('PENDING');
+        expect(stored.teamIds.values).toEqual([live]);
       });
     });
 
