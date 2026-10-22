@@ -1,4 +1,5 @@
 import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../../shared/presentation/decorators/public.decorator';
 import { RawResponse } from '../../shared/presentation/decorators/raw-response.decorator';
 import { DatabaseReadiness } from './database-readiness';
@@ -13,6 +14,8 @@ interface StatusResponse {
  * (isProbe). Liveness touches nothing but the process (AC-06.1.1); readiness asks the database
  * and nothing else (BR-06.7), naming the failing check and nothing about the failure (AC-06.1.3).
  */
+// Probes are never throttled: the orchestrator calls them often (AC-01.7.5).
+@SkipThrottle({ ip: true, user: true })
 @Controller('health')
 export class HealthController {
   constructor(private readonly readiness: DatabaseReadiness) {}
