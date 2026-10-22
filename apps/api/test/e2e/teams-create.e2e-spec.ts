@@ -63,7 +63,7 @@ describe('POST /api/v1/teams (e2e)', () => {
   };
 
   describe('happy path', () => {
-    it('AC-02.1.1 AC-02.8.3 creates the team: envelope, Location, ETag, trimmed name, upper-case color, taskCount 0', async () => {
+    it('AC-02.1.1 AC-02.8.3 creates the team: envelope, Location, no ETag, trimmed name, upper-case color, taskCount 0', async () => {
       const user = await signUpAndSignIn(app);
 
       const response = await create(user, {
@@ -85,7 +85,7 @@ describe('POST /api/v1/teams (e2e)', () => {
         updatedAt: team.createdAt,
       });
       expect(response.headers.location).toBe(`${TEAMS}/${team.id}`);
-      expect(response.headers.etag).toBe('W/"1"');
+      expect(response.headers.etag).toBeUndefined(); // AC-08.3
     });
 
     it('AC-02.1.4 a blank description is stored as none; it is optional', async () => {

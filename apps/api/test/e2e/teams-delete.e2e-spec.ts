@@ -97,7 +97,7 @@ describe('DELETE /api/v1/teams/:id and ownership (e2e)', () => {
     expect(await row(team.id)).toMatchObject({ deleted: true, version: 2 });
   });
 
-  it('AC-02.9.4 without If-Match the delete proceeds', async () => {
+  it('AC-02.7.1 without If-Match the delete proceeds', async () => {
     const user = await signUpAndSignIn(app);
     const team = await createTeam(user);
 
@@ -129,19 +129,16 @@ describe('DELETE /api/v1/teams/:id and ownership (e2e)', () => {
     },
   );
 
-  it.each(['W/"2"', 'abc'])(
-    'AC-02.9.3 a stale or unrecognizable If-Match (%s) → 412 and the team is still present',
+  it.each(['W/"2"', 'W/"1"', 'abc', '*'])(
+    'AC-08.3 If-Match %s is ignored: the delete proceeds (204), no 412',
     async (ifMatch) => {
       const user = await signUpAndSignIn(app);
       const team = await createTeam(user);
 
       const response = await remove(user, team.id, ifMatch);
 
-      expect(response.status).toBe(412);
-      expect(response.body).toMatchObject({
-        error: { code: 'PRECONDITION_FAILED' },
-      });
-      expect(await row(team.id)).toMatchObject({ deleted: false, version: 1 });
+      expect(response.status).toBe(204);
+      expect(await row(team.id)).toMatchObject({ deleted: true, version: 2 });
     },
   );
 

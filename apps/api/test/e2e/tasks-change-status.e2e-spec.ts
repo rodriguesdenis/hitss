@@ -111,7 +111,7 @@ describe('PATCH /api/v1/tasks/:id/status (e2e)', () => {
         const response = await patch(marina, id, { status: to });
 
         expect(response.status).toBe(200);
-        expect(response.headers.etag).toBe(`W/"${version}"`);
+        expect(response.headers.etag).toBeUndefined(); // AC-08.3
         const body = taskOf(response);
         expect(body).toMatchObject({ status: to, version, completedAt });
         // Updated time moves only on a real change (AC-03.10.1, AC-03.10.3).

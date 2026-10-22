@@ -1,4 +1,3 @@
-import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
 import { Task, TaskProps } from '../../src/modules/tasks/domain/task';
 import {
   TaskNotFound,
@@ -9,7 +8,7 @@ import { TaskRepository } from '../../src/modules/tasks/domain/task.repository';
 /**
  * In-memory TaskRepository for handler unit tests. It passes the same contract suite as the
  * Prisma adapter (task-repository.contract.ts): snapshots in, fresh aggregates out, the same
- * version guard, owner scoping and errors. Team links are part of the snapshot, so a soft delete
+ * version increment, owner scoping and errors. Team links are part of the snapshot, so a soft delete
  * keeps them, as the database does. Every team id is assumed to exist unless a test marks it
  * missing (`simulateMissingTeam`), which mimics the database's team-link foreign key.
  */
@@ -70,20 +69,17 @@ export class InMemoryTaskRepository extends TaskRepository {
     return Promise.resolve();
   }
 
-  update(task: Task, expectedVersion: number): Promise<number> {
+  update(task: Task): Promise<void> {
     const row = this.rows.get(task.id);
     if (!row || row.ownerId !== task.ownerId || row.deletedAt !== null) {
       return Promise.reject(new TaskNotFound());
     }
-    if (row.version !== expectedVersion) {
-      return Promise.reject(new ConcurrencyConflict(row.version));
-    }
     if (this.linksMissingTeam(task)) {
       return Promise.reject(new UnknownTeams([]));
     }
-    const version = expectedVersion + 1;
+    const version = row.version + 1;
     this.rows.set(task.id, snapshot(task, version));
-    return Promise.resolve(version);
+    return Promise.resolve();
   }
 
   private linksMissingTeam(task: Task): boolean {

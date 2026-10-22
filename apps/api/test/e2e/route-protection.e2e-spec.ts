@@ -204,6 +204,23 @@ describe('route protection: deny by default, Bearer only (e2e)', () => {
       expect(response.body).toEqual({ data: { ownerId: user.id } });
     });
 
+    it.each(['Bearer garbage', `Bearer ${'x'.repeat(32)}`])(
+      'AC-08.2 %s with a valid session cookie → 401, writes unchanged: the guard never falls back to the cookie',
+      async (authorization) => {
+        const user = await signIn();
+        const before = writes.count;
+
+        const response = await http()
+          .post(PROBE)
+          .set('Authorization', authorization)
+          .set('Cookie', user.cookie)
+          .send({});
+
+        expectUnauthenticated(response);
+        expect(writes.count).toBe(before);
+      },
+    );
+
     it('AC-08.2 a cookie from a trusted Origin is still not a credential → 401', async () => {
       const user = await signIn();
 

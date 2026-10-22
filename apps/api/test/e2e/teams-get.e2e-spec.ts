@@ -49,7 +49,7 @@ describe('GET /api/v1/teams/:id (e2e)', () => {
     return JSON.stringify({ error: rest });
   };
 
-  it('AC-02.5.1 returns my team with taskCount and version, and an ETag matching the version', async () => {
+  it('AC-02.5.1 AC-08.3 returns my team with taskCount and version, and no ETag', async () => {
     const user = await signUpAndSignIn(app);
     const created = await createTeam(user);
     const { id } = (created.body as { data: { id: string } }).data;
@@ -61,10 +61,10 @@ describe('GET /api/v1/teams/:id (e2e)', () => {
     expect(response.body).toMatchObject({
       data: { id, taskCount: 0, version: 1 },
     });
-    expect(response.headers.etag).toBe('W/"1"');
+    expect(response.headers.etag).toBeUndefined();
   });
 
-  it('AC-02.5.1 the ETag follows the version', async () => {
+  it('AC-02.5.1 the version is returned as data (informational, last write wins)', async () => {
     const user = await signUpAndSignIn(app);
     const { id } = ((await createTeam(user)).body as { data: { id: string } })
       .data;
@@ -72,14 +72,8 @@ describe('GET /api/v1/teams/:id (e2e)', () => {
 
     const response = await get(user, id);
 
-    expect(response.headers.etag).toBe('W/"4"');
     expect(response.body).toMatchObject({ data: { version: 4 } });
-  });
-
-  it('AC-02.1.1 create sends the same ETag through the shared interceptor', async () => {
-    const user = await signUpAndSignIn(app);
-
-    expect((await createTeam(user)).headers.etag).toBe('W/"1"');
+    expect(response.headers.etag).toBeUndefined();
   });
 
   it('AC-02.5.2 AC-02.5.3 AC-02.5.4 AC-01.6.2 unknown, foreign and deleted ids give byte-identical 404 bodies (apart from traceId)', async () => {

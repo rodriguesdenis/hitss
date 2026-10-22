@@ -112,7 +112,7 @@ describe('POST /api/v1/tasks (e2e)', () => {
   };
 
   describe('defaults and the response', () => {
-    it('AC-03.1.1 a title alone → 201 PENDING task at version 1, Location, ETag, owner is the signed-in user', async () => {
+    it('AC-03.1.1 a title alone → 201 PENDING task at version 1, Location, no ETag, owner is the signed-in user', async () => {
       const user = await signUpAndSignIn(app);
 
       const response = await create(user, { title: 'Write release notes' });
@@ -133,7 +133,7 @@ describe('POST /api/v1/tasks (e2e)', () => {
         updatedAt: NOW.toISOString(),
       });
       expect(response.headers.location).toBe(`${TASKS}/${task.id}`);
-      expect(response.headers.etag).toBe('W/"1"');
+      expect(response.headers.etag).toBeUndefined(); // AC-08.3
       const { rows } = await sql.query<{ owner_id: string }>(
         'SELECT owner_id FROM tasks WHERE id = $1',
         [task.id],

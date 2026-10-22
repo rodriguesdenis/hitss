@@ -70,7 +70,8 @@ describe('security baseline (e2e)', () => {
       expect(response.headers['access-control-expose-headers']).toContain(
         'X-Request-Id',
       );
-      expect(response.headers['access-control-expose-headers']).toContain(
+      // AC-08.3: no ETag is ever sent, so none is exposed.
+      expect(response.headers['access-control-expose-headers']).not.toContain(
         'ETag',
       );
     });
@@ -80,7 +81,7 @@ describe('security baseline (e2e)', () => {
         .options('/api/v1/teams')
         .set('Origin', ALLOWED)
         .set('Access-Control-Request-Method', 'PUT')
-        .set('Access-Control-Request-Headers', 'content-type,if-match');
+        .set('Access-Control-Request-Headers', 'content-type,authorization');
 
       expect(response.status).toBe(204);
       expect(response.headers['access-control-allow-origin']).toBe(ALLOWED);

@@ -89,7 +89,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
   };
 
   describe('replacement', () => {
-    it('AC-02.6.1 AC-02.9.1 replaces every field: version 1 → 2, new ETag, updatedAt advances, createdAt kept', async () => {
+    it('AC-02.6.1 AC-02.9.1 replaces every field: version 1 → 2, no ETag, updatedAt advances, createdAt kept', async () => {
       const user = await signUpAndSignIn(app);
       const team = await createTeam(user);
 
@@ -113,7 +113,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
       expect(Date.parse(after.updatedAt)).toBeGreaterThan(
         Date.parse(team.updatedAt),
       );
-      expect(response.headers.etag).toBe('W/"2"');
+      expect(response.headers.etag).toBeUndefined(); // AC-08.3
     });
 
     it('AC-02.6.3 omitting the description clears it (full replacement)', async () => {
@@ -158,7 +158,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
         version: 1,
         updatedAt: team.updatedAt,
       });
-      expect(response.headers.etag).toBe('W/"1"');
+      expect(response.headers.etag).toBeUndefined(); // AC-08.3
       expect(await row(team.id)).toEqual(before);
     });
 
@@ -256,7 +256,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
       },
     );
 
-    it('AC-02.6.2 an invalid body with a stale If-Match → 400 (validation before the precondition)', async () => {
+    it('AC-02.6.2 an invalid body → 400, whatever If-Match says (the header is ignored)', async () => {
       const user = await signUpAndSignIn(app);
       const team = await createTeam(user);
 
@@ -307,7 +307,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
     });
 
     it.each(['W/"1"', 'W/"9"', 'garbage', '*'])(
-      'AC-02.9.7 not found wins over any precondition (If-Match: %s)',
+      'AC-02.6.6 an unknown team → 404 whatever If-Match says (%s; the header is ignored)',
       async (ifMatch) => {
         const { marina, rafael } = await twoUsers(app);
         const theirs = await createTeam(rafael);
@@ -326,64 +326,10 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
     );
   });
 
-  describe('preconditions (AC-02.9.x)', () => {
-    it('AC-02.9.2 a stale If-Match → 412 with currentVersion, the team unchanged', async () => {
-      const user = await signUpAndSignIn(app);
-      const team = await createTeam(user);
-      await put(
-        user,
-        team.id,
-        { name: 'Mobile v2', colorHex: '#7C3AED' },
-        'W/"1"',
-      );
-
-      const response = await put(
-        user,
-        team.id,
-        { name: 'Platform', colorHex: '#0EA5E9' },
-        'W/"1"',
-      );
-
-      expect(response.status).toBe(412);
-      expect(response.body).toMatchObject({
-        error: { code: 'PRECONDITION_FAILED', details: { currentVersion: 2 } },
-      });
-      expect(await row(team.id)).toMatchObject({
-        name: 'Mobile v2',
-        version: 2,
-      });
-    });
-
-    it.each(['abc', 'W/"-1"', '1', 'garbage', '"0"'])(
-      'AC-02.9.6 an unrecognizable If-Match %j → 412, the team unchanged',
+  describe('last write wins: If-Match is ignored (AC-08.3)', () => {
+    it.each([undefined, 'W/"9"', 'W/"1"', 'abc', '*', '"0"'])(
+      'AC-08.3 If-Match %j is ignored: 200, version 2, no ETag, no 412',
       async (ifMatch) => {
-        const user = await signUpAndSignIn(app);
-        const team = await createTeam(user);
-
-        expectError(
-          await put(
-            user,
-            team.id,
-            { name: 'Platform', colorHex: '#0EA5E9' },
-            ifMatch,
-          ),
-          412,
-          'PRECONDITION_FAILED',
-        );
-        expect(await row(team.id)).toMatchObject({
-          name: 'Mobile',
-          version: 1,
-        });
-      },
-    );
-
-    it.each([
-      ['no header', undefined],
-      ['*', '*'],
-      ['a strong tag', '"1"'],
-    ])(
-      'AC-02.9.4 AC-02.9.1 %s proceeds against the current version',
-      async (_label, ifMatch) => {
         const user = await signUpAndSignIn(app);
         const team = await createTeam(user);
 
@@ -396,10 +342,11 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
 
         expect(response.status).toBe(200);
         expect((response.body as { data: TeamBody }).data.version).toBe(2);
+        expect(response.headers.etag).toBeUndefined();
       },
     );
 
-    it('AC-02.9.5 two updates with the same If-Match at the same time → one 200 and one 412', async () => {
+    it('AC-08.3 two concurrent updates of one team both apply (last write wins)', async () => {
       const user = await signUpAndSignIn(app);
       const team = await createTeam(user);
 
@@ -408,38 +355,22 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
         put(user, team.id, { name: 'Second', colorHex: '#0EA5E9' }, 'W/"1"'),
       ]);
 
-      expect(responses.map((response) => response.status).sort()).toEqual([
-        200, 412,
-      ]);
-      expect((await row(team.id))?.version).toBe(2);
-    });
-
-    it('AC-02.9.4 without If-Match, two concurrent updates both succeed (a lost race is retried once)', async () => {
-      const user = await signUpAndSignIn(app);
-      const team = await createTeam(user);
-
-      const responses = await Promise.all([
-        put(user, team.id, { name: 'First', colorHex: '#0EA5E9' }),
-        put(user, team.id, { name: 'Second', colorHex: '#0EA5E9' }),
-      ]);
-
       expect(responses.map((response) => response.status)).toEqual([200, 200]);
       expect((await row(team.id))?.version).toBe(3);
     });
 
-    it('AC-02.6.4 AC-02.9.5 two concurrent renames of two teams to one name → exactly one 200; the loser gets 409', async () => {
+    it('AC-02.6.4 two concurrent renames of two teams to one name → exactly one 200; the loser gets 409', async () => {
       const user = await signUpAndSignIn(app);
       const a = await createTeam(user, 'Alpha');
       const b = await createTeam(user, 'Beta');
 
       const responses = await Promise.all([
-        put(user, a.id, { name: 'Shared', colorHex: '#0EA5E9' }, 'W/"1"'),
-        put(user, b.id, { name: 'shared', colorHex: '#0EA5E9' }, 'W/"1"'),
+        put(user, a.id, { name: 'Shared', colorHex: '#0EA5E9' }),
+        put(user, b.id, { name: 'shared', colorHex: '#0EA5E9' }),
       ]);
 
       const statuses = responses.map((response) => response.status).sort();
-      // Different rows, each at its own version 1: neither precondition can go stale, so the loser
-      // is a name collision (409). A 412 here would be a bug.
+      // The unique index on the owner's active names decides: the loser is a name collision.
       expect(statuses).toEqual([200, 409]);
       const names = [(await row(a.id))?.name, (await row(b.id))?.name];
       expect(

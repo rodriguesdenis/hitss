@@ -1,4 +1,3 @@
-import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
 import { Team, TeamProps } from '../../src/modules/teams/domain/team';
 import {
   TeamNameAlreadyExists,
@@ -10,7 +9,7 @@ import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name
 /**
  * In-memory TeamRepository for handler unit tests. It passes the same contract suite as the
  * Prisma adapter (team-repository.contract.ts): snapshots in, fresh aggregates out, the same
- * version guard, owner scoping and errors. Names are compared with TeamName.equals, the domain
+ * version increment, owner scoping and errors. Names are compared with TeamName.equals, the domain
  * approximation of the database's lower(name) index.
  */
 export class InMemoryTeamRepository extends TeamRepository {
@@ -51,13 +50,10 @@ export class InMemoryTeamRepository extends TeamRepository {
     return Promise.resolve();
   }
 
-  update(team: Team, expectedVersion: number): Promise<number> {
+  update(team: Team): Promise<void> {
     const row = this.rows.get(team.id);
     if (!row || row.ownerId !== team.ownerId || row.deletedAt !== null) {
       return Promise.reject(new TeamNotFound());
-    }
-    if (row.version !== expectedVersion) {
-      return Promise.reject(new ConcurrencyConflict(row.version));
     }
     if (
       team.deletedAt === null &&
@@ -65,9 +61,9 @@ export class InMemoryTeamRepository extends TeamRepository {
     ) {
       return Promise.reject(new TeamNameAlreadyExists());
     }
-    const version = expectedVersion + 1;
+    const version = row.version + 1;
     this.rows.set(team.id, snapshot(team, version));
-    return Promise.resolve(version);
+    return Promise.resolve();
   }
 
   private nameTaken(
