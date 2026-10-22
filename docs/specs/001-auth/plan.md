@@ -32,6 +32,7 @@ apps/api/src/
 │   │   ├── filters/global-exception.filter.ts     # → { error: { code, message, details?, traceId } }
 │   │   ├── filters/error-codes.ts                 # stable codes (single source), incl. CSRF_REJECTED, UNSUPPORTED_MEDIA_TYPE
 │   │   ├── decorators/raw-response.decorator.ts
+│   │   ├── decorators/current-owner.decorator.ts  # @CurrentOwner(): Owner (CO-1; no Better Auth types)
 │   │   ├── dto/                                   # ErrorResponseDto, envelope helpers
 │   │   └── validation.pipe.ts                     # whitelist + forbidNonWhitelisted + transform; → VALIDATION_FAILED
 │   └── observability/              # request-id middleware, redaction constants (006 completes the module)
@@ -42,15 +43,14 @@ apps/api/src/
     │   ├── middleware/
     │   │   ├── client-ip.middleware.ts       # strips incoming x-tt-client-ip, sets it from the trusted IP source
     │   │   └── auth-body-limit.middleware.ts # /api/auth/* body cap 16 kB → 413 before any hashing
-    │   └── presentation/
-    │       ├── current-owner.decorator.ts    # @CurrentOwner(): Owner
+    │   └── presentation/                     # guards only; @CurrentOwner() lives in shared/presentation (CO-1)
     │       ├── ip-throttler.guard.ts         # RATE_LIMIT_IP_MAX per client IP, BEFORE AuthGuard
     │       ├── csrf.guard.ts                 # cookie-authenticated unsafe methods: Origin / Sec-Fetch-Site / Content-Type
     │       └── owner-throttler.guard.ts      # RATE_LIMIT_MAX per ownerId (IP fallback), AFTER AuthGuard
     └── health/                     # GET /health/live only (@AllowAnonymous @SkipThrottle @RawResponse); T-006-03 extends it with readiness
 ```
 
-Identity is a **generic subdomain**. It has no `domain/` layer of its own, because Better Auth owns users, sessions and accounts. Other contexts see Identity only through the `Owner` type in `shared/domain`.
+Identity is a **generic subdomain**. It has no `domain/` layer of its own, because Better Auth owns users, sessions and accounts. Other contexts see Identity only through the `Owner` type in `shared/domain` and the `@CurrentOwner()` decorator in `shared/presentation` (decision CO-1). Teams and tasks never import `modules/identity` (rule A5): the guards stay in Identity and are registered globally, and the decorator reads the authenticated request structurally, with no Better Auth types.
 
 ### Bootstrap
 
@@ -174,7 +174,8 @@ Health uses `@SkipThrottle()` for both throttlers (AC-01.7.5). The global except
 // shared/domain/owner.ts — framework-free
 export type Owner = Readonly<{ ownerId: string }>;
 
-// modules/identity/presentation/current-owner.decorator.ts
+// shared/presentation/decorators/current-owner.decorator.ts (CO-1): no Better Auth import;
+// the global AuthGuard (modules/identity) has already put the user on the request.
 export const CurrentOwner = createParamDecorator((_: unknown, ctx: ExecutionContext): Owner => {
   const req = ctx.switchToHttp().getRequest<{ user?: { id: string } | null }>();
   if (!req.user) throw new UnauthorizedException();   // defensive; the guard already ran

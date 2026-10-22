@@ -289,7 +289,7 @@ apps/api/
 │   │   │   ├── pipes/                   # AppValidationPipe (global), ParseUuidPipe
 │   │   │   ├── interceptors/            # envelope, etag, idempotency
 │   │   │   ├── dto/                     # PaginationQueryDto, ErrorResponseDto, envelope helpers
-│   │   │   └── decorators/              # @RawResponse, @ApiEnvelopedResponse, @IfMatch()
+│   │   │   └── decorators/              # @RawResponse, @ApiEnvelopedResponse, @IfMatch(), @CurrentOwner() (CO-1)
 │   │   └── observability/
 │   │       ├── observability.module.ts  # ObservabilityModule: logging, telemetry shutdown (last in AppModule.imports)
 │   │       ├── is-probe.ts              # probe requests (/api/v1/health/*) are never logged or traced
@@ -298,7 +298,7 @@ apps/api/
 │   │       ├── telemetry/               # diag-logger, resource-attributes, sanitizing-span-exporter, telemetry-lifecycle, telemetry-shutdown
 │   │       └── tracing/                 # use-case spans around command/query handlers
 │   └── modules/
-│       ├── identity/                    # Identity context: betterAuth instance, IdentityModule (wraps nestjs-better-auth AuthModule), @CurrentOwner()
+│       ├── identity/                    # Identity context: betterAuth instance, IdentityModule (wraps nestjs-better-auth AuthModule), global guards; @CurrentOwner() is in shared/presentation (CO-1)
 │       ├── health/                      # Terminus controller + Prisma indicator
 │       ├── teams/
 │       │   ├── contracts/               # PUBLIC: TeamDeleted, GetTeamSummariesQuery + result types
