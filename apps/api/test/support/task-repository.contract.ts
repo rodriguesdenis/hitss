@@ -6,9 +6,7 @@ import {
 } from '../../src/modules/tasks/domain/errors/task.errors';
 import { TaskRepository } from '../../src/modules/tasks/domain/repositories/task.repository';
 import { DueDate } from '../../src/modules/tasks/domain/value-objects/due-date.vo';
-import { TaskDescription } from '../../src/modules/tasks/domain/value-objects/task-description.vo';
 import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status.vo';
-import { TaskTeamIds } from '../../src/modules/tasks/domain/value-objects/task-team-ids.vo';
 import { TaskTitle } from '../../src/modules/tasks/domain/value-objects/task-title.vo';
 
 export interface TaskRepositoryHarness {
@@ -39,14 +37,13 @@ export function aTask(
   const values = {
     ownerId,
     title: TaskTitle.create(extra.title ?? 'Write release notes'),
-    description: TaskDescription.create(
+    description:
       extra.description === undefined ? 'For 1.2' : extra.description,
-    ),
     dueDate:
       extra.dueDate === null
         ? null
         : DueDate.create(extra.dueDate ?? '2026-10-30'),
-    teamIds: TaskTeamIds.of(extra.teamIds ?? []),
+    teamIds: extra.teamIds ?? [],
   };
   // A chosen id (to provoke a duplicate key or order by id) needs restore(); create() draws one.
   return extra.id === undefined
@@ -68,10 +65,10 @@ function snapshot(task: Task) {
     id: task.id,
     ownerId: task.ownerId,
     title: task.title.value,
-    description: task.description.value,
+    description: task.description,
     status: task.status,
     dueDate: task.dueDate?.value ?? null,
-    teamIds: task.teamIds.values,
+    teamIds: task.teamIds,
     completedAt: task.completedAt,
     version: task.version,
     createdAt: task.createdAt,
@@ -126,8 +123,8 @@ export function describeTaskRepositoryContract(
       await repo().insert(task);
       const loaded = (await repo().findById(ownerId, task.id))!;
 
-      expect(loaded.teamIds.values).toEqual([]);
-      expect(loaded.description.value).toBeNull();
+      expect(loaded.teamIds).toEqual([]);
+      expect(loaded.description).toBeNull();
       expect(loaded.dueDate).toBeNull();
       expect(loaded.completedAt).toBeNull();
     });
@@ -171,7 +168,7 @@ export function describeTaskRepositoryContract(
         const loaded = (await repo().findById(ownerId, task.id))!;
         loaded.edit({
           title: TaskTitle.create('Publish release notes'),
-          description: TaskDescription.create(null),
+          description: null,
           dueDate: DueDate.create('2026-11-15'),
           now: LATER,
         });
@@ -195,12 +192,12 @@ export function describeTaskRepositoryContract(
         await repo().insert(task);
 
         const loaded = (await repo().findById(ownerId, task.id))!;
-        loaded.assignTo(TaskTeamIds.of([b, c]), LATER);
+        loaded.assignTo([b, c], LATER);
         await repo().update(loaded);
 
-        expect(
-          (await repo().findById(ownerId, task.id))!.teamIds.values,
-        ).toEqual([b, c].sort());
+        expect((await repo().findById(ownerId, task.id))!.teamIds).toEqual(
+          [b, c].sort(),
+        );
       });
 
       it('clears every team link', async () => {
@@ -209,12 +206,10 @@ export function describeTaskRepositoryContract(
         const task = aTask(ownerId, { teamIds: [a] });
         await repo().insert(task);
 
-        task.assignTo(TaskTeamIds.of([]), LATER);
+        task.assignTo([], LATER);
         await repo().update(task);
 
-        expect(
-          (await repo().findById(ownerId, task.id))!.teamIds.values,
-        ).toEqual([]);
+        expect((await repo().findById(ownerId, task.id))!.teamIds).toEqual([]);
       });
 
       it('AC-08.3 last write wins: an update from an older load still applies and bumps the version', async () => {
@@ -225,11 +220,11 @@ export function describeTaskRepositoryContract(
         task.changeStatus(TaskStatus.IN_PROGRESS, LATER);
         await repo().update(task);
 
-        task.assignTo(TaskTeamIds.of([a]), LATER);
+        task.assignTo([a], LATER);
         await repo().update(task);
 
         const stored = (await repo().findById(ownerId, task.id))!;
-        expect(stored.teamIds.values).toEqual([a]);
+        expect(stored.teamIds).toEqual([a]);
         expect(stored.version).toBe(3);
       });
 
@@ -290,7 +285,7 @@ export function describeTaskRepositoryContract(
         const gone = await unknownTeam();
 
         task.changeStatus(TaskStatus.DONE, LATER);
-        task.assignTo(TaskTeamIds.of([live, gone]), LATER);
+        task.assignTo([live, gone], LATER);
         const error: unknown = await repo()
           .update(task)
           .catch((e: unknown) => e);
@@ -299,7 +294,7 @@ export function describeTaskRepositoryContract(
         const stored = (await repo().findById(ownerId, task.id))!;
         expect(stored.version).toBe(1);
         expect(stored.status).toBe('PENDING');
-        expect(stored.teamIds.values).toEqual([live]);
+        expect(stored.teamIds).toEqual([live]);
       });
     });
   });

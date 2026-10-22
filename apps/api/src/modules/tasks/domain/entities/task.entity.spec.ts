@@ -1,9 +1,7 @@
 import { DueDate } from '../value-objects/due-date.vo';
-import { isOverdue } from '../policies/overdue.policy';
+import { InvalidTaskDescription, TooManyTeams } from '../errors/task.errors';
 import { Task, TaskProps } from './task.entity';
-import { TaskDescription } from '../value-objects/task-description.vo';
 import { TaskStatus } from '../value-objects/task-status.vo';
-import { TaskTeamIds } from '../value-objects/task-team-ids.vo';
 import { TaskTitle } from '../value-objects/task-title.vo';
 
 // ISO strings, not shared Date instances, so aliasing bugs cannot hide.
@@ -18,10 +16,10 @@ function created(status?: TaskStatus): Task {
   return Task.create({
     ownerId: OWNER_ID,
     title: TaskTitle.create('Write release notes'),
-    description: TaskDescription.create(null),
+    description: null,
     status,
     dueDate: null,
-    teamIds: TaskTeamIds.of([]),
+    teamIds: [],
     now: new Date(CREATED),
   });
 }
@@ -32,10 +30,10 @@ function stored(overrides: Partial<TaskProps> = {}): Task {
     id: TASK_ID,
     ownerId: OWNER_ID,
     title: TaskTitle.create('Ship it'),
-    description: TaskDescription.create('notes'),
+    description: 'notes',
     status: PENDING,
     dueDate: DueDate.create('2026-10-31'),
-    teamIds: TaskTeamIds.of(['mobile', 'backend']),
+    teamIds: ['mobile', 'backend'],
     completedAt: null,
     version: 3,
     createdAt: new Date(CREATED),
@@ -54,10 +52,10 @@ describe('Task', () => {
 
       expect(task.ownerId).toBe(OWNER_ID);
       expect(task.title.value).toBe('Write release notes');
-      expect(task.description.value).toBeNull();
+      expect(task.description).toBeNull();
       expect(task.status).toBe(PENDING);
       expect(task.dueDate).toBeNull();
-      expect(task.teamIds.values).toEqual([]);
+      expect(task.teamIds).toEqual([]);
       expect(task.completedAt).toBeNull();
       expect(task.version).toBe(1);
       expect(iso(task.createdAt)).toBe(CREATED);
@@ -88,9 +86,9 @@ describe('Task', () => {
     const task = stored({ status: DONE, completedAt: new Date(COMPLETED) });
 
     expect(task.title.value).toBe('Ship it');
-    expect(task.description.value).toBe('notes');
+    expect(task.description).toBe('notes');
     expect(task.dueDate?.value).toBe('2026-10-31');
-    expect(task.teamIds.values).toEqual(['backend', 'mobile']);
+    expect(task.teamIds).toEqual(['backend', 'mobile']);
     expect(iso(task.completedAt)).toBe(COMPLETED);
     expect(task.version).toBe(3);
   });
@@ -129,9 +127,9 @@ describe('Task', () => {
       task.changeStatus(DONE, new Date(NOW));
 
       expect(task.title.value).toBe('Ship it');
-      expect(task.description.value).toBe('notes');
+      expect(task.description).toBe('notes');
       expect(task.dueDate?.value).toBe('2026-10-31');
-      expect(task.teamIds.values).toEqual(['backend', 'mobile']);
+      expect(task.teamIds).toEqual(['backend', 'mobile']);
     });
   });
 
@@ -141,7 +139,7 @@ describe('Task', () => {
 
       const changed = task.edit({
         title: TaskTitle.create('  Ship it  '),
-        description: TaskDescription.create(' notes '),
+        description: ' notes ',
         dueDate: DueDate.create('2026-10-31'),
         now: new Date(NOW),
       });
@@ -167,12 +165,8 @@ describe('Task', () => {
     type EditRow = [string, Partial<TaskProps>, Partial<TaskProps>];
     it.each<EditRow>([
       ['the title', {}, { title: TaskTitle.create('Ship it now') }],
-      ['the description', {}, { description: TaskDescription.create('more') }],
-      [
-        'clearing the description',
-        {},
-        { description: TaskDescription.create('') },
-      ],
+      ['the description', {}, { description: 'more' }],
+      ['clearing the description', {}, { description: '' }],
       ['the due date', {}, { dueDate: DueDate.create('2026-11-01') }],
       ['clearing the due date', {}, { dueDate: null }],
       [
@@ -190,7 +184,8 @@ describe('Task', () => {
 
       expect(task.edit({ ...values, now: new Date(NOW) })).toBe(true);
       expect(task.title.equals(values.title)).toBe(true);
-      expect(task.description.equals(values.description)).toBe(true);
+      // Blank is stored as no description (AC-03.1.3).
+      expect(task.description).toBe(values.description?.trim() || null);
       expect(task.dueDate?.value ?? null).toBe(values.dueDate?.value ?? null);
       expect(iso(task.updatedAt)).toBe(NOW);
       expect(task.version).toBe(3);
@@ -202,19 +197,15 @@ describe('Task', () => {
     it('AC-03.9.5 the same teams in another order change nothing', () => {
       const task = stored();
 
-      expect(
-        task.assignTo(TaskTeamIds.of(['backend', 'mobile']), new Date(NOW)),
-      ).toBe(false);
+      expect(task.assignTo(['backend', 'mobile'], new Date(NOW))).toBe(false);
       expect(iso(task.updatedAt)).toBe(CREATED);
     });
 
     it('another set is a change', () => {
       const task = stored();
 
-      expect(task.assignTo(TaskTeamIds.of(['design']), new Date(NOW))).toBe(
-        true,
-      );
-      expect(task.teamIds.values).toEqual(['design']);
+      expect(task.assignTo(['design'], new Date(NOW))).toBe(true);
+      expect(task.teamIds).toEqual(['design']);
       expect(iso(task.updatedAt)).toBe(NOW);
       expect(task.version).toBe(3);
     });
@@ -246,11 +237,11 @@ describe('Task', () => {
       dueDate: DueDate.create('2026-10-01'),
     });
     const today = DueDate.create('2026-10-20');
-    expect(isOverdue(task.status, task.dueDate, today)).toBe(false);
+    expect(task.isOverdue(today)).toBe(false);
 
     task.changeStatus(IN_PROGRESS, new Date(NOW));
 
-    expect(isOverdue(task.status, task.dueDate, today)).toBe(true);
+    expect(task.isOverdue(today)).toBe(true);
   });
 
   describe('timestamps are not shared with callers', () => {
@@ -278,10 +269,10 @@ describe('Task', () => {
       const task = Task.create({
         ownerId: OWNER_ID,
         title: TaskTitle.create('Ship it'),
-        description: TaskDescription.create(null),
+        description: null,
         status: DONE,
         dueDate: null,
-        teamIds: TaskTeamIds.of([]),
+        teamIds: [],
         now: createdAt,
       });
       const reopenedAt = new Date(NOW);
@@ -318,6 +309,206 @@ describe('Task', () => {
       expect(iso(task.updatedAt)).toBe(CREATED);
       expect(iso(task.completedAt)).toBe(COMPLETED);
       expect(iso(task.deletedAt)).toBe(NOW);
+    });
+  });
+
+  describe('description (validated by the entity)', () => {
+    const EMOJI = '\u{1F680}';
+    const description = (raw?: string | null) =>
+      Task.create({
+        ownerId: OWNER_ID,
+        title: TaskTitle.create('Write release notes'),
+        description: raw,
+        dueDate: null,
+        teamIds: [],
+        now: new Date(CREATED),
+      }).description;
+
+    describe('AC-03.1.3 length boundaries (code points after trimming)', () => {
+      it('accepts 2000 characters and rejects 2001', () => {
+        expect(description('d'.repeat(2000))).toBe('d'.repeat(2000));
+        expect(() => description('d'.repeat(2001))).toThrow(
+          InvalidTaskDescription,
+        );
+      });
+
+      it('trims before measuring, and trimming never forgives length', () => {
+        expect(description(`  ${'d'.repeat(2000)}  `)).toBe('d'.repeat(2000));
+        expect(() => description(`  ${'d'.repeat(2001)}  `)).toThrow(
+          InvalidTaskDescription,
+        );
+      });
+
+      it('counts code points, not UTF-16 units', () => {
+        expect(description(EMOJI.repeat(2000))).toBe(EMOJI.repeat(2000));
+        expect(() => description(EMOJI.repeat(2001))).toThrow(
+          InvalidTaskDescription,
+        );
+      });
+    });
+
+    describe('AC-03.1.3 blank descriptions become no description', () => {
+      it.each([undefined, null, '', '   ', '\n\r\n '])('%j → null', (raw) => {
+        expect(description(raw)).toBeNull();
+      });
+    });
+
+    describe('AC-03.1.8 control characters other than line breaks', () => {
+      it.each([
+        ['LF', 'line 1\nline 2'],
+        ['CRLF', 'line 1\r\nline 2'],
+        ['CR', 'line 1\rline 2'],
+      ])('keeps %s line breaks inside', (_label, raw) => {
+        expect(description(raw)).toBe(raw);
+      });
+
+      it.each([
+        ['a tab', 'col 1\tcol 2'],
+        ['a NUL character', 'text\u0000'],
+        ['an escape character', 'text\u001b[31m'],
+        ['a DEL character', 'text\u007f'],
+        ['a C1 control character', 'text\u0085'],
+        ['a trailing tab (checked before trimming)', 'text\t'],
+      ])('rejects %s', (_label, raw) => {
+        expect(() => description(raw)).toThrow(InvalidTaskDescription);
+      });
+    });
+
+    it('reports the "description" field', () => {
+      expect(() => description('d'.repeat(2001))).toThrow(
+        expect.objectContaining({
+          field: 'description',
+          message:
+            'Description must be at most 2000 characters long and contain no control characters other than line breaks.',
+        }) as Error,
+      );
+    });
+
+    it('an edit with the same description after trimming is a no-op', () => {
+      const task = stored();
+
+      expect(
+        task.edit({
+          title: task.title,
+          description: '  notes  ',
+          dueDate: task.dueDate,
+          now: new Date(NOW),
+        }),
+      ).toBe(false);
+    });
+  });
+
+  describe('team ids (validated by the entity)', () => {
+    const ids = (count: number): string[] =>
+      Array.from(
+        { length: count },
+        (_, i) => `team-${String(i).padStart(2, '0')}`,
+      );
+    const withTeams = (teamIds: string[]) =>
+      Task.create({
+        ownerId: OWNER_ID,
+        title: TaskTitle.create('Write release notes'),
+        dueDate: null,
+        teamIds,
+        now: new Date(CREATED),
+      });
+
+    describe('AC-03.1.6 team count boundaries', () => {
+      it.each([0, 1, 10])('accepts %i distinct teams', (count) => {
+        expect(withTeams(ids(count)).teamIds).toHaveLength(count);
+      });
+
+      it('rejects 11 distinct teams with TooManyTeams { max: 10, received: 11 }', () => {
+        expect(() => withTeams(ids(11))).toThrow(
+          expect.objectContaining({
+            max: 10,
+            received: 11,
+            message: 'A task can have at most 10 teams.',
+          }) as Error,
+        );
+        expect(() => withTeams(ids(11))).toThrow(TooManyTeams);
+      });
+
+      it('assignTo checks the count too', () => {
+        expect(() => stored().assignTo(ids(11), new Date(NOW))).toThrow(
+          TooManyTeams,
+        );
+      });
+    });
+
+    it('is a set: 11 entries with one repeat are 10 distinct teams (duplicates are a DTO 400 before this)', () => {
+      const input = ['team-00', ...ids(10)];
+      expect(input).toHaveLength(11);
+
+      expect(withTeams(input).teamIds).toEqual(ids(10));
+    });
+
+    it('exposes a copy of the ids and keeps none of the input array', () => {
+      const input = ['b', 'a'];
+      const task = withTeams(input);
+      input.push('c');
+      task.teamIds.push('d');
+
+      expect(task.teamIds).toEqual(['a', 'b']);
+    });
+
+    describe('AC-03.9.5 the same ids in any order are a no-op', () => {
+      it.each([
+        [['a', 'b'], ['b', 'a'], false],
+        [[], [], false],
+        [['a'], ['a', 'b'], true],
+        [['a', 'b'], ['a', 'c'], true],
+        [['a', 'b'], ['a'], true],
+      ])('%j then %j: changed %s', (first, second, changed) => {
+        expect(withTeams(first).assignTo(second, new Date(NOW))).toBe(changed);
+      });
+    });
+  });
+
+  describe('isOverdue (static, so read rows use the same rule)', () => {
+    const today = DueDate.create('2026-10-20');
+
+    it.each([
+      [PENDING, '2026-10-19', true],
+      [IN_PROGRESS, '2026-01-01', true],
+      [PENDING, '2026-10-20', false],
+      [PENDING, '2026-10-21', false],
+      [PENDING, null, false],
+      [DONE, '2026-10-19', false],
+      [IN_PROGRESS, '2026-10-20', false],
+      [DONE, null, false],
+    ])(
+      'AC-03.14.1 AC-03.14.2 %s due %s is overdue: %s',
+      (status, due, expected) => {
+        const dueDate = due === null ? null : DueDate.create(due);
+
+        expect(Task.isOverdue(status, dueDate, today)).toBe(expected);
+      },
+    );
+
+    it('BR-03.9 today is the UTC date, not the local date of the instant', () => {
+      // 23:30 on the 21st in UTC-3 is already the 22nd in UTC.
+      const utcToday = DueDate.todayFrom(new Date('2026-10-21T23:30:00-03:00'));
+      expect(utcToday.value).toBe('2026-10-22');
+
+      expect(
+        Task.isOverdue(PENDING, DueDate.create('2026-10-21'), utcToday),
+      ).toBe(true);
+    });
+
+    it('AC-03.14.3 the passing of a day makes a task overdue without changing it', () => {
+      const dueDate = DueDate.create('2026-10-21');
+
+      expect(
+        Task.isOverdue(PENDING, dueDate, DueDate.create('2026-10-21')),
+      ).toBe(false);
+      expect(
+        Task.isOverdue(
+          PENDING,
+          dueDate,
+          DueDate.todayFrom(new Date('2026-10-22T00:00:01Z')),
+        ),
+      ).toBe(true);
     });
   });
 });

@@ -2,8 +2,6 @@ import { InMemoryTaskRepository } from '../../../../../test/support/in-memory-ta
 import { Clock } from '../../../../shared/domain/clock';
 import { Task } from '../../domain/entities/task.entity';
 import { TaskNotFound } from '../../domain/errors/task.errors';
-import { TaskDescription } from '../../domain/value-objects/task-description.vo';
-import { TaskTeamIds } from '../../domain/value-objects/task-team-ids.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
 import { DeleteTaskUseCase } from './delete-task.use-case';
 
@@ -21,9 +19,9 @@ describe('DeleteTaskUseCase', () => {
     const task = Task.create({
       ownerId: OWNER,
       title: TaskTitle.create('Obsolete'),
-      description: TaskDescription.create(null),
+      description: null,
       dueDate: null,
-      teamIds: TaskTeamIds.of([TEAM]),
+      teamIds: [TEAM],
       now: new Date('2026-10-20T13:00:00.000Z'),
     });
     tasks.seed(task);
@@ -39,7 +37,7 @@ describe('DeleteTaskUseCase', () => {
 
     const [stored] = tasks.all();
     expect(stored?.deletedAt).toEqual(NOW);
-    expect(stored?.teamIds.values).toEqual([TEAM]);
+    expect(stored?.teamIds).toEqual([TEAM]);
     await expect(tasks.findById(OWNER, ID)).resolves.toBeNull();
   });
 

@@ -5,9 +5,7 @@ import { Task } from '../../domain/entities/task.entity';
 import { UnknownTeams } from '../../domain/errors/task.errors';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
-import { TaskDescription } from '../../domain/value-objects/task-description.vo';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
-import { TaskTeamIds } from '../../domain/value-objects/task-team-ids.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
 
 export interface CreateTaskInput {
@@ -35,24 +33,24 @@ export class CreateTaskUseCase {
   ) {}
 
   async execute(input: CreateTaskInput): Promise<string> {
-    const teamIds = TaskTeamIds.of(input.teamIds ?? []);
     const task = Task.create({
       ownerId: input.ownerId,
       title: TaskTitle.create(input.title),
-      description: TaskDescription.create(input.description),
+      description: input.description,
       status: input.status,
       dueDate: input.dueDate ? DueDate.create(input.dueDate) : null,
-      teamIds,
+      teamIds: input.teamIds ?? [],
       now: this.clock.now(),
     });
+    const teamIds = task.teamIds;
     const unknown = (missing: string[]) => new UnknownTeams(missing);
-    await this.teams.assertAllLive(input.ownerId, teamIds.values, unknown);
+    await this.teams.assertAllLive(input.ownerId, teamIds, unknown);
     try {
       await this.tasks.insert(task);
     } catch (error) {
       // A team deleted after the check: the FK violation carries no ids, so ask again (AC-03.1.6).
       if (error instanceof UnknownTeams && error.teamIds.length === 0) {
-        await this.teams.assertAllLive(input.ownerId, teamIds.values, unknown);
+        await this.teams.assertAllLive(input.ownerId, teamIds, unknown);
       }
       throw error;
     }

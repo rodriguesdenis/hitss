@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
-import { assembleTaskView } from '../../src/modules/tasks/application/views/task-view.assembler';
 import { DueDate } from '../../src/modules/tasks/domain/value-objects/due-date.vo';
 import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status.vo';
+import { toTaskResponse } from '../../src/modules/tasks/presentation/http/presenters/task.presenter';
 import { PrismaTaskReadModel } from '../../src/modules/tasks/infrastructure/persistence/task.prisma-read';
 import { PrismaTaskRepository } from '../../src/modules/tasks/infrastructure/persistence/task.prisma-repository';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
@@ -114,7 +114,7 @@ describe('PrismaTaskReadModel (integration, T-003-06a)', () => {
     await expect(readModel.findById(stranger, task.id)).resolves.toBeNull();
   });
 
-  it('AC-03.2.5 assembles the view with live teams by name (record + directory + today)', async () => {
+  it('AC-03.2.5 presents the record with live teams by name (record + TeamLookup + today)', async () => {
     const ownerId = await newOwner();
     const [mobile, backend, archived] = [
       await newTeam(ownerId, 'mobile'),
@@ -141,11 +141,11 @@ describe('PrismaTaskReadModel (integration, T-003-06a)', () => {
     directory.remove(archived);
 
     const record = (await readModel.findById(ownerId, task.id))!;
-    const view = assembleTaskView(
-      record,
-      await directory.summaries(ownerId, record.teamIds),
-      DueDate.create('2026-10-21'),
-    );
+    const view = toTaskResponse({
+      task: record,
+      teams: await directory.summaries(ownerId, record.teamIds),
+      today: DueDate.create('2026-10-21'),
+    });
 
     expect(view.teams.map((t) => t.name)).toEqual(['Backend', 'mobile']);
     expect(view.isOverdue).toBe(true);

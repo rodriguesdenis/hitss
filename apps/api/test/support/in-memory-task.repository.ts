@@ -65,7 +65,7 @@ export class InMemoryTaskRepository extends TaskRepository {
   }
 
   private linksMissingTeam(task: Task): boolean {
-    return task.teamIds.values.some((id) => this.missingTeams.has(id));
+    return task.teamIds.some((id) => this.missingTeams.has(id));
   }
 }
 

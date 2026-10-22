@@ -4,6 +4,8 @@ import type {
   Sort,
 } from '../../../../shared/application/page';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
+import type { TeamSummary } from '../../../teams/team-lookup.service';
+import type { DueDate } from '../../domain/value-objects/due-date.vo';
 
 /** A task as the read side stores it: flat, no aggregate, team links as ids. */
 export interface TaskRecord {
@@ -19,6 +21,23 @@ export interface TaskRecord {
   readonly version: number;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+}
+
+/**
+ * What GetTask hands to the presenter: the row, the live teams it references (TeamLookup) and
+ * today's UTC day. The presenter keeps the task's own teams by name and derives isOverdue.
+ */
+export interface TaskView {
+  readonly task: TaskRecord;
+  readonly teams: readonly TeamSummary[];
+  readonly today: DueDate;
+}
+
+/** What ListTasks hands to the presenter: one page, every live team on it (one lookup), today. */
+export interface TaskPageView {
+  readonly page: Page<TaskRecord>;
+  readonly teams: readonly TeamSummary[];
+  readonly today: DueDate;
 }
 
 /** AC-03.6.1: the sortable fields; the default is `-createdAt`, ties are broken by id. */

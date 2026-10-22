@@ -79,9 +79,9 @@ export class TasksController {
       dueDate: body.dueDate,
       teamIds: body.teamIds,
     });
-    const task = await this.getTask.execute({ ownerId, id });
-    response.setHeader('Location', `/api/v1/tasks/${task.id}`);
-    return toTaskResponse(task);
+    const view = await this.getTask.execute({ ownerId, id });
+    response.setHeader('Location', `/api/v1/tasks/${view.task.id}`);
+    return toTaskResponse(view);
   }
 
   /**
@@ -101,7 +101,11 @@ export class TasksController {
     @Query() query: ListTasksQueryDto,
   ): Promise<{ data: TaskResponseDto[]; meta: PageMeta }> {
     const page = { limit: query.limit, offset: query.offset };
-    const { items, total } = await this.listTasks.execute({
+    const {
+      page: found,
+      teams,
+      today,
+    } = await this.listTasks.execute({
       ownerId,
       criteria: {
         page,
@@ -112,8 +116,8 @@ export class TasksController {
       },
     });
     return {
-      data: items.map(toTaskResponse),
-      meta: toPageMeta(page, items.length, total),
+      data: found.items.map((task) => toTaskResponse({ task, teams, today })),
+      meta: toPageMeta(page, found.items.length, found.total),
     };
   }
 

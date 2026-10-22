@@ -55,7 +55,7 @@ describe('CreateTaskUseCase', () => {
   it('AC-03.1.6 assigns live teams of the owner', async () => {
     await create({ teamIds: [team(2), team(1)] });
 
-    expect(tasks.all()[0]?.teamIds.values).toEqual([team(1), team(2)]);
+    expect(tasks.all()[0]?.teamIds).toEqual([team(1), team(2)]);
   });
 
   it('AC-03.1.6 TOO_MANY_TEAMS is checked before team existence, and nothing is written', async () => {

@@ -71,13 +71,11 @@ flowchart LR
   subgraph application["application/"]
     uc["use-cases/<br/>one class, execute(input)"]
     rm["ports/&lt;x&gt;.read-model.ts<br/>views and pages"]
-    views["views/ (tasks)"]
   end
   subgraph domain["domain/ (framework-free)"]
     ent["entities/<br/>Team, Task"]
     vo["value-objects/"]
     err["errors/"]
-    pol["policies/ (tasks)"]
     repo["repositories/<br/>abstract class"]
   end
   subgraph infrastructure["infrastructure/persistence/"]
@@ -88,13 +86,12 @@ flowchart LR
   ctrl --> dto
   ctrl --> uc
   ctrl --> pres
+  pres --> ent
   uc --> ent
   uc --> repo
   uc --> rm
-  uc --> views
   ent --> vo
   ent --> err
-  views --> pol
   prepo -. "implements" .-> repo
   pread -. "implements" .-> rm
 ```
@@ -119,15 +116,15 @@ Arrows are compile-time imports; everything points toward `domain/`.
 | **Status**            | **Pending**, **In progress**, **Done**; any status may move to any other.                   | `TaskStatus`: `PENDING`, `IN_PROGRESS`, `DONE` |
 | **Assign**            | Link a task to zero or more (up to 10) of the owner's teams.                                | `task.assignTo(teamIds)`                       |
 | **Complete / reopen** | Entering Done records `completedAt`; leaving Done clears it.                                | `completedAt`                                  |
-| **Overdue**           | Not Done and due before today (UTC). Derived, never stored.                                 | `isOverdue(status, dueDate, today)`            |
+| **Overdue**           | Not Done and due before today (UTC). Derived, never stored.                                 | `Task.isOverdue(status, dueDate, today)`       |
 | **Delete**            | Soft delete: the item disappears from the API; a deleted team's links to tasks are removed. | `deletedAt`                                    |
 
 ### Entities and value objects
 
-| Entity   | State                                                                                                                                                  | Behaviour                                                                                                                    |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| **Team** | `id`, `ownerId`, `name: TeamName`, `color: ColorHex`, `description?`, `version`, timestamps, `deletedAt?`                                              | `create()`, `restore()`, `replace()` (full `PUT`; `false` when nothing changes), `delete()`                                  |
-| **Task** | `id`, `ownerId`, `title: TaskTitle`, `description?`, `status`, `dueDate?`, `completedAt?`, `teamIds: TaskTeamIds`, `version`, timestamps, `deletedAt?` | `create()`, `restore()`, `edit()`, `assignTo()`, `changeStatus()`, `delete()`; each change method returns `false` on a no-op |
+| Entity   | State                                                                                                                                                         | Behaviour                                                                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Team** | `id`, `ownerId`, `name: TeamName`, `color: ColorHex`, `description?`, `version`, timestamps, `deletedAt?`                                                     | `create()`, `restore()`, `replace()` (full `PUT`; `false` when nothing changes), `delete()`                                                      |
+| **Task** | `id`, `ownerId`, `title: TaskTitle`, `description?`, `status`, `dueDate?`, `completedAt?`, `teamIds` (0–10 distinct ids), `version`, timestamps, `deletedAt?` | `create()`, `restore()`, `edit()`, `assignTo()`, `changeStatus()`, `delete()`, `isOverdue(today)`; each change method returns `false` on a no-op |
 
 | Value object or field | Rule                                                                                                                         |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -135,10 +132,10 @@ Arrows are compile-time imports; everything points toward `domain/`.
 | `ColorHex`            | `#RRGGBB`, normalized to upper case                                                                                          |
 | Team `description`    | Optional, ≤ 280 characters, no control characters except line breaks; blank → `null`                                         |
 | `TaskTitle`           | Trimmed, 3–120 characters                                                                                                    |
-| `TaskDescription`     | Optional, ≤ 2000 characters, same character rule; blank → `null`                                                             |
+| Task `description`    | Optional, ≤ 2000 characters, same character rule; blank → `null`                                                             |
 | `TaskStatus`          | `PENDING` · `IN_PROGRESS` · `DONE`                                                                                           |
 | `DueDate`             | Calendar date `YYYY-MM-DD`; past dates allowed                                                                               |
-| `TaskTeamIds`         | 0–10 distinct ids, order-insensitive; more → `TooManyTeams`                                                                  |
+| Task `teamIds`        | 0–10 distinct ids, order-insensitive; more → `TooManyTeams`                                                                  |
 
 Lengths count Unicode code points after trimming, the same as the DTOs and the `varchar(n)` columns. Ids are UUIDs drawn by the entity (`crypto.randomUUID()`). Use cases never set `version`: entities set `updatedAt`, the repository increments `version`.
 
@@ -221,13 +218,12 @@ modules/
 │   ├── team-lookup.service.ts               # the module's only export: summaries, findMissing, assertAllLive
 │   └── teams.module.ts
 └── tasks/
-    ├── domain/{entities,value-objects,errors,repositories}/ · policies/overdue.policy.ts
+    ├── domain/{entities,value-objects,errors,repositories}/   # Task validates description and teams; Task.isOverdue
     ├── application/
-    │   ├── ports/task.read-model.ts
-    │   ├── use-cases/                       # create, list, get, update, change-status, delete
-    │   └── views/                           # task.view.ts, task-view.assembler.ts (rows + team chips from TeamLookup)
-    ├── infrastructure/persistence/          # task.prisma-repository.ts, task.persistence-mapper.ts, task.prisma-read.ts
-    ├── presentation/http/                   # tasks.controller.ts, task-error.mapping.ts, dto/, presenters/
+    │   ├── ports/task.read-model.ts         # rows, TaskView / TaskPageView (row + live teams + today)
+    │   └── use-cases/                       # create, list, get, update, change-status, delete
+    ├── infrastructure/persistence/          # task.prisma-repository.ts (mapping as private functions), task.prisma-read.ts
+    ├── presentation/http/                   # tasks.controller.ts, task-error.mapping.ts, dto/ (update extends create minus status/teamIds), presenters/ (team chips + isOverdue)
     └── tasks.module.ts                      # imports TeamsModule for TeamLookup
 ```
 

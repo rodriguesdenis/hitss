@@ -55,18 +55,16 @@ describe('ListTasksUseCase', () => {
     );
   });
 
-  it('AC-03.2.2 assembles full views: live teams by name, overdue on the UTC day, the total kept', async () => {
-    const page = await handler.execute({
+  it("AC-03.2.2 returns the page with its total, every live team on it and today's UTC day", async () => {
+    const view = await handler.execute({
       ownerId: OWNER,
       criteria: criteria(),
     });
 
-    expect(page.total).toBe(7);
-    expect(page.items.map((task) => task.teams.map((t) => t.name))).toEqual([
-      ['Mobile'],
-      ['Backend', 'Mobile'],
-    ]);
-    expect(page.items.every((task) => task.isOverdue)).toBe(true);
+    expect(view.page.total).toBe(7);
+    expect(view.page.items.map((task) => task.id)).toEqual(['t1', 't2']);
+    expect(view.teams.map((t) => t.name).sort()).toEqual(['Backend', 'Mobile']);
+    expect(view.today.value).toBe('2026-10-22');
   });
 
   it('asks the directory once per page, with every distinct team on it', async () => {
@@ -86,12 +84,12 @@ describe('ListTasksUseCase', () => {
   ])(
     'AC-03.3.2 a %s team filter → empty page without querying the tasks',
     async (_label, teamId) => {
-      const page = await handler.execute({
+      const view = await handler.execute({
         ownerId: OWNER,
         criteria: criteria({ teamId }),
       });
 
-      expect(page).toEqual({ items: [], total: 0 });
+      expect(view.page).toEqual({ items: [], total: 0 });
       expect(list).not.toHaveBeenCalled();
     },
   );
