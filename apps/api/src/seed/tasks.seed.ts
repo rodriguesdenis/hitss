@@ -1,5 +1,10 @@
 import type { PrismaService } from '../shared/infrastructure/prisma/prisma.service';
-import { DEMO_TASK_IDS, DEMO_USER_ID, demoTaskFixtures } from './fixtures';
+import {
+  DEMO_TASK_IDS,
+  DEMO_TEAM_IDS,
+  DEMO_USER_ID,
+  demoTaskFixtures,
+} from './fixtures';
 
 /**
  * Upserts the 10 demo tasks by their fixed ids with their full seeded values, and rewrites the team
@@ -7,7 +12,7 @@ import { DEMO_TASK_IDS, DEMO_USER_ID, demoTaskFixtures } from './fixtures';
  * (AC-07.2.4). Due dates are relative to `seedDay`.
  */
 export async function seedTasks(
-  prisma: Pick<PrismaService, 'task' | 'taskTeam' | '$transaction'>,
+  prisma: Pick<PrismaService, 'task' | 'team' | 'taskTeam' | '$transaction'>,
   seedDay: Date,
 ): Promise<number> {
   const fixtures = demoTaskFixtures(seedDay);
@@ -30,15 +35,26 @@ export async function seedTasks(
       update: values,
     });
   }
+  // A seeded team that could not be restored may not exist at all: link only existing teams.
+  const existingTeams = new Set(
+    (
+      await prisma.team.findMany({
+        where: { id: { in: DEMO_TEAM_IDS } },
+        select: { id: true },
+      })
+    ).map((team) => team.id),
+  );
   await prisma.$transaction([
     prisma.taskTeam.deleteMany({ where: { taskId: { in: DEMO_TASK_IDS } } }),
     prisma.taskTeam.createMany({
       data: fixtures.flatMap((task) =>
-        task.teamIds.map((teamId) => ({
-          taskId: task.id,
-          teamId,
-          createdAt: task.createdAt,
-        })),
+        task.teamIds
+          .filter((id) => existingTeams.has(id))
+          .map((teamId) => ({
+            taskId: task.id,
+            teamId,
+            createdAt: task.createdAt,
+          })),
       ),
     }),
   ]);
