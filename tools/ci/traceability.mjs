@@ -151,7 +151,8 @@ export function loadModel(root) {
     if (!existsSync(file)) continue;
     let current = null;
     for (const line of read(file).split('\n')) {
-      const header = /^## (T-\d+-\d+) — (.*)/.exec(line);
+      // A split task keeps its number plus one letter (T-003-06a, T-003-06b).
+      const header = /^## (T-\d+-\d+[a-z]?) — (.*)/.exec(line);
       if (header) {
         current = header[1];
         taskTitle.set(current, header[2].trim());
@@ -171,7 +172,9 @@ export function loadModel(root) {
           acTasks.get(ac).add(current);
         }
       }
-      if (line.startsWith('## ') && !line.startsWith('## T-')) current = null;
+      // Any other level-2 heading ends the task, including a malformed task heading, so its
+      // lines can never be attributed to the previous task.
+      if (line.startsWith('## ')) current = null;
     }
   }
 
