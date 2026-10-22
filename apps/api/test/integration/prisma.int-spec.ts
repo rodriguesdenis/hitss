@@ -100,18 +100,46 @@ describe('Prisma module (integration)', () => {
     await booted.close();
   });
 
-  it('VII.3 refuses to boot when the database is unreachable, naming DATABASE_URL only', async () => {
-    // Port 1 on loopback: nothing listens, so the probe fails at once (ECONNREFUSED).
-    const unreachable = 'postgresql://probe:probe@127.0.0.1:1/none';
+  // Fail fast must not depend on the network refusing quickly: a database that never answers
+  // has to stop the boot within the probe bound too. The bound is shortened to 2 s here.
+  const PROBE_MS = 2_000;
+  const MARGIN_MS = 5_000;
 
-    const error: unknown = await createTestApp(unreachable).catch(
-      (e: unknown) => e,
+  async function bootFailure(
+    databaseUrl: string,
+  ): Promise<{ error: unknown; elapsedMs: number }> {
+    const started = Date.now();
+    const error: unknown = await createTestApp(databaseUrl, {
+      probeTimeoutMs: PROBE_MS,
+    }).catch((e: unknown) => e);
+    return { error, elapsedMs: Date.now() - started };
+  }
+
+  it('VII.3 refuses to boot when the database is unreachable, naming DATABASE_URL only', async () => {
+    // A closed port: refused at once on most hosts, may hang where loopback is mirrored.
+    const { error, elapsedMs } = await bootFailure(
+      'postgresql://probe:probe@127.0.0.1:1/none',
     );
 
     expect(error).toBeInstanceOf(DatabaseUnavailableError);
     expect((error as Error).message).toContain('DATABASE_URL');
     expect((error as Error).message).not.toContain('127.0.0.1');
-  });
+    expect(elapsedMs).toBeLessThan(PROBE_MS + MARGIN_MS);
+  }, 30_000);
+
+  it('VII.3 refuses to boot within the probe bound when the database never answers', async () => {
+    // 10.255.255.1 is not routable: the connection attempt hangs (black hole).
+    const { error, elapsedMs } = await bootFailure(
+      'postgresql://probe:probe@10.255.255.1:5432/none',
+    );
+
+    expect(error).toBeInstanceOf(DatabaseUnavailableError);
+    expect((error as Error).message).toBe(
+      'Database unreachable: no answer within 2 s. Check DATABASE_URL and that PostgreSQL is running.',
+    );
+    expect(elapsedMs).toBeGreaterThanOrEqual(PROBE_MS - 100);
+    expect(elapsedMs).toBeLessThan(PROBE_MS + MARGIN_MS);
+  }, 30_000);
 
   it('disconnects from the database when the app closes', async () => {
     const closing = await createTestApp(db.url);
