@@ -1,0 +1,306 @@
+import { INestApplication } from '@nestjs/common';
+import { Client } from 'pg';
+import request, { Response, Test } from 'supertest';
+import { App } from 'supertest/types';
+import { createTestApp } from '../support/app';
+import { useTestDatabase } from '../support/postgres';
+import { KNOWN_ID, OwnerProbeModule, writes } from './owner-probe.module';
+
+// Built at runtime with low entropy so secret scanners never mistake a fixture for a secret.
+const PASSWORD = ['correct', 'horse', 'battery', '42'].join('-');
+const TRUSTED = 'https://app.example.test';
+const UNTRUSTED = 'https://evil.example.test';
+const PROBE = '/api/v1/owner-probe';
+const OTHER_ID = '0b7a3c1e-2d4f-4a6b-8c9d-1e2f3a4b5c6d';
+
+let emailSeq = 0;
+const freshEmail = () => `guard${++emailSeq}-${Date.now()}@example.test`;
+
+interface SignedIn {
+  id: string;
+  email: string;
+  bearer: string;
+  /** `name=value` of the session cookie, as a browser would send it back. */
+  cookie: string;
+}
+
+describe('route protection: deny by default, CSRF for cookies (e2e)', () => {
+  const db = useTestDatabase();
+  let app: INestApplication;
+  let sql: Client;
+
+  beforeAll(async () => {
+    app = await createTestApp(db.url, {
+      imports: [OwnerProbeModule],
+      config: {
+        corsOrigins: [TRUSTED],
+        appEnv: 'test',
+        authRateLimitEnabled: false,
+      },
+    });
+    sql = new Client({ connectionString: db.url });
+    await sql.connect();
+  });
+
+  afterAll(async () => {
+    await sql.end();
+    await app.close();
+  });
+
+  const http = () => request(app.getHttpServer() as App);
+
+  const signIn = async (): Promise<SignedIn> => {
+    const email = freshEmail();
+    const response = await http()
+      .post('/api/auth/sign-up/email')
+      .send({ name: 'Marina', email, password: PASSWORD });
+    expect(response.status).toBe(200);
+    const cookies = ([] as string[]).concat(
+      response.headers['set-cookie'] ?? [],
+    );
+    const session = cookies.find((c) =>
+      c.startsWith('better-auth.session_token='),
+    );
+    return {
+      id: (response.body as { user: { id: string } }).user.id,
+      email,
+      bearer: response.headers['set-auth-token'] as string,
+      cookie: (session ?? '').split(';')[0] ?? '',
+    };
+  };
+
+  const expectUnauthenticated = (response: Response) => {
+    expect(response.status).toBe(401);
+    expect(response.body).toEqual({
+      error: {
+        code: 'UNAUTHENTICATED',
+        message: 'Authentication required.',
+        traceId: expect.any(String) as string,
+      },
+    });
+  };
+
+  const withAuth = (test: Test, authorization?: string) =>
+    authorization === undefined
+      ? test
+      : test.set('Authorization', authorization);
+
+  describe('authentication (AC-01.5.1 to AC-01.5.7)', () => {
+    it.each(['get', 'post', 'put', 'patch', 'delete'] as const)(
+      'AC-01.5.1 an anonymous %s → 401 envelope and nothing changes',
+      async (method) => {
+        const before = writes.count;
+
+        const response = await http()[method](PROBE).send({});
+
+        expectUnauthenticated(response);
+        expect(writes.count).toBe(before);
+      },
+    );
+
+    it('AC-01.5.2 AC-01.5.6 malformed, forged, empty, Basic and unsigned tokens → 401', async () => {
+      const user = await signIn();
+      const [value] = user.bearer.split('.');
+      const raw = (
+        await sql.query<{ token: string }>(
+          'SELECT token FROM sessions WHERE user_id = $1 LIMIT 1',
+          [user.id],
+        )
+      ).rows[0]?.token;
+      expect(raw).toBeDefined();
+
+      for (const authorization of [
+        'Bearer not-a-token',
+        `Bearer ${value}.${'A'.repeat(43)}`, // forged signature
+        `Bearer ${raw}`, // the raw sessions.token, unsigned (AC-01.5.6)
+        'Bearer ',
+        '',
+        // Built at runtime from low-entropy parts: never a credential-shaped literal.
+        `Basic ${Buffer.from('user:pass').toString('base64')}`,
+      ]) {
+        expectUnauthenticated(await withAuth(http().get(PROBE), authorization));
+      }
+    });
+
+    it('AC-01.5.2 a revoked session → 401', async () => {
+      const user = await signIn();
+      await http()
+        .post('/api/auth/sign-out')
+        .set('Authorization', `Bearer ${user.bearer}`)
+        .send({});
+
+      expectUnauthenticated(
+        await http().get(PROBE).set('Authorization', `Bearer ${user.bearer}`),
+      );
+      expectUnauthenticated(await http().get(PROBE).set('Cookie', user.cookie));
+    });
+
+    it('AC-01.5.2 an expired session → 401', async () => {
+      const user = await signIn();
+      await sql.query(
+        `UPDATE sessions SET expires_at = now() - interval '1 minute' WHERE user_id = $1`,
+        [user.id],
+      );
+
+      expectUnauthenticated(
+        await http().get(PROBE).set('Authorization', `Bearer ${user.bearer}`),
+      );
+    });
+
+    it('AC-01.2.4 a bearer token is processed as its user', async () => {
+      const user = await signIn();
+
+      const response = await http()
+        .get(PROBE)
+        .set('Authorization', `Bearer ${user.bearer}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ data: { ownerId: user.id } });
+    });
+
+    it('AC-01.2.5 a session cookie alone is processed as its user', async () => {
+      const user = await signIn();
+
+      const response = await http().get(PROBE).set('Cookie', user.cookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ data: { ownerId: user.id } });
+    });
+
+    it('AC-01.5.7 a bearer token of A with a session cookie of B → processed as A', async () => {
+      const a = await signIn();
+      const b = await signIn();
+
+      const response = await http()
+        .get(PROBE)
+        .set('Authorization', `Bearer ${a.bearer}`)
+        .set('Cookie', b.cookie);
+
+      expect(response.body).toEqual({ data: { ownerId: a.id } });
+    });
+
+    it('AC-01.5.5 without credentials an existing and a missing id get the same 401', async () => {
+      const user = await signIn();
+      const known = await http()
+        .get(`${PROBE}/items/${KNOWN_ID}`)
+        .set('Authorization', `Bearer ${user.bearer}`);
+      expect(known.status).toBe(200);
+      expect(
+        (
+          await http()
+            .get(`${PROBE}/items/${OTHER_ID}`)
+            .set('Authorization', `Bearer ${user.bearer}`)
+        ).status,
+      ).toBe(404);
+
+      const anonymous = await Promise.all(
+        [KNOWN_ID, OTHER_ID, 'not-a-uuid'].map((id) =>
+          http().get(`${PROBE}/items/${id}`),
+        ),
+      );
+
+      for (const response of anonymous) {
+        expectUnauthenticated(response);
+      }
+    });
+
+    it('AC-01.5.3 the liveness check answers without credentials', async () => {
+      const response = await http().get('/api/v1/health/live');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ status: 'ok' });
+    });
+  });
+
+  describe('CSRF for cookie sessions (AC-01.5.8 to AC-01.5.10)', () => {
+    const cookiePost = (user: SignedIn) =>
+      http()
+        .post(PROBE)
+        .set('Cookie', user.cookie)
+        .set('Content-Type', 'application/json');
+
+    const expectRejected = (
+      response: Response,
+      status: number,
+      code: string,
+    ) => {
+      expect(response.status).toBe(status);
+      expect(response.body).toMatchObject({ error: { code } });
+    };
+
+    it.each(['post', 'put', 'patch', 'delete'] as const)(
+      'AC-01.5.8 a cookie-authenticated %s from an untrusted Origin → 403 and nothing changes',
+      async (method) => {
+        const user = await signIn();
+        const before = writes.count;
+
+        const response = await http()
+          [method](PROBE)
+          .set('Cookie', user.cookie)
+          .set('Origin', UNTRUSTED)
+          .send({});
+
+        expectRejected(response, 403, 'CSRF_REJECTED');
+        expect(writes.count).toBe(before);
+      },
+    );
+
+    it('AC-01.5.8 Sec-Fetch-Site: cross-site → 403', async () => {
+      const user = await signIn();
+
+      expectRejected(
+        await cookiePost(user).set('Sec-Fetch-Site', 'cross-site').send('{}'),
+        403,
+        'CSRF_REJECTED',
+      );
+    });
+
+    it('AC-01.5.8 an untrusted Referer → 403', async () => {
+      const user = await signIn();
+
+      expectRejected(
+        await cookiePost(user).set('Referer', `${UNTRUSTED}/form`).send('{}'),
+        403,
+        'CSRF_REJECTED',
+      );
+    });
+
+    it('AC-01.5.9 a cookie-authenticated text/plain body → 415 and nothing changes', async () => {
+      const user = await signIn();
+      const before = writes.count;
+
+      const response = await http()
+        .post(PROBE)
+        .set('Cookie', user.cookie)
+        .set('Content-Type', 'text/plain')
+        .send('{"name":"x"}');
+
+      expectRejected(response, 415, 'UNSUPPORTED_MEDIA_TYPE');
+      expect(writes.count).toBe(before);
+    });
+
+    it('AC-01.5.8 a cookie with a trusted Origin, or with no Origin (native client), passes', async () => {
+      const user = await signIn();
+
+      expect(
+        (await cookiePost(user).set('Origin', TRUSTED).send('{}')).status,
+      ).toBe(201);
+      expect((await cookiePost(user).send('{}')).status).toBe(201);
+    });
+
+    it('AC-01.5.10 a bearer request with no Origin or an untrusted one skips the CSRF checks', async () => {
+      const user = await signIn();
+      const bearerPost = () =>
+        http().post(PROBE).set('Authorization', `Bearer ${user.bearer}`);
+
+      expect((await bearerPost().send({})).status).toBe(201);
+      expect(
+        (await bearerPost().set('Origin', UNTRUSTED).send({})).status,
+      ).toBe(201);
+      expect(
+        (await bearerPost().set('Content-Type', 'text/plain').send('{}'))
+          .status,
+      ).toBe(201);
+    });
+  });
+});
