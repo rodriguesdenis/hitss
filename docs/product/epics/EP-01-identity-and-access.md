@@ -1,7 +1,7 @@
 # EP-01 — Identity & Access
 
 - **Priority:** `MUST` for the access-control core (US-01.2, 01.3, 01.4, 01.5, 01.6, 01.8 — the product requires sign-in and owner scoping, [constitution VI](../../constitution.md)); `COULD` for sign-up and abuse protection (US-01.1, 01.7). Every `MUST` feature (teams, tasks) is scoped to its owner and relies on this epic.
-- **Bounded context:** Identity (generic subdomain), see the [domain model](../../architecture/domain-model.md#bounded-contexts)
+- **Bounded context:** Identity (generic subdomain), see the [domain model](../../architecture/overview.md#2-modules)
 - **Spec:** [001-auth](../../specs/001-auth/spec.md)
 
 ## Goal

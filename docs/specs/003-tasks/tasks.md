@@ -1,8 +1,8 @@
 # 003 — Tasks
 
-Ordered, atomic tasks; **each task = one PR** (Conventional Commits, scope `api`, [ADR-0017](../../architecture/adr/0017-conventional-commits-and-atomic-prs.md)). Every PR: TDD, `pnpm --filter @hitss/api lint typecheck test` green, OpenAPI/client regenerated when the contract changes, scenarios of **Covers** automated, [Definition of Done](../../quality/definition-of-done.md).
+Ordered, atomic tasks; **each task = one PR** (Conventional Commits, scope `api`, [ADR-0017](../../architecture/adr/archive/0017-conventional-commits-and-atomic-prs.md)). Every PR: TDD, `pnpm --filter @hitss/api lint typecheck test` green, OpenAPI/client regenerated when the contract changes, scenarios of **Covers** automated, [Definition of Done](../../quality/definition-of-done.md).
 
-Prerequisites from other specs: authenticated `ownerId` decorator and guards (001), `Team` model, `teams/contracts/` (`GetTeamSummariesQuery`, `TeamDeleted`) and the in-transaction event publisher (002, T-002-09/T-002-10), shared envelope/filter/`Clock`/`IdGenerator`/unit of work (001/002). Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi). Cross-context calls go only through the `QueryBus`, the in-transaction publisher and `contracts/` folders.
+Prerequisites from other specs: authenticated `ownerId` decorator and guards (001), `Team` model, `teams/contracts/` (`GetTeamSummariesQuery`, `TeamDeleted`) and the in-transaction event publisher (002, T-002-09/T-002-10), shared envelope/filter/`Clock`/`IdGenerator`/unit of work (001/002). Paths follow [overview §6.2](../../architecture/overview.md#6-folder-structure-appsapisrc). Cross-context calls go only through the `QueryBus`, the in-transaction publisher and `contracts/` folders.
 
 **ACs of 002 verified here:** `AC-02.7.2` (T-003-13), `AC-02.8.1` and `AC-02.8.2` (T-003-14). 002 binds a zero-count placeholder until T-003-14 lands.
 

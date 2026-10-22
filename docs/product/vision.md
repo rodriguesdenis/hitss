@@ -6,7 +6,7 @@
 
 ## Context
 
-This product is the deliverable of a fullstack hiring test (original brief: [`docs/brief/`](../brief/)). The evaluation focuses on **code quality, architectural clarity, tests, minimal UX and documented decisions**. The vision therefore has two audiences:
+This product is the deliverable of a fullstack hiring test (original brief: [`docs/brief/`](../brief)). The evaluation focuses on **code quality, architectural clarity, tests, minimal UX and documented decisions**. The vision therefore has two audiences:
 
 | Audience                           | What success looks like                                                                                                    |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |

@@ -4,7 +4,7 @@
 - **Bounded context:** cross-cutting (delivery platform)
 - **Priority:** mixed — the brief makes one-step local run, seed data, run instructions and request examples `MUST`; `start`/`test`/`seed` scripts are a brief differential (`SHOULD`); CI and automated gates are our extras (`COULD`).
 - **Principles:** [Constitution III.3](../../constitution.md#iii-clean-architecture), [IV](../../constitution.md#iv-contracts), [V](../../constitution.md#v-quality), [VII.1](../../constitution.md#vii-operability), [VIII](../../constitution.md#viii-delivery)
-- **ADRs:** [0001](../../architecture/adr/0001-monorepo-pnpm-turborepo.md), [0004](../../architecture/adr/0004-prisma-migrations-and-seeding.md), [0008](../../architecture/adr/0008-class-validator-dtos-and-generated-client.md), [0014](../../architecture/adr/0014-testing-strategy.md), [0017](../../architecture/adr/0017-conventional-commits-and-atomic-prs.md), [0018](../../architecture/adr/0018-docker-compose-one-command-run.md)
+- **ADRs:** [0001](../../architecture/adr/0001-monorepo-pnpm-turborepo.md), [0004](../../architecture/adr/0004-prisma-migrations-and-seeding.md), [0008](../../architecture/adr/archive/0008-class-validator-dtos-and-generated-client.md), [0014](../../architecture/adr/0014-testing-strategy.md), [0017](../../architecture/adr/archive/0017-conventional-commits-and-atomic-prs.md), [0018](../../architecture/adr/0018-docker-compose-one-command-run.md)
 
 ## Goal
 

@@ -4,25 +4,25 @@
 
 ## Context & references
 
-| Reference                                                                                                                                                                                | Used for                                                                            |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| [Domain model](../../architecture/domain-model.md)                                                                                                                                       | `Task` aggregate, VOs, events, errors, `TeamDirectory` / `TeamDeleted` relationship |
-| [Data model](../../architecture/data-model.md)                                                                                                                                           | `tasks`, `task_teams`, `task_status`, indexes, soft delete, `version`               |
-| [API contracts](../../architecture/api-contracts.md#tasks--apiv1tasks)                                                                                                                   | Endpoints, resource shape, list params, error codes — **not duplicated here**       |
-| [ADR-0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md)                                                                                                            | Layers, CQRS (commands vs queries), in-process events                               |
-| [ADR-0003](../../architecture/adr/0003-postgresql.md) · [ADR-0004](../../architecture/adr/0004-prisma-migrations-and-seeding.md)                                                         | PostgreSQL, Prisma migrations with raw SQL, deterministic seed                      |
-| [ADR-0005](../../architecture/adr/0005-rest-openapi-and-response-envelope.md) · [ADR-0008](../../architecture/adr/0008-class-validator-dtos-and-generated-client.md)                     | Envelope, error filter, DTOs as contract source, generated client                   |
-| [ADR-0006](../../architecture/adr/0006-offset-pagination.md)                                                                                                                             | Offset pagination, `meta`, drift trade-off                                          |
-| [ADR-0013](../../architecture/adr/0013-opentelemetry-and-signoz.md)                                                                                                                      | Spans, metrics, logs                                                                |
-| [ADR-0014](../../architecture/adr/0014-testing-strategy.md)                                                                                                                              | Test levels and tooling                                                             |
-| [ADR-0015](../../architecture/adr/0015-optimistic-concurrency.md) · [ADR-0016](../../architecture/adr/0016-soft-delete.md) · [ADR-0019](../../architecture/adr/0019-idempotency-keys.md) | `version` + ETag/If-Match, `deleted_at`, `Idempotency-Key`                          |
-| [002-teams plan](../002-teams/plan.md)                                                                                                                                                   | Supplier of `TeamDirectory` and publisher of `TeamDeleted`                          |
+| Reference                                                                                                                                                                                                        | Used for                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [Domain model](../../architecture/overview.md#4-domain)                                                                                                                                                          | `Task` aggregate, VOs, events, errors, `TeamDirectory` / `TeamDeleted` relationship |
+| [Data model](../../architecture/data-model.md)                                                                                                                                                                   | `tasks`, `task_teams`, `task_status`, indexes, soft delete, `version`               |
+| [API contracts](../../architecture/api-contracts.md#tasks--apiv1tasks)                                                                                                                                           | Endpoints, resource shape, list params, error codes — **not duplicated here**       |
+| [ADR-0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md)                                                                                                                                    | Layers, CQRS (commands vs queries), in-process events                               |
+| [ADR-0003](../../architecture/adr/0003-postgresql.md) · [ADR-0004](../../architecture/adr/0004-prisma-migrations-and-seeding.md)                                                                                 | PostgreSQL, Prisma migrations with raw SQL, deterministic seed                      |
+| [ADR-0005](../../architecture/adr/0005-rest-openapi-and-response-envelope.md) · [ADR-0008](../../architecture/adr/archive/0008-class-validator-dtos-and-generated-client.md)                                     | Envelope, error filter, DTOs as contract source, generated client                   |
+| [ADR-0006](../../architecture/adr/0006-offset-pagination.md)                                                                                                                                                     | Offset pagination, `meta`, drift trade-off                                          |
+| [ADR-0013](../../architecture/adr/archive/0013-opentelemetry-and-signoz.md)                                                                                                                                      | Spans, metrics, logs                                                                |
+| [ADR-0014](../../architecture/adr/0014-testing-strategy.md)                                                                                                                                                      | Test levels and tooling                                                             |
+| [ADR-0015](../../architecture/adr/archive/0015-optimistic-concurrency.md) · [ADR-0016](../../architecture/adr/archive/0016-soft-delete.md) · [ADR-0019](../../architecture/adr/archive/0019-idempotency-keys.md) | `version` + ETag/If-Match, `deleted_at`, `Idempotency-Key`                          |
+| [002-teams plan](../002-teams/plan.md)                                                                                                                                                                           | Supplier of `TeamDirectory` and publisher of `TeamDeleted`                          |
 
 ## Architecture
 
 ### Module layout — `apps/api/src/modules/tasks`
 
-Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi) (authoritative; dependency-cruiser keys on them).
+Paths follow [overview §6.2](../../architecture/overview.md#6-folder-structure-appsapisrc) (authoritative; dependency-cruiser keys on them).
 
 ```text
 tasks/
@@ -80,7 +80,7 @@ changeStatus(to: TaskStatus, now: Date): boolean {
 }
 ```
 
-**Version convention** (same as Teams, [ADR-0015](../../architecture/adr/0015-optimistic-concurrency.md)): the aggregate never changes `version`. When a change method returns `true`, the repository writes it with `UPDATE … SET …, version = version + 1 WHERE id = $1 AND owner_id = $2 AND version = $expected AND deleted_at IS NULL`; 0 rows → re-check → `TaskNotFound` or `ConcurrencyConflict`. `Task.touch(now)` only sets `updatedAt`.
+**Version convention** (same as Teams, [ADR-0015](../../architecture/adr/archive/0015-optimistic-concurrency.md)): the aggregate never changes `version`. When a change method returns `true`, the repository writes it with `UPDATE … SET …, version = version + 1 WHERE id = $1 AND owner_id = $2 AND version = $expected AND deleted_at IS NULL`; 0 rows → re-check → `TaskNotFound` or `ConcurrencyConflict`. `Task.touch(now)` only sets `updatedAt`.
 
 ### Application (CQRS)
 
@@ -182,7 +182,7 @@ sequenceDiagram
 | `ListTasksQueryDto`   | see below                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `TaskResponseDto`     | contract shape incl. `isOverdue`, `teams: TeamChipDto[]`, `version`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
-Mass assignment (AC-03.1.7, AC-03.12.6, security review S-L1): `forbidNonWhitelisted` rejects `id`, `ownerId`, `owner_id`, `userId`, `owner` (object), `version`, `completedAt`, `createdAt`, `updatedAt`, `deletedAt`, `teams`, `isOverdue`, `__proto__` and `constructor` on `CreateTaskDto`, `ReplaceTaskDto` **and** `ChangeTaskStatusDto`. Check order ([ADR-0015](../../architecture/adr/0015-optimistic-concurrency.md)): validation `400` → not found `404` (wins over any `If-Match`, AC-03.15.5) → `412` (mismatch or malformed `If-Match`) → no-op detection.
+Mass assignment (AC-03.1.7, AC-03.12.6, security review S-L1): `forbidNonWhitelisted` rejects `id`, `ownerId`, `owner_id`, `userId`, `owner` (object), `version`, `completedAt`, `createdAt`, `updatedAt`, `deletedAt`, `teams`, `isOverdue`, `__proto__` and `constructor` on `CreateTaskDto`, `ReplaceTaskDto` **and** `ChangeTaskStatusDto`. Check order ([ADR-0015](../../architecture/adr/archive/0015-optimistic-concurrency.md)): validation `400` → not found `404` (wins over any `If-Match`, AC-03.15.5) → `412` (mismatch or malformed `If-Match`) → no-op detection.
 
 ```ts
 // presentation/dto/list-tasks.query.dto.ts — illustrative
@@ -242,7 +242,7 @@ As in [api-contracts.md § Tasks](../../architecture/api-contracts.md#tasks--api
 - `search` escapes `%`, `_`, `\`; `status` also accepts repeated params (`status=A&status=B`).
 - Same-status `PATCH` → `200` with the unchanged resource and unchanged `ETag`.
 - `ETag` on `GET /tasks/:id` 200, `POST` 201, `PUT` 200, `PATCH` 200 (including idempotent replays, which also carry `Idempotent-Replayed: true`); `If-Match` accepts `W/"n"` and `"n"`, anything else → 412.
-- `Idempotency-Key` is honored on `POST /tasks` only ([ADR-0019](../../architecture/adr/0019-idempotency-keys.md)).
+- `Idempotency-Key` is honored on `POST /tasks` only ([ADR-0019](../../architecture/adr/archive/0019-idempotency-keys.md)).
 
 ## Data
 

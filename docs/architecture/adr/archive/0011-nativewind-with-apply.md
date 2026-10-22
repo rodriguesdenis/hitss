@@ -72,5 +72,5 @@ The brief forbids styled-components. The UI needs light/dark themes, a small des
 
 ## Links
 
-- [Design spec](../../design/design-spec.md)
+- [Design spec](../../../design/design-spec.md)
 - NativeWind: https://www.nativewind.dev/docs · Tailwind `@apply`: https://v3.tailwindcss.com/docs/functions-and-directives#apply

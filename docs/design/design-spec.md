@@ -2,7 +2,7 @@
 
 - **Owner:** ux-ui-designer · **Status:** Draft · **Specs:** [004-mobile-app](../specs/004-mobile-app/spec.md), [005-offline-sync](../specs/005-offline-sync/spec.md)
 - **Epics:** [EP-04 Mobile Experience](../product/epics/EP-04-mobile-experience.md), [EP-05 Offline & Responsiveness](../product/epics/EP-05-offline-and-responsiveness.md)
-- **ADRs:** [0009](../architecture/adr/0009-expo-and-expo-router.md) · [0011](../architecture/adr/0011-nativewind-with-apply.md) · [0012](../architecture/adr/0012-offline-first-and-optimistic-updates.md)
+- **ADRs:** [0009](../architecture/adr/archive/0009-expo-and-expo-router.md) · [0011](../architecture/adr/archive/0011-nativewind-with-apply.md) · [0012](../architecture/adr/archive/0012-offline-first-and-optimistic-updates.md)
 
 The design lives **in this document** (text, tables, ASCII wireframes, Mermaid). There is no external design file. Every visual value used by the app must be a token defined here; anything not here is a bug in this spec, not a licence to improvise.
 
@@ -613,7 +613,7 @@ flowchart TD
 ```
 
 - **Auth gate:** the root layout reads the session; while it is resolving it keeps the splash screen visible (no flash of the sign-in screen). Unauthenticated users can only reach `(auth)`; authenticated users visiting `(auth)` are redirected to Tasks. A `401` from any request signs the user out locally and returns to Sign in with the "session expired" message.
-- **Team filter is URL state** ([ADR-0009](../architecture/adr/0009-expo-and-expo-router.md)): tapping a team pushes `/tasks?teamId=<id>`; the Tasks tab uses `backBehavior="history"`, so Back returns to Teams; "Show all tasks" (header action) replaces the route with `/tasks`.
+- **Team filter is URL state** ([ADR-0009](../architecture/adr/archive/0009-expo-and-expo-router.md)): tapping a team pushes `/tasks?teamId=<id>`; the Tasks tab uses `backBehavior="history"`, so Back returns to Teams; "Show all tasks" (header action) replaces the route with `/tasks`.
 - **Deep links / typed routes:** `teamstasks://tasks/<id>` opens S7; `teamstasks://tasks?teamId=<id>` opens S6 (cold start goes through the gate first).
 - **Back behaviour:** modals close with "Cancel" or swipe-down; if the form is dirty, a "Discard changes?" dialog appears (§6.6).
 - **Tab bar:** icons `check-square` (Tasks), `users` (Teams), `settings` (Settings), always with labels; the Tasks tab shows a small pending-sync dot when the offline queue is non-empty.
@@ -1015,7 +1015,7 @@ S3 (global)                              S6 (filtered by team "Mobile")
 
 ## 9. UX copy (en / pt-BR)
 
-Keys map 1:1 to i18n resource keys (`src/i18n/locales/{en,pt-BR}.json`). Domain terms follow the [ubiquitous language](../architecture/domain-model.md#ubiquitous-language): Team = **Time**, Task = **Tarefa**, Pending = **Pendente**, In progress = **Em andamento**, Done = **Concluída**. Interpolations in `{braces}`.
+Keys map 1:1 to i18n resource keys (`src/i18n/locales/{en,pt-BR}.json`). Domain terms follow the [ubiquitous language](../architecture/overview.md#ubiquitous-language): Team = **Time**, Task = **Tarefa**, Pending = **Pendente**, In progress = **Em andamento**, Done = **Concluída**. Interpolations in `{braces}`.
 
 ### 9.1 Navigation, titles, actions
 

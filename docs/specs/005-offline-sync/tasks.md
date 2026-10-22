@@ -1,6 +1,6 @@
 # 005 — Tasks
 
-Ordered; each task is one PR ([ADR-0017](../../architecture/adr/0017-conventional-commits-and-atomic-prs.md)). Requires the 004 MUST set through T-004-17 (screens, mutation keys, toast store, `StorageAdapter`) and the sign-out task T-004-11. `shared/query` stays a leaf (rule M1): it holds the generic registry and helpers, and each feature registers its own durable mutation logic. Test-first: each task lands with the tests of the scenarios it covers.
+Ordered; each task is one PR ([ADR-0017](../../architecture/adr/archive/0017-conventional-commits-and-atomic-prs.md)). Requires the 004 MUST set through T-004-17 (screens, mutation keys, toast store, `StorageAdapter`) and the sign-out task T-004-11. `shared/query` stays a leaf (rule M1): it holds the generic registry and helpers, and each feature registers its own durable mutation logic. Test-first: each task lands with the tests of the scenarios it covers.
 
 | ID       | Task                                                                    | Depends on   | Size | Branch                       |
 | -------- | ----------------------------------------------------------------------- | ------------ | ---- | ---------------------------- |

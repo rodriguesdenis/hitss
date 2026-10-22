@@ -58,7 +58,7 @@ Rules:
 - **Reads** go through `QueryBus`; query handlers use a read-model port that returns view DTOs directly (no aggregate hydration needed for lists). This is the "CQRS-lite" split: same database, separate code paths.
 - **Cross-context calls** use the buses and the target module's `contracts/` folder. Task Management's `TeamDirectory` port is implemented by an adapter that sends `GetTeamSummariesQuery`; Team Management's `taskCount` uses a `TeamTaskCounts` port whose adapter sends `CountTasksByTeamQuery`. Modules never import each other's providers, so there is no DI cycle.
 - **Errors**: the domain throws typed `DomainError`s; a global exception filter maps them to the error envelope ([ADR-0005](0005-rest-openapi-and-response-envelope.md)).
-- **Enforcement**: `dependency-cruiser` rules A1–A9 ([overview §7](../overview.md#7-dependency-rules-enforced-by-dependency-cruiser-in-ci)) run in CI.
+- **Enforcement**: `dependency-cruiser` rules A1–A9 ([overview §7](../overview.md#7-dependency-rules)) run in CI.
 
 ### TeamDeleted consistency
 
@@ -80,7 +80,7 @@ At this scale (one process, one database) the atomic option is simpler and stric
 **Positive**
 
 - Domain and handler tests run without Nest, Prisma or Postgres; use cases read like the spec.
-- Each use case is one folder (command, handler, spec), so PRs stay small ([ADR-0017](0017-conventional-commits-and-atomic-prs.md)).
+- Each use case is one folder (command, handler, spec), so PRs stay small ([ADR-0017](archive/0017-conventional-commits-and-atomic-prs.md)).
 - Contexts can later be extracted (buses → messaging) without rewriting the domain.
 
 **Negative**
@@ -95,6 +95,6 @@ At this scale (one process, one database) the atomic option is simpler and stric
 
 ## Links
 
-- [Domain model](../domain-model.md) · [Architecture overview](../overview.md)
+- [Domain model](../overview.md#4-domain) · [Architecture overview](../overview.md)
 - [ADR-0004 — Prisma](0004-prisma-migrations-and-seeding.md) · [ADR-0014 — Testing strategy](0014-testing-strategy.md)
 - NestJS CQRS: https://docs.nestjs.com/recipes/cqrs · dependency-cruiser: https://github.com/sverweij/dependency-cruiser

@@ -4,17 +4,16 @@ Local operation of Teams & Tasks. Commands assume the repository root. Every `ma
 
 ## Run
 
-| Goal                                                                   | Command                                                                              |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Start DB + API (migrate, seed, wait until healthy)                     | `docker compose up --build` (foreground) · `make up` (background, waits for healthy) |
-| Stop (keep data)                                                       | `make down`                                                                          |
-| Follow API logs                                                        | `make logs` (`LOG_PRETTY=true make up` for human-readable logs)                      |
-| Re-apply demo data                                                     | `make seed`                                                                          |
-| Wipe everything and start fresh                                        | `make reset`                                                                         |
-| With SigNoz (≈ 4 GB RAM)                                               | _planned (T-006-06), not in the Makefile yet_                                        |
-| Mobile dev server (Expo Go QR)                                         | _planned (mobile app), not in the Makefile yet_                                      |
-| Smoke test (stop the dev stack first: ports 3000 and 5432) · load test | `make smoke` · `make load` (_planned, T-006-07_)                                     |
-| Status                                                                 | `docker compose ps` (look for `healthy`)                                             |
+| Goal                                                       | Command                                                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Start DB + API (migrate, seed, wait until healthy)         | `docker compose up --build` (foreground) · `make up` (background, waits for healthy) |
+| Stop (keep data)                                           | `make down`                                                                          |
+| Follow API logs                                            | `make logs` (`LOG_PRETTY=true make up` for human-readable logs)                      |
+| Re-apply demo data                                         | `make seed`                                                                          |
+| Wipe everything and start fresh                            | `make reset`                                                                         |
+| Mobile dev server (Expo Go QR)                             | _planned (mobile app), not in the Makefile yet_                                      |
+| Smoke test (stop the dev stack first: ports 3000 and 5432) | `make smoke`                                                                         |
+| Status                                                     | `docker compose ps` (look for `healthy`)                                             |
 
 URLs once healthy:
 
@@ -70,6 +69,7 @@ Symptom: the app on a phone shows network errors/timeouts; on an emulator it wor
 ### Requests return 401
 
 - Token missing/expired: sign in again (`POST /api/auth/sign-in/email`), read the `set-auth-token` header, send `Authorization: Bearer <token>`.
+- Cookie only: `/api/v1` accepts **Bearer tokens only** ([ADR-0020](../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md)); a request that carries just the session cookie answers `401 UNAUTHENTICATED`. Send the `Authorization` header (Bruno and the `.http` files do).
 - After `make reset` all sessions are gone — sign in again in the app/Bruno.
 
 ### Requests return 429
@@ -78,12 +78,14 @@ Rate limit: `RATE_LIMIT_MAX` (default 100) req/min per user, `RATE_LIMIT_IP_MAX`
 
 **Docker Desktop / WSL2 caveat.** On Docker Desktop (macOS, Windows, WSL2) published ports go through a NAT/userland proxy, so the API usually sees **one client IP (the gateway, e.g. `172.x.0.1` / `192.168.65.1`) for all traffic coming from the host** — Bruno, the app, `curl` and a phone on the LAN. The per-IP limits then act as one shared bucket for everything you run locally, and a burst from one tool can cause `429` in another. This is expected and local-only (native Linux Docker shows real addresses; behind a real proxy set `TRUSTED_PROXIES`). Workarounds: wait for `Retry-After`, sign in once and reuse the token, or raise the limits for a session: `RATE_LIMIT_IP_MAX=1000 make up`. Do not trust client-sent `X-Forwarded-For` / `x-tt-client-ip` to work around it — the API ignores them.
 
-### SigNoz shows nothing
+### No traces arrive at my collector
 
-1. `docker compose --profile observability ps` — all `healthy`/`running`; the schema migrator must have exited `0`.
-2. API not exporting: `OTEL_SDK_DISABLED` must be `false`; endpoint `http://signoz-otel-collector:4318`.
-3. Wait 15–30 s (batch export interval); refresh with a time range of "last 15 minutes".
-4. Out of memory: `docker stats` — ClickHouse needs ~2–3 GB; raise Docker Desktop memory to ≥ 6 GB.
+Telemetry is off unless `OTEL_EXPORTER_OTLP_ENDPOINT` is set; see [observability](observability.md).
+
+1. The API container must see the variable: `docker compose exec api printenv OTEL_EXPORTER_OTLP_ENDPOINT` (set it in `.env` and `docker compose up -d`).
+2. `OTEL_SDK_DISABLED` must not be `true`; a per-signal endpoint (`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) alone does not start the exporter.
+3. The endpoint must be reachable **from the API container** (`localhost` there is the container itself); a down collector never affects requests but drops the spans.
+4. Spans are batched: wait about 5 s, then search by service `teams-tasks-api` or the `traceId` from a log line.
 
 ### Build is slow or fails on install
 
@@ -129,5 +131,5 @@ Or connect a GUI to `localhost:${POSTGRES_PORT:-5432}` with `teams` / `teams`.
 ## Clean up everything
 
 ```bash
-docker compose --profile observability --profile mobile --profile load down -v --rmi local
+docker compose down -v --rmi local
 ```

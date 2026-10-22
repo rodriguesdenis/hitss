@@ -75,6 +75,8 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 ## T-008-09 — Docs reduction
 
+- **Status:** done
 - **Goal:** the docs describe the code as it is, in few documents (AC-08.9).
 - **Changes:** README (how to run, decisions, data model, API summary, tests, production notes); keep about six ADRs current (monorepo, NestJS layering as amended by 0020, PostgreSQL + Prisma, REST + envelope + pagination, Better Auth Bearer, Docker one-command run) and mark the rest superseded or historical; one architecture document replacing overview/domain-model/data-model/api-contracts overlap; specs, features and the traceability matrix marked as optional process material.
 - **Done when:** every document left in the main path matches the code; links resolve.
+- **Delivered:** README and `docs/README.md` rewritten around the code as it is (process material in its own section); one architecture document, `overview.md`, with the domain model folded in (`domain-model.md` removed, links redirected); ADRs 0001–0007, 0014, 0018 and 0020 kept, the other ten moved to `adr/archive/` with a one-line index; the ADR-0020 and plan trees amended (read-model ports, `domain/policies/`, `application/views/`, `shared/presentation/`); data model, constitution §II.2/§III.2 and test strategy updated; threat model and ADR-0007 from security (S-06, E-06, I-03, I-12, R-12, R-16/R-19 closed, R-20, R-21); operations docs from observability-sre; README Testing line from devops-ci.

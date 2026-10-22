@@ -1,6 +1,6 @@
 # Engineering process
 
-The working rules the team settled on while building the backend. They complement the [Definition of Done](definition-of-done.md) and [ADR-0017](../architecture/adr/0017-conventional-commits-and-atomic-prs.md); when a rule here and a checklist disagree, this page is the newer one.
+The working rules the team settled on while building the backend. They complement the [Definition of Done](definition-of-done.md) and [ADR-0017](../architecture/adr/archive/0017-conventional-commits-and-atomic-prs.md); when a rule here and a checklist disagree, this page is the newer one.
 
 ## Where checks run
 

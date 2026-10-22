@@ -1,6 +1,6 @@
 # ADR-0015 — Optimistic concurrency with `version` + ETag/If-Match
 
-- **Status:** Superseded by [ADR-0020](0020-simplify-architecture-for-the-hiring-test.md)
+- **Status:** Superseded by [ADR-0020](../0020-simplify-architecture-for-the-hiring-test.md)
 - **Superseded (2026-10-22):** ETag, `If-Match`, `412` and the retry-once policy (last-write-wins; `version` stays as data) — see ADR-0020.
 - **Date:** 2026-10-20
 - **Deciders:** software-architect, nestjs-specialist, database-specialist
@@ -76,5 +76,5 @@ The same user can edit a task from two devices, or an offline device can replay 
 
 ## Links
 
-- [Data model — concurrency](../data-model.md#concurrency) · [API contracts — conventions](../api-contracts.md#conventions)
+- [Data model — concurrency](../../data-model.md#concurrency) · [API contracts — conventions](../../api-contracts.md#conventions)
 - RFC 9110 §13.1.1 If-Match: https://www.rfc-editor.org/rfc/rfc9110#name-if-match
