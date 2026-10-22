@@ -157,17 +157,17 @@ Stop, reset, logs, re-seed and common failures: [runbook](docs/operations/runboo
 
 ## API contract summary
 
-Base URL `http://localhost:3000`; business routes under `/api/v1`, authentication under `/api/auth` (Better Auth, its native format). Full contract: [API contracts](docs/architecture/api-contracts.md) and Swagger UI at `/docs` once the OpenAPI task (T-001-13) lands.
+Base URL `http://localhost:3000`; business routes under `/api/v1`, authentication under `/api/auth` (Better Auth, its native format). Full contract: [API contracts](docs/architecture/api-contracts.md) and Swagger UI at `/docs` (served while `DOCS_ENABLED`: on by default locally, always off in production).
 
-| Topic       | Rule                                                                                                                                                                                                  |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth        | Sign up or in at `/api/auth/sign-up/email` · `/sign-in/email`; send `Authorization: Bearer <token>` (mobile) or the session cookie (web). Every `/api/v1/*` route needs one, except the health probes |
-| Success     | `{ "data": <resource or array>, "meta"?: { limit, offset, total } }`                                                                                                                                  |
-| Errors      | `{ "error": { "code": "VALIDATION_FAILED", "message": "…", "details"?: […], "traceId": "…" } }`: 400, 401, 403, 404, 409, 412, 415, 422, 429, 500                                                     |
-| Concurrency | `ETag: W/"<version>"` on single resources; `PUT`/`PATCH`/`DELETE` take `If-Match` (stale → `412`)                                                                                                     |
-| Retries     | `POST` accepts `Idempotency-Key`: the same key and body replays the first response                                                                                                                    |
-| Limits      | Per client address before authentication and per user after (`429 RATE_LIMITED` + `Retry-After`); `/api/auth/*` bodies over 16 kB → `413`                                                             |
-| Correlation | Every response has `X-Request-Id`; error envelopes carry the `traceId` of the request's trace                                                                                                         |
+| Topic       | Rule                                                                                                                                                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Auth        | Sign up or in at `/api/auth/sign-up/email` · `/sign-in/email`; send `Authorization: Bearer <token>` (mobile) or the session cookie (web). Every `/api/v1/*` route needs one, except the health probes                    |
+| Success     | `{ "data": <resource or array>, "meta"?: { total, limit, offset, hasNextPage } }`                                                                                                                                        |
+| Errors      | `{ "error": { "code": "VALIDATION_FAILED", "message": "…", "details"?: […], "traceId": "…" } }`: 400, 401, 403, 404, 409, 412, 415, 422, 429, 500                                                                        |
+| Concurrency | Today `ETag: W/"<version>"` on `POST /teams` and `GET /tasks/:id`. **Planned** (rest of the teams and tasks tasks): the same on every single-resource response, and `If-Match` on `PUT`/`PATCH`/`DELETE` (stale → `412`) |
+| Retries     | `POST` accepts `Idempotency-Key`: the same key and body replays the first response                                                                                                                                       |
+| Limits      | Per client address before authentication and per user after (`429 RATE_LIMITED` + `Retry-After`); `/api/auth/*` bodies over 16 kB → `413`                                                                                |
+| Correlation | Every response has `X-Request-Id`; error envelopes carry the `traceId` of the request's trace                                                                                                                            |
 
 Routes implemented on `main` today: `POST /api/v1/teams`, `GET /api/v1/tasks/:id`, `GET /api/v1/health/live` and `/ready`, and the four `/api/auth` routes (sign-up, sign-in, sign-out, get-session). The rest of the teams and tasks endpoints are the remaining MUST tasks of specs [002](docs/specs/002-teams/tasks.md) and [003](docs/specs/003-tasks/tasks.md).
 
@@ -253,7 +253,7 @@ pnpm arch                                     # dependency-cruiser layer rules
 pnpm test:tools && pnpm traceability:check    # CI scripts, and AC ↔ test traceability
 ```
 
-Every acceptance criterion of the specs is traced to tests by the AC id leading the test title ([traceability matrix](docs/quality/traceability-matrix.md)). Strategy, pyramid proportions, mutation testing and test data: [test strategy](docs/quality/test-strategy.md) · [ADR-0014](docs/architecture/adr/0014-testing-strategy.md).
+Every MUST acceptance criterion of a finished task is named by at least one automated test, by the AC id leading the test title; CI enforces it ([traceability matrix](docs/quality/traceability-matrix.md)). Strategy, pyramid proportions, mutation testing and test data: [test strategy](docs/quality/test-strategy.md) · [ADR-0014](docs/architecture/adr/0014-testing-strategy.md).
 
 ## Contributing
 
