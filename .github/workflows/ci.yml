@@ -53,6 +53,8 @@ jobs:
         run: |
           if [ -n "$BASE_SHA" ]; then git fetch --no-tags --depth=1 origin "$BASE_SHA"; fi
           pnpm traceability:check
+      - name: Makefile syntax (dry run of every alias)
+        run: make -n help up down logs reset test test-all test-docker smoke
       - name: README sections and relative links
         run: pnpm doc-check
       - name: CI tooling tests
