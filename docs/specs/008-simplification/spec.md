@@ -48,6 +48,9 @@ The backend meets every MUST requirement of the brief, but a reviewer must read 
 - **AC-08.6** Given the dependency-cruiser rules, when a domain file imports a framework or a module imports another module's internals other than its exported service, then `pnpm arch` fails.
 - **AC-08.7** Given no `OTEL_EXPORTER_OTLP_ENDPOINT`, then the API exports no telemetry and still logs JSON with `reqId` and `traceId`; given the variable, then traces are exported over OTLP.
 - **AC-08.8** Given the CI workflow, then its required gate is lint, typecheck, unit, integration, e2e, build, compose smoke, gitleaks and the dependency audit; the traceability, README and production-readiness doc checks are not part of it.
+- **AC-08.10** (addendum) Given the teams and tasks modules, then they have no `domain/policies/`, no `application/views/` and no persistence-mapper files; `TaskDescription`, `TaskTeamIds` and `TeamDescription` are entity validation, not value objects; the OpenAPI document and every e2e answer are unchanged.
+- **AC-08.11** (addendum) Given a module, then its own unit, integration and e2e tests are under `src/modules/<m>/tests/`; cross-cutting suites stay in `apps/api/test`; the number of tests per Jest project is unchanged and no test file is built into `dist/`.
+- **AC-08.12** (addendum) Given the API source and tests, then they hold no explanatory comments, only functional ones (`eslint-disable`, `@ts-expect-error`, triple-slash, tool pragmas).
 - **AC-08.9** Given the docs folder, then the README, the essential ADRs and one architecture document describe the code as it is; specs, features and the traceability matrix are marked as optional process material.
 
 ## Out of scope
