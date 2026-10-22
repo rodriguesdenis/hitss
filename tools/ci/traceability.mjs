@@ -3,6 +3,8 @@
 // docs/quality/traceability-matrix.md and fails on gaps or drift.
 //   node tools/ci/traceability.mjs                  check (CI): gaps, stale matrix, lost tests
 //   node tools/ci/traceability.mjs --write          regenerate the matrix, then check
+//   node tools/ci/traceability.mjs --require-tests  also fail a MUST AC whose tasks are all `Status: done`
+//                                                   (tasks.md) and that has no automated test
 //   node tools/ci/traceability.mjs --base <ref>     compare tests with <ref> (default: $BASE_SHA,
 //                                                   else the merge-base with origin/main)
 // The matrix holds no test data (parallel PRs would conflict on it). Which ACs have tests is computed
@@ -85,6 +87,7 @@ export function loadModel(root) {
   const scenarios = [];
   const tasks = new Map();
   const taskTitle = new Map();
+  const taskStatus = new Map();
   const acTasks = new Map();
   const acScen = new Map();
 
@@ -152,6 +155,8 @@ export function loadModel(root) {
         tasks.set(current, new Set());
         continue;
       }
+      const status = /^- \*\*Status:\*\*\s*(\S+)/.exec(line);
+      if (current && status) taskStatus.set(current, status[1].toLowerCase());
       if (current && line.startsWith('- **Covers:**')) {
         for (const ac of expandCovers(line)) {
           tasks.get(current).add(ac);
@@ -177,6 +182,7 @@ export function loadModel(root) {
     scenarios,
     tasks,
     taskTitle,
+    taskStatus,
     acTasks,
     acScen,
   };
@@ -704,7 +710,7 @@ export function validateWaivers(waivers) {
 export function checkTraceability(
   model,
   tests,
-  { committed, generated, baseTests, waivers = [] } = {},
+  { committed, generated, baseTests, waivers = [], requireTests = false } = {},
 ) {
   const gaps = analyze(model);
   const failures = [];
@@ -733,7 +739,7 @@ export function checkTraceability(
     failures.push(`${task} Covers: names ${ac}, which is not in a spec`);
   }
   failures.push(...validateWaivers(waivers));
-  const lost = new Set();
+  const usedWaivers = new Set();
   if (baseTests) {
     const waived = new Set(
       (Array.isArray(waivers) ? waivers : []).map((w) => w?.ac),
@@ -742,20 +748,11 @@ export function checkTraceability(
       byNumber(x, y),
     )) {
       if (!files.size || tests.get(ac)?.size) continue;
-      lost.add(ac);
+      usedWaivers.add(ac);
       const message = `${ac} lost its last test (it had one in ${[...files][0]} on the base); restore a test whose title starts with ${ac} or record a waiver with a reason in ${WAIVERS}`;
       (waived.has(ac) ? warnings : failures).push(
         waived.has(ac) ? `${message} [waived]` : message,
       );
-    }
-  }
-  if (baseTests) {
-    for (const waiver of Array.isArray(waivers) ? waivers : []) {
-      if (waiver?.ac && !lost.has(waiver.ac)) {
-        warnings.push(
-          `waiver for ${waiver.ac} is stale: that AC did not lose a test; remove it from ${WAIVERS}`,
-        );
-      }
     }
   }
   if (
@@ -766,6 +763,32 @@ export function checkTraceability(
     failures.push(
       `${MATRIX} is out of date: run pnpm traceability and commit the result\n${diffExcerpt(committed, generated)}`,
     );
+  }
+  if (requireTests) {
+    const waived = new Set(
+      (Array.isArray(waivers) ? waivers : []).map((w) => w?.ac),
+    );
+    for (const [ac, taskIds] of model.acTasks) {
+      if (priorityOf(model, ac) !== 'must' || tests.get(ac)?.size) continue;
+      const done = [...taskIds].filter(
+        (id) => model.taskStatus.get(id) === 'done',
+      );
+      if (!done.length || done.length !== taskIds.size) continue;
+      const message = `${ac} (MUST) is covered only by done task(s) ${done.sort().join(', ')} but has no automated test: add a test whose title starts with ${ac} or record a waiver with a reason in ${WAIVERS}`;
+      if (waived.has(ac)) {
+        usedWaivers.add(ac);
+        warnings.push(`${message} [waived]`);
+      } else failures.push(message);
+    }
+  }
+  if (baseTests || requireTests) {
+    for (const waiver of Array.isArray(waivers) ? waivers : []) {
+      if (waiver?.ac && !usedWaivers.has(waiver.ac)) {
+        warnings.push(
+          `waiver for ${waiver.ac} is stale: that AC neither lost a test nor lacks one in a done task; remove it from ${WAIVERS}`,
+        );
+      }
+    }
   }
   return { failures, warnings };
 }
@@ -840,6 +863,7 @@ async function main() {
     generated,
     baseTests,
     waivers,
+    requireTests: process.argv.includes('--require-tests'),
   });
   const failures = [...baseFailures, ...result.failures];
   const { warnings } = result;
