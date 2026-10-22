@@ -7,7 +7,7 @@ import {
   TaskStatusChanged,
 } from '../../domain/task.events';
 import { TaskStatus } from '../../domain/value-objects/task-status';
-import { TASK_METRICS, TaskMetrics } from '../ports/task-metrics';
+import { TaskMetrics } from '../ports/task-metrics';
 import { TASK_METRICS_HANDLERS } from './record-task-metrics.handler';
 
 const now = new Date('2026-01-01T00:00:00Z');
@@ -23,7 +23,7 @@ async function setup() {
     imports: [CqrsModule.forRoot()],
     providers: [
       ...TASK_METRICS_HANDLERS,
-      { provide: TASK_METRICS, useValue: metrics },
+      { provide: TaskMetrics, useValue: metrics },
     ],
   }).compile();
   await moduleRef.init();
