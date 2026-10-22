@@ -264,7 +264,7 @@ describe('OpenTelemetry bootstrap', () => {
           {
             host: '127.0.0.1',
             port: app.port,
-            path: '/ping?token=secret-value&search=marina',
+            path: '/api/v1/ping?token=secret-value&search=marina',
             headers: { host },
           },
           (res) => {
