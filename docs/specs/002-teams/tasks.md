@@ -81,8 +81,9 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 ## T-002-07 — Get team + ETag
 
 - **Goal:** `GET /api/v1/teams/:id` returns the team with `ETag`. Shared ETag and `If-Match` support.
-- **Changes:** `TeamsController.findOne` (`ParseUUIDPipe` mapped to `VALIDATION_FAILED` with `field: "id"`). Shared `EtagInterceptor` (also applied to create) and `@IfMatch()` decorator with unit tests.
+- **Changes:** `TeamsController.findOne` (shared `ParseUuidPipe` → `VALIDATION_FAILED` with `field: "id"`; `@ApiOkEnvelope`). Shared `EtagInterceptor` (`shared/presentation/interceptors/`; also on create, replacing its interim header) and `@IfMatch()` / `parseIfMatch` (`shared/presentation/decorators/`, used from T-002-08) with unit tests.
 - **Covers:** `@AC-02.5.1 @AC-02.5.2 @AC-02.5.3 @AC-02.5.4 @AC-02.5.5`, `@AC-01.6.2` (team row), `@AC-01.5.5`
+- **Status:** done
 - **Done when:** E2E: `ETag: W/"1"` on get and create. Unknown, foreign and deleted ids give byte-identical 404 bodies apart from `traceId`. Malformed ids → 400. Anonymous with an existing id → 401. Unit: `@IfMatch` parses `W/"3"`, `"3"` and `*`, and treats `abc`, `W/"-1"`, `1` and `garbage` as `unmatchable`.
 
 ## T-002-08 — Replace team
@@ -120,6 +121,8 @@ Prerequisite: the 001 API foundation and auth tasks T-001-01…T-001-09 (auth co
 - **Goal:** The demo user has 3 teams on every fresh start.
 - **Changes:** `prisma/seed/teams.seed.ts` (fixed literal fixtures, no faker; fixed UUIDs, upsert by id with `deleted_at` reset, fixed timestamps, `DEMO_TEAM_IDS` exported for the task seed), wired into the `prisma/seed.ts` orchestrator (T-007-07). Skipped when the demo user is not seeded (`SEED_DEMO=false` or `APP_ENV=production`).
 - **Covers:** brief "Seeds/fixtures (3 times)", part of `@AC-01.8.3`.
+- **Status:** done
+- **Note:** Maestro: covered by the T-007-07 demo seed, #51: `src/seed/teams.seed.ts` and `fixtures.ts`, with `test/integration/seed.int-spec.ts` proving 3 teams per demo user, an identical snapshot after seeding twice, and a restore after reset. The listing e2e for the demo user is not separate: `GET /teams` is covered by T-002-06b.
 - **Done when:** Integration: seeding twice gives exactly 3 teams for the demo user with unchanged rows. E2E: the demo user lists Mobile, Backend and Design.
 
 ## T-002-12 — Teams telemetry
