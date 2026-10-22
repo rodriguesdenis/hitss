@@ -16,4 +16,5 @@
 - [ ] Tests added/updated (unit / integration / component as applicable)
 - [ ] `pnpm lint`, `pnpm typecheck` and `pnpm test` pass
 - [ ] Docs/ADR updated if behavior or decisions changed
+- [ ] If this PR completes a spec task, its `- **Status:** done` is set in `tasks.md`
 - [ ] No secrets, no unrelated changes

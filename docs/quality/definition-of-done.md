@@ -35,6 +35,7 @@ Applies to every task, pull request and feature ([Constitution V.4](../constitut
 - [ ] Observability: new use cases produce a handler span; errors map to documented `code`s; new business events counted if relevant; no high-cardinality metric attributes.
 - [ ] Docs updated in the same PR: spec (if behavior changed — spec first), plan, ADR (if a decision changed), README/runbook (if a command or setting changed), `.env.example` (if a setting was added).
 - [ ] The task's "Done when" checks are demonstrated in the PR (command output, screenshot or test names).
+- [ ] The PR that completes a task sets `- **Status:** done` on it in `tasks.md`; from then on the traceability gate requires an automated test for every MUST AC the task covers (or a waiver with a reason in `tools/ci/traceability-waivers.json`).
 
 ### Pull request is Done (mergeable) when
 
