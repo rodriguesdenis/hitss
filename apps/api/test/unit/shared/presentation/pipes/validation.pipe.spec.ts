@@ -132,7 +132,6 @@ describe('AppValidationPipe', () => {
 
   describe('Lynx S1: nesting depth', () => {
     const untyped: ArgumentMetadata = { type: 'body' };
-    /** { a: { a: … { a: 1 } } } with `levels` objects, built without recursion. */
     const nested = (levels: number, leaf: unknown = 1): unknown => {
       let value = leaf;
       for (let i = 0; i < levels; i++) value = { a: value };

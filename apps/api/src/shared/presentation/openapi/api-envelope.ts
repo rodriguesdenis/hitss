@@ -7,7 +7,6 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 
-/** `meta` of a list response (ADR-0006). */
 export class PageMeta {
   @ApiProperty({ example: 42 }) total!: number;
   @ApiProperty({ example: 20 }) limit!: number;
@@ -15,7 +14,6 @@ export class PageMeta {
   @ApiProperty({ example: true }) hasNextPage!: boolean;
 }
 
-/** Documents the `200 { data: T }` success envelope of a handler (ADR-0005). */
 export function ApiOkEnvelope<T extends Type>(model: T) {
   return applyDecorators(
     ApiExtraModels(model),
@@ -29,7 +27,6 @@ export function ApiOkEnvelope<T extends Type>(model: T) {
   );
 }
 
-/** Documents the `201 { data: T }` envelope of a create handler (ADR-0005). */
 export function ApiCreatedEnvelope<T extends Type>(model: T) {
   return applyDecorators(
     ApiExtraModels(model),
@@ -43,7 +40,6 @@ export function ApiCreatedEnvelope<T extends Type>(model: T) {
   );
 }
 
-/** Documents the `200 { data: T[], meta }` list envelope of a handler (ADR-0005, ADR-0006). */
 export function ApiPageEnvelope<T extends Type>(model: T) {
   return applyDecorators(
     ApiExtraModels(model, PageMeta),

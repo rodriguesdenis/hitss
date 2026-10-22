@@ -25,7 +25,6 @@ describe('request logging', () => {
     const response = await call('/api/v1/tasks/7f3c?search=private');
 
     const line = await out.waitFor(completed('/api/v1/tasks/7f3c'));
-    // Sentinel: once the next request's line exists, a duplicate of the first would be there too.
     await call('/api/v1/tasks/sentinel');
     await out.waitFor(completed('/api/v1/tasks/sentinel'));
     expect(
@@ -101,7 +100,6 @@ describe('request logging', () => {
 
   it('AC-06.1.5 does not log probe requests', async () => {
     expect((await call('/api/v1/health/live')).status).toBe(200);
-    // Sentinel: once the next request's line is written, a probe line would be there too.
     await call('/api/v1/tasks/sentinel');
     await out.waitFor(completed('/api/v1/tasks/sentinel'));
 

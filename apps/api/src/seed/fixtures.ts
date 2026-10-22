@@ -1,11 +1,6 @@
-// Deterministic demo data (ADR-0004): fixed literals, fixed ids, fixed timestamps, no faker and no
-// randomness. Only due dates are computed, relative to the seeding day, so the overdue task is
-// always overdue and the upcoming ones always upcoming (data-model → Migrations & seeding).
-
 export const DEMO_USER_ID = '00000000-0000-4000-8000-000000000001';
 export const DEMO_EMAIL = 'demo@teams-tasks.dev';
 export const DEMO_NAME = 'Demo User';
-// A documented, public demo credential (README); the seed never runs in production.
 export const DEMO_PASSWORD = 'Demo@1234';
 
 const TEAM_MOBILE = '00000000-0000-4000-8000-0000000000a1';
@@ -30,7 +25,6 @@ export interface TaskFixture {
   title: string;
   description: string | null;
   status: SeedTaskStatus;
-  /** `YYYY-MM-DD`, relative to the seeding day. */
   dueDate: string | null;
   completedAt: Date | null;
   teamIds: string[];
@@ -70,7 +64,6 @@ export function demoTeamFixtures(): TeamFixture[] {
   ];
 }
 
-/** `YYYY-MM-DD` of the UTC day that is `offsetDays` after the day of `seedDay`. */
 function dayOffset(seedDay: Date, offsetDays: number): string {
   const day = new Date(
     Date.UTC(
@@ -89,11 +82,6 @@ export const DEMO_TASK_IDS = Array.from({ length: 10 }, (_, i) =>
   taskId(i + 1),
 );
 
-/**
- * 4 pending, 3 in progress, 3 done. Two tasks are in two teams, one in three, one in none, one is
- * overdue (due 7 days before the seeding day) and the open ones are due between tomorrow and in 21
- * days or have no due date.
- */
 export function demoTaskFixtures(seedDay: Date): TaskFixture[] {
   const created = (n: number) =>
     at(`2026-01-10T${String(8 + n).padStart(2, '0')}:00:00.000Z`);

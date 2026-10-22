@@ -14,7 +14,6 @@ const METHODS = [
 
 type Json = Record<string, unknown>;
 
-/** Every `$ref` string anywhere in the value, with where it was found. */
 function collectRefs(
   value: unknown,
   at: string,
@@ -33,7 +32,6 @@ function collectRefs(
   }
 }
 
-/** Resolves `#/a/b/c` inside the document. */
 function resolves(document: OpenAPIObject, ref: string): boolean {
   if (!ref.startsWith('#/')) {
     return false;
@@ -48,13 +46,6 @@ function resolves(document: OpenAPIObject, ref: string): boolean {
   return node !== undefined;
 }
 
-/**
- * Structural problems of the API's OpenAPI document (empty = valid enough for the generated
- * client, T-007-10): an OpenAPI 3 document, every `$ref` resolving, path templates matching
- * their declared path parameters, unique operationIds, a 2xx on every operation, and every
- * JSON error response using the shared `{ error }` schema (except the hand-written Identity
- * routes, which keep Better Auth's native format).
- */
 export function openApiProblems(
   document: OpenAPIObject,
   nativeTags: readonly string[] = [],

@@ -64,7 +64,6 @@ describe('PrismaTeamRepository (integration, T-002-03)', () => {
       repository.update(second!),
     ]);
 
-    // Last write wins (ADR-0020, AC-08.3): both writes apply, each incrementing the version.
     expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
     expect((await repository.findById(ownerId, team.id))!.version).toBe(3);
   });
@@ -94,13 +93,11 @@ describe('PrismaTeamRepository (integration, T-002-03)', () => {
       .insert(clone)
       .catch((e: unknown) => e);
 
-    // The primary-key violation passes through untranslated...
     expect(error).not.toBeInstanceOf(TeamNameAlreadyExists);
     expect(error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError);
     const known = error as Prisma.PrismaClientKnownRequestError;
     expect(known.code).toBe('P2002');
     expect(JSON.stringify(known.meta)).toContain('teams_pkey');
-    // ...and nothing was written.
     const rows = await prisma.team.findMany({ where: { id: team.id } });
     expect(rows.map((r) => r.name)).toEqual(['Original']);
   });

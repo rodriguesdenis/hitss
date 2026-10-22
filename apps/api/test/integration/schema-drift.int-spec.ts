@@ -4,13 +4,6 @@ import { useTestDatabase } from '../support/postgres';
 
 const API_DIR = join(__dirname, '../..');
 
-/**
- * The committed migrations and schema.prisma must describe the same database: after
- * `migrate deploy` (the template), `prisma migrate diff` to the schema is empty. A non-empty
- * diff means a model change without a migration, or a migration Prisma would "fix". Raw-SQL
- * objects Prisma cannot express (partial and expression indexes, CHECKs, the GIN index) are
- * invisible to the diff, which is why they live in migrations only.
- */
 describe('Schema drift (integration)', () => {
   const db = useTestDatabase();
 
@@ -37,7 +30,6 @@ describe('Schema drift (integration)', () => {
       },
     );
 
-    // --exit-code: 0 = no difference, 2 = difference (the script shows it), 1 = error.
     if (result.status !== 0) {
       throw new Error(
         `prisma migrate diff exited with ${String(result.status)}:\n${result.stdout}${result.stderr}`,

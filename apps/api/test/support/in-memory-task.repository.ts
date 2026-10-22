@@ -8,28 +8,18 @@ import {
 } from '../../src/modules/tasks/domain/errors/task.errors';
 import { TaskRepository } from '../../src/modules/tasks/domain/repositories/task.repository';
 
-/**
- * In-memory TaskRepository for handler unit tests. It passes the same contract suite as the
- * Prisma adapter (task-repository.contract.ts): snapshots in, fresh aggregates out, the same
- * version increment, owner scoping and errors. Team links are part of the snapshot, so a soft delete
- * keeps them, as the database does. Every team id is assumed to exist unless a test marks it
- * missing (`simulateMissingTeam`), which mimics the database's team-link foreign key.
- */
 export class InMemoryTaskRepository extends TaskRepository {
   private readonly rows = new Map<string, TaskProps>();
   private readonly missingTeams = new Set<string>();
 
-  /** Makes a team id fail like a team gone after the directory check (UnknownTeams, no ids). */
   simulateMissingTeam(teamId: string): void {
     this.missingTeams.add(teamId);
   }
 
-  /** Stores a task as-is (its own version). For test setup. */
   seed(task: Task): void {
     this.rows.set(task.id, snapshot(task, task.version));
   }
 
-  /** Every stored task, deleted ones included, as fresh aggregates. */
   all(): Task[] {
     return [...this.rows.values()].map((row) => Task.restore(row));
   }

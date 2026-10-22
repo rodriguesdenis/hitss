@@ -10,7 +10,6 @@ import {
   UnknownTeams,
 } from '../../domain/errors/task.errors';
 
-/** A domain validation error as one `{ field, message }` detail, like the validation pipe's. */
 const invalid = (
   error:
     | typeof InvalidTaskTitle
@@ -27,10 +26,6 @@ const invalid = (
   details: () => [{ field, message }],
 });
 
-/**
- * Plan 003 → Error mapping; registered by TasksModule (fixed messages, never the exception's).
- * The validation rows are defensive: the DTO rejects these values first.
- */
 export const TASK_ERROR_MAPPINGS: readonly DomainErrorMapping[] = [
   invalid(
     InvalidTaskTitle,

@@ -1,11 +1,6 @@
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { normalizeAuthInput } from './auth-input';
 
-/**
- * Better Auth `hooks.before`: runs before the endpoint validates its body, so the trimmed email
- * is what Better Auth checks and stores. An invalid name answers Better Auth's native 400.
- */
-/** A replacement body for the endpoint, or nothing to change. */
 type HookResult = { context: { body: Record<string, unknown> } } | undefined;
 
 export const authInputHook = createAuthMiddleware(

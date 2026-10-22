@@ -28,14 +28,12 @@ export class InvalidTeamDescription extends DomainError {
   }
 }
 
-/** The id is unknown, deleted or owned by another user (never revealed which). */
 export class TeamNotFound extends DomainError {
   constructor() {
     super('Team not found.');
   }
 }
 
-/** The owner already has an active team with this name (case-insensitive). */
 export class TeamNameAlreadyExists extends DomainError {
   constructor() {
     super('A team with this name already exists.');

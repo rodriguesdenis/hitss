@@ -42,7 +42,6 @@ describe('GetTaskUseCase', () => {
   };
 
   it("AC-03.8.1 returns the record, its live teams and today's UTC day from the clock", async () => {
-    // 2026-10-22T01:00 in UTC, still 2026-10-21 in São Paulo: the due day has passed in UTC.
     const { handler, findById } = handlerAt('2026-10-22T01:00:00.000Z', record);
 
     const view = await handler.execute({ ownerId: OWNER, id: record.id });

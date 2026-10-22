@@ -8,11 +8,6 @@ import { useTestDatabase } from '@test/support/postgres';
 
 const CREATED = new Date('2026-10-20T13:00:00.000Z');
 
-/**
- * Deleting a team (T-008-06, ADR-0020): one Prisma transaction soft-deletes the team, bumps the
- * version and updated time of the owner's live tasks linked to it, and removes its task_teams
- * rows. Either all three apply or none does.
- */
 describe('DeleteTeam in one transaction (integration)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
@@ -127,7 +122,6 @@ describe('DeleteTeam in one transaction (integration)', () => {
   it('AC-02.7.4 AC-08.4 a failing last statement rolls everything back: team active, task versions and links intact', async () => {
     const mobile = await team('Mobile');
     const linked = await task([mobile]);
-    // Test-only trigger: deleting this team's links fails, after the soft delete and the bump.
     await sql.query(`
       CREATE OR REPLACE FUNCTION fail_link_delete() RETURNS trigger AS $$
       BEGIN
@@ -157,8 +151,6 @@ describe('DeleteTeam in one transaction (integration)', () => {
   it("another user's tasks are never touched", async () => {
     const mobile = await team('Mobile');
     const stranger = (await signUpAndSignIn(app)).id;
-    // A foreign task cannot link a team of mine through the API; seeded directly to prove the
-    // owner filter of the bump.
     const theirs = await task([mobile], { ownerId: stranger });
 
     await deleteTeam(mobile);

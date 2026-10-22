@@ -70,7 +70,6 @@ describe('security baseline (e2e)', () => {
       expect(response.headers['access-control-expose-headers']).toContain(
         'X-Request-Id',
       );
-      // AC-08.3: no ETag is ever sent, so none is exposed.
       expect(response.headers['access-control-expose-headers']).not.toContain(
         'ETag',
       );
@@ -86,7 +85,6 @@ describe('security baseline (e2e)', () => {
       expect(response.status).toBe(204);
       expect(response.headers['access-control-allow-origin']).toBe(ALLOWED);
       expect(response.headers['access-control-allow-methods']).toContain('PUT');
-      // PR #29: browsers may cache the preflight for 10 minutes.
       expect(response.headers['access-control-max-age']).toBe('600');
     });
 
@@ -98,9 +96,6 @@ describe('security baseline (e2e)', () => {
           .set('Origin', EVIL)
           .set('Access-Control-Request-Method', 'DELETE'),
       ]) {
-        // Without Access-Control-Allow-Origin the browser blocks the response. (The `cors`
-        // package still sends Allow-Credentials when credentials are on; without a matching
-        // Allow-Origin, browsers ignore it.)
         expect(response.headers['access-control-allow-origin']).toBeUndefined();
       }
     });

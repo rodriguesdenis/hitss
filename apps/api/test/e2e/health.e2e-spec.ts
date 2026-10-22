@@ -57,7 +57,6 @@ describe('Health probes (e2e)', () => {
     expect((await http().get('/api/v1/health/live')).status).toBe(200);
 
     await proxy.start();
-    // The pool drops its broken connections and opens new ones: ready again, same process.
     const deadline = Date.now() + 10_000;
     let recovered = await http().get('/api/v1/health/ready');
     while (recovered.status !== 200 && Date.now() < deadline) {
@@ -81,13 +80,11 @@ describe('Health probes (e2e)', () => {
     expect(down.status).toBe(503);
     expect((await http().get('/api/v1/health/live')).status).toBe(200);
 
-    // Repeated probes during the outage share the one stuck attempt (no pool exhaustion).
     for (let i = 0; i < 5; i++) {
       expect((await http().get('/api/v1/health/ready')).status).toBe(503);
     }
 
     proxy.restore();
-    // The stuck attempt ends at the pg query timeout (5 s), the pool reconnects, ready again.
     const restored = Date.now();
     let recovered = await http().get('/api/v1/health/ready');
     while (recovered.status !== 200 && Date.now() - restored < 15_000) {

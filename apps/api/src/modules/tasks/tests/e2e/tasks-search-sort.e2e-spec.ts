@@ -28,14 +28,8 @@ interface PageBody {
   meta: { total: number; hasNextPage: boolean };
 }
 
-/** Canonical lower-case uuids: PostgreSQL's uuid order is their string order. */
 const byId = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
-/**
- * GET /api/v1/tasks: `search` and `sort` (T-003-09b) on the full AppModule, only the clock
- * fixed. The read model's SQL is proven at data level in prisma-task.list.int-spec.ts; this
- * checks the parameters end to end.
- */
 describe('GET /api/v1/tasks — search and sort (e2e)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
@@ -78,7 +72,6 @@ describe('GET /api/v1/tasks — search and sort (e2e)', () => {
       ).body as { data: { id: string } }
     ).data.id;
 
-  /** Inserts the tasks; createdAt defaults to one minute apart. Returns title → id. */
   async function seed(
     owner: TestUser,
     tasks: Seed[],
@@ -231,7 +224,6 @@ describe('GET /api/v1/tasks — search and sort (e2e)', () => {
   describe('sort (AC-03.6.x)', () => {
     let user: TestUser;
     let ids: Record<string, string>;
-    /** Titles of tied tasks, ordered by id in the given direction. */
     const tied = (titles: string[], direction: 'asc' | 'desc') => {
       const ordered = [...titles].sort((a, b) =>
         byId(ids[a] as string, ids[b] as string),
@@ -273,8 +265,6 @@ describe('GET /api/v1/tasks — search and sort (e2e)', () => {
           title: 'echo',
           status: 'PENDING',
           createdAt: '2026-10-05T10:00:00Z',
-          // The feature's background had 10-03, before its creation, which the
-          // tasks_updated_after_created CHECK rejects; corrected in tasks.feature.
           updatedAt: '2026-10-05T11:00:00Z',
         },
       ]);
@@ -320,7 +310,6 @@ describe('GET /api/v1/tasks — search and sort (e2e)', () => {
         const first = await order(sort);
 
         expect(first).toEqual(expected());
-        // Deterministic: the same request returns exactly the same order.
         expect(await order(sort)).toEqual(first);
       },
     );

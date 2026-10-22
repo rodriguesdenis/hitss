@@ -64,7 +64,6 @@ describe('Prisma module (integration)', () => {
       WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL
       ORDER BY migration_name`;
 
-    // The table exists only because `prisma migrate deploy` ran on the template.
     expect(row?.migrations).toBe('_prisma_migrations');
     expect(applied.map((r) => r.migration_name)).toEqual(committedMigrations());
   });
@@ -101,12 +100,9 @@ describe('Prisma module (integration)', () => {
     await booted.close();
   });
 
-  // Fail fast must not depend on the network refusing quickly: a database that never answers
-  // has to stop the boot within the probe bound too. The bound is shortened to 2 s here.
   const PROBE_MS = 2_000;
   const MARGIN_MS = 5_000;
 
-  // Low-entropy credentials, distinctive enough to scan the logs for.
   const USER = 'tcuser';
   const PASSWORD = 'tcpass';
 
@@ -122,7 +118,6 @@ describe('Prisma module (integration)', () => {
     return { error, elapsedMs: Date.now() - started, logs: capture.raw };
   }
 
-  /** Neither the error nor any log line may reveal where or as whom we tried to connect. */
   function expectNoConnectionDetails(
     text: string,
     host: string,
@@ -140,7 +135,6 @@ describe('Prisma module (integration)', () => {
   }
 
   it('VII.3 refuses to boot when the database is unreachable, naming DATABASE_URL only', async () => {
-    // A closed port: refused at once on most hosts, may hang where loopback is mirrored.
     const { error, elapsedMs, logs } = await bootFailure(
       `postgresql://${USER}:${PASSWORD}@127.0.0.1:1/none`,
     );
@@ -156,7 +150,6 @@ describe('Prisma module (integration)', () => {
   }, 30_000);
 
   it('VII.3 refuses to boot within the probe bound when the database never answers', async () => {
-    // 10.255.255.1 is not routable: the connection attempt hangs (black hole).
     const { error, elapsedMs, logs } = await bootFailure(
       `postgresql://${USER}:${PASSWORD}@10.255.255.1:5432/none`,
     );

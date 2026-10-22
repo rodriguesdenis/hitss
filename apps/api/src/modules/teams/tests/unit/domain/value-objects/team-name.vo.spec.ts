@@ -1,8 +1,8 @@
 import { InvalidTeamName } from '../../../../domain/errors/team.errors';
 import { TeamName } from '../../../../domain/value-objects/team-name.vo';
 
-const ACCENTED = '\u00e9'; // e acute, one code point
-const EMOJI = '\u{1F680}'; // rocket emoji, one code point, two UTF-16 units
+const ACCENTED = '\u00e9';
+const EMOJI = '\u{1F680}';
 
 describe('TeamName', () => {
   describe('AC-02.1.2 length boundaries (code points after trimming)', () => {
@@ -39,8 +39,6 @@ describe('TeamName', () => {
       );
     });
 
-    // NBSP (U+00A0) and LINE SEPARATOR (U+2028) are whitespace but not Cc:
-    // trim() removes them at the edges, inside the name they are kept.
     it.each([
       ['NBSP at the edges', '\u00a0Mobile\u00a0', 'Mobile'],
       ['NBSP inside', 'Mobile\u00a0Team', 'Mobile\u00a0Team'],
@@ -62,7 +60,7 @@ describe('TeamName', () => {
 
     it('accepts 50 characters made of accented letters and emoji', () => {
       const raw = ACCENTED.repeat(25) + EMOJI.repeat(25);
-      expect(raw.length).toBe(75); // UTF-16 units
+      expect(raw.length).toBe(75);
 
       expect(TeamName.create(raw).value).toBe(raw);
     });
@@ -111,16 +109,13 @@ describe('TeamName', () => {
     it.each([
       ['Mobile', 'MOBILE', true],
       ['Mobile', 'mobile', true],
-      ['\u03a9mega', '\u03c9mega', true], // capital / small omega
-      ['\u00c9quipe', '\u00e9quipe', true], // capital / small e acute
-      ['\u00c9quipe', 'Equipe', false], // accents are significant
+      ['\u03a9mega', '\u03c9mega', true],
+      ['\u00c9quipe', '\u00e9quipe', true],
+      ['\u00c9quipe', 'Equipe', false],
       ['Mobile', 'Backend', false],
-      // Greek sigma: PostgreSQL lower() maps each code point on its own, so a
-      // capital sigma always becomes the medial sigma, never the final one.
-      ['\u039f\u0394\u039f\u03a3', '\u03bf\u03b4\u03bf\u03c3', true], // ΟΔΟΣ / οδοσ
-      ['\u039f\u0394\u039f\u03a3', '\u03bf\u03b4\u03bf\u03c2', false], // ΟΔΟΣ / οδος
-      ['\u03bf\u03b4\u03bf\u03c2', '\u03bf\u03b4\u03bf\u03c3', false], // οδος / οδοσ
-      // Dotted capital I lowers to a plain "i" (simple mapping), as in PostgreSQL.
+      ['\u039f\u0394\u039f\u03a3', '\u03bf\u03b4\u03bf\u03c3', true],
+      ['\u039f\u0394\u039f\u03a3', '\u03bf\u03b4\u03bf\u03c2', false],
+      ['\u03bf\u03b4\u03bf\u03c2', '\u03bf\u03b4\u03bf\u03c3', false],
       ['\u0130stanbul', 'istanbul', true],
       ['\u0130stanbul', 'i\u0307stanbul', false],
     ])('%j equals %j: %s', (a, b, expected) => {

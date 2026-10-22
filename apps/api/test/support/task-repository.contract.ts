@@ -11,11 +11,8 @@ import { TaskTitle } from '../../src/modules/tasks/domain/value-objects/task-tit
 
 export interface TaskRepositoryHarness {
   repository: TaskRepository;
-  /** An owner id the repository accepts (the Prisma adapter needs an existing user). */
   newOwner(): Promise<string>;
-  /** A team of that owner (the Prisma adapter needs an existing team for the links). */
   newTeam(ownerId: string): Promise<string>;
-  /** A team id that does not exist (e.g. deleted after the directory check). */
   unknownTeam(): Promise<string>;
 }
 
@@ -45,7 +42,6 @@ export function aTask(
         : DueDate.create(extra.dueDate ?? '2026-10-30'),
     teamIds: extra.teamIds ?? [],
   };
-  // A chosen id (to provoke a duplicate key or order by id) needs restore(); create() draws one.
   return extra.id === undefined
     ? Task.create({ ...values, status, now: CREATED })
     : Task.restore({
@@ -77,10 +73,6 @@ function snapshot(task: Task) {
   };
 }
 
-/**
- * Behaviour every TaskRepository must show (T-003-04). Run against the in-memory fake (unit)
- * and the Prisma adapter (integration). `harness` is read inside tests, after beforeAll hooks.
- */
 export function describeTaskRepositoryContract(
   harness: () => TaskRepositoryHarness,
 ): void {
@@ -262,7 +254,6 @@ export function describeTaskRepositoryContract(
       });
     });
 
-    // The precise ids are the use case's job (it asks TeamLookup.findMissing again).
     describe('a team that no longer exists (TOCTOU after the directory check)', () => {
       it('insert fails with UnknownTeams and stores nothing', async () => {
         const ownerId = await owner();

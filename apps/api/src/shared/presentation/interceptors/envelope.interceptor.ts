@@ -11,7 +11,6 @@ import { RAW_RESPONSE } from '../decorators/raw-response.decorator';
 
 const ENVELOPE_KEYS: ReadonlySet<string> = new Set(['data', 'meta']);
 
-/** `{ data }` or `{ data, meta }` built by a handler (pages): passed through, not wrapped twice. */
 function isEnvelope(value: unknown): boolean {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
@@ -20,10 +19,6 @@ function isEnvelope(value: unknown): boolean {
   return keys.includes('data') && keys.every((key) => ENVELOPE_KEYS.has(key));
 }
 
-/**
- * Wraps what a handler returns as `{ data }` (ADR-0005). An empty result stays empty (204), and
- * `@RawResponse()` handlers, streamed files and non-HTTP contexts are left untouched.
- */
 @Injectable()
 export class EnvelopeInterceptor implements NestInterceptor {
   constructor(private readonly reflector: Reflector) {}

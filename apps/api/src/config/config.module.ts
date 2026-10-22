@@ -8,7 +8,6 @@ import { validate } from './env.validation';
 @Global()
 @Module({})
 export class AppConfigModule {
-  /** Validates the environment when called, so the process fails fast at module composition. */
   static forRoot(): DynamicModule {
     let validated: EnvironmentVariables | undefined;
     return {

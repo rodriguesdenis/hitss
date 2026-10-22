@@ -8,21 +8,12 @@ import {
   ValidationDetail,
 } from '../filters/api-exception';
 
-/** Keys that could reach an object's prototype; never valid in a request, at any depth. */
 const PROTOTYPE_KEYS: ReadonlySet<string> = new Set([
   '__proto__',
   'constructor',
   'prototype',
 ]);
 
-/**
- * The global pipe (ADR-0005): unknown fields are rejected (`whitelist` +
- * `forbidNonWhitelisted`), values are transformed to DTO instances, and every failure becomes
- * `400 VALIDATION_FAILED` with `details: [{ field, message }]`. Before class-transformer sees the
- * input, prototype keys anywhere in a body or query are rejected and a DTO body must be a JSON
- * object, so `__proto__` / `constructor` never reach a DTO (AC-01.6.6). Input nested deeper than
- * 32 levels is refused first, so no recursive walk can overflow the stack (Lynx S1).
- */
 export class AppValidationPipe extends ValidationPipe {
   constructor() {
     super({
@@ -74,15 +65,10 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** Deeper input is refused before any recursive library (class-transformer) walks it. */
 const MAX_DEPTH = 32;
 
 type ScanResult = { prototypeKey: string } | { tooDeep: true } | undefined;
 
-/**
- * Walks a JSON value without recursion (no stack overflow on hostile input) and returns the
- * dotted path of the first prototype key, or `tooDeep` beyond MAX_DEPTH nested objects/arrays.
- */
 function scan(value: unknown): ScanResult {
   const stack: { value: unknown; path: string; depth: number }[] = [
     { value, path: '', depth: 1 },
@@ -103,7 +89,6 @@ function scan(value: unknown): ScanResult {
         };
       }
     }
-    // Reversed, so that keys are visited in their own order (the first offender is reported).
     for (const key of keys.reverse()) {
       stack.push({
         value: (current.value as Record<string, unknown>)[key],
@@ -115,7 +100,6 @@ function scan(value: unknown): ScanResult {
   return undefined;
 }
 
-/** One detail per broken rule; nested properties get a dotted path (`child.label`). */
 function toDetails(errors: ValidationError[], parent = ''): ValidationDetail[] {
   return errors.flatMap((error) => {
     const field =

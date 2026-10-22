@@ -32,14 +32,7 @@ export const LOG_LEVELS = [
   'silent',
 ] as const;
 
-/**
- * Every environment variable the API reads. Defaults are documented in `.env.example`
- * (a parity test keeps both in sync). Secret-bearing variables have no default in code:
- * they come from the gitignored `.env` or the process environment. The auth and security
- * variables of spec 001 are inherited from `AuthEnvironmentVariables`.
- */
 export class EnvironmentVariables extends AuthEnvironmentVariables {
-  /** Application environment; distinct from NODE_ENV (which is "production" in the image). */
   @IsIn(APP_ENVS, oneOf(APP_ENVS))
   APP_ENV: AppEnv = 'local';
 

@@ -1,7 +1,7 @@
 import { InvalidTaskTitle } from '../../../../domain/errors/task.errors';
 import { TaskTitle } from '../../../../domain/value-objects/task-title.vo';
 
-const EMOJI = '\u{1F680}'; // rocket emoji, one code point, two UTF-16 units
+const EMOJI = '\u{1F680}';
 
 describe('TaskTitle', () => {
   describe('AC-03.1.2 length boundaries (code points after trimming)', () => {

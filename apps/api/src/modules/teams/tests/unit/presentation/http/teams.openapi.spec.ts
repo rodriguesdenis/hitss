@@ -9,7 +9,6 @@ import { ListTeamsUseCase } from '../../../../application/use-cases/list-teams.u
 import { UpdateTeamUseCase } from '../../../../application/use-cases/update-team.use-case';
 import { TeamsController } from '../../../../presentation/http/teams.controller';
 
-/** The schemas the generated client (orval, T-007-10) is built from. */
 describe('Teams in the OpenAPI document', () => {
   async function document() {
     const moduleRef = await Test.createTestingModule({

@@ -7,13 +7,11 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 
-/** One validation problem (`400 VALIDATION_FAILED`). */
 export class ApiValidationDetailDto {
   @ApiProperty({ example: 'name' }) field!: string;
   @ApiProperty({ example: 'name must be 2 to 50 characters' }) message!: string;
 }
 
-/** The `error` object of every error response (ADR-0005, api-contracts → Errors). */
 export class ApiErrorBodyDto {
   @ApiProperty({
     description: 'Stable, machine-readable code',
@@ -53,12 +51,10 @@ export class ApiErrorBodyDto {
   traceId!: string;
 }
 
-/** `{ error }`: the body of every 4xx and 5xx response. */
 export class ApiErrorResponseDto {
   @ApiProperty({ type: ApiErrorBodyDto }) error!: ApiErrorBodyDto;
 }
 
-/** Default descriptions, by status, naming the contract codes (api-contracts → Error codes). */
 const DEFAULT_DESCRIPTIONS: Readonly<Record<number, string>> = {
   400: 'VALIDATION_FAILED: the request is invalid; `details` names each field.',
   401: 'UNAUTHENTICATED: no valid session (bearer token or session cookie).',
@@ -69,7 +65,6 @@ const DEFAULT_DESCRIPTIONS: Readonly<Record<number, string>> = {
   429: 'RATE_LIMITED: too many requests; retry after `Retry-After` seconds.',
 };
 
-/** Documented on 429: when the client may retry. */
 const RETRY_AFTER = {
   'Retry-After': {
     description: 'Seconds to wait before retrying.',
@@ -81,10 +76,6 @@ const isStatusList = (
   value: readonly number[] | Readonly<Record<number, string>>,
 ): value is readonly number[] => Array.isArray(value);
 
-/**
- * Documents error responses with the shared `{ error }` schema. Pass the statuses, or a map of
- * status → description when a route needs a more precise one (e.g. 409 TEAM_NAME_ALREADY_EXISTS).
- */
 export function ApiErrorResponses(
   statuses: readonly number[] | Readonly<Record<number, string>>,
 ) {

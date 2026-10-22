@@ -7,7 +7,6 @@ import { Task, TaskProps } from '../../../../domain/entities/task.entity';
 import { TaskStatus } from '../../../../domain/value-objects/task-status.vo';
 import { TaskTitle } from '../../../../domain/value-objects/task-title.vo';
 
-// ISO strings, not shared Date instances, so aliasing bugs cannot hide.
 const CREATED = '2026-10-20T13:00:00.000Z';
 const COMPLETED = '2026-10-19T08:00:00.000Z';
 const NOW = '2026-10-21T09:00:00.000Z';
@@ -27,7 +26,6 @@ function created(status?: TaskStatus): Task {
   });
 }
 
-/** "Ship it": version 3, notes, due 2026-10-31, assigned to Mobile and Backend. */
 function stored(overrides: Partial<TaskProps> = {}): Task {
   return Task.restore({
     id: TASK_ID,
@@ -97,7 +95,6 @@ describe('Task', () => {
   });
 
   describe('AC-03.10.1 AC-03.10.2 AC-03.10.3 AC-03.9.4 changeStatus transition matrix', () => {
-    // `changed` true ⇔ persistence writes version n+1; false ⇔ version stays n.
     it.each([
       [PENDING, PENDING, false, null],
       [PENDING, IN_PROGRESS, true, null],
@@ -187,7 +184,6 @@ describe('Task', () => {
 
       expect(task.edit({ ...values, now: new Date(NOW) })).toBe(true);
       expect(task.title.equals(values.title)).toBe(true);
-      // Blank is stored as no description (AC-03.1.3).
       expect(task.description).toBe(values.description?.trim() || null);
       expect(task.dueDate?.value ?? null).toBe(values.dueDate?.value ?? null);
       expect(iso(task.updatedAt)).toBe(NOW);
@@ -490,7 +486,6 @@ describe('Task', () => {
     );
 
     it('BR-03.9 today is the UTC date, not the local date of the instant', () => {
-      // 23:30 on the 21st in UTC-3 is already the 22nd in UTC.
       const utcToday = DueDate.todayFrom(new Date('2026-10-21T23:30:00-03:00'));
       expect(utcToday.value).toBe('2026-10-22');
 

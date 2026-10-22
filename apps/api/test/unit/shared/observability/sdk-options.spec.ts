@@ -18,7 +18,6 @@ describe('nodeSdkOptions', () => {
       .find(
         (i) => i.instrumentationName === '@opentelemetry/instrumentation-pino',
       );
-    // A disabled instrumentation is left out of the list altogether.
     expect(pino).toBeUndefined();
     expect((options.instrumentations ?? []).flat().length).toBeGreaterThan(0);
   });

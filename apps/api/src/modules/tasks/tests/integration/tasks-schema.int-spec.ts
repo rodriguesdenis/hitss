@@ -399,9 +399,6 @@ describe('Tasks schema (integration, T-003-01)', () => {
       const owners = [await aUser(), await aUser(), await aUser()];
       ownerId = owners[0]!;
       teamId = await aTeam(ownerId);
-      // 3 owners x 3,000 tasks, shaped like a real backlog: 5 % PENDING, 5 % IN_PROGRESS, the
-      // rest DONE; every 10th soft-deleted, every 500th mentions "login", every 4th has a due
-      // date; every 50th task of the first owner is in the team.
       await sql.query(
         `INSERT INTO tasks (id, owner_id, title, description, status, due_date, completed_at,
                             created_at, updated_at, deleted_at)
@@ -427,11 +424,6 @@ describe('Tasks schema (integration, T-003-01)', () => {
       await sql.query('ANALYZE task_teams');
     });
 
-    /**
-     * EXPLAIN ANALYZE with sequential scans disabled, so the planner must show its index.
-     * `without` drops indexes inside a rolled-back transaction, to prove that a specific index
-     * can serve a predicate when the planner would otherwise prefer a cheaper path.
-     */
     async function plan(
       query: string,
       params: unknown[],
@@ -475,10 +467,6 @@ describe('Tasks schema (integration, T-003-01)', () => {
       noSort(p);
     });
 
-    // Only an equality on status lets this index return rows already in created_at order:
-    // `status = ANY($2::task_status[])` never uses it, even with a single element (verified on
-    // the compose image), so the read model emits `status = $n` for one status (plan 003).
-    // tasks_owner_created_idx is dropped so the plan cannot fall back to it with a filter.
     it('one status (equality) + default sort reads tasks_owner_status_created_idx in order', async () => {
       const p = await plan(
         `SELECT id FROM tasks WHERE owner_id = $1 AND deleted_at IS NULL
@@ -503,8 +491,6 @@ describe('Tasks schema (integration, T-003-01)', () => {
       noSort(p);
     });
 
-    // Which plan wins at scale (10k tasks per owner) is T-003-09's acceptance; at this size the
-    // owner-scoped scan is cheaper. Here: the trigram index can serve both ILIKE arms.
     it('search can be served by tasks_search_trgm_idx (BitmapOr over title and description)', async () => {
       const p = await plan(
         `SELECT id FROM tasks WHERE owner_id = $1 AND deleted_at IS NULL
@@ -524,9 +510,6 @@ describe('Tasks schema (integration, T-003-01)', () => {
       expect(p).toContain('"Node Type":"BitmapOr"');
     });
 
-    // With nested loops off, the EXISTS becomes a hash/merge semi-join that must look the team's
-    // links up by team_id = $2 alone: only task_teams_team_id_task_id_idx can serve that (the
-    // primary key leads with task_id).
     it('teamId filter uses task_teams_team_id_task_id_idx', async () => {
       const p = await plan(
         `SELECT t.id FROM tasks t WHERE t.owner_id = $1 AND t.deleted_at IS NULL

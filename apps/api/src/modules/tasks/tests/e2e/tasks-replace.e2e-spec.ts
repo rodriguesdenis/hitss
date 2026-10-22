@@ -29,7 +29,6 @@ interface Draft {
   user: TestUser;
   id: string;
   teams: { mobile: string; backend: string; design: string };
-  /** The task's current values, as a valid PUT body. */
   current: {
     title: string;
     description: string;
@@ -39,11 +38,6 @@ interface Draft {
   };
 }
 
-/**
- * PUT /api/v1/tasks/:id on the full AppModule, only the clock fixed. Each test starts from the
- * feature's background: "Draft", description "v1", PENDING, due 2026-10-30, teams Mobile and
- * Backend, version 1, created at 2026-10-20T13:00Z.
- */
 describe('PUT /api/v1/tasks/:id (e2e)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
@@ -124,7 +118,6 @@ describe('PUT /api/v1/tasks/:id (e2e)', () => {
     };
   }
 
-  /** The stored row is still the background's, at version 1. */
   const expectUnchanged = async ({ id, teams }: Draft) => {
     const row = await prisma.task.findUniqueOrThrow({
       where: { id },
@@ -157,7 +150,7 @@ describe('PUT /api/v1/tasks/:id (e2e)', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.etag).toBeUndefined(); // AC-08.3
+    expect(response.headers.etag).toBeUndefined();
     expect(taskOf(response)).toMatchObject({
       id: task.id,
       title: 'Final',
@@ -397,7 +390,7 @@ describe('PUT /api/v1/tasks/:id (e2e)', () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.etag).toBeUndefined(); // AC-08.3
+    expect(response.headers.etag).toBeUndefined();
     expect(taskOf(response)).toMatchObject({
       version: 1,
       updatedAt: CREATED.toISOString(),

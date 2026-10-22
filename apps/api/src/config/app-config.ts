@@ -18,12 +18,10 @@ export interface AppConfig {
   authRateLimitEnabled: boolean;
   rateLimitIpMax: number;
   seedDemo: boolean;
-  /** Always false when APP_ENV=production (AC-01.8.6). */
   docsEnabled: boolean;
   otel: {
     sdkDisabled: boolean;
     serviceName: string;
-    /** Absent: nothing is exported. */
     exporterEndpoint?: string;
   };
 }

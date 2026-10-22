@@ -39,9 +39,7 @@ import { TaskResponseDto } from './dto/task-response.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { toTaskResponse } from './presenters/task.presenter';
 
-/** `/api/v1/tasks`: private (global auth guard), always scoped to the signed-in owner. */
 @ApiTags('Tasks')
-// Every route needs a bearer token and is rate limited.
 @ApiErrorResponses([401, 429])
 @Controller('tasks')
 export class TasksController {
@@ -54,10 +52,6 @@ export class TasksController {
     private readonly listTasks: ListTasksUseCase,
   ) {}
 
-  /**
-   * 201 with the created task read back through GetTaskUseCase (same shape as every single-task
-   * response) and `Location` (AC-03.1.1).
-   */
   @Post()
   @HttpCode(201)
   @ApiCreatedEnvelope(TaskResponseDto)
@@ -84,13 +78,6 @@ export class TasksController {
     return toTaskResponse(view);
   }
 
-  /**
-   * 200 with a page of the owner's active tasks as full task views, newest first, and `meta`
-   * (AC-03.2.1, AC-03.2.2). Filters combine with AND; statuses within the list with OR
-   * (AC-03.4.4). Search is literal and case-insensitive on title or description; the sort is
-   * whitelisted with an id tie-break (AC-03.5.x, AC-03.6.x). Foreign and deleted tasks are never
-   * listed nor counted (AC-03.2.3).
-   */
   @Get()
   @ApiPageEnvelope(TaskResponseDto)
   @ApiErrorResponses({
@@ -121,7 +108,6 @@ export class TasksController {
     };
   }
 
-  /** 200 with the task view (AC-03.8.1); unknown → 404 TASK_NOT_FOUND. */
   @Get(':id')
   @ApiOkEnvelope(TaskResponseDto)
   @ApiErrorResponses({
@@ -135,10 +121,6 @@ export class TasksController {
     return toTaskResponse(await this.getTask.execute({ ownerId, id }));
   }
 
-  /**
-   * 200 with the task read back (AC-03.10.1). The same status is a no-op: the unchanged task,
-   * same version (AC-03.10.3).
-   */
   @Patch(':id/status')
   @ApiOkEnvelope(TaskResponseDto)
   @ApiErrorResponses({
@@ -155,10 +137,6 @@ export class TasksController {
     return toTaskResponse(await this.getTask.execute({ ownerId, id }));
   }
 
-  /**
-   * 200 with the replaced task read back (AC-03.9.1). An identical replacement is a no-op: the
-   * unchanged task, same version (AC-03.9.5).
-   */
   @Put(':id')
   @ApiOkEnvelope(TaskResponseDto)
   @ApiErrorResponses({
@@ -184,7 +162,6 @@ export class TasksController {
     return toTaskResponse(await this.getTask.execute({ ownerId, id }));
   }
 
-  /** 204 with no content; afterwards every read and write of the task → 404 (AC-03.11.1). */
   @Delete(':id')
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'The task was deleted.' })

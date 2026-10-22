@@ -4,7 +4,6 @@ import { useTestDatabase } from '../support/postgres';
 import { OtlpReceiver, ReceivedSpan } from './otlp-receiver';
 
 const API_DIR = join(__dirname, '../..');
-/** The fixture is compiled once: the generated Prisma client cannot run through ts-node. */
 const BUILD_DIR = join(API_DIR, 'node_modules/.cache/telemetry-e2e');
 const TRACE_ID = '4bf92f3577b34da6a3ce929d0e0e4736';
 
@@ -63,7 +62,6 @@ async function ready(app: Running): Promise<void> {
   });
 }
 
-/** Spans with a db.system attribute that descend from the given span. */
 function dbSpansBelow(spans: ReceivedSpan[], rootId: string | undefined) {
   const below = (span: ReceivedSpan): boolean => {
     const parent = spans.find((s) => s.spanId === span.parentSpanId);
@@ -157,8 +155,6 @@ describe('OpenTelemetry bootstrap (AC-08.7)', () => {
     expect(completed).toMatchObject({ traceId: TRACE_ID });
     expect(completed?.reqId).toBe(response.headers.get('x-request-id'));
     expect(completed?.spanId).toMatch(/^[0-9a-f]{16}$/);
-    // One correlation source (the logger mixin): the pino instrumentation is off, so no
-    // duplicate OpenTelemetry fields.
     for (const entry of logLines(app)) {
       for (const field of ['trace_id', 'span_id', 'trace_flags']) {
         expect(entry).not.toHaveProperty(field);
@@ -172,7 +168,6 @@ describe('OpenTelemetry bootstrap (AC-08.7)', () => {
     });
     const response = await get(app);
     expect(response.status).toBe(200);
-    // Batches flush every 5 s by default: wait past it before judging "nothing".
     await new Promise((resolve) => setTimeout(resolve, 6_000));
     await stop(app);
 

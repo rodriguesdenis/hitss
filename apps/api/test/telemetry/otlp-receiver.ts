@@ -21,12 +21,10 @@ interface TracePayload {
   }[];
 }
 
-/** Minimal OTLP/HTTP (JSON) collector standing in for SigNoz; records what the API exports. */
 export class OtlpReceiver {
   readonly spans: ReceivedSpan[] = [];
   readonly resources: ReceivedResource[] = [];
   requests = 0;
-  /** Request path -> raw bodies, for signals other than traces (metrics, logs). */
   readonly bodies = new Map<string, string[]>();
   private server!: Server;
 

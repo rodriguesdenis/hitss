@@ -67,7 +67,6 @@ describe('DELETE /api/v1/teams/:id and ownership (e2e)', () => {
       )
     ).rows[0];
 
-  /** The error body without its per-request traceId, to compare 404s byte for byte. */
   const withoutTraceId = (response: Response): string => {
     const { traceId, ...rest } = (
       response.body as { error: Record<string, unknown> }

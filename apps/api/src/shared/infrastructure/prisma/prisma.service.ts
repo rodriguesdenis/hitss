@@ -19,7 +19,6 @@ import {
   settleWithin,
 } from './database-probe';
 
-// Prisma logs are emitted as events and routed to the Nest logger (pino once 006 lands).
 const PRISMA_LOG = [
   { emit: 'event', level: 'query' },
   { emit: 'event', level: 'warn' },
@@ -28,7 +27,6 @@ const PRISMA_LOG = [
 
 type PrismaServiceOptions = { adapter: PrismaPg; log: typeof PRISMA_LOG };
 
-/** A query log entry: the parameterized statement only, never its bound values (may hold PII). */
 export function toQueryLog(event: Prisma.QueryEvent) {
   return {
     msg: 'prisma.query',
@@ -41,12 +39,6 @@ const SQLSTATE = /Code: `([0-9A-Z]{5})`/;
 const PRISMA_CODE = /\b(P\d{4})\b/;
 const CONSTRAINT = /constraint "([\w.$-]{1,128})"/;
 
-/**
- * A warn/error log entry reduced to identifiers: the client method, the SQLSTATE or Prisma error
- * code and the constraint name. The raw message is never logged, because driver messages and
- * DETAIL lines echo values (`Key (email)=(...) already exists`). Callers still receive the full
- * error.
- */
 export function toLogEventLog(level: 'warn' | 'error', event: Prisma.LogEvent) {
   const code = (SQLSTATE.exec(event.message) ??
     PRISMA_CODE.exec(event.message))?.[1];
@@ -59,10 +51,6 @@ export function toLogEventLog(level: 'warn' | 'error', event: Prisma.LogEvent) {
   };
 }
 
-/**
- * The single Prisma client of the API: one pg pool, probed on init (fail fast), closed on
- * shutdown.
- */
 @Injectable()
 export class PrismaService
   extends PrismaClient<PrismaServiceOptions>
@@ -87,12 +75,6 @@ export class PrismaService
     );
   }
 
-  /**
-   * $connect opens nothing with the pg adapter, so a probe query proves the database answers.
-   * A failure aborts the Nest bootstrap and the process exits non-zero (VII.3). The pool is
-   * closed first, best effort and bounded: closing waits for pending connection attempts, which
-   * against a black-holed host would otherwise hang the failing boot.
-   */
   async onModuleInit(): Promise<void> {
     await this.$connect();
     try {

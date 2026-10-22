@@ -12,7 +12,6 @@ describe('API throttlers: per address before AuthGuard, per user after (e2e)', (
   const db = useTestDatabase();
   const apps: INestApplication[] = [];
 
-  /** Each case gets a fresh app, so its buckets start empty. */
   async function freshApp(limits: { ip: number; user: number }) {
     const app = await createTestApp(db.url, {
       imports: [OwnerProbeModule],
@@ -53,7 +52,6 @@ describe('API throttlers: per address before AuthGuard, per user after (e2e)', (
     for (let i = 0; i < 6; i++) {
       expect((await http(app).get(PROBE)).status).toBe(401);
     }
-    // Had the anonymous 401s counted against the user throttler (limit 2) these would be 429.
     const user = await signUpAndSignIn(app);
     for (let i = 0; i < 2; i++) {
       expect(

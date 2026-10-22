@@ -4,13 +4,10 @@ import type { EnvironmentVariables } from './env.schema';
 
 export type { Violation };
 
-/** A production rule inspects the already type-valid configuration. Names variables, never values. */
 export type ProductionRule = (config: EnvironmentVariables) => Violation[];
 
-/** Prefixes of the placeholder secrets shipped in `.env.example` and the unit-test setup. */
 export const PLACEHOLDER_SECRET_PREFIXES = ['local-dev-', 'unit-test-secret-'];
 
-/** Password of the local database from `.env.example` and docker-compose.yml. */
 export const LOCAL_DATABASE_PASSWORD = 'teams-local-only';
 
 export const secretIsNotAPlaceholder: ProductionRule = (config) =>
@@ -40,7 +37,6 @@ export const seedIsOff: ProductionRule = (config) =>
     ? [{ variable: 'SEED_ON_START', message: 'must be false in production' }]
     : [];
 
-/** Levels that log query statements and request details; diagnostics for local use only. */
 export const VERBOSE_LOG_LEVELS = ['debug', 'trace'];
 
 export const logLevelIsNotVerbose: ProductionRule = (config) =>
@@ -58,7 +54,6 @@ export const logPrettyIsOff: ProductionRule = (config) =>
     ? [{ variable: 'LOG_PRETTY', message: 'must be false in production' }]
     : [];
 
-/** Telemetry leaves the process only over https in production (when an endpoint is set). */
 export const otlpEndpointIsSecure: ProductionRule = (config) => {
   const endpoint = config.OTEL_EXPORTER_OTLP_ENDPOINT;
   if (config.OTEL_SDK_DISABLED || !endpoint) return [];
@@ -78,7 +73,6 @@ const PER_SIGNAL_ENDPOINTS = [
   'OTEL_EXPORTER_OTLP_LOGS_ENDPOINT',
 ] as const;
 
-/** The SDK honours these too, so they would bypass the https rule on the generic endpoint. */
 export const otlpPerSignalEndpointsAreUnset: ProductionRule = (config) =>
   PER_SIGNAL_ENDPOINTS.filter((name) => config[name]).map((variable) => ({
     variable,
@@ -90,18 +84,12 @@ export const authUrlIsHttps: ProductionRule = (config) =>
     ? []
     : [{ variable: 'BETTER_AUTH_URL', message: 'must be https in production' }];
 
-/**
- * Hosts that resolve to this machine (`URL.hostname` form): localhost names, 127/8, the IPv6
- * loopback, the unspecified addresses and the IPv4-mapped loopback (WHATWG normalizes
- * `[::ffff:127.0.0.1]` to `[::ffff:7f00:1]`).
- */
 const isLoopbackHost = (hostname: string): boolean =>
   hostname === 'localhost' ||
   hostname.endsWith('.localhost') ||
   hostname.startsWith('127.') ||
   ['0.0.0.0', '[::1]', '[::]', '[::ffff:7f00:1]'].includes(hostname);
 
-/** Validated values always parse; an unparseable one is treated as unsafe, never thrown. */
 const hasLoopbackHost = (value: string): boolean => {
   const url = parseUrl(value);
   return url === null || isLoopbackHost(url.hostname);
@@ -141,7 +129,6 @@ export const authRateLimitIsOn: ProductionRule = (config) =>
         },
       ];
 
-/** Narrowest acceptable prefix per family in production: wider ranges trust too many hosts. */
 export const MIN_PROXY_PREFIX = { 4: 8, 6: 16 } as const;
 
 export const trustedProxiesAreNarrow: ProductionRule = (config) =>
@@ -162,7 +149,6 @@ export const demoSeedIsOff: ProductionRule = (config) =>
     ? [{ variable: 'SEED_DEMO', message: 'must be false in production' }]
     : [];
 
-/** Applied only when APP_ENV=production. Add one entry per rule; validate() never changes. */
 export const productionRules: ProductionRule[] = [
   secretIsNotAPlaceholder,
   databaseIsNotTheLocalOne,

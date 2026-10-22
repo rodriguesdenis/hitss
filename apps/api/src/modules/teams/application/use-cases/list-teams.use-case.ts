@@ -10,7 +10,6 @@ export interface ListTeamsInput extends ListTeamsCriteria {
   readonly ownerId: string;
 }
 
-/** One page of the owner's active teams, each with its task count (AC-02.2.x to AC-02.4.x). */
 @Injectable()
 export class ListTeamsUseCase {
   constructor(private readonly readModel: TeamReadModel) {}

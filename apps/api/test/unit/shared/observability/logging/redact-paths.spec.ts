@@ -5,7 +5,6 @@ import {
   REDACTED,
 } from '../../../../../src/shared/observability/logging/redact-paths';
 
-// Built at runtime with low entropy so scanners never mistake fixtures for real secrets.
 const secret = (name: string) => `${name}-value`.repeat(2);
 
 function logOf(payload: object): string {

@@ -39,9 +39,7 @@ import { UpdateTeamDto } from './dto/update-team.dto';
 import { TeamResponseDto } from './dto/team-response.dto';
 import { toTeamResponse } from './presenters/team.presenter';
 
-/** `/api/v1/teams`: private (global auth guard), always scoped to the signed-in owner. */
 @ApiTags('Teams')
-// Every route needs a bearer token and is rate limited.
 @ApiErrorResponses([401, 429])
 @Controller('teams')
 export class TeamsController {
@@ -53,10 +51,6 @@ export class TeamsController {
     private readonly listTeams: ListTeamsUseCase,
   ) {}
 
-  /**
-   * The owner's active teams, one page at a time, with search and sort (AC-02.2.x to
-   * AC-02.4.x). Foreign and deleted teams are never listed nor counted.
-   */
   @Get()
   @ApiPageEnvelope(TeamResponseDto)
   @ApiErrorResponses([400])
@@ -77,11 +71,6 @@ export class TeamsController {
     };
   }
 
-  /**
-   * One of my active teams with its task count and version (AC-02.5.1). Unknown, foreign and deleted ids
-   * all get the same 404 TEAM_NOT_FOUND (AC-02.5.2 to AC-02.5.4); a malformed id is a 400 naming
-   * `id` (AC-02.5.5), after authentication (AC-01.5.5).
-   */
   @Get(':id')
   @ApiOkEnvelope(TeamResponseDto)
   @ApiErrorResponses({
@@ -95,7 +84,6 @@ export class TeamsController {
     return toTeamResponse(await this.getTeam.execute({ ownerId, id }));
   }
 
-  /** 201 with the created team read back (same shape as every single-team response) and its `Location` (AC-02.1.1). */
   @Post()
   @HttpCode(201)
   @ApiCreatedEnvelope(TeamResponseDto)
@@ -120,10 +108,6 @@ export class TeamsController {
     return toTeamResponse(team);
   }
 
-  /**
-   * Full replacement (AC-02.6.x), last write wins (ADR-0020). Order: body validation 400 → 404 →
-   * no-op → 409. Answers the team read back.
-   */
   @Put(':id')
   @ApiOkEnvelope(TeamResponseDto)
   @ApiErrorResponses({
@@ -147,10 +131,6 @@ export class TeamsController {
     return toTeamResponse(await this.getTeam.execute({ ownerId, id }));
   }
 
-  /**
-   * Soft-deletes the team (AC-02.7.1): 204, then it is gone from get and list. Unknown, foreign
-   * and deleted ids → 404 (AC-02.7.3). Last write wins (ADR-0020).
-   */
   @Delete(':id')
   @HttpCode(204)
   @ApiNoContentResponse({ description: 'The team was deleted.' })

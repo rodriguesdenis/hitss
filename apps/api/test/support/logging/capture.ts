@@ -1,6 +1,5 @@
 import { Writable } from 'node:stream';
 
-/** In-memory pino destination: parsed JSON lines, plus the raw text for leak scans. */
 export class LogCapture extends Writable {
   private text = '';
   private readonly waiters = new Set<() => boolean>();
@@ -11,11 +10,6 @@ export class LogCapture extends Writable {
     done();
   }
 
-  /**
-   * Resolves once a line matching `predicate` exists. pino-http writes the completion line on the
-   * response's `finish` event, which can land after the client has its response, so tests wait
-   * for the line instead of reading it right away. Waiters are checked on every write.
-   */
   waitFor(
     predicate: (line: Record<string, unknown>) => boolean,
     timeoutMs = 3000,

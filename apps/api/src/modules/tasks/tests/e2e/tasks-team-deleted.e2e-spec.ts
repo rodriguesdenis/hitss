@@ -15,11 +15,6 @@ interface TaskBody {
   version: number;
 }
 
-/**
- * Deleting a team through DELETE /api/v1/teams/:id (T-003-13): its tasks survive, lose only that
- * team, and get a new version, in the same transaction as the soft delete. Edits are last write
- * wins (ADR-0020): the new version is informational.
- */
 describe('Deleting a team unassigns it from its tasks (e2e)', () => {
   const db = useTestDatabase();
   let app: INestApplication;

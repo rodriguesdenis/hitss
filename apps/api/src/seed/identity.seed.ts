@@ -2,12 +2,6 @@ import type { AuthInstance } from '../modules/identity/auth.factory';
 import type { PrismaService } from '../shared/infrastructure/prisma/prisma.service';
 import { DEMO_EMAIL, DEMO_NAME, DEMO_PASSWORD, DEMO_USER_ID } from './fixtures';
 
-/**
- * Creates the demo account through Better Auth, so the password hash is the library's own, with the
- * fixed DEMO_USER_ID (the auth instance was built with `fixedUserId`). The account is looked up by
- * that id, never by email alone: when it exists nothing is touched, so the password, the id and
- * `updated_at` stay as they were (AC-01.8.2).
- */
 export async function seedDemoUser(
   prisma: Pick<PrismaService, 'user'>,
   auth: Pick<AuthInstance, 'api'>,

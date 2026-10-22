@@ -10,11 +10,6 @@ import { createTestApp } from '@test/support/app';
 import { signUpAndSignIn } from '@test/support/auth';
 import { useTestDatabase } from '@test/support/postgres';
 
-/**
- * A team-link foreign-key violation (P2003) on the write: the directory said every
- * team was live, but one team row is not there. After the failed write the use case asks the
- * TeamLookup again and reports exactly that id; nothing is written.
- */
 describe('UNKNOWN_TEAMS after a team-link FK violation (integration)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
@@ -51,7 +46,6 @@ describe('UNKNOWN_TEAMS after a team-link FK violation (integration)', () => {
     );
     return id;
   };
-  /** The directory's check passes once, as if the team vanished right after it. */
   const checkPassesOnce = () =>
     jest
       .spyOn(app.get(TeamLookup, { strict: false }), 'findMissing')
@@ -78,7 +72,6 @@ describe('UNKNOWN_TEAMS after a team-link FK violation (integration)', () => {
 
     expect(error).toBeInstanceOf(UnknownTeams);
     expect((error as UnknownTeams).teamIds).toEqual([gone]);
-    // Asked twice: the check before the insert, then again after the failed insert.
     expect(findMissing).toHaveBeenCalledTimes(2);
     expect(await taskCount()).toBe(before);
   });

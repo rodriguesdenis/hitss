@@ -14,30 +14,19 @@ import { createLoggerParams } from '../../src/shared/observability/logging/logge
 import { LogCapture } from './logging/capture';
 
 export interface TestAppOptions {
-  /** Test-only modules mounted next to AppModule (e.g. probe controllers). */
   imports?: Type[];
-  /** Receives every pino log line of the app as JSON (e.g. for leak scans). */
   logs?: LogCapture;
-  /** Overrides of the validated config (e.g. CORS origins for one test file). */
   config?: Partial<AppConfig>;
-  /** Provider overrides (e.g. spies around the password hasher). */
   providers?: { provide: unknown; useValue: unknown }[];
-  /** Bound of the startup database probe, shorter than the 10 s default (fail-fast tests). */
   probeTimeoutMs?: number;
 }
 
-/**
- * Builds the full Nest app against the given database, configured like `main.ts`.
- * AppConfigModule validates the environment when AppModule is imported, so the container URL
- * (known only at runtime) replaces `databaseUrl` in the validated config.
- */
 export async function createTestApp(
   databaseUrl: string,
   options: TestAppOptions = {},
 ): Promise<INestApplication> {
   const config: AppConfig = {
     ...toAppConfig(validate({ ...process.env })),
-    // Out of the way unless a test sets them: suites send many requests from one address.
     rateLimitMax: 100_000,
     rateLimitIpMax: 100_000,
     ...options.config,

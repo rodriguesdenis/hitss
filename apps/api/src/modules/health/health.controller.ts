@@ -4,17 +4,10 @@ import { Public } from '../../shared/presentation/decorators/public.decorator';
 import { RawResponse } from '../../shared/presentation/decorators/raw-response.decorator';
 import { DatabaseReadiness } from './database-readiness';
 
-/** The part of the HTTP response the probe sets (the Express type is a dev dependency). */
 interface StatusResponse {
   status(code: number): unknown;
 }
 
-/**
- * Probes for the container orchestrator: public (AC-01.5.3), unwrapped, not logged or traced
- * (isProbe). Liveness touches nothing but the process (AC-06.1.1); readiness asks the database
- * and nothing else (BR-06.7), naming the failing check and nothing about the failure (AC-06.1.3).
- */
-// Probes are never throttled: the orchestrator calls them often (AC-01.7.5).
 @SkipThrottle({ ip: true, user: true })
 @Controller('health')
 export class HealthController {

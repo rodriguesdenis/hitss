@@ -42,7 +42,6 @@ describe('PrismaTeamReadModel (integration, T-002-06a, T-008-05)', () => {
       })
     ).id;
 
-  /** Inserts a team; minute `n` after T0 sets created_at (and updated_at unless given). */
   async function team(
     ownerId: string,
     name: string,
@@ -164,7 +163,6 @@ describe('PrismaTeamReadModel (integration, T-002-06a, T-008-05)', () => {
     'AC-02.2.8 lists every team exactly once across pages when keys tie (sort $field $direction)',
     async (sort) => {
       const ownerId = await newOwner();
-      // Twelve teams created and updated at one instant: only the id breaks the ties.
       const ids: string[] = [];
       for (let i = 0; i < 12; i++)
         ids.push(await team(ownerId, `Tied ${i}`, 5));
@@ -190,8 +188,6 @@ describe('PrismaTeamReadModel (integration, T-002-06a, T-008-05)', () => {
   it.each(['asc', 'desc'] as const)(
     'AC-02.2.8 lists every team exactly once across pages sorted by name (%s)',
     async (direction) => {
-      // Active names are unique per owner, case aside (teams_owner_id_lower_name_key), so a
-      // name sort has no ties to break; paging still sees every team once.
       const ownerId = await newOwner();
       for (let i = 0; i < 12; i++)
         await team(ownerId, `Team ${String(i).padStart(2, '0')}`, 5);
@@ -418,7 +414,6 @@ describe('PrismaTeamReadModel (integration, T-002-06a, T-008-05)', () => {
       const theirs = await team(stranger, 'Theirs', 1);
       await task(ownerId, [mine]);
       await task(stranger, [theirs]);
-      // A cross-owner link the API never creates (task_teams has no owner column).
       await task(stranger, [mine]);
 
       expect(await countOf(ownerId, mine)).toBe(1);
@@ -462,7 +457,6 @@ describe('PrismaTeamReadModel (integration, T-002-06a, T-008-05)', () => {
       await sql.query('ANALYZE teams');
     });
 
-    /** Captures the SQL the read model sends (Prisma query events), then EXPLAINs it. */
     async function planOf(sort: Sort<TeamSortField>): Promise<string> {
       const captured: { query: string; params: string }[] = [];
       prisma.$on('query', (event) =>
@@ -494,7 +488,6 @@ describe('PrismaTeamReadModel (integration, T-002-06a, T-008-05)', () => {
       const plan = await planOf(NEWEST_FIRST);
 
       expect(plan).toContain('"Index Name":"teams_owner_id_created_at_idx"');
-      // taskCount: one index probe per returned team, not a scan of task_teams.
       expect(plan).toContain('"Index Name":"task_teams_team_id_task_id_idx"');
       noSort(plan);
     });

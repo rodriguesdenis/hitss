@@ -21,7 +21,6 @@ import { HttpConventionsModule } from './shared/presentation/http-conventions.mo
     ObservabilityModule,
   ],
   controllers: [],
-  // Root-module provider: its shutdown hook runs after every other module's.
   providers: [GracefulExit],
 })
 export class AppModule {}

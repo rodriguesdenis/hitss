@@ -2,7 +2,6 @@ import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { CurrentOwner } from '../../../../../src/shared/presentation/decorators/current-owner.decorator';
 
-/** Runs the factory behind a param decorator, as Nest does for a handler argument. */
 function resolve(user: unknown) {
   class Probe {
     handler(@CurrentOwner() owner: unknown) {

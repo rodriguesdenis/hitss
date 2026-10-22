@@ -62,7 +62,6 @@ describe('taskCount on teams, from Task Management (e2e, T-003-14b)', () => {
     expect(response.status).toBe(204);
   };
 
-  /** taskCount per team name, from the list and from each single-team read. */
   const countsOf = async (user: TestUser) => {
     const list = await http().get(TEAMS).set('Authorization', bearerOf(user));
     expect(list.status).toBe(200);

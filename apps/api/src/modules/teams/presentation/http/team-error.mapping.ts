@@ -8,7 +8,6 @@ import {
   TeamNotFound,
 } from '../../domain/errors/team.errors';
 
-/** A domain validation error as one `{ field, message }` detail, like the validation pipe's. */
 const invalid = (
   error:
     | typeof InvalidTeamName
@@ -24,7 +23,6 @@ const invalid = (
   details: () => [{ field, message }],
 });
 
-/** Plan 002 → Error mapping; registered by TeamsModule (fixed messages, never the exception's). */
 export const TEAM_ERROR_MAPPINGS: readonly DomainErrorMapping[] = [
   invalid(
     InvalidTeamName,

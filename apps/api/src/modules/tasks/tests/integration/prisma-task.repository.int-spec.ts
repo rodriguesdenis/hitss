@@ -60,7 +60,6 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     repository,
     newOwner,
     newTeam,
-    // A random id has no teams row, so the link trips the foreign key.
     unknownTeam: () => Promise.resolve(randomUUID()),
   }));
 
@@ -80,7 +79,6 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
       repository.update(second!),
     ]);
 
-    // Last write wins (ADR-0020, AC-08.3): both writes apply, each incrementing the version.
     expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
     expect((await repository.findById(ownerId, task.id))!.version).toBe(3);
   });
@@ -90,7 +88,7 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     const team = await newTeam(ownerId);
     const task = aTask(ownerId, { teamIds: [team] });
     await repository.insert(task);
-    const gone = randomUUID(); // no teams row: the link insert trips the foreign key
+    const gone = randomUUID();
 
     task.changeStatus(TaskStatus.DONE, LATER);
     task.assignTo([team, gone], LATER);
@@ -131,7 +129,6 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     const [kept, added] = [await newTeam(ownerId), await newTeam(ownerId)];
     const task = aTask(ownerId, { teamIds: [kept] });
     await repository.insert(task);
-    // A fixed past timestamp: a re-created row would get the default (now) instead.
     const pinned = new Date('2020-01-01T00:00:00.000Z');
     const link = { taskId_teamId: { taskId: task.id, teamId: kept } };
     await prisma.taskTeam.update({ where: link, data: { createdAt: pinned } });
@@ -154,8 +151,6 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
     expect(row?.day).toBe('2026-12-31');
   });
 
-  // A test cannot change its own process's zone, so each zone runs in a child process that
-  // writes and reads through PrismaTaskRepository against this file's database.
   it.each(['Pacific/Kiritimati', 'America/Los_Angeles'])(
     'stores and loads year-edge calendar days with the process in %s',
     (zone) => {

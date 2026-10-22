@@ -26,7 +26,6 @@ interface TaskBody {
   updatedAt: string;
 }
 
-/** PATCH /api/v1/tasks/:id/status on the full AppModule, only the clock fixed. */
 describe('PATCH /api/v1/tasks/:id/status (e2e)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
@@ -58,7 +57,6 @@ describe('PATCH /api/v1/tasks/:id/status (e2e)', () => {
   const codeOf = (response: Response) =>
     (response.body as { error: { code: string } }).error.code;
 
-  /** A task at version 3, last updated (and, if DONE, completed) at EARLIER. */
   async function task(
     owner: TestUser,
     status: Status,
@@ -111,10 +109,9 @@ describe('PATCH /api/v1/tasks/:id/status (e2e)', () => {
         const response = await patch(marina, id, { status: to });
 
         expect(response.status).toBe(200);
-        expect(response.headers.etag).toBeUndefined(); // AC-08.3
+        expect(response.headers.etag).toBeUndefined();
         const body = taskOf(response);
         expect(body).toMatchObject({ status: to, version, completedAt });
-        // Updated time moves only on a real change (AC-03.10.1, AC-03.10.3).
         const updatedAt = (from === to ? EARLIER : NOW).toISOString();
         expect(body.updatedAt).toBe(updatedAt);
         expect(await stored(id)).toEqual({

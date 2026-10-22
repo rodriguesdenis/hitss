@@ -8,12 +8,6 @@ type RoutedRequest = IncomingMessage & {
 
 const templates = new WeakMap<IncomingMessage, string>();
 
-/**
- * Remembers the Express route template (`/api/v1/tasks/:id`) of a request. Express assigns
- * `req.route` for every route layer it enters and Nest's catch-all middleware route overwrites the
- * handler's, so reading `req.route` at completion would log `{/*splat}`. Wildcard routes are
- * ignored. Call before routing starts (genReqId runs first).
- */
 export function trackRouteTemplate(request: IncomingMessage): void {
   const routed = request as RoutedRequest;
   let current = routed.route;
@@ -31,7 +25,6 @@ export function trackRouteTemplate(request: IncomingMessage): void {
   });
 }
 
-/** Route template of the request, else the URL without query string (unmatched paths). */
 export function routeOf(request: IncomingMessage, url: string): string {
   return templates.get(request) ?? sanitizeUrl(url);
 }

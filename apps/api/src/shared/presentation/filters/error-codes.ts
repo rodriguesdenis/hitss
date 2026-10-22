@@ -1,9 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
 
-/**
- * Error codes owned by the shared HTTP layer (api-contracts.md → Error codes). Modules add their
- * own codes (TEAM_NOT_FOUND, …) through domain-error mappings, never here.
- */
 export const ErrorCode = {
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   UNAUTHENTICATED: 'UNAUTHENTICATED',
@@ -17,7 +13,6 @@ export interface CodeAndMessage {
   message: string;
 }
 
-/** Statuses with a contract code; any other 4xx uses its HttpStatus name (e.g. PAYLOAD_TOO_LARGE). */
 const BY_STATUS: Partial<Record<number, CodeAndMessage>> = {
   400: {
     code: ErrorCode.VALIDATION_FAILED,
@@ -33,10 +28,6 @@ export const UNEXPECTED: CodeAndMessage = {
   message: 'An unexpected error occurred.',
 };
 
-/**
- * A stable code and a fixed message for a 4xx raised by the framework or the body parser. The
- * exception's own message is never used: it can echo the path, the query string or the body.
- */
 export function describeClientError(status: number): CodeAndMessage {
   const known = BY_STATUS[status];
   if (known) {

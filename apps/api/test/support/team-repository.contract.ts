@@ -10,7 +10,6 @@ import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name
 
 export interface TeamRepositoryHarness {
   repository: TeamRepository;
-  /** An owner id the repository accepts (the Prisma adapter needs an existing user). */
   newOwner(): Promise<string>;
 }
 
@@ -29,7 +28,6 @@ export function aTeam(
     description:
       extra.description === undefined ? 'iOS & Android' : extra.description,
   };
-  // A chosen id (to provoke a duplicate key) needs restore(); create() always draws a new one.
   return extra.id === undefined
     ? Team.create({ ...values, now: CREATED })
     : Team.restore({
@@ -52,11 +50,6 @@ function rename(team: Team, name: string): Team {
   return team;
 }
 
-/**
- * Behaviour every TeamRepository must show (T-002-03). Run against the in-memory fake (unit)
- * and the Prisma adapter (integration), so handler tests on the fake mean what they say.
- * `harness` is read inside tests, after the caller's beforeAll hooks.
- */
 export function describeTeamRepositoryContract(
   harness: () => TeamRepositoryHarness,
 ): void {
@@ -169,8 +162,6 @@ export function describeTeamRepositoryContract(
         ).resolves.toBe(false);
       });
 
-      // Must agree with the lower(name) unique index: PostgreSQL lowers each code point on its
-      // own (no final-sigma rule), and İ (U+0130) lowers to a plain i.
       it.each([
         ['ΟΔΟΣ', 'οδοσ', true],
         ['ΟΔΟΣ', 'οδος', false],

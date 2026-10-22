@@ -8,27 +8,19 @@ import { seedTeams } from './teams.seed';
 
 export interface SeedDemoResult {
   seeded: boolean;
-  /** Why nothing was written; set when `seeded` is false. */
   skippedBecause?: string;
   user?: 'created' | 'existing';
   teams?: number;
-  /** Seeded teams left as they are because the evaluator owns a team with that name. */
   teamsSkipped?: number;
   tasks?: number;
 }
 
-/**
- * Seeds the demo account, its 3 teams and its 10 tasks, in dependency order. Writes nothing and
- * succeeds when the gate says so (SEED_DEMO=false or APP_ENV=production). Safe to run any number of
- * times (AC-07.2.3).
- */
 export async function seedDemo(deps: {
   config: Pick<AppConfig, 'seedDemo' | 'appEnv'>;
   prisma: Pick<
     PrismaService,
     'user' | 'team' | 'task' | 'taskTeam' | '$transaction'
   >;
-  /** Created lazily: only a run that seeds needs the auth instance. */
   auth: () => Pick<AuthInstance, 'api'>;
   now?: Date;
 }): Promise<SeedDemoResult> {

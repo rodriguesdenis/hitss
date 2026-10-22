@@ -1,6 +1,3 @@
-// Entry point of the demo seed: `node dist/seed/run.js`. Run by the container entrypoint after the
-// migrations when SEED_ON_START=true, and by `pnpm db:seed`. Idempotent; exits 0 when the gate
-// skips the demo data, non-zero on any failure. Logs counts and reasons only, never credentials.
 import pino from 'pino';
 import { loadAppConfig, loadEnvFiles } from '../config/load-config';
 import { createAuth } from '../modules/identity/auth.factory';

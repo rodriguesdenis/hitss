@@ -19,7 +19,6 @@ import {
   toNumber,
 } from './transforms';
 
-/** WHATWG URL parsing that never throws: its ERR_INVALID_URL message would echo the input. */
 export function parseUrl(value: string): URL | null {
   try {
     return new URL(value);
@@ -31,7 +30,6 @@ export function parseUrl(value: string): URL | null {
 const isHttp = (url: URL): boolean =>
   url.protocol === 'http:' || url.protocol === 'https:';
 
-/** An absolute http(s) URL without `user:password@`. */
 const isAbsoluteHttpUrl = (value: string): boolean => {
   const url = parseUrl(value);
   return (
@@ -39,10 +37,6 @@ const isAbsoluteHttpUrl = (value: string): boolean => {
   );
 };
 
-/**
- * `*` or a canonical http(s) origin (`scheme://host[:port]`, lower-case host, no default port,
- * no path or credentials), exactly as browsers send it: CORS compares origins as strings.
- */
 const isCorsOrigin = (item: string): boolean => {
   if (item === '*') {
     return true;
@@ -53,11 +47,9 @@ const isCorsOrigin = (item: string): boolean => {
 
 export interface ProxyRange {
   family: 4 | 6;
-  /** CIDR prefix length; a single address is a full-length prefix. IPv4-mapped IPv6 is IPv4. */
   prefix: number;
 }
 
-/** Parses an IPv4/IPv6 address, optionally with a CIDR prefix length (Express `trust proxy`). */
 export function parseProxy(item: string): ProxyRange | null {
   const [address = '', prefix, ...rest] = item.split('/');
   const family = isIP(address, 4) ? 4 : isIP(address, 6) ? 6 : null;
@@ -76,27 +68,17 @@ export function parseProxy(item: string): ProxyRange | null {
 
 const IPV4_MAPPED = /^::ffff:\d{1,3}(\.\d{1,3}){3}$/i;
 
-/**
- * `::ffff:a.b.c.d/N` covers IPv4 addresses only: report it as IPv4 /N-96, so `/96` (all of
- * IPv4) counts as a catch-all and production applies the IPv4 minimum. N-96 may be ≤ 0.
- */
 function asIpv4IfMapped(address: string, range: ProxyRange): ProxyRange {
   return range.family === 6 && IPV4_MAPPED.test(address)
     ? { family: 4, prefix: range.prefix - 96 }
     : range;
 }
 
-/** A /0 range would trust X-Forwarded-For from anywhere, in every environment. */
 const isNarrowerThanEverything = (item: string): boolean => {
   const range = parseProxy(item);
   return range !== null && range.prefix > 0;
 };
 
-/**
- * Schemes that must never be trusted as the app's deep-link scheme: Better Auth matches trusted
- * origins by prefix, so `http` would trust every http:// origin. `exp`/`exps` are Expo Go's,
- * added by the auth module only for local development, never through APP_SCHEME.
- */
 export const RESERVED_SCHEMES: ReadonlySet<string> = new Set([
   'http',
   'https',
@@ -115,7 +97,6 @@ export const RESERVED_SCHEMES: ReadonlySet<string> = new Set([
 const isAppScheme = (value: string): boolean =>
   /^[a-z][a-z0-9+.-]*$/.test(value) && !RESERVED_SCHEMES.has(value);
 
-/** The value is a string that passes `check`. The message never contains the value. */
 function Satisfies(
   name: string,
   check: (value: string) => boolean,
@@ -130,7 +111,6 @@ function Satisfies(
   });
 }
 
-/** Every item of a parsed list passes `check`. The message never contains a value. */
 function EveryItem(
   name: string,
   check: (item: string) => boolean,
@@ -147,13 +127,7 @@ function EveryItem(
   });
 }
 
-/**
- * Auth and security settings (spec 001, T-001-01). Inherited by `EnvironmentVariables` (and
- * inheriting the telemetry settings), so the T-007-02 `validate()` covers them; production-only
- * rules live in `production-rules.ts`.
- */
 export class AuthEnvironmentVariables extends TelemetryEnv {
-  /** Public base URL of the API, used by Better Auth for callbacks and cookies. */
   @Satisfies(
     'isAbsoluteHttpUrl',
     isAbsoluteHttpUrl,
@@ -161,7 +135,6 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   )
   BETTER_AUTH_URL: string = 'http://localhost:3000';
 
-  /** Browser origins allowed by CORS (comma-separated). */
   @Transform(toList)
   @EveryItem(
     'isCorsOriginList',
@@ -170,7 +143,6 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   )
   CORS_ORIGINS: string[] = ['http://localhost:8081'];
 
-  /** Deep-link scheme of the mobile app, trusted as an origin by Better Auth. */
   @Satisfies(
     'isAppScheme',
     isAppScheme,
@@ -178,7 +150,6 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   )
   APP_SCHEME: string = 'teamstasks';
 
-  /** Reverse proxies whose X-Forwarded-For is trusted (comma-separated IPs or CIDRs). */
   @Transform(toList)
   @EveryItem(
     'isAddressOrCidrList',
@@ -187,12 +158,10 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   )
   TRUSTED_PROXIES: string[] = [];
 
-  /** Better Auth's own rate limiter on /api/auth/*. */
   @Transform(toBoolean)
   @IsIn([true, false], isBoolean)
   AUTH_RATE_LIMIT_ENABLED: boolean = true;
 
-  /** Requests per minute per client IP, checked before authentication. */
   @Transform(toNumber)
   @IsInt(integer)
   @Min(1, { message: 'must be at least 1' })
@@ -200,7 +169,6 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   @ValidateBy({
     name: 'isAtLeastRateLimitMax',
     validator: {
-      // Checked only when both are numbers; an invalid RATE_LIMIT_MAX reports its own error.
       validate: (value: unknown, args) => {
         const userMax = (args?.object as { RATE_LIMIT_MAX?: unknown })
           .RATE_LIMIT_MAX;
@@ -218,12 +186,10 @@ export class AuthEnvironmentVariables extends TelemetryEnv {
   })
   RATE_LIMIT_IP_MAX: number = 300;
 
-  /** Create the demo account when seeding. */
   @Transform(toBoolean)
   @IsIn([true, false], isBoolean)
   SEED_DEMO: boolean = true;
 
-  /** Serve /docs and /docs/openapi.json; always off in production (see toAppConfig). */
   @Transform(toBoolean)
   @IsIn([true, false], isBoolean)
   DOCS_ENABLED: boolean = true;

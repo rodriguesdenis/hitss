@@ -16,10 +16,6 @@ import { PrismaTaskRepository } from './infrastructure/persistence/task.prisma-r
 import { TASK_ERROR_MAPPINGS } from './presentation/http/task-error.mapping';
 import { TasksController } from './presentation/http/tasks.controller';
 
-/**
- * Task Management's composition root: binds its ports to adapters and registers its error
- * table. Teams come from TeamsModule's exported TeamLookup (ADR-0020).
- */
 @Module({
   imports: [TeamsModule],
   controllers: [TasksController],

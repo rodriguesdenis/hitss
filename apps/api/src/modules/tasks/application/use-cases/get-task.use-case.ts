@@ -10,10 +10,6 @@ export interface GetTaskInput {
   readonly id: string;
 }
 
-/**
- * Reads the task, its live teams through TeamLookup and today's UTC day from the Clock.
- * Unknown, foreign and deleted → TaskNotFound (AC-03.8.2).
- */
 @Injectable()
 export class GetTaskUseCase {
   constructor(

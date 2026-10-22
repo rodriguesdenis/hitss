@@ -30,7 +30,6 @@ type ActiveSpan = () =>
   Pick<Span, 'spanContext' | 'setStatus' | 'setAttribute'> | undefined;
 
 interface HttpRequestLike {
-  /** Set by requestIdMiddleware (shared/observability/logging/request-id.ts). */
   id?: unknown;
   method?: string;
   originalUrl?: string;
@@ -46,12 +45,6 @@ interface Described {
   error: CodeAndMessage & { details?: unknown };
 }
 
-/**
- * Turns every error into the contract's `{ error: { code, message, details?, traceId } }`.
- * Unexpected errors (5xx) become a generic 500 and produce exactly one error-level log entry,
- * whose `err` is `{ name, code }` only: driver and Prisma messages can carry row values
- * (DETAIL) or URLs, so they never reach the response, the log or the span.
- */
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
   private readonly mappings: DomainErrorMappings;
@@ -129,10 +122,6 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     span?.setAttribute('error.type', name);
   }
 
-  /**
-   * The trace id when telemetry runs, otherwise the request id resolved by the middleware
-   * (never the raw X-Request-Id header, which may be unsafe).
-   */
   private traceIdOf(request: HttpRequestLike): string {
     const context = this.activeSpan()?.spanContext();
     if (context && isSpanContextValid(context)) {
@@ -153,7 +142,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-/** 4xx of an HttpException or of a body-parser (http-errors) error; anything else is unexpected. */
 function clientErrorStatus(exception: unknown): number | undefined {
   const status =
     exception instanceof HttpException
