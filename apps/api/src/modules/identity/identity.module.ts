@@ -4,16 +4,12 @@ import { PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
 import { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
 import { createAuth } from './auth.factory';
-import {
-  defaultPasswordHasher,
-  PASSWORD_HASHER,
-  PasswordHasher,
-} from './password-hasher';
+import { BetterAuthPasswordHasher, PasswordHasher } from './password-hasher';
 
 /** Provides the password hasher to the auth factory; e2e tests override it to observe calls. */
 @Module({
-  providers: [{ provide: PASSWORD_HASHER, useValue: defaultPasswordHasher }],
-  exports: [PASSWORD_HASHER],
+  providers: [{ provide: PasswordHasher, useClass: BetterAuthPasswordHasher }],
+  exports: [PasswordHasher],
 })
 export class PasswordHasherModule {}
 
@@ -28,7 +24,7 @@ export class PasswordHasherModule {}
   imports: [
     AuthModule.forRootAsync({
       imports: [PasswordHasherModule],
-      inject: [APP_CONFIG, PrismaService, PinoLogger, PASSWORD_HASHER],
+      inject: [APP_CONFIG, PrismaService, PinoLogger, PasswordHasher],
       useFactory: (
         config: AppConfig,
         prisma: PrismaService,

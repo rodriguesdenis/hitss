@@ -63,7 +63,11 @@ export function createAuth(
       minPasswordLength: 8,
       maxPasswordLength: 128,
       autoSignIn: true,
-      password: passwordHasher,
+      // Bound closures: Better Auth calls these detached from their object.
+      password: {
+        hash: (password) => passwordHasher.hash(password),
+        verify: (data) => passwordHasher.verify(data),
+      },
     },
     session: { expiresIn: SESSION_EXPIRES_IN, updateAge: SESSION_UPDATE_AGE },
     trustedOrigins: trustedOrigins(config),
