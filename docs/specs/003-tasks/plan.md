@@ -345,15 +345,15 @@ Round-trips per list request: `findMissing` (only with `teamId`) + page + count 
 
 **Query plan acceptance (T-003-09a).** On a synthetic owner with 10 000 tasks (and other owners), the integration suite asserts the plan shape (index used, no Sort node; never timing) for:
 
-| Query                                       | Expected plan                                               | Budget  |
-| ------------------------------------------- | ----------------------------------------------------------- | ------- |
-| default list (`-createdAt`, limit 20)       | Index Scan on `tasks_owner_created_idx`, Limit, no Sort     | < 2 ms  |
-| `status=PENDING` + default sort             | Index Scan on `tasks_owner_status_created_idx`, no Sort     | < 2 ms  |
-| `status=PENDING,IN_PROGRESS` + default sort | Bitmap/Index Scan on status index + top-N heapsort          | < 10 ms |
-| `search=login`                              | BitmapOr on `tasks_search_trgm_idx` + owner recheck         | < 10 ms |
-| `teamId=…`                                  | Nested Loop / Semi Join via `task_teams (team_id, task_id)` | < 10 ms |
+| Query                                       | Expected plan                                                | Budget  |
+| ------------------------------------------- | ------------------------------------------------------------ | ------- |
+| default list (`-createdAt`, limit 20)       | Index Scan on `tasks_owner_created_idx`, Limit, no Sort      | < 2 ms  |
+| `status=PENDING` + default sort             | Index Scan on `tasks_owner_status_created_idx`, no Sort      | < 2 ms  |
+| `status=PENDING,IN_PROGRESS` + default sort | Bitmap/Index Scan on status index + top-N heapsort           | < 10 ms |
+| `search=login`                              | `tasks_search_trgm_idx` can serve both ILIKE arms (BitmapOr) | < 10 ms |
+| `teamId=…`                                  | Nested Loop / Semi Join via `task_teams (team_id, task_id)`  | < 10 ms |
 
-No `Seq Scan on tasks` in any of them.
+No `Seq Scan on tasks` in any of them. For search, the requirement is that the trigram index _can_ serve both `ILIKE` arms (proven with the owner indexes dropped in a rolled-back transaction), not that the planner picks it: for `LIMIT 20` it may prefer walking the owner index with a filter, because it cannot estimate how rare the term is (decided with the architect, T-003-09a).
 
 ### Seed (`prisma/seed/tasks.seed.ts`, called by the `prisma/seed.ts` orchestrator of T-007-07)
 
