@@ -118,6 +118,7 @@ describe('OpenTelemetry bootstrap (AC-08.7)', () => {
   beforeEach(() => {
     receiver.spans.length = 0;
     receiver.bodies.clear();
+    receiver.requests = 0;
   });
   afterAll(async () => {
     running.forEach((a) => a.child.kill('SIGKILL'));
