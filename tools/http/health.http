@@ -1,0 +1,8 @@
+# Health requests (VS Code REST Client / JetBrains HTTP Client).
+@baseUrl = http://localhost:3000
+
+### Liveness
+GET {{baseUrl}}/api/v1/health/live
+
+### Readiness
+GET {{baseUrl}}/api/v1/health/ready

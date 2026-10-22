@@ -59,6 +59,14 @@ assert_http_up "$API_PORT"
 # TODO(T-001-08, T-006-03, T-007-07): assert GET /api/v1/health/ready is 200, /docs is 200, sign in
 # as the demo user and check 3 teams and 10 tasks (AC-07.6.8) once those routes and the seed exist.
 
+log 'the request collection passes against the freshly seeded stack (AC-07.4.4)'
+node tools/ci/request-parity.mjs
+# Pinned Bruno CLI (npm, published more than two weeks before it was pinned). The demo password
+# is the documented public one; the collection keeps it out of its files as a secret variable.
+(cd tools/bruno/teams-tasks && npx --yes @usebruno/cli@4.2.1 run --env local \
+  --env-var "baseUrl=http://127.0.0.1:$API_PORT" --env-var 'demoPassword=Demo@1234') \
+  || fail 'the Bruno collection has failing requests or assertions'
+
 log 'the API image is unprivileged and minimal (AC-07.1.6)'
 [ "$(docker compose exec -T api id -u)" != 0 ] || fail 'the API runs as root'
 docker compose exec -T api sh -c '
