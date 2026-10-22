@@ -155,17 +155,17 @@ Telemetry is optional: without a collector the API starts and serves normally an
 
 `make` is optional; every alias echoes the plain command it runs, so the same works without it. `make` with no target lists them.
 
-| Goal                                   | Alias              | Plain command                         |
-| -------------------------------------- | ------------------ | ------------------------------------- |
-| Build and start everything, wait ready | `make up`          | `docker compose up -d --build --wait` |
-| Stop (keeps the database volume)       | `make down`        | `docker compose down`                 |
-| Follow the API logs                    | `make logs`        | `docker compose logs -f api`          |
-| Drop the data and start from scratch   | `make reset`       | `docker compose down -v` then `up`    |
-| Re-apply the demo data                 | `make seed`        | `docker compose exec api …` (echoed)  |
-| Unit tests on the host                 | `make test`        | `pnpm test`                           |
-| Every suite (needs Docker)             | `make test-all`    | `pnpm test:all`                       |
-| Unit tests in a throwaway container    | `make test-docker` | echoed by make                        |
-| Fresh-stack smoke test                 | `make smoke`       | `tools/ci/compose-smoke.sh`           |
+| Goal                                                                            | Alias              | Plain command                         |
+| ------------------------------------------------------------------------------- | ------------------ | ------------------------------------- |
+| Build and start everything, wait ready                                          | `make up`          | `docker compose up -d --build --wait` |
+| Stop (keeps the database volume)                                                | `make down`        | `docker compose down`                 |
+| Follow the API logs                                                             | `make logs`        | `docker compose logs -f api`          |
+| Drop the data and start from scratch                                            | `make reset`       | `docker compose down -v` then `up`    |
+| Re-apply the demo data                                                          | `make seed`        | `docker compose exec api …` (echoed)  |
+| Unit tests on the host                                                          | `make test`        | `pnpm test`                           |
+| Every suite (needs Docker)                                                      | `make test-all`    | `pnpm test:all`                       |
+| Unit tests in a throwaway container                                             | `make test-docker` | echoed by make                        |
+| Fresh-stack smoke test (stop the dev stack first: it needs ports 3000 and 5432) | `make smoke`       | `tools/ci/compose-smoke.sh`           |
 
 Root scripts for the host toolchain (Node ≥ 24, pnpm 10): `pnpm start` / `pnpm stop` (compose up and down), `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:all`, `pnpm format`. More commands and failure handling: [runbook](docs/operations/runbook.md).
 
@@ -177,15 +177,15 @@ Stop, reset, logs, re-seed and common failures: [runbook](docs/operations/runboo
 
 Base URL `http://localhost:3000`; business routes under `/api/v1`, authentication under `/api/auth` (Better Auth, its native format). Full contract: [API contracts](docs/architecture/api-contracts.md) and Swagger UI at `/docs` (served while `DOCS_ENABLED`: on by default locally, always off in production).
 
-| Topic       | Rule                                                                                                                                                                                                                     |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Auth        | Sign up or in at `/api/auth/sign-up/email` · `/sign-in/email`; send `Authorization: Bearer <token>` (mobile) or the session cookie (web). Every `/api/v1/*` route needs one, except the health probes                    |
-| Success     | `{ "data": <resource or array>, "meta"?: { total, limit, offset, hasNextPage } }`                                                                                                                                        |
-| Errors      | `{ "error": { "code": "VALIDATION_FAILED", "message": "…", "details"?: […], "traceId": "…" } }`: 400, 401, 403, 404, 409, 412, 415, 422, 429, 500                                                                        |
-| Concurrency | Today `ETag: W/"<version>"` on `POST /teams` and `GET /tasks/:id`. **Planned** (rest of the teams and tasks tasks): the same on every single-resource response, and `If-Match` on `PUT`/`PATCH`/`DELETE` (stale → `412`) |
-| Retries     | **Planned** (T-002-05, deferred): `POST` accepts `Idempotency-Key` and replays the first response for the same key and body                                                                                              |
-| Limits      | Per client address before authentication and per user after (`429 RATE_LIMITED` + `Retry-After`); `/api/auth/*` bodies over 16 kB → `413`                                                                                |
-| Correlation | Every response has `X-Request-Id`; error envelopes carry the `traceId` of the request's trace                                                                                                                            |
+| Topic       | Rule                                                                                                                                                                                                                                                |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth        | Sign up or in at `/api/auth/sign-up/email` · `/sign-in/email`; send `Authorization: Bearer <token>` (mobile) or the session cookie (web). Every `/api/v1/*` route needs one, except the health probes                                               |
+| Success     | `{ "data": <resource or array>, "meta"?: { total, limit, offset, hasNextPage } }`                                                                                                                                                                   |
+| Errors      | `{ "error": { "code": "VALIDATION_FAILED", "message": "…", "details"?: […], "traceId": "…" } }`: 400, 401, 403, 404, 409, 412, 415, 422, 429, 500                                                                                                   |
+| Concurrency | `ETag: W/"<version>"` on every single-resource response (lists and `204` carry none). `If-Match` is honored on `PUT`/`DELETE /teams/:id` (stale → `412`); for tasks it is **not read yet** (T-003-17, deferred), so task writes are last-write-wins |
+| Retries     | **Planned** (T-002-05, deferred): `POST` accepts `Idempotency-Key` and replays the first response for the same key and body                                                                                                                         |
+| Limits      | Per client address before authentication and per user after (`429 RATE_LIMITED` + `Retry-After`); `/api/auth/*` bodies over 16 kB → `413`                                                                                                           |
+| Correlation | Every response has `X-Request-Id`; error envelopes carry the `traceId` of the request's trace                                                                                                                                                       |
 
 Implemented: teams (list, create, get, replace, delete), tasks (list with filters, search and sort; create, get, replace, change status, delete), `GET /api/v1/health/live` and `/ready`, and the four `/api/auth` routes (sign-up, sign-in, sign-out, get-session). Remaining contract items are tracked in specs [002](docs/specs/002-teams/tasks.md) and [003](docs/specs/003-tasks/tasks.md).
 
@@ -227,7 +227,7 @@ curl -s -X POST $API/api/v1/tasks -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"title":"Write release notes","dueDate":"2026-11-05","teamIds":["<teamA>","<teamB>"]}'
 
-# Quick action: mark as done (with optimistic concurrency)
+# Quick action: mark as done (task If-Match is accepted but not checked yet, T-003-17)
 curl -s -X PATCH $API/api/v1/tasks/<taskId>/status -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -H 'If-Match: W/"3"' \
   -d '{"status":"DONE"}'

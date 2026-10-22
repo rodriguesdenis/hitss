@@ -2,7 +2,7 @@
 
 How the API is instrumented, how to see the signals locally, and what to chart and alert on. Design and tasks: [spec 006](../specs/006-observability/spec.md) · [plan](../specs/006-observability/plan.md) · [ADR-0013](../architecture/adr/0013-opentelemetry-and-signoz.md).
 
-> Observability is **optional at runtime**. `docker compose up` runs without any telemetry backend; the API silently drops telemetry it cannot export. Turn telemetry off completely with `OTEL_SDK_DISABLED=true`.
+> Observability is **optional at runtime**. `docker compose up` runs without any telemetry backend; the API drops telemetry it cannot export (it logs at most one `[telemetry]` warning per minute). Turn telemetry off completely with `OTEL_SDK_DISABLED=true`.
 
 ## Signals at a glance
 

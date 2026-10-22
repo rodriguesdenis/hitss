@@ -69,6 +69,7 @@ Order matters; each task is one PR. Sizes: **S** < 150 changed lines, **M** < 40
 
 ## T-006-08 — Operations docs final pass
 
+- **Status:** done
 - **Goal:** docs match reality (ports, commands, signal names, screenshots).
 - **Changes:** `docs/operations/observability.md`, `runbook.md`, `production-readiness.md`; README link (via T-007-15).
 - **Covers:** @AC-06.8.1, @AC-06.8.2, @AC-06.8.3
