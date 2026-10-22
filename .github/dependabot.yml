@@ -45,8 +45,14 @@ updates:
       interval: weekly
     commit-message:
       prefix: 'ci'
-  # Container base images. docker-compose.yml covers postgres today; Dockerfile entries
-  # (apps/api, apps/mobile) are added with T-007-04 and T-007-13.
+  # Container base images: the API Dockerfile (node image pinned by minor and digest) and the
+  # compose images. The mobile Dockerfile entry is added with T-007-13.
+  - package-ecosystem: docker
+    directory: /apps/api
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'build(infra)'
   - package-ecosystem: docker-compose
     directory: /
     schedule:

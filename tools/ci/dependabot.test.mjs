@@ -12,7 +12,12 @@ const updates = config.updates;
 describe('.github/dependabot.yml', () => {
   it('AC-07.9.3 covers packages, pipeline actions and container images, weekly', () => {
     const ecosystems = updates.map((u) => u['package-ecosystem']);
-    for (const wanted of ['npm', 'github-actions', 'docker-compose']) {
+    for (const wanted of [
+      'npm',
+      'github-actions',
+      'docker',
+      'docker-compose',
+    ]) {
       assert.ok(ecosystems.includes(wanted), `${wanted} missing`);
     }
     for (const update of updates) {
@@ -58,5 +63,11 @@ describe('.github/dependabot.yml', () => {
         'version-update:semver-minor',
       ]);
     }
+  });
+
+  it('AC-07.9.3 watches the API Dockerfile base image', () => {
+    const docker = updates.find((u) => u['package-ecosystem'] === 'docker');
+    assert.equal(docker.directory, '/apps/api');
+    assert.equal(docker['commit-message'].prefix, 'build(infra)');
   });
 });
