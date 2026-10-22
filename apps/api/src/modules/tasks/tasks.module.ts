@@ -1,6 +1,5 @@
 import { Module, OnModuleInit } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
-import { metrics } from '@opentelemetry/api';
 import { Clock } from '../../shared/application/ports/clock';
 import { IdGenerator } from '../../shared/application/ports/id-generator';
 import { SystemClock } from '../../shared/infrastructure/system-clock';
@@ -11,17 +10,11 @@ import { ReplaceTaskHandler } from './application/commands/replace-task/replace-
 import { DeleteTaskHandler } from './application/commands/delete-task/delete-task.handler';
 import { CreateTaskHandler } from './application/commands/create-task/create-task.handler';
 import { OnTeamDeletedHandler } from './application/events/on-team-deleted.handler';
-import { TASK_METRICS_HANDLERS } from './application/events/record-task-metrics.handler';
-import { TaskMetrics } from './application/ports/task-metrics';
 import { TaskReadModel } from './application/ports/task.read-model';
 import { TeamDirectory } from './application/ports/team-directory';
 import { CountTasksByTeamHandler } from './application/queries/count-tasks-by-team/count-tasks-by-team.handler';
 import { ListTasksHandler } from './application/queries/list-tasks/list-tasks.handler';
 import { GetTaskHandler } from './application/queries/get-task/get-task.handler';
-import {
-  METER_NAME,
-  OtelTaskMetrics,
-} from './infrastructure/adapters/otel-task-metrics.adapter';
 import { QueryBusTeamDirectory } from './infrastructure/adapters/team-directory.adapter';
 import { TaskRepository } from './domain/task.repository';
 import { PrismaTaskReadModel } from './infrastructure/prisma-task.read-model';
@@ -46,13 +39,8 @@ import { TasksController } from './presentation/tasks.controller';
     ListTasksHandler,
     // Public: answers CountTasksByTeamQuery (contracts/) for Team Management's taskCount.
     CountTasksByTeamHandler,
-    ...TASK_METRICS_HANDLERS,
     // In DeleteTeam's transaction (@InTransactionHandler(TeamDeleted), T-003-13).
     OnTeamDeletedHandler,
-    {
-      provide: TaskMetrics,
-      useFactory: () => new OtelTaskMetrics(metrics.getMeter(METER_NAME)),
-    },
     { provide: TaskRepository, useClass: PrismaTaskRepository },
     { provide: TaskReadModel, useClass: PrismaTaskReadModel },
     // Team names and colors come from Team Management through the QueryBus (T-003-05).

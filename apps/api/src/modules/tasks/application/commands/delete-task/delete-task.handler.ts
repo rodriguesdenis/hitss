@@ -1,7 +1,6 @@
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
 import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { TaskNotFound } from '../../../domain/task.errors';
 import { TaskRepository } from '../../../domain/task.repository';
 import { DeleteTaskCommand } from './delete-task.command';
@@ -22,8 +21,6 @@ export class DeleteTaskHandler implements ICommandHandler<
     private readonly events: EventBus,
     private readonly clock: Clock,
   ) {}
-
-  @Traced()
   async execute(command: DeleteTaskCommand): Promise<void> {
     try {
       await this.attempt(command);

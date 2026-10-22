@@ -1,5 +1,4 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import {
   CountTasksByTeamQuery,
   TaskCountsByTeam,
@@ -13,8 +12,6 @@ export class CountTasksByTeamHandler implements IQueryHandler<
   TaskCountsByTeam
 > {
   constructor(private readonly readModel: TaskReadModel) {}
-
-  @Traced()
   execute({
     ownerId,
     teamIds,

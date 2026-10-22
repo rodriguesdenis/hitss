@@ -1,7 +1,6 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
 import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import {
   TeamNameAlreadyExists,
   TeamNotFound,
@@ -29,8 +28,6 @@ export class ReplaceTeamHandler implements ICommandHandler<
     private readonly teams: TeamRepository,
     private readonly clock: Clock,
   ) {}
-
-  @Traced()
   async execute(command: ReplaceTeamCommand): Promise<{ id: string }> {
     try {
       return await this.attempt(command);

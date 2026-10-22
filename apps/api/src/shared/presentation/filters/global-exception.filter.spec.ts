@@ -272,7 +272,7 @@ describe('GlobalExceptionFilter', () => {
   });
 
   describe('unexpected errors', () => {
-    it('→ 500 INTERNAL_ERROR with a generic message, even for an unmapped domain error', () => {
+    it('AC-06.3.4 → 500 INTERNAL_ERROR with a generic message, even for an unmapped domain error', () => {
       for (const exception of [
         new Error('boom'),
         new UnmappedDomainError(),
@@ -373,7 +373,7 @@ describe('GlobalExceptionFilter', () => {
       expect(traceId).not.toContain('script');
     });
 
-    it('is the active span trace id when it is valid, otherwise the request id', () => {
+    it('AC-06.2.4 is the active span trace id when it is valid, otherwise the request id', () => {
       expect(run(new NotFoundException()).sent.body?.error.traceId).toBe(
         REQUEST_ID,
       );

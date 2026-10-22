@@ -1,4 +1,3 @@
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { TeamNotFound } from '../../../domain/team.errors';
 import { TeamTaskCounts } from '../../ports/team-task-counts';
@@ -16,8 +15,6 @@ export class GetTeamHandler implements IQueryHandler<
     private readonly readModel: TeamReadModel,
     private readonly taskCounts: TeamTaskCounts,
   ) {}
-
-  @Traced()
   async execute({ ownerId, id }: GetTeamQuery): Promise<TeamDetails> {
     const view = await this.readModel.findById(ownerId, id);
     if (!view) {
