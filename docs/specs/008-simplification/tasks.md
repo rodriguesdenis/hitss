@@ -51,9 +51,11 @@ Each task is one PR. The brief's e2e contract stays green on every PR. Order: T-
 
 ## T-008-06 — Tasks module, new layout, single-transaction delete
 
+- **Status:** done
 - **Goal:** tasks follows the layout; `DeleteTeam` is one Prisma transaction (AC-08.4); no `nestjs-cls` (AC-08.5).
 - **Changes:** tasks moved like teams; `TeamDirectory` adapter → `TeamLookup`; `DeleteTeam` use case: `prisma.$transaction` soft-deleting the team and deleting its `task_teams` rows; remove the unit of work, two-phase publisher, `@InTransactionHandler`, `OnTeamDeletedHandler`, the advisory lock, `tasks/contracts/` and the `nestjs-cls` packages; integration test for the transaction rollback.
 - **Done when:** tasks unit/integration/e2e green, incl. team-delete unassignment; the rollback test passes; no `nestjs-cls` import.
+- **Delivered:** tasks mirrors teams (`domain/{entities,errors,policies,repositories,value-objects}`, `application/{ports/task.read-model.ts, use-cases/, views/}`, `presentation/http/`, `infrastructure/persistence/`), with the read port kept like teams (views, not entities). Use cases inject `TeamLookup` directly; the `TeamDirectory` port and adapter are gone. `TeamRepository.delete` runs one `prisma.$transaction`: soft delete (version + 1), **one set-based `UPDATE`** bumping `version` and `updated_at` of the owner's live tasks linked to the team (AC-03.13.4 kept, Maestro decision), then `DELETE FROM task_teams WHERE team_id`. Domain events (`TaskCreated`, `TaskStatusChanged`, `TaskDeleted`, `TeamDeleted`) had no consumer left and are removed with `Task.unassignTeam`, `TaskTeamIds.without` and `findByTeam`. Also removed: `shared/infrastructure/transactions/*`, the `UnitOfWork`, `DomainEventPublisher` and in-transaction handler ports, and the three `nestjs-cls` packages. `IdGenerator` is gone from tasks (`Task.create()` draws `crypto.randomUUID()`). The rollback test fails the last statement with a test-only trigger.
 
 ## T-008-07 — Remove `@nestjs/cqrs`, update architecture rules
 
