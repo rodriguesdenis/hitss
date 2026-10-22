@@ -2,5 +2,21 @@
   {
     "ac": "AC-07.1.2",
     "reason": "T-007-04 delivers the ordering (depends_on service_healthy, up --wait) but the readiness check is still an interim TCP probe; the readiness route lands with T-001-08 / T-006-03 and gets the AC's test then (compose-smoke covers the stack coming up healthy)."
+  },
+  {
+    "ac": "AC-01.2.5",
+    "reason": "Superseded by 008 (ADR-0020, T-008-02): /api/v1 is Bearer-only, so a session cookie alone answers 401 (AC-08.2 has the test)."
+  },
+  {
+    "ac": "AC-01.5.8",
+    "reason": "Superseded by 008 (ADR-0020, T-008-02): no cookie auth on /api/v1, so the Origin/CSRF check and its tests were removed."
+  },
+  {
+    "ac": "AC-01.5.9",
+    "reason": "Superseded by 008 (ADR-0020, T-008-02): the JSON-only body guard (415) was removed with cookie auth on /api/v1."
+  },
+  {
+    "ac": "AC-01.5.10",
+    "reason": "Superseded by 008 (ADR-0020, T-008-02): with Bearer-only auth there are no CSRF checks left to exempt bearer requests from."
   }
 ]
