@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { expo } from '@better-auth/expo';
 import { type Auth, betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
@@ -50,12 +51,22 @@ function summarize(error: unknown): { name: string; code?: string } {
  */
 export type AuthInstance = Pick<Auth, 'handler' | 'api' | 'options'>;
 
+export interface CreateAuthOptions {
+  /**
+   * Gives the next created user this id (the demo seed, T-007-07). Every other id stays a random
+   * UUID. A user id returned from `databaseHooks.user.create.before` is dropped by the Prisma
+   * adapter on PostgreSQL, so the id generator is the supported way.
+   */
+  fixedUserId?: string;
+}
+
 /** The Better Auth instance mounted at /api/auth (ADR-0007, plan 001 → Better Auth configuration). */
 export function createAuth(
   config: AppConfig,
   prisma: PrismaService,
   logger: AuthLoggerTarget,
   passwordHasher: PasswordHasher,
+  options: CreateAuthOptions = {},
 ): AuthInstance {
   return betterAuth({
     appName: 'Teams & Tasks',
@@ -98,7 +109,12 @@ export function createAuth(
       // would not exercise what production runs (AC-01.2.8).
       disableOriginCheck: false,
       disableCSRFCheck: false,
-      database: { generateId: 'uuid' },
+      database: {
+        generateId: options.fixedUserId
+          ? ({ model }: { model: string }) =>
+              model === 'user' ? (options.fixedUserId as string) : randomUUID()
+          : 'uuid',
+      },
       // Written only by clientIpMiddleware (any client-sent value is dropped first, AC-01.7.6).
       ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
       useSecureCookies: config.appEnv === 'production',

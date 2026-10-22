@@ -16,18 +16,13 @@ const TARGETS = [
   'down',
   'logs',
   'reset',
+  'seed',
   'test',
   'test-all',
   'test-docker',
   'smoke',
 ];
-const PENDING = [
-  'seed',
-  'observability',
-  'observability-down',
-  'mobile',
-  'load',
-];
+const PENDING = ['observability', 'observability-down', 'mobile', 'load'];
 
 const make = (...args) =>
   spawnSync('make', args, { cwd: root, encoding: 'utf8' });

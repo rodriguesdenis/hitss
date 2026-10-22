@@ -79,6 +79,7 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 - **Changes:** `apps/api/prisma/seed.ts` (orchestrator: gate, then calls `identity.seed.ts` from 001 → `teams.seed.ts` from 002 → tasks seed from 003; the demo user is created via `auth.api.signUpEmail` with the fixed `DEMO_USER_ID` set by `databaseHooks.user.create.before`, checked by id, never looked up by email alone), `apps/api/package.json` (`db:seed`, `db:reset`, `prisma.seed`), seed integration test. Team colors as in 002: Mobile `#7C3AED`, Backend `#0EA5E9`, Design `#F59E0B`.
 - **Covers:** @AC-07.2.1, @AC-07.2.2, @AC-07.2.3, @AC-07.2.4, @AC-07.2.5, @AC-07.2.6, @AC-07.1.3
 - **Done when:** integration test: seed ×2 → identical snapshot; rename "Mobile" + own task → re-seed restores "Mobile", keeps own task; reset → exactly 3/10; the demo user's id equals `DEMO_USER_ID` and sign-in works; `SEED_ON_START=false` → seed step not run; `SEED_DEMO=false` or `APP_ENV=production` → no user, team or task written and exit code 0. Also: move the `seed` alias from the “Not available yet” block of `make help` to a real `##` target in the Makefile, and add it to the CI `make -n` list and to `tools/ci/makefile.test.mjs`.
+- **Status:** done
 
 ## T-007-08 — Root scripts and Makefile
 
