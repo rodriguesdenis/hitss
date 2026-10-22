@@ -2,8 +2,11 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { metrics } from '@opentelemetry/api';
 import { Clock } from '../../shared/application/ports/clock';
+import { IdGenerator } from '../../shared/application/ports/id-generator';
 import { SystemClock } from '../../shared/infrastructure/system-clock';
+import { UuidGenerator } from '../../shared/infrastructure/uuid-generator';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
+import { CreateTaskHandler } from './application/commands/create-task/create-task.handler';
 import { TASK_METRICS_HANDLERS } from './application/events/record-task-metrics.handler';
 import { TaskMetrics } from './application/ports/task-metrics';
 import { TaskReadModel } from './application/ports/task.read-model';
@@ -14,7 +17,9 @@ import {
   OtelTaskMetrics,
 } from './infrastructure/adapters/otel-task-metrics.adapter';
 import { QueryBusTeamDirectory } from './infrastructure/adapters/team-directory.adapter';
+import { TaskRepository } from './domain/task.repository';
 import { PrismaTaskReadModel } from './infrastructure/prisma-task.read-model';
+import { PrismaTaskRepository } from './infrastructure/prisma-task.repository';
 import { TASK_ERROR_MAPPINGS } from './presentation/task-error.mapping';
 import { TasksController } from './presentation/tasks.controller';
 
@@ -27,16 +32,19 @@ import { TasksController } from './presentation/tasks.controller';
   imports: [CqrsModule],
   controllers: [TasksController],
   providers: [
+    CreateTaskHandler,
     GetTaskHandler,
     ...TASK_METRICS_HANDLERS,
     {
       provide: TaskMetrics,
       useFactory: () => new OtelTaskMetrics(metrics.getMeter(METER_NAME)),
     },
+    { provide: TaskRepository, useClass: PrismaTaskRepository },
     { provide: TaskReadModel, useClass: PrismaTaskReadModel },
     // Team names and colors come from Team Management through the QueryBus (T-003-05).
     { provide: TeamDirectory, useClass: QueryBusTeamDirectory },
     { provide: Clock, useClass: SystemClock },
+    { provide: IdGenerator, useClass: UuidGenerator },
   ],
 })
 export class TasksModule implements OnModuleInit {

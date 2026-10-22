@@ -94,6 +94,8 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-07 — Add `CreateTask` command and `POST /tasks`
 
+- **Status:** done
+- **Owner:** Strata (database specialist; reassigned by the Maestro).
 - **Goal:** capture tasks with validation and team assignment.
 - **Changes:** `commands/create-task/*`; `dto/create-task.dto.ts` (+ `IsCalendarDate` validator, `\p{Cc}` rules, `@ArrayMaxSize(100)` on `teamIds`); controller POST (`201`, `Location`, `ETag`); e2e + handler specs.
 - **Covers:** @AC-03.1.1 – @AC-03.1.8, @AC-03.12.3 (create), @AC-03.12.5 (create), @AC-03.12.6, `@AC-01.6.4 @AC-01.6.6 @AC-01.6.5` (task create rows).
