@@ -19,13 +19,14 @@ describe('corsOptions', () => {
       expect(corsOptions(origins)).toEqual({
         origin: '*',
         credentials: false,
+        allowedHeaders: ALLOWED_HEADERS,
         exposedHeaders: EXPOSED_HEADERS,
         maxAge: 600,
       });
     },
   );
 
-  it('Lynx #36: an allowlist allows only the API request headers, never expo-origin', () => {
+  it('Lynx #36: both modes allow only the API request headers, never expo-origin', () => {
     expect(ALLOWED_HEADERS.map((header) => header.toLowerCase())).toEqual([
       'content-type',
       'authorization',
@@ -36,6 +37,7 @@ describe('corsOptions', () => {
     expect(corsOptions(['https://app.example.test'])?.allowedHeaders).toBe(
       ALLOWED_HEADERS,
     );
+    expect(corsOptions(['*'])?.allowedHeaders).toBe(ALLOWED_HEADERS);
   });
 
   it('PR #29: an empty list means no CORS at all (nothing to register)', () => {
@@ -49,6 +51,7 @@ describe('corsOptions', () => {
       'Location',
       'X-Request-Id',
       'Retry-After',
+      'X-Retry-After',
       'Idempotent-Replayed',
     ]);
   });
