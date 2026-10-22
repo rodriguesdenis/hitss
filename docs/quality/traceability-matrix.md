@@ -13,7 +13,7 @@ Brief requirement → epic → story (priority) → acceptance criteria → scen
 | `MUST` ACs (with scenario / with task / total)   | 225 / 225 / 225 |
 | `SHOULD` ACs (with scenario / with task / total) | 38 / 38 / 38    |
 | `COULD` ACs (with scenario / with task / total)  | 138 / 138 / 138 |
-| Tasks                                            | 115             |
+| Tasks                                            | 116             |
 
 ## Gaps and findings
 
@@ -147,7 +147,7 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 | AC-01.6.2 | `auth.feature` › A user only ever sees and changes their own data › Another user's resource looks like it does not exist                                                                                                                                             | unit+e2e | T-001-09, T-002-07                                         |
 | AC-01.6.3 | `auth.feature` › A user only ever sees and changes their own data › I cannot change another user's resource                                                                                                                                                          | unit+e2e | T-001-09, T-002-08, T-002-09                               |
 | AC-01.6.4 | `auth.feature` › A user only ever sees and changes their own data › The owner cannot be chosen by the client                                                                                                                                                         | unit+e2e | T-001-03, T-001-09, T-002-04, T-003-07                     |
-| AC-01.6.5 | `auth.feature` › A user only ever sees and changes their own data › Another user's team behaves as an unknown team                                                                                                                                                   | unit+e2e | T-001-09, T-002-10, T-003-05, T-003-07                     |
+| AC-01.6.5 | `auth.feature` › A user only ever sees and changes their own data › Another user's team behaves as an unknown team                                                                                                                                                   | unit+e2e | T-001-09, T-002-10a, T-003-05, T-003-07                    |
 | AC-01.6.6 | `auth.feature` › A user only ever sees and changes their own data › Server-managed and prototype fields are rejected on create and update<br>`auth.feature` › A user only ever sees and changes their own data › An owner given as an object is rejected, not merged | unit+e2e | T-001-03, T-001-09, T-002-04, T-002-08, T-003-07, T-003-10 |
 
 **US-01.7 — Protection against brute force and abuse** (`COULD`) · epic EP-01
@@ -252,20 +252,20 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 
 **US-02.7 — Delete a team** (`MUST`) · epic EP-02
 
-| AC        | Scenarios (file › rule › scenario)                                                                                         | Level    | Tasks                        |
-| --------- | -------------------------------------------------------------------------------------------------------------------------- | -------- | ---------------------------- |
-| AC-02.7.1 | `teams.feature` › Deleting a team archives it and keeps its tasks › Delete a team                                          | e2e      | T-002-09                     |
-| AC-02.7.2 | `teams.feature` › Deleting a team archives it and keeps its tasks › Tasks survive and are unassigned from the deleted team | e2e      | T-002-09, T-002-10, T-003-13 |
-| AC-02.7.3 | `teams.feature` › Deleting a team archives it and keeps its tasks › Deleting a team that is not mine or no longer exists   | unit+e2e | T-002-09                     |
-| AC-02.7.4 | `teams.feature` › Deleting a team archives it and keeps its tasks › Deletion is all or nothing                             | e2e      | T-002-09                     |
+| AC        | Scenarios (file › rule › scenario)                                                                                         | Level    | Tasks                         |
+| --------- | -------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------- |
+| AC-02.7.1 | `teams.feature` › Deleting a team archives it and keeps its tasks › Delete a team                                          | e2e      | T-002-09                      |
+| AC-02.7.2 | `teams.feature` › Deleting a team archives it and keeps its tasks › Tasks survive and are unassigned from the deleted team | e2e      | T-002-09, T-002-10b, T-003-13 |
+| AC-02.7.3 | `teams.feature` › Deleting a team archives it and keeps its tasks › Deleting a team that is not mine or no longer exists   | unit+e2e | T-002-09                      |
+| AC-02.7.4 | `teams.feature` › Deleting a team archives it and keeps its tasks › Deletion is all or nothing                             | e2e      | T-002-09                      |
 
 **US-02.8 — See how many tasks a team has** (`COULD`) · epic EP-02
 
-| AC        | Scenarios (file › rule › scenario)                                                                                | Level    | Tasks                          |
-| --------- | ----------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------ |
-| AC-02.8.1 | `teams.feature` › Each team shows how many active tasks it has › Task count counts active tasks of any status     | e2e      | T-002-10, T-003-14a, T-003-14b |
-| AC-02.8.2 | `teams.feature` › Each team shows how many active tasks it has › Task count decreases when a task leaves the team | unit+e2e | T-002-10, T-003-14a, T-003-14b |
-| AC-02.8.3 | `teams.feature` › Each team shows how many active tasks it has › A new team has no tasks                          | e2e      | T-002-04                       |
+| AC        | Scenarios (file › rule › scenario)                                                                                | Level    | Tasks                           |
+| --------- | ----------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------- |
+| AC-02.8.1 | `teams.feature` › Each team shows how many active tasks it has › Task count counts active tasks of any status     | e2e      | T-002-10b, T-003-14a, T-003-14b |
+| AC-02.8.2 | `teams.feature` › Each team shows how many active tasks it has › Task count decreases when a task leaves the team | unit+e2e | T-002-10b, T-003-14a, T-003-14b |
+| AC-02.8.3 | `teams.feature` › Each team shows how many active tasks it has › A new team has no tasks                          | e2e      | T-002-04                        |
 
 **US-02.9 — Edit safely when another device changed the team** (`COULD`) · epic EP-02
 
