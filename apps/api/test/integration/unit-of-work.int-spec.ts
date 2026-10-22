@@ -1,0 +1,180 @@
+import { randomUUID } from 'node:crypto';
+import { INestApplication, Injectable, Module } from '@nestjs/common';
+import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
+import { TransactionHost } from '@nestjs-cls/transactional';
+import { ClsService } from 'nestjs-cls';
+import { Client } from 'pg';
+import {
+  InTransactionEventHandler,
+  InTransactionHandler,
+} from '../../src/shared/application/in-transaction-handler';
+import { ExpectedVersion } from '../../src/shared/domain/expected-version';
+import type { PrismaTransactionHost } from '../../src/shared/infrastructure/transactions/cls-unit-of-work';
+import { DeleteTeamCommand } from '../../src/modules/teams/application/commands/delete-team/delete-team.command';
+import { TeamDeleted } from '../../src/modules/teams/domain/team.events';
+import { createTestApp } from '../support/app';
+import { signUpAndSignIn } from '../support/auth';
+import { useTestDatabase } from '../support/postgres';
+
+/** A real user: teams.owner_id references users. */
+let OWNER = '';
+
+/** What the in-transaction reaction does on the next TeamDeleted. */
+const reaction = { fail: false };
+
+/** A reaction that writes in the same transaction (renames a sibling team), then maybe fails. */
+@Injectable()
+@InTransactionHandler(TeamDeleted)
+class SiblingWriter implements InTransactionEventHandler<TeamDeleted> {
+  static siblingId = '';
+
+  constructor(private readonly txHost: TransactionHost) {}
+
+  async handle(): Promise<void> {
+    await (this.txHost as PrismaTransactionHost).tx.team.update({
+      where: { id: SiblingWriter.siblingId },
+      data: { description: 'touched by the reaction' },
+    });
+    if (reaction.fail) {
+      throw new Error('in-transaction reaction failed');
+    }
+  }
+}
+
+/** After commit: records whether the delete was already visible from another connection. */
+@EventsHandler(TeamDeleted)
+class AfterCommitProbe implements IEventHandler<TeamDeleted> {
+  static seen: { teamId: string; committed: boolean }[] = [];
+  static sql: Client;
+
+  async handle(event: TeamDeleted): Promise<void> {
+    const { rows } = await AfterCommitProbe.sql.query<{ deleted: boolean }>(
+      'SELECT deleted_at IS NOT NULL AS deleted FROM teams WHERE id = $1',
+      [event.teamId],
+    );
+    AfterCommitProbe.seen.push({
+      teamId: event.teamId,
+      committed: rows[0]?.deleted ?? false,
+    });
+  }
+}
+
+@Module({ providers: [SiblingWriter, AfterCommitProbe] })
+class ProbeModule {}
+
+describe('UnitOfWork and the two-phase publisher (integration, T-002-09)', () => {
+  const db = useTestDatabase();
+  let app: INestApplication;
+  let sql: Client;
+
+  beforeAll(async () => {
+    app = await createTestApp(db.url, { imports: [ProbeModule] });
+    sql = new Client({ connectionString: db.url });
+    await sql.connect();
+    AfterCommitProbe.sql = sql;
+    OWNER = (await signUpAndSignIn(app)).id;
+  });
+
+  afterAll(async () => {
+    await sql.end();
+    await app.close();
+  });
+
+  beforeEach(() => {
+    AfterCommitProbe.seen = [];
+    reaction.fail = false;
+  });
+
+  const insertTeam = async (name: string): Promise<string> => {
+    const id = randomUUID();
+    await sql.query(
+      `INSERT INTO teams (id, owner_id, name, color_hex, description, version, created_at, updated_at)
+       VALUES ($1, $2, $3, '#7C3AED', NULL, 1, now(), now())`,
+      [id, OWNER, `${name}-${id.slice(0, 8)}`],
+    );
+    return id;
+  };
+
+  const state = async (id: string) =>
+    (
+      await sql.query<{
+        deleted: boolean;
+        description: string | null;
+        version: number;
+      }>(
+        'SELECT deleted_at IS NOT NULL AS deleted, description, version FROM teams WHERE id = $1',
+        [id],
+      )
+    ).rows[0];
+
+  /** Runs the command in a CLS context, as the request middleware does for HTTP. */
+  const deleteTeam = (id: string) =>
+    app
+      .get(ClsService)
+      .run(() =>
+        app
+          .get(CommandBus)
+          .execute(new DeleteTeamCommand(OWNER, id, ExpectedVersion.any())),
+      );
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 200));
+
+  it('AC-02.7.4 a failing in-transaction reaction rolls the soft delete back: the team stays active', async () => {
+    const team = await insertTeam('Rollback');
+    SiblingWriter.siblingId = await insertTeam('Sibling');
+    reaction.fail = true;
+
+    await expect(deleteTeam(team)).rejects.toThrow(
+      'in-transaction reaction failed',
+    );
+
+    expect(await state(team)).toEqual({
+      deleted: false,
+      description: null,
+      version: 1,
+    });
+    // The reaction's own write rolled back with it.
+    expect((await state(SiblingWriter.siblingId))?.description).toBeNull();
+    await settle();
+    expect(AfterCommitProbe.seen).toEqual([]);
+  });
+
+  it('AC-02.7.3 a succeeding reaction commits together with the soft delete', async () => {
+    const team = await insertTeam('Commit');
+    SiblingWriter.siblingId = await insertTeam('Sibling');
+
+    await deleteTeam(team);
+
+    expect(await state(team)).toMatchObject({ deleted: true, version: 2 });
+    expect((await state(SiblingWriter.siblingId))?.description).toBe(
+      'touched by the reaction',
+    );
+  });
+
+  it('AC-02.7.3 after-commit handlers run only after the commit is visible to other connections', async () => {
+    const team = await insertTeam('After');
+    SiblingWriter.siblingId = await insertTeam('Sibling');
+
+    await deleteTeam(team);
+    await settle();
+
+    expect(AfterCommitProbe.seen).toEqual([{ teamId: team, committed: true }]);
+  });
+
+  it('repositories join the ambient transaction: txHost.tx inside a unit of work is not the base client', async () => {
+    const txHost = app.get(TransactionHost);
+
+    const inside = await app
+      .get(ClsService)
+      .run(() =>
+        txHost.withTransaction(() =>
+          Promise.resolve(txHost.isTransactionActive()),
+        ),
+      );
+
+    expect(inside).toBe(true);
+    expect(app.get(ClsService).run(() => txHost.isTransactionActive())).toBe(
+      false,
+    );
+  });
+});
