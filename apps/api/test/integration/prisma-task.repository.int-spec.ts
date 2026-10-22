@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { ConcurrencyConflict } from '../../src/shared/domain/domain-error';
 import { UnknownTeams } from '../../src/modules/tasks/domain/task.errors';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
@@ -25,7 +26,7 @@ describe('PrismaTaskRepository (integration, T-003-04)', () => {
   beforeAll(async () => {
     app = await createTestApp(db.url);
     prisma = app.get(PrismaService);
-    repository = new PrismaTaskRepository(prisma);
+    repository = new PrismaTaskRepository(app.get(TransactionHost));
   });
 
   afterAll(async () => {

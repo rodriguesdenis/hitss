@@ -1,6 +1,9 @@
-import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
+import { DomainEventPublisher } from '../../../../../shared/application/ports/domain-event-publisher';
+import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
 import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
+import type { DomainEvent } from '../../../../../shared/domain/domain-event';
 import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { TaskNotFound, UnknownTeams } from '../../../domain/task.errors';
 import { TaskRepository } from '../../../domain/task.repository';
@@ -19,6 +22,9 @@ import { ReplaceTaskCommand } from './replace-task.command';
  *    UnknownTeams for ids that are not the owner's live teams.
  * 3. Apply `edit`, `assignTo` and `changeStatus`, then write once (version + 1) unless nothing
  *    changed. An identical replacement (team order ignored) is a no-op (AC-03.9.5).
+ * Steps 1–3 run in one unit of work that first locks the new team links, so a team deleted
+ * concurrently is either reported here or unassigned by the TeamDeleted reaction (T-003-13).
+ * Events are published after commit.
  * Without an expected version the client asked for last-write-wins, so a write lost to a
  * concurrent one is reloaded and reapplied once.
  */
@@ -30,21 +36,29 @@ export class ReplaceTaskHandler implements ICommandHandler<
   constructor(
     private readonly tasks: TaskRepository,
     private readonly teams: TeamDirectory,
-    private readonly events: EventBus,
+    private readonly unitOfWork: UnitOfWork,
+    private readonly publisher: DomainEventPublisher,
     private readonly clock: Clock,
   ) {}
 
   @Traced()
   async execute(command: ReplaceTaskCommand): Promise<{ id: string }> {
+    let events: DomainEvent[];
     try {
-      return await this.attempt(command);
+      events = await this.attempt(command);
     } catch (error) {
       if (!(error instanceof ConcurrencyConflict)) throw error;
-      return this.attempt(command);
+      events = await this.attempt(command);
     }
+    this.publisher.publishAfterCommit(events);
+    return { id: command.id };
   }
 
-  private async attempt(command: ReplaceTaskCommand): Promise<{ id: string }> {
+  private attempt(command: ReplaceTaskCommand): Promise<DomainEvent[]> {
+    return this.unitOfWork.run(() => this.replace(command));
+  }
+
+  private async replace(command: ReplaceTaskCommand): Promise<DomainEvent[]> {
     const { ownerId, id } = command;
     const task = await this.tasks.findById(ownerId, id);
     if (!task) {
@@ -56,6 +70,7 @@ export class ReplaceTaskHandler implements ICommandHandler<
       description: TaskDescription.create(command.description),
       dueDate: command.dueDate ? DueDate.create(command.dueDate) : null,
     };
+    await this.tasks.lockTeamLinks(teamIds.values);
     const missing = await this.teams.findMissing(ownerId, teamIds.values);
     if (missing.length > 0) {
       throw new UnknownTeams(missing);
@@ -70,8 +85,7 @@ export class ReplaceTaskHandler implements ICommandHandler<
     ];
     if (changes.includes(true)) {
       await this.tasks.update(task, task.version);
-      this.events.publishAll(task.pullEvents());
     }
-    return { id: task.id };
+    return task.pullEvents();
   }
 }

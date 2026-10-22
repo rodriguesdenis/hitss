@@ -164,10 +164,13 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-13 — `OnTeamDeletedHandler` (in-transaction)
 
+- **Status:** done
+- **Owner:** Strata (database specialist; assigned by the Maestro).
 - **Goal:** tasks survive team deletion, atomically with it.
 - **Changes:** `application/events/on-team-deleted.handler.ts` registered with 002's `@InTransactionHandler(TeamDeleted)` (`TeamDeleted` imported from `teams/contracts/`; **not** an `@EventsHandler`); repository `findByTeam`/`update` per task (removes the team's `task_teams` rows, bumps each affected task's `version` and `updatedAt`); integration + e2e (through `DELETE /api/v1/teams/:id`).
 - **Covers:** @AC-03.13.1 – @AC-03.13.4, @AC-03.2.5 (deleted teams not embedded), and **`@AC-02.7.2`** from 002.
 - **Done when:** affected tasks lose only that team (other assignments untouched) and gain +1 version and a new `updatedAt`; unaffected tasks untouched; replaying the event is a no-op; the handler joins 002's transaction, and a forced failure in it rolls back the team's soft delete (team still active, `task_teams` intact); e2e: a stale `PUT /tasks/:id` with the pre-delete `If-Match` → 412. There is no after-commit fallback or retry. **Stale-link fix from T-003-04 (moved here from T-002-09, Maestro decision):** a team soft-deleted between `TeamDirectory.findMissing` and a task write must not leave the task linked to a deleted team; in one CLS transaction (T-002-09's `UnitOfWork`), either re-validate through `TeamDirectory` inside the transaction or order `DeleteTeam`'s reaction after the task write, with an integration test of that race. Never `FOR SHARE` on `teams` from the tasks repository. Note: inside a unit of work `txHost.tx` is a transaction client, so the task repository uses `txHost.withTransaction` (joins the ambient one) rather than `prisma.$transaction`.
+- **Delivered:** the stale-link race is closed with a per-team, transaction-scoped advisory lock taken only by Task Management (`TaskRepository.lockTeamLinks`, `pg_advisory_xact_lock`): CreateTask and ReplaceTask lock their team ids in their unit of work before `TeamDirectory.findMissing`, and `OnTeamDeletedHandler` locks the deleted team before `findByTeam`. Whoever comes second waits for the first to commit and reads its result (integration test of both orders). No lock on `teams`. The e2e row "stale `PUT` with the pre-delete `If-Match` → 412" moves to **T-003-17** with If-Match on tasks (deferred, Maestro decision); this task's e2e asserts the version tag moves instead.
 
 ## T-003-14a — `CountTasksByTeam` data side
 
@@ -206,7 +209,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Goal:** reject stale writes.
 - **Changes:** `ETag: W/"<version>"` on GET/POST/PUT/PATCH; shared `IfMatch` decorator → `expectedVersion` on update/status/delete commands; 412 mapping with `details.currentVersion`; e2e specs.
 - **Covers:** @AC-03.15.1 – @AC-03.15.5.
-- **Done when:** conditional-writes outline (8 rows) passes; check order validation 400 → 404 → 412 → no-op (an invalid body with a stale tag → 400; a foreign, unknown or deleted task with any tag → 404); malformed tag → 412; no-op with stale tag → 412; requests without `If-Match` behave as before (all earlier e2e green).
+- **Done when:** conditional-writes outline (8 rows) passes; check order validation 400 → 404 → 412 → no-op (an invalid body with a stale tag → 400; a foreign, unknown or deleted task with any tag → 404); malformed tag → 412; no-op with stale tag → 412; requests without `If-Match` behave as before (all earlier e2e green). Moved from T-003-13: after a team delete, a `PUT /tasks/:id` with the pre-delete `If-Match` → 412.
 
 ## T-003-18 — Add Idempotency-Key on `POST /tasks` (COULD)
 

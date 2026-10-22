@@ -62,6 +62,14 @@ export class InMemoryTaskRepository extends TaskRepository {
     return Promise.resolve();
   }
 
+  /** Records the requested locks; one process has no concurrent writers to serialize. */
+  readonly lockedTeams: string[][] = [];
+
+  lockTeamLinks(teamIds: readonly string[]): Promise<void> {
+    this.lockedTeams.push([...teamIds]);
+    return Promise.resolve();
+  }
+
   update(task: Task, expectedVersion: number): Promise<number> {
     const row = this.rows.get(task.id);
     if (!row || row.ownerId !== task.ownerId || row.deletedAt !== null) {

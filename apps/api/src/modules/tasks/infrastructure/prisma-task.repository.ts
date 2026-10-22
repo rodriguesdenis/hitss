@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { Prisma } from '../../../generated/prisma/client';
 import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
-import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
+import type { PrismaTransactionHost } from '../../../shared/infrastructure/transactions/cls-unit-of-work';
 import { Task } from '../domain/task';
 import { TaskNotFound, UnknownTeams } from '../domain/task.errors';
 import { TaskRepository } from '../domain/task.repository';
@@ -10,6 +11,8 @@ import { TaskMapper } from './task.mapper';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TEAM_LINK_FK = 'task_teams_team_id_fkey';
 const WITH_TEAMS = { teams: { select: { teamId: true } } } as const;
+/** First key of the team-link advisory locks (pg_advisory_xact_lock(int4, int4)): "tt". */
+const TEAM_LINK_LOCK_SPACE = 0x7474;
 
 /**
  * Write-side persistence of the Task aggregate: the tasks row and its task_teams links, always
@@ -19,15 +22,27 @@ const WITH_TEAMS = { teams: { select: { teamId: true } } } as const;
  * handler re-runs findMissing to report the precise ids. This repository never reads Team
  * Management's tables (constitution II.2).
  *
- * P2003 only covers a team row that is physically gone; a team SOFT-deleted between findMissing
- * and the write still satisfies the FK and leaves a stale link (low impact: invisible chip, empty
- * filter). The real fix goes to T-002-09 (in one CLS transaction: re-validate through
- * TeamDirectory inside the transaction or order DeleteTeam's reaction after the task write).
+ * P2003 only covers a team row that is physically gone. A team SOFT-deleted concurrently with
+ * a write is handled by `lockTeamLinks` (T-003-13): the write and the TeamDeleted reaction
+ * serialize on a per-team advisory lock, so the second one sees the first one's commit.
+ *
+ * Statements run on `txHost.tx`, so they join the unit of work's transaction (the
+ * TeamDeleted reaction runs inside DeleteTeam's). A write that needs several statements opens
+ * one with `txHost.withTransaction`, which joins the ambient transaction when there is one
+ * (Propagation.Required); a nested `prisma.$transaction` is not possible on a transaction
+ * client.
  */
 @Injectable()
 export class PrismaTaskRepository extends TaskRepository {
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    @Inject(TransactionHost) private readonly txHost: PrismaTransactionHost,
+  ) {
     super();
+  }
+
+  /** The client of the ambient transaction (UnitOfWork.run), or the base client outside one. */
+  private get prisma() {
+    return this.txHost.tx;
   }
 
   async findById(ownerId: string, id: string): Promise<Task | null> {
@@ -119,15 +134,26 @@ export class PrismaTaskRepository extends TaskRepository {
     });
   }
 
+  async lockTeamLinks(teamIds: readonly string[]): Promise<void> {
+    if (!this.txHost.isTransactionActive()) {
+      throw new Error('lockTeamLinks needs a transaction (UnitOfWork.run)');
+    }
+    // Sorted and distinct, so two writers never wait for each other in opposite orders.
+    const ids = [...new Set(teamIds.map((id) => id.toLowerCase()))].sort();
+    for (const id of ids) {
+      await this.prisma.$executeRaw`
+        SELECT pg_advisory_xact_lock(${TEAM_LINK_LOCK_SPACE}::int4, hashtext(${id}))`;
+    }
+  }
+
   /**
-   * The single transaction seam. Until the CLS unit of work lands (T-002-05/09), each write is
-   * its own interactive transaction; then this becomes the ambient `txHost.tx`
-   * (Propagation.Required), joining the caller's transaction without a port change.
+   * The single transaction seam: joins the unit of work's transaction when there is one
+   * (Propagation.Required), else opens one for this write.
    */
   private transaction<T>(
     work: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
-    return this.prisma.$transaction(work);
+    return this.txHost.withTransaction(() => work(this.txHost.tx));
   }
 }
 

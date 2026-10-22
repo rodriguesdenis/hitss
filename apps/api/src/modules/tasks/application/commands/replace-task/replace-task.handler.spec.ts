@@ -1,7 +1,8 @@
-import { EventBus } from '@nestjs/cqrs';
 import { InMemoryTaskRepository } from '../../../../../../test/support/in-memory-task.repository';
 import { InMemoryTeamDirectory } from '../../../../../../test/support/in-memory-team-directory';
 import { Clock } from '../../../../../shared/application/ports/clock';
+import { DomainEventPublisher } from '../../../../../shared/application/ports/domain-event-publisher';
+import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
 import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import { Task } from '../../../domain/task';
 import { TaskStatusChanged } from '../../../domain/task.events';
@@ -18,6 +19,8 @@ import { TaskTitle } from '../../../domain/value-objects/task-title';
 import { ReplaceTaskCommand } from './replace-task.command';
 import { ReplaceTaskHandler } from './replace-task.handler';
 
+/** Runs the work directly; the real unit of work's atomicity is proven in integration. */
+const inline: UnitOfWork = { run: (work) => work() };
 const OWNER = 'owner-1';
 const ID = '11111111-1111-4111-8111-111111111111';
 const CREATED = new Date('2026-10-20T13:00:00.000Z');
@@ -29,6 +32,7 @@ const [MOBILE, BACKEND, DESIGN] = [team(1), team(2), team(3)];
 describe('ReplaceTaskHandler', () => {
   let tasks: InMemoryTaskRepository;
   let directory: InMemoryTeamDirectory;
+  /** publishAfterCommit of the fake publisher. */
   let publishAll: jest.Mock;
   let handler: ReplaceTaskHandler;
 
@@ -55,7 +59,8 @@ describe('ReplaceTaskHandler', () => {
     handler = new ReplaceTaskHandler(
       tasks,
       directory,
-      { publishAll } as unknown as EventBus,
+      inline,
+      { publishAfterCommit: publishAll } as unknown as DomainEventPublisher,
       clock,
     );
   });
@@ -122,7 +127,7 @@ describe('ReplaceTaskHandler', () => {
     await replace();
 
     expect(update).not.toHaveBeenCalled();
-    expect(publishAll).not.toHaveBeenCalled();
+    expect(publishAll).toHaveBeenCalledWith([]);
     expect(stored()?.version).toBe(1);
     expect(stored()?.updatedAt).toEqual(CREATED);
   });
