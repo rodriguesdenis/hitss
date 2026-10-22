@@ -14,6 +14,7 @@ import { TASK_METRICS_HANDLERS } from './application/events/record-task-metrics.
 import { TaskMetrics } from './application/ports/task-metrics';
 import { TaskReadModel } from './application/ports/task.read-model';
 import { TeamDirectory } from './application/ports/team-directory';
+import { ListTasksHandler } from './application/queries/list-tasks/list-tasks.handler';
 import { GetTaskHandler } from './application/queries/get-task/get-task.handler';
 import {
   METER_NAME,
@@ -40,6 +41,7 @@ import { TasksController } from './presentation/tasks.controller';
     ChangeTaskStatusHandler,
     DeleteTaskHandler,
     GetTaskHandler,
+    ListTasksHandler,
     ...TASK_METRICS_HANDLERS,
     {
       provide: TaskMetrics,
