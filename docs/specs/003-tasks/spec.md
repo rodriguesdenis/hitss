@@ -2,7 +2,7 @@
 
 - **Epic:** [EP-03 Task Management](../../product/epics/EP-03-task-management.md) · **Status:** Draft · **Priority:** MUST
 - **Behavior:** [tasks.feature](tasks.feature) · **Plan:** [plan.md](plan.md) · **Tasks:** [tasks.md](tasks.md)
-- **Language:** terms in **bold** are from the [ubiquitous language](../../architecture/domain-model.md#ubiquitous-language).
+- **Language:** terms in **bold** are from the [ubiquitous language](../../architecture/overview.md#ubiquitous-language).
 
 ## Problem
 

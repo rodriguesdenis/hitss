@@ -1,6 +1,6 @@
 # Data Model
 
-PostgreSQL 17, managed by Prisma (schema in `apps/api/prisma/schema.prisma`). Decisions: [ADR-0003](adr/0003-postgresql.md), [ADR-0004](adr/0004-prisma-migrations-and-seeding.md), [ADR-0015](adr/0015-optimistic-concurrency.md), [ADR-0016](adr/0016-soft-delete.md).
+PostgreSQL 17, managed by Prisma (schema in `apps/api/prisma/schema.prisma`). Decisions: [ADR-0003](adr/0003-postgresql.md), [ADR-0004](adr/0004-prisma-migrations-and-seeding.md), [ADR-0015](adr/archive/0015-optimistic-concurrency.md), [ADR-0016](adr/archive/0016-soft-delete.md).
 
 ## Entity-relationship diagram
 
@@ -53,7 +53,7 @@ erDiagram
   }
 ```
 
-`idempotency_keys` (key, owner, request hash, stored response, expiry) is **planned, not migrated**: it comes with the `Idempotency-Key` support (T-002-05 / T-003-18, COULD; [ADR-0019](adr/0019-idempotency-keys.md)).
+`idempotency_keys` (key, owner, request hash, stored response, expiry) is **planned, not migrated**: it comes with the `Idempotency-Key` support (T-002-05 / T-003-18, COULD; [ADR-0019](adr/archive/0019-idempotency-keys.md)).
 
 `sessions`, `accounts` and `verifications` follow the Better Auth schema (generated with the Better Auth CLI, the `auth` package: `auth generate --adapter prisma`, then mapped to snake_case) and are owned by the Identity context; other contexts only reference `users.id`. User ids are **UUIDs** (`advanced.database.generateId: 'uuid'`), but `users.id` and every `owner_id` stay `text`; the domain treats `ownerId` as an opaque string ([ADR-0007](adr/0007-better-auth.md)). With `generateId: 'uuid'` on PostgreSQL, Better Auth omits the id on insert and expects the database to generate it, so every identity id column defaults to `gen_random_uuid()::text` (Better Auth's own generator would emit `uuid` columns; `text` is kept on purpose). Identity indexes: unique `users.email`, unique `sessions.token`, unique `accounts(provider_id, account_id)`, `sessions(user_id)`, `accounts(user_id)`, `verifications(identifier)`; `sessions` and `accounts` reference `users` with `ON DELETE CASCADE`. Integrity checks (raw SQL in `create_identity_tables`): `users_email_lowercase` (`email = lower(email)`), `users_name_length` (1–100 characters), `users_email_length` (≤ 254 characters). `updated_at` defaults to the current time on every identity table.
 
@@ -89,17 +89,17 @@ List indexes end with `id` because every sort is tie-broken by `id` for stable o
 
 ## Soft delete
 
-`deleted_at` on `teams` and `tasks`. Repositories always filter `deleted_at IS NULL`. Deleting a team soft-deletes the `teams` row; its `task_teams` rows are **removed** by Task Management's `OnTeamDeletedHandler` (an in-transaction reaction to `TeamDeleted`) in the same transaction — never by the Teams repository. The tasks remain, and each affected task's `version` / `updated_at` are bumped. A task write and the reaction serialize on a per-team, transaction-scoped advisory lock (`pg_advisory_xact_lock`, taken only by Task Management), so a team deleted concurrently with a task write never leaves a stale link; this relies on the default `READ COMMITTED` isolation. A soft-deleted task keeps its `task_teams` rows (history); every read ignores them. A purge job is listed as a production improvement.
+`deleted_at` on `teams` and `tasks`. Repositories always filter `deleted_at IS NULL`. Deleting a team soft-deletes the `teams` row; in the **same `prisma.$transaction`** one set-based `UPDATE` bumps `version` / `updated_at` of the owner's live tasks linked to it, and its `task_teams` rows are deleted; either everything commits or nothing does ([ADR-0020](adr/0020-simplify-architecture-for-the-hiring-test.md)). The tasks remain. There is no lock against a concurrent task write: such a write can leave a link to the just-deleted team, which every read ignores (accepted residual, ADR-0020). A soft-deleted task keeps its `task_teams` rows (history); every read ignores them. A purge job is listed as a production improvement.
 
 ## Concurrency
 
-`version` integer starts at 1 and is incremented on every update — including unassigning a deleted team from a task, which also sets `updated_at` ([ADR-0015](adr/0015-optimistic-concurrency.md)). No-op changes do not bump it. Updates use `UPDATE ... WHERE id = $1 AND owner_id = $2 AND version = $3 AND deleted_at IS NULL`; zero affected rows → `ConcurrencyConflict` (or not found). Exposed through `ETag` on every single-resource response and `If-Match` on team writes (task writes: T-003-17).
+`version` integer starts at 1 and is incremented by the repository on every update that changes state — including the unassignment of a deleted team, which also sets `updated_at`. No-op changes do not bump it. Updates use `UPDATE ... WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL`; zero affected rows → not found. Writes are **last-write-wins**: `version` is returned in responses as data, with no `ETag` / `If-Match` precondition ([ADR-0020](adr/0020-simplify-architecture-for-the-hiring-test.md), superseding [ADR-0015](adr/archive/0015-optimistic-concurrency.md)).
 
 ## Connections, transactions and timeouts
 
 - **Pool (pg driver, client side):** connecting gives up after **2 s** (`connectionTimeoutMillis`), a query after **5 s** (`query_timeout`). These bound how long a request, or readiness, can hang on a black-holed database. The client stops waiting; no server-side `statement_timeout` is set.
 - **Startup:** the API probes the database (`SELECT 1`) for at most **10 s** and fails fast otherwise; closing the pool on a failed boot waits at most **1 s**.
-- **Transactions:** one interactive transaction per unit of work (`@nestjs-cls/transactional` over Prisma), at PostgreSQL's default **`READ COMMITTED`**. No options are passed, so Prisma's defaults apply: up to **2 s** to start (`maxWait`) and **5 s** in total (`timeout`). Reads of the list page and its total share one `REPEATABLE READ` batch.
+- **Transactions:** single-statement writes, plus one interactive `prisma.$transaction` for a team delete, at PostgreSQL's default **`READ COMMITTED`**. No options are passed, so Prisma's defaults apply: up to **2 s** to start (`maxWait`) and **5 s** in total (`timeout`). Reads of the list page and its total share one `REPEATABLE READ` batch.
 
 ## Migrations & seeding (reproducibility)
 

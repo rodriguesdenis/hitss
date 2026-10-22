@@ -4,8 +4,8 @@
 
 - Spec: [spec.md](spec.md) · Scenarios: [teams.feature](teams.feature) · Tasks: [tasks.md](tasks.md)
 - Contract: [api-contracts.md → Teams](../../architecture/api-contracts.md#teams--apiv1teams), [pagination](../../architecture/api-contracts.md#pagination-sorting-search), [error codes](../../architecture/api-contracts.md#error-codes)
-- Domain: [domain-model.md → Team](../../architecture/domain-model.md#team-aggregate-root) · Data: [data-model.md](../../architecture/data-model.md)
-- ADRs: [0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md) (layers, CQRS, events in the same transaction), [0004](../../architecture/adr/0004-prisma-migrations-and-seeding.md) (migrations, seed), [0005](../../architecture/adr/0005-rest-openapi-and-response-envelope.md) (envelope, OpenAPI), [0006](../../architecture/adr/0006-offset-pagination.md) (offset pagination), [0008](../../architecture/adr/0008-class-validator-dtos-and-generated-client.md) (DTOs as contract), [0013](../../architecture/adr/0013-opentelemetry-and-signoz.md) (telemetry), [0014](../../architecture/adr/0014-testing-strategy.md) (testing), [0015](../../architecture/adr/0015-optimistic-concurrency.md) (version + ETag/If-Match), [0016](../../architecture/adr/0016-soft-delete.md) (soft delete), [0019](../../architecture/adr/0019-idempotency-keys.md) (idempotency keys)
+- Domain: [overview.md#4-domain → Team](../../architecture/overview.md#entities-and-value-objects) · Data: [data-model.md](../../architecture/data-model.md)
+- ADRs: [0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md) (layers, CQRS, events in the same transaction), [0004](../../architecture/adr/0004-prisma-migrations-and-seeding.md) (migrations, seed), [0005](../../architecture/adr/0005-rest-openapi-and-response-envelope.md) (envelope, OpenAPI), [0006](../../architecture/adr/0006-offset-pagination.md) (offset pagination), [0008](../../architecture/adr/archive/0008-class-validator-dtos-and-generated-client.md) (DTOs as contract), [0013](../../architecture/adr/archive/0013-opentelemetry-and-signoz.md) (telemetry), [0014](../../architecture/adr/0014-testing-strategy.md) (testing), [0015](../../architecture/adr/archive/0015-optimistic-concurrency.md) (version + ETag/If-Match), [0016](../../architecture/adr/archive/0016-soft-delete.md) (soft delete), [0019](../../architecture/adr/archive/0019-idempotency-keys.md) (idempotency keys)
 - Builds on the 001 API foundation: config, `PrismaModule`, envelope, exception filter, `ValidationPipe`, global `AuthGuard`, `@CurrentOwner()`.
 
 Teams is the **first vertical slice**. The shared building blocks it introduces (pagination, ETag/If-Match, idempotency, transactional unit of work, domain-event publisher) go into `shared/` with their own tests, so 003-tasks reuses them unchanged.
@@ -14,7 +14,7 @@ Teams is the **first vertical slice**. The shared building blocks it introduces 
 
 ### Module layout
 
-Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi) (authoritative; dependency-cruiser keys on them).
+Paths follow [overview §6.2](../../architecture/overview.md#6-folder-structure-appsapisrc) (authoritative; dependency-cruiser keys on them).
 
 ```
 apps/api/src/
@@ -65,7 +65,7 @@ apps/api/src/
     └── teams.module.ts                      # composition root: binds ports → adapters; exports no providers
 ```
 
-Dependency rules (`dependency-cruiser`, constitution III.3, [overview §7](../../architecture/overview.md#7-dependency-rules-enforced-by-dependency-cruiser-in-ci)):
+Dependency rules (`dependency-cruiser`, constitution III.3, [overview §7](../../architecture/overview.md#7-dependency-rules)):
 
 - `modules/teams/domain/**` imports only `shared/domain/**`.
 - `application/**` never imports `infrastructure/**`, `presentation/**` or `@prisma/*`. Of the Nest packages it may use only `@nestjs/cqrs` and `@nestjs/common` decorators (e.g. `@Injectable`), per ADR-0002.
@@ -122,11 +122,11 @@ export class Team extends AggregateRoot {
 - **Commands return ids.** The controller then runs `GetTeamQuery` to build the response. Writes and reads stay separate, and every single-team response has the same shape, including `taskCount`.
 - `ExpectedVersion` = `{ kind: 'any' }` (no header or `*`) | `{ kind: 'exact', version }` | `{ kind: 'unmatchable' }` (unparseable tag). Handlers check it **after** loading, so 404 wins over 412 (AC-02.9.7).
 - Ports are abstract classes used as DI tokens. The repository port `TeamRepository` lives in `domain/team.repository.ts` (domain types only, decision P-2); the others are in `application/ports/`: `TeamReadModel`, `TeamTaskCounts`, `Clock`, `IdGenerator`, `UnitOfWork`, `DomainEventPublisher`.
-- **Check order** ([ADR-0015](../../architecture/adr/0015-optimistic-concurrency.md)): request validation (`400`, pipes) → not found (`404`) → `If-Match` (`412`; a malformed value is `unmatchable` → `412`) → no-op detection.
+- **Check order** ([ADR-0015](../../architecture/adr/archive/0015-optimistic-concurrency.md)): request validation (`400`, pipes) → not found (`404`) → `If-Match` (`412`; a malformed value is `unmatchable` → `412`) → no-op detection.
 
 ### Cross-context seams (Team Management ↔ Task Management)
 
-All calls go through the `QueryBus` / event publisher and each module's public `contracts/` folder ([ADR-0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md), [domain model](../../architecture/domain-model.md#bounded-contexts)). Neither module exports providers to the other, so there is no DI cycle.
+All calls go through the `QueryBus` / event publisher and each module's public `contracts/` folder ([ADR-0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md), [domain model](../../architecture/overview.md#2-modules)). Neither module exports providers to the other, so there is no DI cycle.
 
 ```mermaid
 flowchart LR
@@ -272,7 +272,7 @@ export class ListTeamsQueryDto extends PaginationQueryDto {
 
 ### Idempotency
 
-As decided in [ADR-0019](../../architecture/adr/0019-idempotency-keys.md). Table `idempotency_keys` (from the data model). Applied with `@UseInterceptors(IdempotencyInterceptor)` on `POST /teams`, and on `POST /tasks` in 003. The `Idempotency-Key` header is honored on `POST` only.
+As decided in [ADR-0019](../../architecture/adr/archive/0019-idempotency-keys.md). Table `idempotency_keys` (from the data model). Applied with `@UseInterceptors(IdempotencyInterceptor)` on `POST /teams`, and on `POST /tasks` in 003. The `Idempotency-Key` header is honored on `POST` only.
 
 1. Validate the `Idempotency-Key` header as a UUID, or return `400 VALIDATION_FAILED` with `field: "Idempotency-Key"`. If the header is absent, pass through. DTO validation (`400`) runs before the interceptor touches the store.
 2. `requestHash = sha256(method + routePath + canonicalJson(body))`. `canonicalJson` sorts keys and ignores prototype-related keys (`__proto__`, `constructor`, `prototype`), which the DTO already rejects (AC-02.10.11). Because the route is part of the hash, the same key reused on another route (team K1, then task K1) → `422 IDEMPOTENCY_KEY_REUSED` (AC-02.10.10).

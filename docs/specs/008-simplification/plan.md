@@ -25,15 +25,15 @@ modules/
 ├── health/                               # live / ready
 ├── teams/
 │   ├── domain/{entities/team.entity.ts, value-objects/*.vo.ts, errors/team.errors.ts, repositories/team.repository.ts}
-│   ├── application/use-cases/{create,list,get,update,delete}-team.use-case.ts
+│   ├── application/{use-cases/{create,list,get,update,delete}-team.use-case.ts, ports/team.read-model.ts}
 │   ├── presentation/http/{teams.controller.ts, dto/, presenters/team.presenter.ts}
-│   ├── infrastructure/persistence/{team.prisma-repository.ts, team.persistence-mapper.ts}
+│   ├── infrastructure/persistence/{team.prisma-repository.ts, team.persistence-mapper.ts, team.prisma-read.ts}
 │   ├── team-lookup.service.ts            # exported: live team summaries + missing ids, for tasks
 │   └── teams.module.ts                   # exports TeamLookup only
-└── tasks/                                # same shape; injects TeamLookup
+└── tasks/                                # same shape + domain/policies/, application/views/; injects TeamLookup
 ```
 
-Reads (lists with filters, search, sort, counts) stay as SQL in the persistence layer; a use case calls a repository method that returns a page of rows. No separate read-model port is required; a module may keep a `<x>.prisma-read.ts` file next to the repository if the SQL is long.
+Reads (lists with filters, search, sort, counts) stay as SQL in the persistence layer behind `application/ports/<x>.read-model.ts` (views and pages), implemented by `<x>.prisma-read.ts`; view and page types stay out of the domain. (Amended in T-008-09: the read port was kept in both modules, Maestro decision on #96.)
 
 ## Removals and where they happen
 

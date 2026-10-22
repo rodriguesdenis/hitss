@@ -1,50 +1,18 @@
 # Observability
 
-How the API is instrumented, how to see the signals locally, and what to chart and alert on. Design and tasks: [spec 006](../specs/006-observability/spec.md) · [plan](../specs/006-observability/plan.md) · [ADR-0013](../architecture/adr/0013-opentelemetry-and-signoz.md).
+What the API logs and traces, how to read them locally, and what to watch in production. The scope is deliberately small ([ADR-0020](../architecture/adr/0020-simplify-architecture-for-the-hiring-test.md), spec [008](../specs/008-simplification/spec.md)): JSON logs always, traces only when you ask for them.
 
-> Observability is **optional at runtime**. `docker compose up` runs without any telemetry backend; the API drops telemetry it cannot export (it logs at most one `[telemetry]` warning per minute). Turn telemetry off completely with `OTEL_SDK_DISABLED=true`.
+> Telemetry is **optional at runtime**. `docker compose up` runs without any collector and exports nothing. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export traces over OTLP/HTTP; `OTEL_SDK_DISABLED=true` turns the SDK off even then. Logs are unaffected either way.
 
 ## Signals at a glance
 
-| Signal      | Source                                                                                                                                                                                                  | Where to read it locally                              |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| Traces      | OpenTelemetry Node SDK (`src/instrumentation.ts`) — instrumentations `http`, `express`, `@nestjs/core`, `pg`, `undici` + `@prisma/instrumentation`, plus one `@Traced()` span per command/query handler | SigNoz → Traces                                       |
-| Metrics     | OTel SDK → OTLP every 15 s                                                                                                                                                                              | SigNoz → Dashboards / Metrics explorer                |
-| Logs        | `nestjs-pino` JSON on stdout only; there is no OTLP log pipeline (decided in T-006-02, proven by an e2e)                                                                                                | `docker compose logs -f api`                          |
-| Health      | `DatabaseReadiness` (the boot probe, bounded at 1.5 s); no Terminus                                                                                                                                     | `GET /api/v1/health/live`, `GET /api/v1/health/ready` |
-| Correlation | `X-Request-Id` response header, `error.traceId` in error envelopes                                                                                                                                      | response headers / app error screen                   |
-
-Resource attributes on every signal: `service.name=teams-tasks-api`, `service.version=<package version>`, `deployment.environment.name=<APP_ENV>`.
-
-## Traces
-
-Every request is **one trace**:
-
-```text
-GET /api/v1/tasks                         (http server span — route template, status code)
- └─ request handler / TasksController.list (nestjs-core / express spans)
-     └─ ListTasksHandler                   (use-case span, one per command/query handler)
-         ├─ prisma:client:operation Task.findMany
-         │   └─ prisma:engine:db_query  /  pg.query SELECT …   (statement, no parameter values)
-         └─ prisma:client:operation Task.count
-```
-
-- Incoming W3C `traceparent` is honored (a client trace continues into the API).
-- Probes (`/api/v1/health/*`) are not traced.
-- Never on spans: headers, bodies, query strings, emails, DB parameter values ([threat model I-03](../security/threat-model.md#information-disclosure)).
-
-## Metrics
-
-| Metric                                           | Type              | Unit | Attributes                                                       | Use                                                                                                    |
-| ------------------------------------------------ | ----------------- | ---- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `http.server.request.duration`                   | histogram         | s    | `http.request.method`, `http.route`, `http.response.status_code` | **RED**: Rate = count/s, Errors = count with status ≥ 500 (and 4xx separately), Duration = p50/p95/p99 |
-| `tasks_created_total`                            | counter           | 1    | —                                                                | business throughput (from `TaskCreated`)                                                               |
-| `tasks_completed_total`                          | counter           | 1    | —                                                                | completions (from `TaskStatusChanged` with `to = DONE`)                                                |
-| `tasks_deleted_total`                            | counter           | 1    | —                                                                | deletions (from `TaskDeleted`)                                                                         |
-| `db.client.connection.*` (pg instr., if enabled) | gauges/histograms |      | pool name                                                        | connection pool saturation                                                                             |
-| Node runtime (`nodejs.eventloop.delay`, heap)    | gauges            |      |                                                                  | saturation (optional, via runtime instrumentation)                                                     |
-
-Rules: attributes are low-cardinality only; never user ids, emails, resource ids, search terms or raw URLs.
+| Signal      | Source                                                                                                                              | Where to read it locally                              |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Logs        | `nestjs-pino`, one JSON object per line on stdout; there is no OTLP log pipeline                                                    | `docker compose logs -f api`                          |
+| Traces      | OpenTelemetry Node SDK (`src/instrumentation.ts`), auto-instrumentations, exported over OTLP/HTTP **only when the endpoint is set** | any OTLP/HTTP collector or tracing UI you point it at |
+| Metrics     | none exported by the API                                                                                                            | —                                                     |
+| Health      | `GET /api/v1/health/live` (process) and `/ready` (database)                                                                         | `curl` / `docker compose ps`                          |
+| Correlation | `X-Request-Id` response header, `reqId` and `traceId` in every log line, `error.traceId` in error envelopes                         | response headers, logs                                |
 
 ## Logs
 
@@ -56,111 +24,81 @@ One JSON object per line. Example completion entry:
   "time": 1792501200000,
   "msg": "request completed",
   "reqId": "3f0c8a2e-6a7b-4c1d-9e8f-0a1b2c3d4e5f",
-  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
-  "spanId": "00f067aa0ba902b7",
+  "traceId": "3f0c8a2e-6a7b-4c1d-9e8f-0a1b2c3d4e5f",
   "userId": "usr_8d1…",
-  "req": { "method": "GET", "route": "/api/v1/tasks" },
+  "req": { "method": "GET", "url": "/api/v1/tasks" },
+  "route": "/api/v1/tasks",
   "res": { "statusCode": 200 },
   "responseTime": 12
 }
 ```
 
-- Levels: `LOG_LEVEL` (`info` default). Human-readable output: `LOG_PRETTY=true`.
-- Redacted (`[REDACTED]`): `req.headers.authorization`, `req.headers.cookie`, `res.headers["set-cookie"]`, `res.headers["set-auth-token"]`, and nested `password`, `newPassword`, `currentPassword`, `token` (also `secret`, `email` as defence in depth). Bodies are never logged.
-- Query strings are stripped from `/api/auth/*` URLs; other routes log the route template.
-- Better Auth's own logger is routed into pino at `warn`; Prisma logs events (warn/error, `query` at `debug`) **without parameters**.
-- Unexpected errors: one `level:50` entry with `err.type`, `err.message`, `err.stack` and the `traceId` returned to the client.
-- Find all logs of a request: `docker compose logs api | grep <traceId>` .
+- `reqId` is the `X-Request-Id` of the request (a well-formed client value is echoed, otherwise one is generated).
+- `traceId` is the OpenTelemetry trace id when telemetry is on (with a `spanId` next to it); otherwise it is the request id, the same fallback the error envelope uses. Either way one id finds all lines of a request: `docker compose logs api | grep <traceId>`.
+- `route` is the route template (`/api/v1/tasks/:id`), so ids and search terms stay out of the aggregate; `req.url` is the path without its query string.
+- Health probes (`/api/v1/health/*`) are not logged.
+- Levels: `LOG_LEVEL` (`info` default; `debug` and `trace` are refused when `APP_ENV=production`). Human-readable output: `LOG_PRETTY=true` (needs the dev-only `pino-pretty`; the production image falls back to JSON with one warning).
+- Redacted (`[REDACTED]`): credential headers (`authorization`, `cookie`, `set-cookie`, `set-auth-token`) and fields named `password`, `newPassword`, `currentPassword`, `token`, `accessToken`, `refreshToken`, `idToken`, `sessionToken`, `apiKey`, `secret`, `email`, `connectionString`, `databaseUrl` at depth 0 to 3. Request and response bodies are never logged.
+- Better Auth's logger is bridged into pino (messages sanitized: URL query strings stripped, emails masked); Prisma logs warn/error events and, at `debug`, query events **without parameters**.
+- Unexpected errors: one `level:50` entry with the error class and code only (driver messages can carry row values) and the `traceId` that the client also receives. Find them with `docker compose logs api | grep '"level":50'`.
+
+## Traces (when enabled)
+
+```text
+GET /api/v1/tasks                          (http server span: route template, status code)
+ └─ request handler / TasksController.list (express and nestjs-core spans)
+     └─ pg-pool.connect, pg.query SELECT …  (the pg driver behind Prisma)
+```
+
+- An incoming W3C `traceparent` is honored: a client trace continues into the API.
+- Health probes are not traced.
+- The resource carries only `service.name` (`OTEL_SERVICE_NAME`, default `teams-tasks-api`): no process command line, user or host id.
+
+**Treat exported spans as sensitive.** The API does not scrub them. When the endpoint is set they can contain the full request URL **including its query string** (search terms), `exception` events with the **error message and stack**, `client.address` and `user_agent.original`, and the SQL text of `pg` spans (statement text, no bound parameter values). Send them only to a collector you control, strip or drop those attributes there (an `attributes`/`transform` processor), and keep the endpoint `https` outside your machine: `APP_ENV=production` refuses a plain `http` endpoint and the per-signal `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_ENDPOINT` variables, which would bypass that rule.
+
+### Look at a trace locally
+
+Any OTLP/HTTP receiver works. For example, with a Jaeger all-in-one container (an example, not part of this repository's tests):
+
+```bash
+docker run --rm -p 16686:16686 -p 4318:4318 jaegertracing/all-in-one
+# API on the host: OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 in .env (from a container use an address it can reach)
+# UI: http://localhost:16686  → service teams-tasks-api → paste a traceId from the logs
+```
+
+The repository's own check of this path is the compose smoke (`tools/ci/compose-smoke.sh`): it runs a tiny OTLP sink, asserts that **no** trace arrives when the endpoint is unset (even with a per-signal endpoint pointing at the sink) and that a trace for `teams-tasks-api` arrives when it is set.
 
 ## Health
 
-| Endpoint                   | Meaning                                                                                                                                                                                                  | Used by                                          |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `GET /api/v1/health/live`  | Process up; no dependency check                                                                                                                                                                          | liveness (orchestrator restart)                  |
-| `GET /api/v1/health/ready` | DB reachable (`SELECT 1`, 1.5 s timeout; one attempt outstanding, bounded by the pg connect 2 s / query 5 s timeouts so a black-holed database recovers within seconds of returning) → `200`, else `503` | compose healthcheck, `depends_on`, load balancer |
+| Endpoint                   | Meaning                                                                                                                                                                           | Used by                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `GET /api/v1/health/live`  | Process up; no dependency check                                                                                                                                                   | liveness                                         |
+| `GET /api/v1/health/ready` | Database reachable (`SELECT 1`, 1.5 s bound; one attempt outstanding, pg connect 2 s / query 5 s) → `200 {"status":"ready","checks":{"database":"up"}}`, else `503` with `"down"` | compose healthcheck, `depends_on`, load balancer |
 
-Public, unthrottled, not logged/traced. Liveness ships with the auth work (001); readiness (T-006-03) asks the database only, with one `SELECT 1` outstanding and the pg connect/query bounds of 2 s / 5 s, so it is back within seconds of the database returning. The telemetry backend is never a readiness dependency.
+Public, unthrottled, not logged or traced. The telemetry backend is never a readiness dependency.
 
-## Running SigNoz locally
+## What to watch in production
 
-> **Not in the repository yet** (T-006-06): the `observability` compose profile, the Makefile targets and the dashboard JSON below are the specified behavior. Until then point `OTEL_EXPORTER_OTLP_ENDPOINT` at any OTLP/HTTP collector. Logs stay on stdout; correlate them with `traceId`.
+Not provisioned here; the API exports no metrics, so derive these from request logs (`res.statusCode`, `responseTime`, `route`) or from the load balancer:
 
-Requirements: Docker with **≈ 4 GB free RAM** (ClickHouse is the heavy part) and ~2 GB disk.
+| Signal        | Condition                                       | First action                                    |
+| ------------- | ----------------------------------------------- | ----------------------------------------------- |
+| 5xx rate      | > 2 % for 5 min                                 | logs by the `traceId` of failing requests       |
+| Latency       | task list p95 above the budget (100 ms locally) | slow queries, pool saturation, indexes          |
+| Readiness     | `/ready` non-200 for 2 min on any instance      | database reachability, credentials, connections |
+| Throttling    | 429 > 5 % of requests                           | abuse vs. a misbehaving client                  |
+| Auth failures | 401 on `/api/auth/sign-in` far above baseline   | credential stuffing: WAF / IP blocks            |
 
-```bash
-make observability                       # = docker compose --profile observability up -d --build --wait
-# UI:        http://localhost:8080        (first start: create the local admin account when prompted)
-# Collector: OTLP gRPC :4317 · OTLP HTTP :4318 (the API exports to http://signoz-otel-collector:4318)
-make observability-down                  # stops SigNoz and deletes its volumes
-```
-
-The API needs no change: its default `OTEL_EXPORTER_OTLP_ENDPOINT` already points at the collector service name; before the profile is up, exports just fail quietly.
-
-### Find a trace
-
-1. Generate traffic: open the app, or `make smoke`, or run a request from `tools/bruno/` / the README cURL examples.
-2. Copy an id: the `traceId` of an error envelope, or the `traceId` of a log line (`docker compose logs api | tail`). `X-Request-Id` is searchable as the log field `reqId`.
-3. SigNoz → **Traces** → filter `serviceName = teams-tasks-api`, or paste the trace id in the search box (`traceID = …`).
-4. Open the trace: flame graph shows `GET /api/v1/tasks → ListTasksHandler → prisma/pg` spans with durations; the **Logs** tab shows the correlated log lines.
-5. From a slow span, check `db.statement` to identify the query; compare with indexes in [data model](../architecture/data-model.md#indexes-and-why).
-
-### Find errors
-
-SigNoz → Traces → filter `hasError = true` or `httpStatusCode >= 500`; or search the stdout logs for `"level":50` and take the `traceId`.
-
-## Dashboards to create
-
-Exported JSON in `infra/signoz/dashboards/teams-tasks-api.json` (import: Dashboards → New → Import JSON).
-
-| Panel                              | Query (conceptual)                                                             |
-| ---------------------------------- | ------------------------------------------------------------------------------ |
-| Request rate by route              | `sum(rate(http.server.request.duration_count)) by http.route`                  |
-| Error rate (5xx %)                 | `5xx count / total count` by route                                             |
-| 4xx by status                      | `count by http.response.status_code` where 400–499 (watch 401/404/409/412/429) |
-| Latency p50/p95/p99                | histogram quantiles by route; highlight `GET /api/v1/tasks` vs 100 ms budget   |
-| Tasks created / completed per hour | `increase(tasks_created_total[1h])`, `increase(tasks_completed_total[1h])`     |
-| DB time share                      | sum of DB span durations / request duration (trace-derived)                    |
-| Top slow traces                    | trace list sorted by duration, `GET /api/v1/tasks`                             |
-| Readiness                          | external probe (production) or `up` derived from request rate                  |
-
-## Alerts to define (documented, not provisioned locally)
-
-| Alert                 | Condition                                                       | Severity | First action                                               |
-| --------------------- | --------------------------------------------------------------- | -------- | ---------------------------------------------------------- |
-| API error rate high   | 5xx > 2 % for 5 min (≥ 50 req)                                  | page     | Runbook → logs by `traceId` of failing requests            |
-| Latency SLO burn      | task list p95 > 100 ms for 10 min / burn rate > 14× (1 h)       | page     | Check DB span share, slow queries, pool saturation         |
-| Readiness failing     | `/ready` non-200 for 2 min on any instance                      | page     | DB reachability, credentials, connection limit             |
-| Throttling spike      | 429 > 5 % of requests for 10 min                                | ticket   | Abuse vs. a misbehaving client (offline queue retry storm) |
-| Auth failures spike   | 401 on `/api/auth/sign-in` > 10× baseline                       | ticket   | Credential stuffing → WAF/IP blocks                        |
-| Concurrency conflicts | 412 rate > 5 %                                                  | ticket   | Offline sync conflicts — check client version              |
-| No telemetry          | no spans from `teams-tasks-api` for 10 min while traffic exists | ticket   | Collector/exporter health                                  |
-
-SLO proposals and error budgets are in [production readiness](production-readiness.md#reliability).
-
-## Load and smoke tests
-
-> **Not in the repository yet** (T-006-07): the k6 scripts and targets below are the specified behavior (the Makefile target for the k6 smoke will be `k6-smoke`; `make smoke` is the compose smoke).
-
-`tools/k6/` — see [006 plan § k6](../specs/006-observability/plan.md#k6).
-
-```bash
-make smoke    # all endpoints once; fails on any failed check
-make load     # 20 VUs, 2 min; fails if task list p95 >= 100 ms or error rate >= 1 %
-```
-
-`make load` runs with `RATE_LIMIT_MAX` (per user, default 100/min) and `RATE_LIMIT_IP_MAX` (per IP, default 300/min) raised for the run; otherwise the load would be answered with `429`. Recreate the `api` service without the overrides afterwards.
-
-Run `make load` with SigNoz up to see the latency panels move; compare p95 there with k6's summary.
+SLO proposals are in [production readiness](production-readiness.md#reliability).
 
 ## Configuration reference
 
-| Variable                      | Default                                                                                                                          | Effect                                                               |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `OTEL_SDK_DISABLED`           | `false`                                                                                                                          | `true` → no telemetry at all                                         |
-| `OTEL_SERVICE_NAME`           | `teams-tasks-api`                                                                                                                | service name                                                         |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` (the `.env.example` value; the SigNoz profile will point compose at `http://signoz-otel-collector:4318`) | collector; must be https in production, except the compose collector |
-| `OTEL_TRACES_SAMPLER`         | `parentbased_always_on`                                                                                                          | sampling                                                             |
-| `LOG_LEVEL`                   | `info`                                                                                                                           | log threshold                                                        |
-| `LOG_PRETTY`                  | `false`                                                                                                                          | human-readable logs                                                  |
+| Variable                      | Default           | Effect                                                                                      |
+| ----------------------------- | ----------------- | ------------------------------------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | unset             | unset: nothing is exported. Set: traces go to this OTLP/HTTP endpoint (https in production) |
+| `OTEL_SDK_DISABLED`           | `false`           | `true` → no telemetry even when the endpoint is set                                         |
+| `OTEL_SERVICE_NAME`           | `teams-tasks-api` | service name on exported traces                                                             |
+| `LOG_LEVEL`                   | `info`            | log threshold                                                                               |
+| `LOG_PRETTY`                  | `false`           | human-readable logs (refused in production)                                                 |
 
-Validated at start by a class-validator env class (`src/config/telemetry.env.ts`); an invalid value fails the start naming the variable (never its value). Only these variables are supported: per-signal endpoints/protocols (`OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_*`) and `OTEL_{TRACES,METRICS,LOGS}_EXPORTER` are rejected when set.
+Validated at start by a class-validator env class (`src/config/telemetry.env.ts`); an invalid value fails the start naming the variable (never its value). A collector that is down never affects requests: the API starts and answers normally.

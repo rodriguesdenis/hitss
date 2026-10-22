@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-22
 - **Deciders:** user (product owner of the submission), software-architect, nestjs-specialist, database-specialist
-- **Supersedes in part:** [ADR-0002](0002-nestjs-clean-architecture-ddd-cqrs.md) (CQRS, buses, module contracts, unit of work), [ADR-0007](0007-better-auth.md) (cookie sessions and CSRF on `/api/v1`), [ADR-0013](0013-opentelemetry-and-signoz.md) (custom telemetry machinery), [ADR-0015](0015-optimistic-concurrency.md) (ETag / `If-Match`)
+- **Supersedes in part:** [ADR-0002](0002-nestjs-clean-architecture-ddd-cqrs.md) (CQRS, buses, module contracts, unit of work), [ADR-0007](0007-better-auth.md) (cookie sessions and CSRF on `/api/v1`), [ADR-0013](archive/0013-opentelemetry-and-signoz.md) (custom telemetry machinery), [ADR-0015](archive/0015-optimistic-concurrency.md) (ETag / `If-Match`)
 
 ## Context and problem statement
 
@@ -32,7 +32,7 @@ Each piece was reasoned and tested, but together they cost more reading time tha
 
 ## Decision outcome
 
-Option 3. Per module:
+Option 3. Per module (as built; amended 2026-10-22 in T-008-09 to the tree the code settled on):
 
 ```
 modules/<x>s/
@@ -40,21 +40,28 @@ modules/<x>s/
 │   ├── entities/<x>.entity.ts            # create() validates new data; restore() rebuilds from storage
 │   ├── value-objects/<y>.vo.ts
 │   ├── errors/<x>.errors.ts
-│   └── repositories/<x>.repository.ts    # abstract class (DI token), domain types only
-├── application/use-cases/<verb>-<x>.use-case.ts   # one class, execute(input: plain TS type)
+│   ├── repositories/<x>.repository.ts    # abstract class (DI token), domain types only
+│   └── policies/                         # pure rules shared by write and read side (tasks: overdue)
+├── application/
+│   ├── use-cases/<verb>-<x>.use-case.ts  # one class, execute(input: plain TS type)
+│   ├── ports/<x>.read-model.ts           # query side: views and pages, implemented by SQL
+│   └── views/                            # view types and assemblers when a view combines sources (tasks)
 ├── presentation/http/
 │   ├── <x>s.controller.ts
 │   ├── dto/                              # class-validator requests, <x>-response.dto.ts with @ApiProperty
 │   └── presenters/<x>.presenter.ts       # explicit entity/row → response mapping
 ├── infrastructure/persistence/
 │   ├── <x>.prisma-repository.ts
-│   └── <x>.persistence-mapper.ts
+│   ├── <x>.persistence-mapper.ts
+│   └── <x>.prisma-read.ts                # implements the read model
+├── <x>-lookup.service.ts                 # only when other modules need it (teams: TeamLookup)
 └── <x>s.module.ts
 shared/
-├── domain/                               # entity base, value-object base, domain error
+├── domain/                               # DomainError, Clock, Owner
+├── application/page.ts                   # Page<T>, PageRequest, Sort
 ├── infrastructure/prisma/prisma.service.ts
-├── http/                                 # envelope interceptor, exception filter + per-module error tables,
-│                                         # pagination query DTO, @CurrentUser()
+├── presentation/                         # envelope interceptor, exception filter + per-module error tables,
+│                                         # pipes, pagination query DTO, @CurrentOwner()
 └── observability/                        # pino logger config
 ```
 
@@ -101,4 +108,4 @@ shared/
 ## Links
 
 - Specification and plan: [008 — Simplification](../../specs/008-simplification/spec.md)
-- Superseded parts: [ADR-0002](0002-nestjs-clean-architecture-ddd-cqrs.md) · [ADR-0007](0007-better-auth.md) · [ADR-0013](0013-opentelemetry-and-signoz.md) · [ADR-0015](0015-optimistic-concurrency.md)
+- Superseded parts: [ADR-0002](0002-nestjs-clean-architecture-ddd-cqrs.md) · [ADR-0007](0007-better-auth.md) · [ADR-0013](archive/0013-opentelemetry-and-signoz.md) · [ADR-0015](archive/0015-optimistic-concurrency.md)

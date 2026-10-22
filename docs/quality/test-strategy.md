@@ -1,6 +1,7 @@
 # Test Strategy
 
 - **Principles:** [Constitution V — Quality](../constitution.md#v-quality) (test-first, pyramid, strict TS). Decision record: [ADR-0014 Testing strategy](../architecture/adr/0014-testing-strategy.md).
+- **In place today:** API unit, integration and e2e suites, the architecture rules (`pnpm arch`), the CI-script tests and the compose smoke with the Bruno collection. **Planned, described below as the target:** mobile component and Maestro tests (with the mobile app), mutation testing, k6 and the generated-client drift check.
 - **Related:** [definition of done](definition-of-done.md) · scenarios in `docs/specs/*/*.feature` · CI in [007 plan](../specs/007-ci-and-dx/plan.md#ci-pipeline-githubworkflowsciyml).
 
 ## Goals
@@ -37,23 +38,23 @@ Proportions are a guide, reviewed in PRs: a feature PR whose tests are mostly E2
 
 ### 1. API unit — Jest (`apps/api`, `*.spec.ts` next to the code)
 
-- **Domain:** aggregates (`Team`, `Task`), value objects (`TeamName`, `ColorHex`, `TaskTitle`, `TaskStatus`, `DueDate`), domain events, domain errors. Pure TypeScript, no Nest testing module, no mocks needed.
-- **Application:** command/query handlers with **in-memory fakes** of ports (`InMemoryTaskRepository`, `FakeTeamDirectory`, `FixedClock`, `SequentialIdGenerator`). Asserts outcomes and emitted events, not calls.
-- **Presentation units:** DTO validation (`class-validator` `validate()` on DTO instances — boundaries via `it.each`), error-code mapping in the exception filter, ETag/If-Match parsing.
-- **Infrastructure units:** event handlers for metrics (fake meter), config schema, request-id generator.
+- **Domain:** entities (`Team`, `Task`), value objects (`TeamName`, `ColorHex`, `TaskTitle`, `TaskStatus`, `DueDate`), the overdue policy, domain errors. Pure TypeScript, no Nest testing module, no mocks needed.
+- **Application:** use cases with **in-memory fakes** of the repositories and read models (`InMemoryTaskRepository`, `InMemoryTeamRepository`, a fixed `Clock`). The in-memory and Prisma repositories run the same contract suite. Asserts outcomes, not calls.
+- **Presentation units:** DTO validation (`class-validator` `validate()` on DTO instances — boundaries via `it.each`), error-code mapping in the exception filter, presenters.
+- **Infrastructure units:** config schema and production rules, request-id generator, logger configuration, OTel SDK options.
 - Covers most `@must` validation and rule scenarios at the cheapest level.
 
 ### 2. API integration — Jest + Testcontainers PostgreSQL 17 (`apps/api/test/integration/**/*.int-spec.ts`)
 
 - Real `postgres:17-alpine` container, migrations applied with `prisma migrate deploy`.
-- Repositories: owner scoping, soft-delete filtering, `version` conditional updates, `task_teams` replacement, `TeamDeleted` → unassign in one transaction, partial unique index for team names (case-insensitive), trigram search, sort + tie-breaker stability, pagination totals.
-- Idempotency store, seed (idempotence, reset), readiness (stop/restart container), telemetry (in-memory span/metric exporters) and log redaction (in-memory log stream).
+- Repositories: owner scoping, soft-delete filtering, `version` increments, `task_teams` replacement, team delete in one transaction (rolled back as a whole when its last statement fails), partial unique index for team names (case-insensitive), trigram search, sort + tie-breaker stability, pagination totals.
+- Seed (idempotence, reset), migrations vs `schema.prisma` drift, readiness (stop/restart container) and log redaction (in-memory log stream).
 
 ### 3. API E2E — supertest (`apps/api/test/e2e/**/*.e2e-spec.ts`)
 
 - The full Nest app (`AppModule`, real guards, pipes, filters, interceptors, Better Auth) against a Testcontainers DB.
-- HTTP contract: status codes, envelopes `{ data, meta }` / `{ error }`, `ETag`, `Location`, `X-Request-Id`, `Retry-After`, CORS/helmet headers.
-- Security: route enumeration → `401` without session; **another user's resource → `404`**; unknown fields → `400`; rate limits → `429`.
+- HTTP contract: status codes, envelopes `{ data, meta }` / `{ error }`, `Location`, `X-Request-Id`, `Retry-After`, CORS/helmet headers.
+- Security: route enumeration → `401` without a Bearer token (a session cookie alone is not enough); **another user's resource → `404`**; unknown fields → `400`; rate limits → `429`.
 - One "happy journey" per resource (create → list → get → update → delete).
 
 ### 4. Mobile component — jest-expo + React Native Testing Library (`apps/mobile/**/*.test.tsx`)
@@ -124,18 +125,18 @@ describe('Tasks list filters (US-03.4)', () => {
 ```
 
 - Maestro flows: file name and first comment carry the ids (`# AC-04.2.1 AC-04.3.2`).
-- **Traceability check** (`tools/ci/traceability.mjs`, CI `static` job): parses all `@AC-` tags from feature files and all `AC-\d\d\.\d+\.\d+` ids from test names; fails if a `@must` AC has no test, warns for `@should`/`@could`; output feeds [`traceability-matrix.md`](traceability-matrix.md) (owned by qa-engineer).
+- **Traceability check** (`tools/ci/traceability.mjs`, optional: `pnpm traceability:check` locally or the non-required `docs-checks` CI job): parses all `@AC-` tags from feature files and all `AC-\d\d\.\d+\.\d+` ids from test names; fails if a `@must` AC has no test, warns for `@should`/`@could`; output feeds [`traceability-matrix.md`](traceability-matrix.md) (owned by qa-engineer).
 - `@docs` scenarios are verified by review (DoD checklist) and a markdown link check, not by code tests.
 
 ## Coverage gates
 
-| Scope                                  | Metric           | Gate                                                  | Enforced by                         |
-| -------------------------------------- | ---------------- | ----------------------------------------------------- | ----------------------------------- |
-| API domain (`src/modules/*/domain/**`) | lines            | **≥ 90 %**                                            | Jest `coverageThreshold` (unit run) |
-| API overall                            | lines            | **≥ 80 %**                                            | Jest `coverageThreshold` (unit run) |
-| API domain                             | mutation score   | **≥ 80 %**                                            | Stryker `break: 80`                 |
-| Mobile                                 | lines            | ≥ 70 % (target, reported, non-blocking initially)     | jest-expo coverage                  |
-| MUST acceptance criteria               | AC with ≥ 1 test | **100 %** (ratchet today, `--require-tests` T-007-17) | traceability check                  |
+| Scope                                  | Metric           | Gate                                               | Enforced by                         |
+| -------------------------------------- | ---------------- | -------------------------------------------------- | ----------------------------------- |
+| API domain (`src/modules/*/domain/**`) | lines            | **≥ 90 %**                                         | Jest `coverageThreshold` (unit run) |
+| API overall                            | lines            | **≥ 80 %**                                         | Jest `coverageThreshold` (unit run) |
+| API domain                             | mutation score   | **≥ 80 %**                                         | Stryker `break: 80`                 |
+| Mobile                                 | lines            | ≥ 70 % (target, reported, non-blocking initially)  | jest-expo coverage                  |
+| MUST acceptance criteria               | AC with ≥ 1 test | **100 %** (reported, not a CI gate since ADR-0020) | traceability check (optional)       |
 
 The coverage gates run on the unit project and measure domain, application and shared code only (`infrastructure/`, `presentation/`, the generated Prisma client, `main.ts` and `instrumentation.ts` are excluded), because those excluded layers are proven by the integration and e2e projects against a real database and HTTP stack, where line coverage from unit tests would be meaningless.
 
@@ -155,7 +156,7 @@ Coverage is a floor, not a goal: reviewers reject tests without meaningful asser
 Fast feedback first; all jobs feed the required `ci-success` status ([007 plan](../specs/007-ci-and-dx/plan.md#ci-pipeline-githubworkflowsciyml)).
 
 1. Install (frozen lockfile, caches) → **commitlint** (PR range)
-2. **Static** — format check, lint, typecheck, architecture rules, traceability check
+2. **Static** — format check, lint, typecheck, architecture rules (the traceability and doc checks run in the separate, non-required `docs-checks` job)
 3. **Unit** — API + mobile (component tests run in the same Jest task per package) with coverage gates
 4. **Integration + API E2E** — Testcontainers
 5. **Build** → **contract drift**

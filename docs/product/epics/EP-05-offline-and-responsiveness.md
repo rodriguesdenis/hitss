@@ -51,7 +51,7 @@ Marina's changes feel instant and are never lost: she can read her tasks and tea
 ## Dependencies
 
 - EP-04 (screens, indicators placement, toasts) · EP-03 (quick status, concurrency `version`/`If-Match`, soft delete) · API idempotency keys and optimistic concurrency ([api-contracts.md](../../architecture/api-contracts.md#conventions)).
-- ADR [0012](../../architecture/adr/0012-offline-first-and-optimistic-updates.md), [0015](../../architecture/adr/0015-optimistic-concurrency.md), [0019](../../architecture/adr/0019-idempotency-keys.md).
+- ADR [0012](../../architecture/adr/archive/0012-offline-first-and-optimistic-updates.md), [0015](../../architecture/adr/archive/0015-optimistic-concurrency.md), [0019](../../architecture/adr/archive/0019-idempotency-keys.md).
 
 ## Risks
 

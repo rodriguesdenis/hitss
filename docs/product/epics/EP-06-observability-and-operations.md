@@ -4,7 +4,7 @@
 - **Bounded context:** cross-cutting (platform)
 - **Priority:** mostly `COULD` (our extra); US-06.8 is `MUST` (the brief requires a "what I'd do differently in production" section).
 - **Principles:** [Constitution VII — Operability](../../constitution.md#vii-operability), [VI — Security by default](../../constitution.md#vi-security-by-default)
-- **ADRs:** [0013](../../architecture/adr/0013-opentelemetry-and-signoz.md), [0018](../../architecture/adr/0018-docker-compose-one-command-run.md)
+- **ADRs:** [0013](../../architecture/adr/archive/0013-opentelemetry-and-signoz.md), [0018](../../architecture/adr/0018-docker-compose-one-command-run.md)
 
 ## Goal
 

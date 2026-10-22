@@ -57,7 +57,7 @@ packages/tsconfig   @hitss/tsconfig     (strict base configs)
 - `packageManager` is pinned in the root `package.json`; Node ≥ 24 via `engines`.
 - Root scripts delegate to Turbo (`pnpm build|lint|typecheck|test` → `turbo run …`).
 - Turbo tasks declare `outputs` for caching (`dist/**`, `coverage/**`); `dev` and `test:e2e` are uncached.
-- A dedicated `api:openapi` → `api-client:generate` pipeline lets CI detect contract drift ([ADR-0008](0008-class-validator-dtos-and-generated-client.md)).
+- A dedicated `api:openapi` → `api-client:generate` pipeline lets CI detect contract drift ([ADR-0008](archive/0008-class-validator-dtos-and-generated-client.md)).
 
 ## Consequences
 
@@ -78,6 +78,6 @@ packages/tsconfig   @hitss/tsconfig     (strict base configs)
 
 ## Links
 
-- [Architecture overview — folder structure](../overview.md#6-folder-structure)
+- [Architecture overview — folder structure](../overview.md#6-folder-structure-appsapisrc)
 - [ADR-0018 — Docker Compose one-command run](0018-docker-compose-one-command-run.md)
 - pnpm workspaces: https://pnpm.io/workspaces · Turborepo: https://turborepo.com/docs

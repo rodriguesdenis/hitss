@@ -41,7 +41,7 @@
 ## Decision outcome
 
 - **Header:** `Idempotency-Key: <uuid>` optional on `POST /api/v1/teams` and `POST /api/v1/tasks`. Invalid format → `400 VALIDATION_FAILED`.
-- **Storage:** table `idempotency_keys (key, owner_id) PK, request_hash, response_status, response_body jsonb, expires_at` ([data model](../data-model.md)). Keys are **scoped per owner**, so users cannot collide or probe each other's keys.
+- **Storage:** table `idempotency_keys (key, owner_id) PK, request_hash, response_status, response_body jsonb, expires_at` ([data model](../../data-model.md)). Keys are **scoped per owner**, so users cannot collide or probe each other's keys.
 - **Request hash:** SHA-256 of method + path + canonical JSON body. Because the path is part of the hash, reusing a key on a **different route** (e.g. a key first used on `POST /teams`, then on `POST /tasks`) is a different request → **`422 IDEMPOTENCY_KEY_REUSED`**.
 - **Flow** (an `IdempotencyInterceptor` in shared presentation, backed by an `IdempotencyStore` port):
   1. No header → normal processing.
@@ -74,5 +74,5 @@
 
 ## Links
 
-- [API contracts — conventions](../api-contracts.md#conventions)
+- [API contracts — conventions](../../api-contracts.md#conventions)
 - IETF draft: https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/ · Stripe: https://docs.stripe.com/api/idempotent_requests

@@ -1,456 +1,258 @@
 # Architecture Overview
 
-How **Teams & Tasks** is built, from the outside in. This page uses the [C4 model](https://c4model.com/) (Context → Containers → Components) rendered as Mermaid flowcharts, then zooms into a request, the folder layout and the import rules that keep the layering honest.
+How the **Teams & Tasks** API is built, from the outside in: the system and its containers, the modules and their layers, the domain they implement, the path of one request, and the import rules that keep the layering honest. The layout follows [ADR-0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md) as simplified by [ADR-0020](adr/0020-simplify-architecture-for-the-hiring-test.md).
 
-Related documents: [domain model](domain-model.md) · [data model](data-model.md) · [API contracts](api-contracts.md) · [ADR index](adr/README.md) · [constitution](../constitution.md).
+Related documents: [data model](data-model.md) · [API contracts](api-contracts.md) · [ADR index](adr/README.md) · [constitution](../constitution.md).
 
-## 1. System context (C4 level 1)
-
-```mermaid
-flowchart TB
-  user(["<b>Person: Marina</b><br/>Team lead using her phone,<br/>often on flaky networks"])
-  dev(["<b>Person: Evaluator / developer</b><br/>Runs the stack, calls the API<br/>with cURL / Bruno"])
-
-  subgraph system["Teams & Tasks (software system)"]
-    app["<b>Mobile app</b><br/>Expo / React Native"]
-    api["<b>REST API</b><br/>NestJS 11"]
-    db[("<b>PostgreSQL 17</b>")]
-  end
-
-  signoz["<b>SigNoz</b><br/>Observability backend<br/>(optional)"]
-
-  user -- "Organizes tasks and teams" --> app
-  dev -- "HTTPS / JSON, Bearer token" --> api
-  app -- "HTTPS / JSON /api/v1, /api/auth" --> api
-  api -- "SQL (Prisma)" --> db
-  api -. "OTLP traces, metrics, logs" .-> signoz
-```
-
-| Element    | Responsibility                                                                                                                            |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile app | Screens for teams and tasks, forms, offline cache and mutation queue, optimistic updates.                                                 |
-| REST API   | Identity (Better Auth), Team Management, Task Management; validation, ownership, concurrency, idempotency.                                |
-| PostgreSQL | Source of truth: users/sessions, teams, tasks, `task_teams`, idempotency keys.                                                            |
-| SigNoz     | Receives OpenTelemetry data. **Optional**: the API runs identically when it is absent ([ADR-0013](adr/0013-opentelemetry-and-signoz.md)). |
-
-## 2. Containers (C4 level 2)
+## 1. System context and containers
 
 ```mermaid
 flowchart LR
-  user(["Marina"])
+  dev(["Evaluator / developer<br/>cURL, Bruno, Swagger UI"])
+  app(["Mobile app (Expo)<br/>next phase"])
 
-  subgraph device["Phone (Expo Go)"]
-    mobile["<b>Expo app</b><br/>Expo Router, React Query,<br/>Zustand, NativeWind"]
-    store[("AsyncStorage<br/>query cache + paused mutations")]
-    secure[("expo-secure-store<br/>session cookie")]
+  subgraph compose["docker compose up"]
+    pg[("<b>postgres</b><br/>PostgreSQL 17 + pg_trgm")]
+    migrate["<b>migrate</b> (one-shot)<br/>prisma migrate deploy"]
+    api["<b>api</b><br/>NestJS 11 on Node 24"]
   end
+  otlp["OTLP collector<br/>(optional)"]
 
-  subgraph compose["docker compose (local machine)"]
-    metro["<b>mobile</b> service (optional)<br/>Metro bundler --tunnel"]
-    migrate["<b>migrate</b> service (one-shot)<br/>prisma migrate deploy, then exits"]
-    api["<b>api</b> service<br/>NestJS 11 on Node 24<br/>node --import ./dist/instrumentation.js dist/main.js"]
-    pg[("<b>postgres</b> service<br/>PostgreSQL 17 + pg_trgm<br/>healthcheck")]
-    subgraph obs["profile: observability"]
-      otel["SigNoz OTel collector<br/>OTLP :4317/:4318"]
-      signoz["SigNoz UI + query service"]
-      ch[("ClickHouse")]
-    end
-  end
-
-  user --> mobile
-  mobile <--> store
-  mobile <--> secure
-  metro -. "JS bundle" .-> mobile
-  mobile -- "HTTPS JSON" --> api
-  migrate -- "TCP 5432" --> pg
-  api -- "TCP 5432" --> pg
-  api -. "OTLP/HTTP (default endpoint;<br/>dropped silently if absent)" .-> otel
-  otel --> ch
-  signoz --> ch
+  dev -- "HTTP JSON, Bearer token" --> api
+  app -. "HTTP JSON, Bearer token" .-> api
+  migrate --> pg
+  api -- "SQL (Prisma, pg pool)" --> pg
+  api -. "traces, only when OTEL_EXPORTER_OTLP_ENDPOINT is set" .-> otlp
 ```
 
-- Startup order ([ADR-0018](adr/0018-docker-compose-one-command-run.md)): `postgres` becomes healthy → the one-shot `migrate` service (Dockerfile target `migrator`, the only image with the Prisma CLI) applies the migrations and exits → `api` starts only if `migrate` completed successfully (`service_completed_successfully`), so a failed migration never serves traffic. The API image has no migration tooling; its entrypoint loads OpenTelemetry first (`node --import ./dist/instrumentation.js dist/main.js`). On boot the API probes the database (`SELECT 1`, 10 s bound) and exits non-zero if it does not answer (constitution §VII.3). It is healthy when `GET /api/v1/health/ready` answers (interim: TCP check until the health routes land).
-- The observability stack is behind a Compose **profile** because it needs ~4 GB RAM ([ADR-0013](adr/0013-opentelemetry-and-signoz.md)). The API always has an OTLP endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`, default `http://signoz-otel-collector:4318` in Compose). When the profile is off, exports are dropped silently and the API runs normally. `OTEL_SDK_DISABLED=true` turns telemetry off entirely.
-- The app has no backend of its own: everything persistent on the device is a cache or a queue ([ADR-0012](adr/0012-offline-first-and-optimistic-updates.md)).
+- **Startup order** ([ADR-0018](adr/0018-docker-compose-one-command-run.md)): `postgres` becomes healthy → `migrate` applies the migrations and exits → `api` starts only if `migrate` succeeded, seeds the demo data (idempotent) and serves. On boot the API probes the database (`SELECT 1`, 10 s bound) and exits non-zero if it does not answer; invalid configuration also stops it at boot, naming the variable.
+- **Telemetry is optional.** `instrumentation.ts` is loaded before Nest (`node --import ./dist/instrumentation.js dist/main.js`). Without `OTEL_EXPORTER_OTLP_ENDPOINT` it starts nothing; with it, OpenTelemetry auto-instrumentation exports traces over OTLP. Logs are always pino JSON on stdout with `reqId` and `traceId`. Details: [observability](../operations/observability.md).
 
-## 3. API components (C4 level 3)
-
-### 3.1 Modules
+## 2. Modules
 
 ```mermaid
 flowchart TB
-  subgraph api["NestJS application (apps/api)"]
-    direction TB
-    subgraph cross["Cross-cutting (global)"]
-      cfg["ConfigModule<br/>validated env"]
-      log["LoggerModule<br/>nestjs-pino"]
-      thr["ThrottlerModule"]
-      obsm["ObservabilityModule<br/>OTel meters"]
-      prisma["PrismaModule<br/>PrismaService + transactions"]
-      cqrs["CqrsModule<br/>CommandBus · QueryBus · EventBus"]
-      http["Shared presentation<br/>ExceptionFilter · Envelope/ETag/Idempotency interceptors · ValidationPipe"]
-    end
-    auth["<b>IdentityModule</b> (Identity)<br/>Better Auth at /api/auth/*<br/>global AuthGuard, @CurrentOwner()"]
-    teams["<b>TeamsModule</b><br/>(Team Management)"]
-    tasks["<b>TasksModule</b><br/>(Task Management)"]
-    health["<b>HealthModule</b><br/>Terminus: live / ready"]
+  subgraph cross["Cross-cutting (shared/, config/)"]
+    cfg["ConfigModule<br/>validated env, fail fast"]
+    obs["ObservabilityModule<br/>nestjs-pino, request id, redaction"]
+    prisma["PrismaModule<br/>PrismaService (one pg pool)"]
+    http["HTTP conventions<br/>ValidationPipe · envelope interceptor ·<br/>exception filter + error tables"]
   end
+  identity["<b>IdentityModule</b><br/>Better Auth at /api/auth/*<br/>global guards: IP throttler → Bearer auth → owner throttler"]
+  teams["<b>TeamsModule</b><br/>Team Management"]
+  tasks["<b>TasksModule</b><br/>Task Management"]
+  health["<b>HealthModule</b><br/>/api/v1/health/live · ready"]
 
-  teams -- "publishes TeamDeleted" --> cqrs
-  cqrs -- "TeamDeleted handler<br/>(unassign team)" --> tasks
-  tasks -- "TeamDirectory adapter → QueryBus<br/>GetTeamSummariesQuery" --> cqrs
-  cqrs --> teams
-  teams -- "TeamTaskCounts adapter → QueryBus<br/>CountTasksByTeamQuery" --> cqrs
-  cqrs --> tasks
+  tasks -- "injects TeamLookup<br/>(the only export of TeamsModule)" --> teams
   teams --> prisma
   tasks --> prisma
-  auth --> prisma
+  identity --> prisma
   health --> prisma
 ```
 
-Modules never import each other's providers. Cross-context collaboration goes through the **buses** and the target module's `contracts/` folder (query, event and result types only). This avoids a `TeamsModule ↔ TasksModule` DI cycle and keeps the dependency one-directional at the code level ([ADR-0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md)).
+| Module       | Responsibility                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **Identity** | Sign up, sign in, sessions (Better Auth, generic subdomain). Gives the other modules only an authenticated `ownerId`. |
+| **Teams**    | Team lifecycle, naming rules, colors, task counts. Exports `TeamLookup`.                                              |
+| **Tasks**    | Task lifecycle, status, assignment to teams, filters, search, sort. The core of the product.                          |
+| **Health**   | Liveness and readiness (database reachable) for Docker and orchestrators.                                             |
 
-### 3.2 Layers inside a module
+**Module communication.** `TeamsModule` exports a single provider, `TeamLookup` (`summaries(ownerId, ids)`, `findMissing(ownerId, ids)`): Tasks uses it to reject unknown team ids and to show team chips (name, color). Teams needs a `taskCount` per team; it is computed inside the teams read SQL with a join on `task_teams` and `tasks`, so Teams never calls Tasks and there is no module cycle. Deleting a team runs one `prisma.$transaction` in the teams repository: soft-delete the team, bump `version` / `updated_at` of the owner's live tasks linked to it (one set-based `UPDATE`), and delete its `task_teams` rows; all of it commits or none of it does. Both cross-table touches stay inside one database and one owned statement or transaction, which ADR-0020 accepts in place of buses, events and a unit of work.
+
+## 3. Layers inside a module
 
 ```mermaid
 flowchart LR
-  subgraph presentation["presentation/"]
-    ctrl["Controllers<br/>@nestjs/swagger"]
-    dto["Request/response DTOs<br/>class-validator"]
+  subgraph presentation["presentation/http/"]
+    ctrl["Controller<br/>@nestjs/swagger"]
+    dto["DTOs (class-validator)"]
+    pres["Presenter<br/>view → response DTO"]
   end
   subgraph application["application/"]
-    cmd["Commands + handlers<br/>(write use cases)"]
-    qry["Queries + handlers<br/>(read use cases)"]
-    ports["Ports<br/>read models, cross-context,<br/>clock, ids, metrics"]
+    uc["use-cases/<br/>one class, execute(input)"]
+    rm["ports/&lt;x&gt;.read-model.ts<br/>views and pages"]
+    views["views/ (tasks)"]
   end
   subgraph domain["domain/ (framework-free)"]
-    agg["Aggregates<br/>Team, Task"]
-    vo["Value objects<br/>TeamName, ColorHex, TaskTitle…"]
-    ev["Domain events + errors"]
-    rport["Repository port<br/>&lt;agg&gt;.repository.ts"]
+    ent["entities/<br/>Team, Task"]
+    vo["value-objects/"]
+    err["errors/"]
+    pol["policies/ (tasks)"]
+    repo["repositories/<br/>abstract class"]
   end
-  subgraph infrastructure["infrastructure/"]
-    repo["Prisma repositories<br/>+ mappers"]
-    adp["Adapters<br/>read models, TeamDirectory,<br/>clock, ids"]
+  subgraph infrastructure["infrastructure/persistence/"]
+    prepo["&lt;x&gt;.prisma-repository.ts<br/>+ persistence-mapper"]
+    pread["&lt;x&gt;.prisma-read.ts<br/>SQL for lists and views"]
   end
 
   ctrl --> dto
-  ctrl -- "CommandBus / QueryBus" --> cmd
-  ctrl --> qry
-  cmd --> agg
-  cmd --> rport
-  cmd --> ports
-  qry --> ports
-  agg --> vo
-  agg --> ev
-  rport --> agg
-  repo -. "implements" .-> rport
-  adp -. "implements" .-> ports
-  repo --> agg
+  ctrl --> uc
+  ctrl --> pres
+  uc --> ent
+  uc --> repo
+  uc --> rm
+  uc --> views
+  ent --> vo
+  ent --> err
+  views --> pol
+  prepo -. "implements" .-> repo
+  pread -. "implements" .-> rm
 ```
 
-Arrows are compile-time imports. Everything points toward `domain/`. Ports are `abstract class`es, usable directly as Nest DI tokens. The **repository port** (`domain/<agg>.repository.ts`) belongs to the domain: it loads and saves whole aggregates and uses only domain and `shared/domain` types (aggregate, ids, `ExpectedVersion`). It never uses pagination, transaction or Prisma types. Every **other port** lives in `application/ports/`: read models (lists and views with `Page<T>`), cross-context ports (`TeamDirectory`, `TeamTaskCounts`), `Clock`, `IdGenerator` and `TaskMetrics`. `infrastructure/` implements both kinds and depends on `application/` and `domain/`, never the reverse. The `<module>.module.ts` file is the composition root that binds each port to its adapter (`{ provide: TeamRepository, useClass: PrismaTeamRepository }`).
+Arrows are compile-time imports; everything points toward `domain/`.
 
-## 4. Mobile components
+- **Write side.** A use case loads an entity through the repository (an `abstract class` in `domain/repositories/`, used directly as the Nest DI token), calls a domain method and saves the entity. Entities validate in `create()` and are rebuilt from storage with `restore()`; their change methods return `false` on a no-op, and then nothing is written. The repository increments `version` in SQL. Writes are last-write-wins (ADR-0020).
+- **Read side.** Lists and single views come from `application/ports/<x>.read-model.ts`: plain view types and `Page<T>`, implemented by SQL in `<x>.prisma-read.ts` (filters, trigram search, whitelisted sort with an id tie-break, total from the same snapshot). Reads never build entities, so view and page types stay out of the domain.
+- **Presentation.** Controllers call use cases only, never repositories or Prisma. A write use case returns the new id (or nothing); the controller reads the result back through the get use case, so every single-resource response has the same shape. Presenters map views to response DTOs explicitly; the global envelope interceptor wraps them in `{ data, meta? }`, and the exception filter maps domain errors through each module's error table to `{ error }`.
+- **Composition root.** `<x>s.module.ts` binds each port to its adapter (`{ provide: TeamRepository, useClass: PrismaTeamRepository }`) and registers the module's error table.
 
-```mermaid
-flowchart TB
-  subgraph routes["app/ — Expo Router (file-based, typed routes)"]
-    authr["(auth)/sign-in · sign-up"]
-    tabs["(app)/(tabs)/tasks · teams · settings"]
-    detail["(app)/tasks/[id] · tasks/new · tasks/[id]/edit<br/>(app)/teams/new · teams/[id]/edit"]
-  end
+## 4. Domain
 
-  subgraph features["src/features/"]
-    fauth["auth<br/>authClient (Better Auth + expoClient)"]
-    fteams["teams<br/>hooks, components, form schema"]
-    ftasks["tasks<br/>hooks with optimistic logic,<br/>TaskCard, StatusActions, TaskForm"]
-  end
+### Ubiquitous language
 
-  subgraph shared["src/shared/"]
-    ui["ui/ — Button, Chip, Card, TextField<br/>(NativeWind @apply classes)"]
-    query["query/ — QueryClient, persister,<br/>onlineManager + NetInfo, mutation defaults"]
-    storage["storage/ — StorageAdapter<br/>AsyncStorage (default) · MMKV (dev build)"]
-    stores["stores/ — Zustand + immer<br/>filters, preferences, sync metadata"]
-    i18n["i18n/ · theme/"]
-  end
+| Term                  | Meaning                                                                                     | Code                                           |
+| --------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| **Owner**             | The user a team or task belongs to. Every read and write is scoped to the owner.            | `ownerId` (opaque id from Identity)            |
+| **Team**              | A named, color-coded group used to organize tasks.                                          | `Team`                                         |
+| **Team color**        | The `#RRGGBB` color identifying a team, shown as a chip on its tasks.                       | `ColorHex`                                     |
+| **Task**              | A unit of work with a title, optional description, status and optional due date.            | `Task`                                         |
+| **Status**            | **Pending**, **In progress**, **Done**; any status may move to any other.                   | `TaskStatus`: `PENDING`, `IN_PROGRESS`, `DONE` |
+| **Assign**            | Link a task to zero or more (up to 10) of the owner's teams.                                | `task.assignTo(teamIds)`                       |
+| **Complete / reopen** | Entering Done records `completedAt`; leaving Done clears it.                                | `completedAt`                                  |
+| **Overdue**           | Not Done and due before today (UTC). Derived, never stored.                                 | `isOverdue(status, dueDate, today)`            |
+| **Delete**            | Soft delete: the item disappears from the API; a deleted team's links to tasks are removed. | `deletedAt`                                    |
 
-  client["<b>packages/api-client</b><br/>orval: React Query hooks + zod schemas<br/>custom fetch mutator (auth headers, envelope, ApiError)"]
+### Entities and value objects
 
-  routes --> features
-  routes --> shared
-  features --> shared
-  features --> client
-  query --> storage
-  fauth -. "getCookie() for auth headers" .-> client
-```
+| Entity   | State                                                                                                                                                  | Behaviour                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Team** | `id`, `ownerId`, `name: TeamName`, `color: ColorHex`, `description?`, `version`, timestamps, `deletedAt?`                                              | `create()`, `restore()`, `replace()` (full `PUT`; `false` when nothing changes), `delete()`                                  |
+| **Task** | `id`, `ownerId`, `title: TaskTitle`, `description?`, `status`, `dueDate?`, `completedAt?`, `teamIds: TaskTeamIds`, `version`, timestamps, `deletedAt?` | `create()`, `restore()`, `edit()`, `assignTo()`, `changeStatus()`, `delete()`; each change method returns `false` on a no-op |
 
-- **Server state** lives only in React Query (generated hooks). **Local UI state** (filters, theme, last sync) lives in Zustand. Server data is never copied into Zustand ([ADR-0010](adr/0010-react-query-and-zustand-immer.md)).
-- Route files are thin: they read params, call feature hooks and compose feature components.
-- Styling uses NativeWind classes; reusable looks are `@apply` semantic classes in `global.css` ([ADR-0011](adr/0011-nativewind-with-apply.md)).
+| Value object      | Rule                                                                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `TeamName`        | Trimmed, 2–50 characters; unique per owner, case-insensitive (checked by the use case, guaranteed by a partial unique index) |
+| `ColorHex`        | `#RRGGBB`, normalized to upper case                                                                                          |
+| `TeamDescription` | Optional, ≤ 280 characters, no control characters except line breaks; blank → `null`                                         |
+| `TaskTitle`       | Trimmed, 3–120 characters                                                                                                    |
+| `TaskDescription` | Optional, ≤ 2000 characters, same character rule; blank → `null`                                                             |
+| `TaskStatus`      | `PENDING` · `IN_PROGRESS` · `DONE`                                                                                           |
+| `DueDate`         | Calendar date `YYYY-MM-DD`; past dates allowed                                                                               |
+| `TaskTeamIds`     | 0–10 distinct ids, order-insensitive; more → `TooManyTeams`                                                                  |
+
+Lengths count Unicode code points after trimming, the same as the DTOs and the `varchar(n)` columns. Ids are UUIDs drawn by the entity (`crypto.randomUUID()`). Use cases never set `version`: entities set `updatedAt`, the repository increments `version`.
+
+### Errors
+
+Each module's error table maps domain errors to HTTP ([API contracts](api-contracts.md#error-codes)): `Invalid*` value-object errors → `400` (normally caught earlier by the DTOs) · `TeamNotFound`, `TaskNotFound` (unknown, deleted **or another owner's**) → `404` · `TeamNameAlreadyExists` → `409` · `UnknownTeams { teamIds }`, `TooManyTeams` → `422`.
 
 ## 5. Request lifecycle — change a task's status
 
 ```mermaid
 sequenceDiagram
   autonumber
-  participant App as Expo app<br/>(useMutation)
-  participant MW as HTTP layer<br/>(OTel + pino-http + helmet)
-  participant G as Guards<br/>(Throttler, AuthGuard)
+  participant Client
+  participant MW as Middleware<br/>(request id, pino-http, helmet, CORS)
+  participant G as Global guards<br/>(IP throttler, Bearer auth, owner throttler)
   participant C as TasksController
-  participant CB as CommandBus
-  participant H as ChangeTaskStatusHandler
-  participant D as Task aggregate
+  participant UC as ChangeTaskStatusUseCase
+  participant T as Task entity
   participant R as PrismaTaskRepository
   participant PG as PostgreSQL
-  participant EB as EventBus
 
-  App->>App: onMutate: cancel queries, optimistic cache update
-  App->>MW: PATCH /api/v1/tasks/:id/status<br/>Cookie or Bearer, If-Match W/#quot;3#quot;, traceparent
-  activate MW
-  Note over MW: span "PATCH /api/v1/tasks/:id/status" starts<br/>log line carries trace_id
-  MW->>G: request
-  G->>PG: Better Auth: resolve session
-  G->>C: session.user.id = ownerId
-  C->>C: ValidationPipe (ChangeStatusDto, whitelist)
-  C->>CB: execute(ChangeTaskStatusCommand{ownerId, taskId, status, expectedVersion: 3})
-  CB->>H: handle
-  H->>R: findById(ownerId, taskId)
+  Client->>MW: PATCH /api/v1/tasks/:id/status<br/>Authorization: Bearer …, { "status": "DONE" }
+  MW->>G: request (reqId and traceId in every log line)
+  G->>PG: Better Auth resolves the session
+  G->>C: ownerId via @CurrentOwner()
+  C->>C: ParseUuidPipe, ValidationPipe (ChangeTaskStatusDto)
+  C->>UC: execute({ ownerId, id, status })
+  UC->>R: findById(ownerId, id)
   R->>PG: SELECT … WHERE id AND owner_id AND deleted_at IS NULL
-  Note right of PG: child span from @prisma/instrumentation
-  PG-->>R: row
-  R-->>H: Task (mapped to domain)
-  H->>D: changeStatus(DONE, clock.now())
-  D-->>H: TaskStatusChanged{from, to}
-  H->>R: save(task, expectedVersion 3)
-  R->>PG: UPDATE … SET version = 4 WHERE id AND owner_id AND version = 3
-  alt 0 rows updated
-    R-->>H: ConcurrencyConflict
-    H-->>C: throw → ExceptionFilter → 412 PRECONDITION_FAILED
-  else 1 row updated
-    H->>EB: publish TaskStatusChanged (after persistence)
-    EB-->>EB: metrics: tasks_completed_total++
-    H-->>C: TaskView
-    C-->>MW: Envelope interceptor → { data }, ETag W/#quot;4#quot;
+  R-->>UC: Task (restore), or null → TaskNotFound → 404
+  UC->>T: changeStatus(DONE, clock.now())
+  alt status changed
+    UC->>R: update(task)
+    R->>PG: UPDATE tasks SET status, completed_at, updated_at, version = version + 1<br/>WHERE id AND owner_id AND deleted_at IS NULL
+  else same status
+    Note over UC: no write, version unchanged
   end
-  MW-->>App: 200 (or 412) + X-Request-Id
-  deactivate MW
-  App->>App: onSettled: invalidate task lists / detail<br/>onError: rollback snapshot
+  C->>C: GetTaskUseCase → TaskView → presenter
+  C-->>Client: 200 { data: task } + X-Request-Id
 ```
 
-Writes that span aggregates (team deletion → unassign from tasks) run inside one database transaction; see [ADR-0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md#teamdeleted-consistency).
-
-## 6. Folder structure
-
-### 6.1 Monorepo
+## 6. Folder structure (`apps/api/src`)
 
 ```text
-.
-├── apps/
-│   ├── api/                 # NestJS 11 REST API
-│   └── mobile/              # Expo app
-├── packages/
-│   ├── api-client/          # orval output: hooks + zod + fetch mutator (generated, committed)
-│   └── tsconfig/            # shared strict tsconfig bases
-├── docs/                    # constitution, product, specs, architecture, ADRs
-├── tools/                   # bruno/, http/, k6/
-├── docker-compose.yml       # postgres, api, mobile (optional), observability profile
-├── Makefile                 # up, down, logs, seed, reset, test, observability, observability-down, mobile, smoke, load
-├── turbo.json · pnpm-workspace.yaml
-└── .github/workflows/ci.yml
+main.ts · app.module.ts · app.setup.ts       # setupApp(app): the bootstrap shared by main.ts and the e2e app
+instrumentation.ts                           # optional OTel auto-instrumentation, loaded before Nest
+graceful-exit.ts                             # SIGTERM → close → exit 0
+config/                                      # env schema (class-validator), production rules, .env loading
+openapi/                                     # OpenAPI document at /docs (+ the Better Auth paths)
+seed/                                        # deterministic, idempotent demo data
+shared/
+├── domain/                                  # DomainError, Clock, Owner
+├── application/page.ts                      # Page<T>, PageRequest, Sort
+├── infrastructure/                          # prisma/ (PrismaService, database probe), sql/, system-clock.ts
+├── presentation/                            # envelope interceptor, exception filter + DomainErrorMappings,
+│                                            # validation and UUID pipes, pagination DTO, sort, page meta,
+│                                            # @CurrentOwner(), @Public(), @RawResponse(), OpenAPI helpers, CORS
+└── observability/                           # pino config, request id, redaction, trace fields, probe filter
+modules/
+├── identity/                                # Better Auth factory, Bearer guard, throttler guards, client-IP and body-limit middleware
+├── health/
+├── teams/
+│   ├── domain/
+│   │   ├── entities/team.entity.ts
+│   │   ├── value-objects/{team-name,color-hex,team-description}.vo.ts
+│   │   ├── errors/team.errors.ts
+│   │   └── repositories/team.repository.ts
+│   ├── application/
+│   │   ├── ports/team.read-model.ts         # TeamView, TeamSummary, ListTeamsCriteria
+│   │   └── use-cases/{create,list,get,update,delete}-team.use-case.ts
+│   ├── infrastructure/persistence/
+│   │   ├── team.prisma-repository.ts        # incl. the single-transaction delete
+│   │   ├── team.persistence-mapper.ts
+│   │   └── team.prisma-read.ts              # lists with taskCount, summaries
+│   ├── presentation/http/
+│   │   ├── teams.controller.ts · team-error.mapping.ts
+│   │   ├── dto/                             # create, update, list query, response
+│   │   └── presenters/team.presenter.ts
+│   ├── team-lookup.service.ts               # the module's only export
+│   └── teams.module.ts
+└── tasks/
+    ├── domain/{entities,value-objects,errors,repositories}/ · policies/overdue.policy.ts
+    ├── application/
+    │   ├── ports/task.read-model.ts
+    │   ├── use-cases/                       # create, list, get, update, change-status, delete; shared/precise-unknown-teams.ts
+    │   └── views/                           # task.view.ts, task-view.assembler.ts (rows + team chips from TeamLookup)
+    ├── infrastructure/persistence/          # task.prisma-repository.ts, task.persistence-mapper.ts, task.prisma-read.ts
+    ├── presentation/http/                   # tasks.controller.ts, task-error.mapping.ts, dto/, presenters/, validators/
+    └── tasks.module.ts                      # imports TeamsModule for TeamLookup
 ```
 
-### 6.2 API (`apps/api`)
+Unit tests (`*.spec.ts`) sit next to the file they test; `test/integration` (Testcontainers PostgreSQL) and `test/e2e` (supertest against the full app) live next to `src/`.
 
-```text
-apps/api/
-├── prisma/
-│   ├── schema.prisma
-│   ├── migrations/                      # prisma migrate + raw SQL for partial / trigram indexes
-│   └── seed.ts                          # deterministic, idempotent
-├── src/
-│   ├── instrumentation.ts               # OTel NodeSDK, loaded before anything else
-│   ├── main.ts                          # NestFactory.create(AppModule, { bodyParser: false, bufferLogs: true }) → setupApp(app) → listen
-│   ├── app.setup.ts                     # setupApp(app): the single bootstrap seam, used by main.ts and test/support/app.ts (order below); never add app-level concerns to main.ts
-│   ├── app.module.ts                    # the only CqrsModule.forRoot() (one EventBus; feature modules import plain CqrsModule); ObservabilityModule last
-│   ├── generated/                       # Prisma client from `prisma generate` (gitignored, persistence library: infrastructure only)
-│   ├── config/                          # env schema as a class-validator class, validated via ConfigModule `validate()` (fail fast) + typed config
-│   │   ├── env.schema.ts · env.validation.ts · production-rules.ts · app-config.ts · config.module.ts
-│   │   ├── env-files.ts                 # which .env files load (ignored with APP_ENV=production); shared with prisma.config.ts and instrumentation.ts
-│   │   ├── auth.env.ts                  # Better Auth / CORS / proxy variables, composed into `validate()`
-│   │   ├── telemetry.env.ts             # TelemetryEnv (OTEL_*), composed into the same `validate()` and called directly by instrumentation.ts
-│   │   ├── transforms.ts                # class-transformer/validator helpers shared by the env classes
-│   │   └── config-validation-error.ts   # ConfigValidationError + Violation (names variables, never values)
-│   ├── shared/
-│   │   ├── domain/                      # AggregateRoot, DomainEvent, DomainError + ConcurrencyConflict, expected-version.ts (pure TS)
-│   │   ├── application/                 # Clock, IdGenerator ports, Page<T>, PageRequest
-│   │   ├── infrastructure/
-│   │   │   ├── prisma/                  # PrismaModule, PrismaService (one pg pool), database-probe.ts (pg pool bounds: connect 2 s, query 5 s; boot probe: SELECT 1 bounded by DATABASE_PROBE_TIMEOUT, default 10 s → DatabaseUnavailableError), transaction host (with the CLS unit of work)
-│   │   │   ├── idempotency/             # PrismaIdempotencyStore
-│   │   │   └── system-clock.ts · uuid-generator.ts
-│   │   ├── presentation/
-│   │   │   ├── http-conventions.module.ts  # global: DomainErrorMappings registry + GlobalExceptionFilter
-│   │   │   ├── cors-options.ts          # CORS allowlist from CORS_ORIGINS (none when empty)
-│   │   │   ├── filters/                 # GlobalExceptionFilter, error codes, DomainErrorMappings (modules register theirs)
-│   │   │   ├── pipes/                   # AppValidationPipe (global), ParseUuidPipe
-│   │   │   ├── interceptors/            # envelope, etag, idempotency
-│   │   │   ├── dto/                     # PaginationQueryDto, ErrorResponseDto, envelope helpers
-│   │   │   └── decorators/              # @RawResponse, @ApiEnvelopedResponse, @IfMatch(), @CurrentOwner() (CO-1)
-│   │   └── observability/
-│   │       ├── observability.module.ts  # ObservabilityModule: logging, telemetry shutdown (last in AppModule.imports)
-│   │       ├── is-probe.ts              # probe requests (/api/v1/health/*) are never logged or traced
-│   │       ├── sanitize-url.ts          # strips query strings; shared by logging and the span exporter
-│   │       ├── logging/                 # logger.config, redact-paths, request-id, route-template, trace-fields, pino-bridge (Better Auth → pino)
-│   │       ├── telemetry/               # diag-logger, resource-attributes, http-metric-views (allowlisted request-duration dimensions), sanitizing-span-exporter (no query strings, no error messages/stacks), telemetry-lifecycle, telemetry-shutdown
-│   │       └── tracing/                 # traced-handler.ts: @Traced() use-case spans around command/query handlers (application may import it, see A2)
-│   └── modules/
-│       ├── identity/                    # Identity context (generic subdomain, no domain/ layer); @CurrentOwner() lives in shared/presentation (CO-1), teams/tasks never import identity (A5)
-│       │   ├── identity.module.ts       # wraps nestjs-better-auth AuthModule.forRootAsync (re-adds the JSON parser; global guards registered in order)
-│       │   ├── auth.factory.ts          # createAuth(config, prisma, logger, hasher): the Better Auth instance at /api/auth
-│       │   ├── auth-routes.ts · password-hasher.ts
-│       │   └── middleware/              # client-ip.middleware.ts (sets the only IP header Better Auth trusts)
-│       ├── health/                      # Terminus controller + Prisma indicator
-│       ├── teams/
-│       │   ├── contracts/               # PUBLIC: TeamDeleted, GetTeamSummariesQuery + result types
-│       │   ├── domain/                  # pure TypeScript, grouped by aggregate
-│       │   │   ├── team.ts              # aggregate root
-│       │   │   ├── team.errors.ts       # every error of the module
-│       │   │   ├── team.events.ts       # every event of the module (TeamDeleted)
-│       │   │   ├── team.repository.ts   # TeamRepository port (abstract class, domain types only)
-│       │   │   └── value-objects/       # team-name.ts, color-hex.ts, team-description.ts
-│       │   ├── application/
-│       │   │   ├── commands/            # one folder per use case: create-team/, replace-team/, delete-team/
-│       │   │   │   └── create-team/     # create-team.command.ts, create-team.handler.ts (+ .spec)
-│       │   │   ├── queries/             # one folder per use case: list-teams/, get-team/, get-team-summaries/
-│       │   │   │   └── list-teams/      # list-teams.query.ts, list-teams.handler.ts (+ .spec)
-│       │   │   └── ports/               # TeamReadModel, TeamTaskCounts (abstract classes = DI tokens)
-│       │   ├── infrastructure/
-│       │   │   ├── prisma-team.repository.ts  # write side: aggregate in/out
-│       │   │   ├── team.mapper.ts       # Prisma row ⇄ Team
-│       │   │   └── adapters/            # cross-context ports, e.g. team-task-counts.adapter.ts
-│       │   ├── presentation/
-│       │   │   ├── teams.controller.ts
-│       │   │   └── dto/                 # create-team.dto.ts, replace-team.dto.ts, list-teams.query.dto.ts
-│       │   └── teams.module.ts          # composition root: binds ports → adapters
-│       └── tasks/
-│           ├── contracts/               # PUBLIC: CountTasksByTeamQuery + result types
-│           ├── domain/                  # pure TypeScript, grouped by aggregate
-│           │   ├── task.ts              # aggregate root
-│           │   ├── task.errors.ts       # every error of the module
-│           │   ├── task.events.ts       # every event of the module
-│           │   ├── overdue.policy.ts    # isOverdue(status, dueDate, today), reused by the read side
-│           │   ├── task.repository.ts   # TaskRepository port (abstract class, domain types only)
-│           │   └── value-objects/       # task-title.ts, task-description.ts, task-status.ts, due-date.ts, task-team-ids.ts
-│           ├── application/
-│           │   ├── commands/            # create-task/, replace-task/, change-task-status/, delete-task/
-│           │   ├── queries/             # list-tasks/, get-task/, count-tasks-by-team/
-│           │   ├── events/              # on-team-deleted.handler.ts (unassign), record-task-metrics.handler.ts (after commit)
-│           │   └── ports/               # TaskReadModel, TeamDirectory, task-metrics.ts (TaskMetrics)
-│           ├── infrastructure/          # prisma-task.repository.ts, task.mapper.ts, adapters/ (team-directory.adapter.ts, otel-task-metrics.adapter.ts)
-│           ├── presentation/            # tasks.controller.ts, dto/
-│           └── tasks.module.ts
-├── test/
-│   ├── support/                         # global-setup (one PG container per run, migrated template DB), postgres.ts (useTestDatabase / createTestDatabase), app.ts (createTestApp)
-│   ├── integration/                     # Testcontainers PostgreSQL: repositories, migrations, seed
-│   └── e2e/                             # supertest against the full Nest app
-├── stryker.config.mjs                   # mutation testing scope: src/modules/*/domain
-└── .dependency-cruiser.cjs
-```
+## 7. Dependency rules
 
-Unit tests (`*.spec.ts`) sit next to the file they test.
+`pnpm arch` runs dependency-cruiser with these rules, plus meta-tests that prove each rule fails on a violating fixture. A violation fails CI ([constitution §III](../constitution.md)).
 
-**Bootstrap order (`setupApp`).** 1. pino logger (every later line is JSON, redacted, trace-correlated); 2. shutdown hooks and Express `trust proxy` from `TRUSTED_PROXIES`; 3. request id (before the body parser, so 400/413 parse errors carry it); 4. helmet and CORS (before routing, so every response carries them); 5. `/api` prefix and URI versioning `v1`; 6. validation pipe, `{ data }` envelope interceptor, `{ error }` exception filter (taken from the container, with the domain-error registry). `main.ts` and the test app both call it, so tests serve exactly the production HTTP conventions.
+| Rule                                 | From                      | Must not import                                                                  |
+| ------------------------------------ | ------------------------- | -------------------------------------------------------------------------------- |
+| `domain-is-pure`                     | `**/domain/**`            | `application/`, `infrastructure/`, `presentation/`                               |
+| `domain-no-third-party`              | `**/domain/**`            | any npm package or Node core module; the generated Prisma client                 |
+| `application-not-to-adapters`        | `**/application/**`       | `infrastructure/`, `presentation/`, `@prisma/*`, `express`, the generated client |
+| `infrastructure-not-to-presentation` | `**/infrastructure/**`    | `presentation/`                                                                  |
+| `persistence-not-to-use-cases`       | `**/infrastructure/**`    | `application/use-cases/`                                                         |
+| `presentation-not-to-infra`          | `**/presentation/**`      | `infrastructure/`, `@prisma/*`, the generated client                             |
+| `presentation-not-to-repositories`   | `**/presentation/**`      | `domain/repositories/` (controllers go through use cases)                        |
+| `contexts-isolated`                  | `modules/<a>/**`          | `modules/<b>/**` except `<b>-lookup.service.ts` and `<b>s.module.ts`             |
+| `shared-not-to-features`             | `shared/**`, `config/**`  | `modules/**`                                                                     |
+| `auth-library-in-identity`           | `src/**` outside identity | `better-auth`, `@better-auth/*`, `@thallesp/nestjs-better-auth`                  |
+| `no-circular`                        | any                       | circular dependencies                                                            |
+| `no-tests-in-production`             | `src/**` (non-spec)       | `*.spec.ts`, `test/**`                                                           |
 
-**Module layout.** Every bounded-context module uses the same shape: `domain/` holds `<agg>.ts`, `<agg>.errors.ts` (all of the module's errors), `<agg>.events.ts` (all of its events), `value-objects/` and any pure policy; `application/commands/<use-case>/` and `application/queries/<use-case>/` (message + handler + spec), `application/ports/`; `infrastructure/prisma-<agg>.repository.ts` + `<agg>.mapper.ts` and `infrastructure/adapters/` for cross-context ports; `presentation/<ctx>.controller.ts` + `dto/`; `contracts/` (the module's only public surface); and the `<ctx>.module.ts` composition root.
+Only `*.module.ts` composition roots reference both ports and adapters.
 
-### 6.3 Mobile (`apps/mobile`)
+## 8. Mobile app (next phase)
 
-```text
-apps/mobile/
-├── app/                                 # Expo Router — routes only, thin
-│   ├── _layout.tsx                      # providers: PersistQueryClientProvider, theme, i18n
-│   ├── (auth)/sign-in.tsx · sign-up.tsx
-│   └── (app)/
-│       ├── _layout.tsx                  # redirects to (auth) when no session
-│       ├── (tabs)/_layout.tsx · tasks/index.tsx · teams/index.tsx · settings.tsx
-│       ├── tasks/new.tsx · tasks/[id]/index.tsx · tasks/[id]/edit.tsx
-│       └── teams/new.tsx · teams/[id]/edit.tsx
-├── src/
-│   ├── features/
-│   │   ├── auth/                        # auth-client.ts, useSession, forms
-│   │   ├── teams/                       # components/, hooks/, schemas/, mutations/, index.ts (public)
-│   │   ├── tasks/                       # components/, hooks/, schemas/, mutations/, index.ts (public)
-│   │   │                                # mutations/: register<Feature>MutationDefaults() — mutationFn, onMutate, rollback, cache transforms
-│   │   └── settings/                    # SettingsScreen (theme, language, sync status, sign-out), index.ts
-│   └── shared/
-│       ├── ui/                          # Button, Chip, Card, TextField, EmptyState
-│       ├── query/
-│       │   ├── query-client.ts · keys.ts
-│       │   ├── persister.ts             # React Query persister on the StorageAdapter
-│       │   ├── online-manager.ts        # NetInfo → onlineManager, AppState → focusManager
-│       │   ├── session-gate.ts          # pauses/clears the queue on 401 or user switch (session source injected)
-│       │   ├── mutation-defaults.ts     # registry: registerMutationDefaults(defs); features supply the defs
-│       │   ├── optimistic/              # generic cache-patch helpers (snapshot, patch list pages, rollback)
-│       │   ├── resolve.ts               # tmp- id → server id map (ADR-0012)
-│       │   └── conflicts.ts             # 412 / 404-on-delete handling for queued mutations
-│       ├── storage/                     # storage-adapter.ts, async-storage.adapter.ts, mmkv.adapter.ts
-│       ├── stores/                      # filters.store.ts, preferences.store.ts, sync.store.ts, toast.store.ts
-│       ├── config/
-│       │   └── api-client.ts            # setupApiClient({ baseUrl, getAuthHeaders, onUnauthenticated }) for @hitss/api-client
-│       ├── i18n/                        # index.ts, locales/, error-messages.ts (ApiError.code → message)
-│       └── theme/
-├── global.css                           # @tailwind + @apply semantic classes, CSS variables
-├── tailwind.config.js · babel.config.js · metro.config.js · app.config.ts
-├── e2e/maestro/                         # Maestro flows
-└── .dependency-cruiser.cjs
-```
-
-**Keeping `shared/` a leaf (M1).** `shared/` never imports a feature. Anything feature-specific is **injected** at the composition root, `app/_layout.tsx`, which may import both. It passes `setupApiClient` the auth headers and the `onUnauthenticated` callback from `features/auth`, gives `session-gate` its session source, and calls each feature's `register<Feature>MutationDefaults()` (from `features/<f>/mutations/`, re-exported by the feature's `index.ts`) before cache restoration (ADR-0012). Mutations import only `shared/` (registry, `optimistic/`, `resolve.ts`, `keys.ts`) and `@hitss/api-client`; a team mutation that patches cached task lists (e.g. stripping a deleted team's chip) uses the shared query keys, never `features/tasks` (M2). Storage libraries stay inside `shared/storage/` (M5); `persister.ts` and the `persist` stores use the `StorageAdapter`.
-
-## 7. Dependency rules (enforced by dependency-cruiser in CI)
-
-`dependency-cruiser` runs in CI (`pnpm arch`: the rules plus their meta-tests) for the API (mobile rules arrive with T-004-01); a violation fails the build ([ADR-0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md), constitution §III.3).
-
-### API
-
-| #   | Rule                                      | From                                                        | Must not import                                                                                                                                                                                                                                  |
-| --- | ----------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A1  | Domain is pure                            | `src/**/domain/**`                                          | `@nestjs/*`, `@prisma/*`, `better-auth`, `class-validator`, `class-transformer`, Node I/O, and any `application/`, `infrastructure/`, `presentation/`                                                                                            |
-| A2  | Application knows no adapters             | `src/**/application/**`                                     | `infrastructure/`, `presentation/`, `@prisma/*`, `express`. May import `domain/`, `@nestjs/cqrs`, `@nestjs/common` (decorators only) and, as the one cross-cutting exception, `shared/observability/tracing` (`@Traced()`, OTel API facade only) |
-| A3  | Infrastructure does not reach up          | `src/**/infrastructure/**`                                  | `presentation/`                                                                                                                                                                                                                                  |
-| A4  | Presentation uses use cases, not adapters | `src/**/presentation/**`                                    | `infrastructure/`, `@prisma/*`                                                                                                                                                                                                                   |
-| A5  | Contexts are isolated                     | `src/modules/<a>/**`                                        | `src/modules/<b>/**` except `src/modules/<b>/contracts/**`                                                                                                                                                                                       |
-| A5b | Only Identity uses the auth library       | `src/**` outside `src/modules/identity/**` (specs included) | `better-auth`, `@better-auth/*`, `@thallesp/nestjs-better-auth`; other code uses `Owner`, `@Public()` and `@CurrentOwner()` (rule `auth-library-in-identity`)                                                                                    |
-| A6  | Contracts are thin                        | `src/modules/*/contracts/**`                                | anything but its own `domain/<agg>.events.ts`, `shared/domain` and other `contracts/`                                                                                                                                                            |
-| A7  | Shared does not depend on features        | `src/shared/**`                                             | `src/modules/**`                                                                                                                                                                                                                                 |
-| A8  | No cycles                                 | any                                                         | circular dependencies                                                                                                                                                                                                                            |
-| A9  | Tests stay out of prod                    | `src/**` (non-spec)                                         | `*.spec.ts`, `test/**`                                                                                                                                                                                                                           |
-
-The only files allowed to reference both `application/` ports and `infrastructure/` adapters are `*.module.ts` composition roots.
-
-### Mobile
-
-| #   | Rule                       | From                                     | Must not import                                                                             |
-| --- | -------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------- |
-| M1  | Shared is a leaf           | `src/shared/**`                          | `src/features/**`, `app/**`                                                                 |
-| M2  | Features are isolated      | `src/features/<a>/**`                    | `src/features/<b>/**` except `src/features/<b>/index.ts`                                    |
-| M3  | Routes are not imported    | anything                                 | `app/**`                                                                                    |
-| M4  | Single HTTP path           | `app/**`, `src/**`                       | `fetch`/`axios` wrappers other than `@hitss/api-client` (lint rule `no-restricted-imports`) |
-| M5  | Storage behind the adapter | anything outside `src/shared/storage/**` | `@react-native-async-storage/*`, `react-native-mmkv`                                        |
-| M6  | No cycles                  | any                                      | circular dependencies                                                                       |
-
-### Monorepo
-
-- `packages/api-client` depends on nothing in `apps/*`; it is regenerated from `apps/api`'s exported OpenAPI document, and CI fails if the regenerated output differs from the committed one ([ADR-0008](adr/0008-class-validator-dtos-and-generated-client.md)).
-- `apps/mobile` never imports `apps/api`.
-
-## 8. Decision map
-
-| Area                  | ADRs                                                                                                                                                                                                                    |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Repository & delivery | [0001](adr/0001-monorepo-pnpm-turborepo.md) · [0017](adr/0017-conventional-commits-and-atomic-prs.md) · [0018](adr/0018-docker-compose-one-command-run.md)                                                              |
-| API architecture      | [0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md) · [0005](adr/0005-rest-openapi-and-response-envelope.md) · [0006](adr/0006-offset-pagination.md) · [0008](adr/0008-class-validator-dtos-and-generated-client.md) |
-| Data                  | [0003](adr/0003-postgresql.md) · [0004](adr/0004-prisma-migrations-and-seeding.md) · [0015](adr/0015-optimistic-concurrency.md) · [0016](adr/0016-soft-delete.md) · [0019](adr/0019-idempotency-keys.md)                |
-| Security              | [0007](adr/0007-better-auth.md)                                                                                                                                                                                         |
-| Mobile                | [0009](adr/0009-expo-and-expo-router.md) · [0010](adr/0010-react-query-and-zustand-immer.md) · [0011](adr/0011-nativewind-with-apply.md) · [0012](adr/0012-offline-first-and-optimistic-updates.md)                     |
-| Quality & operations  | [0013](adr/0013-opentelemetry-and-signoz.md) · [0014](adr/0014-testing-strategy.md)                                                                                                                                     |
+The Expo app is specified but not built yet: screens and flows in [spec 004](../specs/004-mobile-app/spec.md) and the [design spec](../design/design-spec.md), offline behaviour in [spec 005](../specs/005-offline-sync/spec.md), and the accepted platform decisions in the [ADR archive](adr/README.md#archive) (Expo + Expo Router, React Query + Zustand/immer, NativeWind with `@apply`, offline-first). It will call the API with a Bearer token kept in `expo-secure-store`, through a client generated from the OpenAPI document.

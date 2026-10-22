@@ -9,7 +9,7 @@ Applies to every task, pull request and feature ([Constitution V.4](../constitut
 - [ ] `spec.md` exists with problem, goals/non-goals, user stories (`US-0N.n`) and acceptance criteria (`AC-0N.n.m`) with priority `MUST`/`SHOULD`/`COULD`.
 - [ ] Spec names no technology; business rules and edge cases are listed; open questions are either answered or explicitly deferred.
 - [ ] Every AC is testable (observable outcome, no "should be fast/nice").
-- [ ] Ubiquitous language matches the [domain model](../architecture/domain-model.md).
+- [ ] Ubiquitous language matches the [domain model](../architecture/overview.md#4-domain).
 - [ ] The epic links to the spec, and the spec is in the [specs index](../specs/README.md).
 
 ### Task is Ready for implementation when

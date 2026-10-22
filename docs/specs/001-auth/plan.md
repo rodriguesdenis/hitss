@@ -3,12 +3,12 @@
 ## Context & references
 
 - Spec: [spec.md](spec.md) · Scenarios: [auth.feature](auth.feature) · Tasks: [tasks.md](tasks.md)
-- Contract: [api-contracts.md](../../architecture/api-contracts.md#identity--apiauth) · Data: [data-model.md](../../architecture/data-model.md) · Domain: [domain-model.md](../../architecture/domain-model.md#bounded-contexts)
-- ADRs: [0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md) (layers), [0004](../../architecture/adr/0004-prisma-migrations-and-seeding.md) (migrations, seed), [0005](../../architecture/adr/0005-rest-openapi-and-response-envelope.md) (envelope), [0007](../../architecture/adr/0007-better-auth.md) (Better Auth), [0013](../../architecture/adr/0013-opentelemetry-and-signoz.md) (telemetry), [0014](../../architecture/adr/0014-testing-strategy.md) (testing), [0018](../../architecture/adr/0018-docker-compose-one-command-run.md) (one-command run)
+- Contract: [api-contracts.md](../../architecture/api-contracts.md#identity--apiauth) · Data: [data-model.md](../../architecture/data-model.md) · Domain: [overview.md#4-domain](../../architecture/overview.md#2-modules)
+- ADRs: [0002](../../architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md) (layers), [0004](../../architecture/adr/0004-prisma-migrations-and-seeding.md) (migrations, seed), [0005](../../architecture/adr/0005-rest-openapi-and-response-envelope.md) (envelope), [0007](../../architecture/adr/0007-better-auth.md) (Better Auth), [0013](../../architecture/adr/archive/0013-opentelemetry-and-signoz.md) (telemetry), [0014](../../architecture/adr/0014-testing-strategy.md) (testing), [0018](../../architecture/adr/0018-docker-compose-one-command-run.md) (one-command run)
 
 This spec also delivers the **API foundation** that every later spec builds on: Prisma module, HTTP conventions (prefix, versioning, validation, envelopes, error filter) and the security baseline. These are the first tasks in [tasks.md](tasks.md) and are labeled as foundation. The validated config module itself is owned by **T-007-02** ([007](../007-ci-and-dx/tasks.md)); 001 only **adds** the auth and security variables and their production rules to that schema.
 
-Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi), which is authoritative (the dependency-cruiser rules key on them); the Identity module lives in `modules/identity`.
+Paths follow [overview §6.2](../../architecture/overview.md#6-folder-structure-appsapisrc), which is authoritative (the dependency-cruiser rules key on them); the Identity module lives in `modules/identity`.
 
 ## Architecture
 

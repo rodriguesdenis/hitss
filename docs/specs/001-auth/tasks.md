@@ -1,6 +1,6 @@
 # 001 — Tasks
 
-Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Compose with PostgreSQL and `.env.example`; the pnpm/Turborepo workspace and the `apps/api` Nest 11 app already exist in the repo) and **T-007-02** (validated config module, `APP_ENV`, `PORT`, `DATABASE_URL`). Tasks **T-001-01 … T-001-04 are the API foundation**. Every later API spec depends on them. Paths follow [overview §6.2](../../architecture/overview.md#62-api-appsapi).
+Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Compose with PostgreSQL and `.env.example`; the pnpm/Turborepo workspace and the `apps/api` Nest 11 app already exist in the repo) and **T-007-02** (validated config module, `APP_ENV`, `PORT`, `DATABASE_URL`). Tasks **T-001-01 … T-001-04 are the API foundation**. Every later API spec depends on them. Paths follow [overview §6.2](../../architecture/overview.md#6-folder-structure-appsapisrc).
 
 | ID       | Task                                                                                           | Depends on                   | Size | Branch                       |
 | -------- | ---------------------------------------------------------------------------------------------- | ---------------------------- | ---- | ---------------------------- |

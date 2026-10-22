@@ -11,15 +11,15 @@ The non-negotiable principles of **Teams & Tasks**. Every spec, plan, task and p
 
 ## II. Domain-Driven Design
 
-1. **Ubiquitous language** (see [domain model](architecture/domain-model.md#ubiquitous-language)) is used identically in docs, code, API and UI copy.
-2. **Bounded contexts:** Identity, Team Management, Task Management. Contexts communicate through application services or domain events, never by reaching into each other's persistence.
+1. **Ubiquitous language** (see [domain model](architecture/overview.md#ubiquitous-language)) is used identically in docs, code, API and UI copy.
+2. **Bounded contexts:** Identity, Team Management, Task Management. Contexts communicate through an exported application service (`TeamLookup`), never through another module's internals. Inside the one database, a read query may join another context's tables (a team's `taskCount`), and deleting a team removes its task links in the same transaction ([ADR-0020](architecture/adr/0020-simplify-architecture-for-the-hiring-test.md)).
 3. **Aggregates protect invariants.** State changes go through aggregate methods; no public setters. Aggregates reference other aggregates **by id only**.
 4. **Value objects** model concepts with rules (`TaskTitle`, `TeamName`, `ColorHex`, `TaskStatus`). Invalid values cannot be constructed.
 
 ## III. Clean Architecture
 
 1. **Dependencies point inward:** `presentation → application → domain` and `infrastructure → application/domain`. The domain imports nothing from NestJS, Prisma or any I/O library.
-2. **Ports and adapters:** the application layer declares ports (repositories, clock, id generator); infrastructure implements them.
+2. **Ports and adapters:** the domain declares repositories and the clock, the application layer declares read models; infrastructure implements them.
 3. **Rules are enforced by tooling**, not by discipline alone (`dependency-cruiser` in CI).
 4. **Frameworks are details,** but we use them idiomatically: NestJS conventions in the API, Expo conventions in the app.
 

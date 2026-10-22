@@ -6,7 +6,7 @@
 
 ## Context
 
-The brief asks for a REST-style CRUD API with listing metadata and request examples (cURL). The consumer is our own mobile app, but evaluators will also call the API by hand. The client must be generated from a machine-readable contract ([ADR-0008](0008-class-validator-dtos-and-generated-client.md)), and errors must be predictable enough for the app to map them to UI messages and for logs to be correlated with traces.
+The brief asks for a REST-style CRUD API with listing metadata and request examples (cURL). The consumer is our own mobile app, but evaluators will also call the API by hand. The client must be generated from a machine-readable contract ([ADR-0008](archive/0008-class-validator-dtos-and-generated-client.md)), and errors must be predictable enough for the app to map them to UI messages and for logs to be correlated with traces.
 
 ## Decision drivers
 
@@ -51,7 +51,7 @@ The brief asks for a REST-style CRUD API with listing metadata and request examp
   - throttling → `429 RATE_LIMITED`, unknown route → `404 ROUTE_NOT_FOUND`,
   - anything else → `500 INTERNAL_ERROR` with a generic message (full error logged with the same `traceId`).
 - **Exclusions:** `204` responses have no body; health endpoints keep Terminus' native format for tool compatibility; Better Auth routes keep Better Auth's format.
-- **Headers:** `Location` on `201`, `ETag` on single-resource responses ([ADR-0015](0015-optimistic-concurrency.md)), `X-Request-Id` on all responses, `traceparent` honored.
+- **Headers:** `Location` on `201`, `ETag` on single-resource responses ([ADR-0015](archive/0015-optimistic-concurrency.md)), `X-Request-Id` on all responses, `traceparent` honored.
 - **Hardening:** `helmet`, `ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })`, `@nestjs/throttler` with per-user and per-IP limits.
 
 ## Consequences
@@ -74,5 +74,5 @@ The brief asks for a REST-style CRUD API with listing metadata and request examp
 ## Links
 
 - [API contracts](../api-contracts.md)
-- [ADR-0006 — Offset pagination](0006-offset-pagination.md) · [ADR-0008 — DTOs and generated client](0008-class-validator-dtos-and-generated-client.md)
+- [ADR-0006 — Offset pagination](0006-offset-pagination.md) · [ADR-0008 — DTOs and generated client](archive/0008-class-validator-dtos-and-generated-client.md)
 - OpenAPI 3.1: https://spec.openapis.org/oas/v3.1.0 · NestJS OpenAPI: https://docs.nestjs.com/openapi/introduction

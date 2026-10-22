@@ -51,7 +51,7 @@ interface StorageAdapter {
 **Query cache persistence**
 
 - `PersistQueryClientProvider` with `createAsyncStoragePersister({ storage: adapter, throttleTime: 1000 })`, `maxAge` 24 h, `buster` = app version + API contract hash (cache dropped when the contract changes).
-- Only successful queries are dehydrated; the session token is never in the query cache (it lives in secure store, [ADR-0007](0007-better-auth.md)).
+- Only successful queries are dehydrated; the session token is never in the query cache (it lives in secure store, [ADR-0007](../0007-better-auth.md)).
 - Cache is cleared on sign-out.
 
 **Online detection and paused mutations**
@@ -93,6 +93,6 @@ interface StorageAdapter {
 
 ## Links
 
-- [Spec 005 — Offline sync](../../specs/005-offline-sync/spec.md)
+- [Spec 005 — Offline sync](../../../specs/005-offline-sync/spec.md)
 - [ADR-0010 — React Query + Zustand](0010-react-query-and-zustand-immer.md)
 - TanStack Query persistence: https://tanstack.com/query/latest/docs/framework/react/plugins/persistQueryClient

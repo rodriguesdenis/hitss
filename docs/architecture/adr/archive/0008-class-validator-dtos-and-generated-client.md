@@ -81,5 +81,5 @@ flowchart LR
 
 ## Links
 
-- [ADR-0005 — REST + OpenAPI](0005-rest-openapi-and-response-envelope.md) · [ADR-0010 — React Query](0010-react-query-and-zustand-immer.md)
+- [ADR-0005 — REST + OpenAPI](../0005-rest-openapi-and-response-envelope.md) · [ADR-0010 — React Query](0010-react-query-and-zustand-immer.md)
 - orval: https://orval.dev · NestJS validation: https://docs.nestjs.com/techniques/validation

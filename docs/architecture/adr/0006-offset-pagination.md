@@ -50,7 +50,7 @@ Both list endpoints (`GET /teams`, `GET /tasks`) must return "pagination metadat
 - **Stable sort:** every `ORDER BY` ends with `id` as a tiebreaker (e.g. `due_date ASC NULLS LAST, id ASC`), so pages are deterministic for a fixed dataset.
 - **Count:** data and `total` are fetched in one transaction (`findMany` + `count` with identical `where`), both served by the partial indexes in the [data model](../data-model.md#indexes-and-why).
 - **Validation:** a shared `PaginationQueryDto` (class-validator) enforces bounds; `sort` is whitelisted per endpoint, so arbitrary columns can never reach SQL.
-- **Client:** generated `useInfiniteQuery` hooks derive the next `offset` from `meta`; optimistic updates patch cached pages in place ([ADR-0012](0012-offline-first-and-optimistic-updates.md)).
+- **Client:** generated `useInfiniteQuery` hooks derive the next `offset` from `meta`; optimistic updates patch cached pages in place ([ADR-0012](archive/0012-offline-first-and-optimistic-updates.md)).
 
 ## Consequences
 

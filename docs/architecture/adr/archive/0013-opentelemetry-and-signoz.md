@@ -1,6 +1,6 @@
 # ADR-0013 — OpenTelemetry + SigNoz
 
-- **Status:** Accepted, partly superseded by [ADR-0020](0020-simplify-architecture-for-the-hiring-test.md)
+- **Status:** Accepted, partly superseded by [ADR-0020](../0020-simplify-architecture-for-the-hiring-test.md)
 - **Superseded (2026-10-22):** the custom telemetry machinery (sanitizing exporter, metric views, `@Traced`, diagnostics logger, telemetry lifecycle); OTLP export only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set — see ADR-0020.
 - **Date:** 2026-10-20
 - **Deciders:** software-architect, observability-sre
@@ -40,8 +40,8 @@ We want production-grade observability — distributed traces, RED metrics, stru
 - **Traces:** auto-instrumentation for HTTP/Express/Nest, `@prisma/instrumentation` for queries; manual spans only around use cases: `@Traced()` on every command/query handler (span named after the handler class, guarded by a spec), recording no arguments, results or ids.
 - **Metrics** via the OTel Metrics API (no Prometheus client): HTTP server duration histograms (auto), business counters `tasks_created_total`, `tasks_completed_total`, `tasks_deleted_total` incremented by `EventBus` handlers, DB pool gauges.
 - **Logs:** `nestjs-pino` JSON logs to **stdout only** (no OTLP log pipeline, amended 2026-10-22); a pino mixin adds `traceId`/`spanId` of the active span to each line. Redaction of `authorization`, `cookie`, `set-cookie`, `set-auth-token` and auth request bodies.
-- **Propagation:** W3C `traceparent` honored; `traceId` returned in every error envelope ([ADR-0005](0005-rest-openapi-and-response-envelope.md)); `X-Request-Id` on every response.
-- **Runtime:** SigNoz runs under `docker compose --profile observability up` (`make observability`), with the API's `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at the SigNoz collector. The default profile starts only postgres + api ([ADR-0018](0018-docker-compose-one-command-run.md)).
+- **Propagation:** W3C `traceparent` honored; `traceId` returned in every error envelope ([ADR-0005](../0005-rest-openapi-and-response-envelope.md)); `X-Request-Id` on every response.
+- **Runtime:** SigNoz runs under `docker compose --profile observability up` (`make observability`), with the API's `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at the SigNoz collector. The default profile starts only postgres + api ([ADR-0018](../0018-docker-compose-one-command-run.md)).
 - **Health:** `@nestjs/terminus` `GET /api/v1/health/live` and `/ready` (Prisma ping) — independent of telemetry.
 
 **Privacy and cardinality guards (amended 2026-10-22).**
@@ -70,5 +70,5 @@ We want production-grade observability — distributed traces, RED metrics, stru
 
 ## Links
 
-- [Spec 006 — Observability](../../specs/006-observability/spec.md)
+- [Spec 006 — Observability](../../../specs/006-observability/spec.md)
 - OpenTelemetry JS: https://opentelemetry.io/docs/languages/js/ · SigNoz: https://signoz.io/docs/

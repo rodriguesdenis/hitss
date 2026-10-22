@@ -74,5 +74,5 @@ Use **PostgreSQL 17** (official `postgres:17-alpine` image) with the `pg_trgm` e
 ## Links
 
 - [Data model](../data-model.md)
-- [ADR-0016 — Soft delete](0016-soft-delete.md) · [ADR-0015 — Optimistic concurrency](0015-optimistic-concurrency.md)
+- [ADR-0016 — Soft delete](archive/0016-soft-delete.md) · [ADR-0015 — Optimistic concurrency](archive/0015-optimistic-concurrency.md)
 - pg_trgm: https://www.postgresql.org/docs/17/pgtrgm.html

@@ -43,8 +43,8 @@ Users delete teams and tasks from the app, sometimes by accident and sometimes f
 
 - `teams.deleted_at` and `tasks.deleted_at` (`timestamptz NULL`). The domain models deletion as behavior: `team.delete(now)` / `task.delete(now)` set `deletedAt` and raise `TeamDeleted` / `TaskDeleted`.
 - **Repositories always** add `deleted_at IS NULL` (owned by the Prisma repository/read model base, not by callers); an integration test per repository asserts deleted rows are invisible to every read method.
-- **Indexes** are partial: `teams (owner_id, lower(name)) UNIQUE WHERE deleted_at IS NULL` and the list indexes in the [data model](../data-model.md#indexes-and-why).
-- **Team deletion** soft-deletes the team **and hard-deletes its `task_teams` rows** in the same transaction ([ADR-0002](0002-nestjs-clean-architecture-ddd-cqrs.md#teamdeleted-consistency)); tasks remain. The join table holds current assignments, not history, so keeping rows that point at a deleted team would only complicate every task query.
+- **Indexes** are partial: `teams (owner_id, lower(name)) UNIQUE WHERE deleted_at IS NULL` and the list indexes in the [data model](../../data-model.md#indexes-and-why).
+- **Team deletion** soft-deletes the team **and hard-deletes its `task_teams` rows** in the same transaction ([ADR-0002](../0002-nestjs-clean-architecture-ddd-cqrs.md#teamdeleted-consistency)); tasks remain. The join table holds current assignments, not history, so keeping rows that point at a deleted team would only complicate every task query.
 - **Task deletion** soft-deletes the task; its `task_teams` rows stay (invisible because the task is filtered) so a future restore keeps assignments; `taskCount` counts only non-deleted tasks.
 - **HTTP:** `DELETE` returns `204`. Deleting an already-deleted or unknown id returns `404` (no existence leak); clients treat `404` on a replayed delete as success (the offline queue does).
 - **Purge** of rows deleted more than N days ago is a **production improvement** (scheduled job), not implemented.
@@ -68,5 +68,5 @@ Users delete teams and tasks from the app, sometimes by accident and sometimes f
 
 ## Links
 
-- [Data model — soft delete](../data-model.md#soft-delete)
-- [ADR-0003 — PostgreSQL](0003-postgresql.md) · [ADR-0015 — Optimistic concurrency](0015-optimistic-concurrency.md)
+- [Data model — soft delete](../../data-model.md#soft-delete)
+- [ADR-0003 — PostgreSQL](../0003-postgresql.md) · [ADR-0015 — Optimistic concurrency](0015-optimistic-concurrency.md)

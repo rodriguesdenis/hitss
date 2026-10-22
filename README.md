@@ -2,7 +2,7 @@
 
 A small fullstack system for managing **teams** and **tasks**: a NestJS REST API (PostgreSQL, Better Auth) and an Expo mobile app, in one pnpm/Turborepo monorepo. Built spec-first as a senior-level hiring test. Tasks can belong to zero or more teams; every user sees only their own data.
 
-> **Status.** The backend is implemented and verified end to end: `docker compose up --build` migrates, seeds and serves the API, Swagger UI and the request collection pass against a fresh stack in CI. The mobile app, the generated API client, the SigNoz profile and the k6 scripts are not in the repository yet; the sections below mark them ⚠️ and describe the target behavior ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
+> **Status.** The backend is implemented and verified end to end: `docker compose up --build` migrates, seeds and serves the API, Swagger UI and the request collection pass against a fresh stack in CI. The mobile app and the generated API client are the next phase; the sections below mark them ⚠️ ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
 
 **Contents:** [Architectural decisions](#architectural-decisions) · [Data model](#data-model) · [How to run](#how-to-run) · [API contract summary](#api-contract-summary) · [Request examples](#request-examples) · [Production notes](#what-id-do-differently-in-production) · [Project structure](#project-structure) · [Testing](#testing) · [Contributing](#contributing) · [Troubleshooting](#troubleshooting)
 
@@ -10,35 +10,26 @@ Full documentation map: [docs/README.md](docs/README.md).
 
 ## Architectural decisions
 
-Every significant decision is an [ADR](docs/architecture/adr/README.md) with the alternatives that were rejected. The principles behind them are in the [constitution](docs/constitution.md); the big picture is in the [architecture overview](docs/architecture/overview.md).
+Every significant decision is an [ADR](docs/architecture/adr/README.md) with the alternatives that were rejected; the principles behind them are in the [constitution](docs/constitution.md). The [architecture overview](docs/architecture/overview.md) shows the modules, layers, domain model and the path of a request.
 
-| Area             | Decision                                                                    | Why (short)                                                                                            | ADR                                                                             |
-| ---------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| Repository       | pnpm workspaces + Turborepo monorepo                                        | Atomic cross-cutting changes (DTO → client → screen) in one PR; fast, affected-only CI                 | [0001](docs/architecture/adr/0001-monorepo-pnpm-turborepo.md)                   |
-| API architecture | NestJS with Clean Architecture, DDD and CQRS                                | Business rules unit-testable in milliseconds; Nest conventions and official packages first             | [0002](docs/architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md)        |
-| Database         | PostgreSQL                                                                  | Referential integrity for the N:M relationship; partial unique indexes, functional indexes, enums      | [0003](docs/architecture/adr/0003-postgresql.md)                                |
-| Persistence      | Prisma, SQL migrations, deterministic seed                                  | End-to-end type safety; reviewable migrations applied non-interactively in Docker and CI               | [0004](docs/architecture/adr/0004-prisma-migrations-and-seeding.md)             |
-| API style        | REST + OpenAPI with response/error envelopes                                | Easy to exercise with cURL/Bruno; one contract that Swagger UI and orval understand                    | [0005](docs/architecture/adr/0005-rest-openapi-and-response-envelope.md)        |
-| Pagination       | Offset pagination                                                           | The brief expects total/pagination metadata; simple to call by hand                                    | [0006](docs/architecture/adr/0006-offset-pagination.md)                         |
-| Authentication   | Better Auth                                                                 | Self-hosted on our PostgreSQL; secure defaults without hand-written crypto glue                        | [0007](docs/architecture/adr/0007-better-auth.md)                               |
-| Contract         | class-validator DTOs → OpenAPI → generated orval client                     | Single source of truth, idiomatic in Nest; typed React Query hooks and zod schemas                     | [0008](docs/architecture/adr/0008-class-validator-dtos-and-generated-client.md) |
-| Mobile platform  | Expo (managed, Expo Go) + Expo Router                                       | No native toolchain for evaluators: scan a QR code                                                     | [0009](docs/architecture/adr/0009-expo-and-expo-router.md)                      |
-| State management | React Query (server state) + Zustand/immer (local state)                    | Every piece of state has exactly one home; caching, retries and optimistic updates without custom code | [0010](docs/architecture/adr/0010-react-query-and-zustand-immer.md)             |
-| Styling          | NativeWind v4 with `@apply` semantic classes                                | No styled-components (brief); works in Expo Go without native modules                                  | [0011](docs/architecture/adr/0011-nativewind-with-apply.md)                     |
-| Offline          | Persisted cache, optimistic updates, queued mutations                       | Readable offline after restart; offline mutations replay in order                                      | [0012](docs/architecture/adr/0012-offline-first-and-optimistic-updates.md)      |
-| Observability    | OpenTelemetry + SigNoz                                                      | Vendor-neutral instrumentation; automatic HTTP and Prisma spans                                        | [0013](docs/architecture/adr/0013-opentelemetry-and-signoz.md)                  |
-| Testing          | Test pyramid, Testcontainers for PostgreSQL, mutation testing on the domain | Fast feedback, with realism where SQL and migrations matter                                            | [0014](docs/architecture/adr/0014-testing-strategy.md)                          |
-| Concurrency      | Optimistic locking with `version` + ETag/`If-Match`                         | Prevents lost updates without long-lived locks                                                         | [0015](docs/architecture/adr/0015-optimistic-concurrency.md)                    |
-| Deletion         | Soft delete                                                                 | Recoverability and auditability; correct uniqueness with deleted rows                                  | [0016](docs/architecture/adr/0016-soft-delete.md)                               |
-| Delivery         | Conventional Commits, atomic PRs                                            | Reviewable units; history that explains why and can be bisected                                        | [0017](docs/architecture/adr/0017-conventional-commits-and-atomic-prs.md)       |
-| Local run        | Docker Compose one-command run                                              | One command, deterministic startup order (database → migrate → seed → API)                             | [0018](docs/architecture/adr/0018-docker-compose-one-command-run.md)            |
-| Retries          | Idempotency keys on `POST`                                                  | Exactly-once effect under client retries and offline replays                                           | [0019](docs/architecture/adr/0019-idempotency-keys.md)                          |
+| Area             | Decision                                                                                                                                 | Why (short)                                                                                   | ADR                                                                                                                                                        |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository       | pnpm workspaces + Turborepo monorepo                                                                                                     | Atomic cross-cutting changes (DTO → client → screen) in one PR; fast, affected-only CI        | [0001](docs/architecture/adr/0001-monorepo-pnpm-turborepo.md)                                                                                              |
+| API architecture | NestJS, four layers (domain → application → infrastructure → presentation), entities and value objects, one use-case class per operation | Business rules unit-testable in milliseconds; a request path readable from controller to SQL  | [0002](docs/architecture/adr/0002-nestjs-clean-architecture-ddd-cqrs.md) · [0020](docs/architecture/adr/0020-simplify-architecture-for-the-hiring-test.md) |
+| Simplification   | No CQRS buses, events, unit of work, ETag or cookie auth on the API; modules talk through `TeamLookup`; team delete is one transaction   | For two CRUD resources, that machinery cost more reading time than it bought                  | [0020](docs/architecture/adr/0020-simplify-architecture-for-the-hiring-test.md)                                                                            |
+| Database         | PostgreSQL                                                                                                                               | Referential integrity for the N:M relationship; partial unique indexes, trigram search, enums | [0003](docs/architecture/adr/0003-postgresql.md)                                                                                                           |
+| Persistence      | Prisma, SQL migrations, deterministic seed                                                                                               | End-to-end type safety; reviewable migrations applied non-interactively in Docker and CI      | [0004](docs/architecture/adr/0004-prisma-migrations-and-seeding.md)                                                                                        |
+| API style        | REST + OpenAPI with response/error envelopes                                                                                             | Easy to exercise with cURL/Bruno; one contract that Swagger UI understands                    | [0005](docs/architecture/adr/0005-rest-openapi-and-response-envelope.md)                                                                                   |
+| Pagination       | Offset pagination with `total` and `hasNextPage`                                                                                         | The brief expects pagination metadata; simple to call by hand                                 | [0006](docs/architecture/adr/0006-offset-pagination.md)                                                                                                    |
+| Authentication   | Better Auth, Bearer tokens on `/api/v1`                                                                                                  | Self-hosted on our PostgreSQL; secure defaults; no ambient credential, so no CSRF surface     | [0007](docs/architecture/adr/0007-better-auth.md)                                                                                                          |
+| Testing          | Unit (no Nest, no DB) → integration (Testcontainers) → e2e (supertest)                                                                   | Fast feedback, with realism where SQL and migrations matter                                   | [0014](docs/architecture/adr/0014-testing-strategy.md)                                                                                                     |
+| Local run        | Docker Compose one-command run                                                                                                           | One command, deterministic startup order (database → migrate → seed → API)                    | [0018](docs/architecture/adr/0018-docker-compose-one-command-run.md)                                                                                       |
 
-Entity modeling (aggregates, value objects, bounded contexts): [domain model](docs/architecture/domain-model.md).
+Also decided, in the [ADR archive](docs/architecture/adr/README.md#archive): class-validator DTOs as the contract source, soft delete, Conventional Commits and atomic PRs, and the mobile platform choices (Expo, React Query + Zustand, NativeWind, offline-first) for the next phase.
 
 ## Data model
 
-PostgreSQL 17, managed by Prisma. A user owns teams and tasks; a task belongs to zero or more teams through an explicit join table (`task_teams`) so the relationship can carry its own columns and be indexed on purpose. Teams and tasks are soft-deleted and carry a `version` used for optimistic concurrency. Details, indexes and the reasoning behind them: [data model](docs/architecture/data-model.md).
+PostgreSQL 17, managed by Prisma. A user owns teams and tasks; a task belongs to zero or more teams through an explicit join table (`task_teams`) so the relationship can carry its own columns and be indexed on purpose. Teams and tasks are soft-deleted and carry a `version` that every change increments (returned as data; writes are last-write-wins). Details, indexes and the reasoning behind them: [data model](docs/architecture/data-model.md).
 
 ```mermaid
 erDiagram
@@ -48,7 +39,6 @@ erDiagram
   users ||--o{ tasks : owns
   teams ||--o{ task_teams : ""
   tasks ||--o{ task_teams : ""
-  users ||--o{ idempotency_keys : sends
 
   users {
     text id PK
@@ -87,23 +77,15 @@ erDiagram
     uuid team_id PK, FK
     timestamptz created_at
   }
-  idempotency_keys {
-    text key PK
-    text owner_id PK, FK
-    text request_hash
-    int response_status
-    jsonb response_body
-    timestamptz expires_at
-  }
 ```
 
 `sessions`, `accounts` and `verifications` are the Better Auth tables ([ADR-0007](docs/architecture/adr/0007-better-auth.md)).
 
-**Migrations and seed.** The schema lives in `apps/api/prisma/schema.prisma`; SQL migrations in `apps/api/prisma/migrations/` (identity tables, teams, tasks and `task_teams` so far) are applied non-interactively by `prisma migrate deploy` — by the one-shot `migrate` service of `docker compose up` and by the Testcontainers harness in the tests — so a fresh machine reaches the same schema. Indexes and checks Prisma cannot express (partial unique `(owner_id, lower(name))`, trigram search, status/completion consistency) are raw SQL in those migrations. `idempotency_keys` is part of the model above but its migration arrives with T-002-05; the deterministic demo seed (one user, 3 teams, 10 tasks with fixed ids) is T-007-07 ([data model](docs/architecture/data-model.md), [ADR-0004](docs/architecture/adr/0004-prisma-migrations-and-seeding.md)).
+**Migrations and seed.** The schema lives in `apps/api/prisma/schema.prisma`; SQL migrations in `apps/api/prisma/migrations/` (identity tables, teams, tasks and `task_teams`) are applied non-interactively by `prisma migrate deploy` — by the one-shot `migrate` service of `docker compose up` and by the Testcontainers harness in the tests — so a fresh machine reaches the same schema. Indexes and checks Prisma cannot express (partial unique `(owner_id, lower(name))`, trigram search, status/completion consistency) are raw SQL in those migrations. The demo seed is deterministic: one user, 3 teams and 10 tasks with fixed ids ([data model](docs/architecture/data-model.md), [ADR-0004](docs/architecture/adr/0004-prisma-migrations-and-seeding.md)).
 
 ## How to run
 
-> The backend path below is verified. The `mobile` and `observability` profiles (⚠️) are not implemented yet.
+> The backend path below is verified. The `mobile` profile (⚠️) arrives with the mobile app.
 
 ### Backend (Docker)
 
@@ -140,16 +122,9 @@ The seed is deterministic and idempotent: the demo account owns 3 teams and 10 t
 
    Emulators: Android → `http://10.0.2.2:3000`, iOS simulator → `http://localhost:3000`. Troubleshooting: [runbook](docs/operations/runbook.md#expo-device-cant-reach-the-api).
 
-### Observability (optional, SigNoz)
+### Observability (optional)
 
-⚠️ Target behavior, not yet implemented. Needs about 4 GB of free RAM.
-
-```bash
-docker compose --profile observability up -d --build --wait   # or: make observability
-# UI: http://localhost:8080
-```
-
-Telemetry is optional: without a collector the API starts and serves normally and drops what it cannot export, `OTEL_SDK_DISABLED=true` turns it off, and logs are JSON on stdout only (no OTLP log pipeline). How to find a trace and which dashboards and alerts exist: [observability](docs/operations/observability.md).
+Logs are JSON on stdout (`docker compose logs api`), one line per request with `reqId`, `traceId`, status and duration; secrets and personal data are redacted. Traces are off by default: set `OTEL_EXPORTER_OTLP_ENDPOINT` to an OTLP/HTTP collector (for example a local Jaeger) and the API exports OpenTelemetry auto-instrumentation traces there. Spans are not scrubbed (URLs with query strings, error text), so point it only at a trusted collector. Details: [observability](docs/operations/observability.md).
 
 ### Make aliases and scripts
 
@@ -177,17 +152,17 @@ Stop, reset, logs, re-seed and common failures: [runbook](docs/operations/runboo
 
 Base URL `http://localhost:3000`; business routes under `/api/v1`, authentication under `/api/auth` (Better Auth, its native format). Full contract: [API contracts](docs/architecture/api-contracts.md) and Swagger UI at `/docs` (served while `DOCS_ENABLED`: on by default locally, always off in production).
 
-| Topic       | Rule                                                                                                                                                                                                                                                |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth        | Sign up or in at `/api/auth/sign-up/email` · `/sign-in/email`; send `Authorization: Bearer <token>` (mobile) or the session cookie (web). Every `/api/v1/*` route needs one, except the health probes                                               |
-| Success     | `{ "data": <resource or array>, "meta"?: { total, limit, offset, hasNextPage } }`                                                                                                                                                                   |
-| Errors      | `{ "error": { "code": "VALIDATION_FAILED", "message": "…", "details"?: […], "traceId": "…" } }`: 400, 401, 403, 404, 409, 412, 415, 422, 429, 500                                                                                                   |
-| Concurrency | `ETag: W/"<version>"` on every single-resource response (lists and `204` carry none). `If-Match` is honored on `PUT`/`DELETE /teams/:id` (stale → `412`); for tasks it is **not read yet** (T-003-17, deferred), so task writes are last-write-wins |
-| Retries     | **Planned** (T-002-05, deferred): `POST` accepts `Idempotency-Key` and replays the first response for the same key and body                                                                                                                         |
-| Limits      | Per client address before authentication and per user after (`429 RATE_LIMITED` + `Retry-After`); `/api/auth/*` bodies over 16 kB → `413`                                                                                                           |
-| Correlation | Every response has `X-Request-Id`; error envelopes carry the `traceId` of the request's trace                                                                                                                                                       |
+| Topic       | Rule                                                                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth        | Sign up or in at `/api/auth/sign-up/email` · `/sign-in/email`, then send `Authorization: Bearer <token>` (the `set-auth-token` response header). Every `/api/v1/*` route needs it, except the health probes; a session cookie alone answers `401` |
+| Success     | `{ "data": <resource or array>, "meta"?: { total, limit, offset, hasNextPage } }`                                                                                                                                                                 |
+| Errors      | `{ "error": { "code": "VALIDATION_FAILED", "message": "…", "details"?: […], "traceId": "…" } }`: 400, 401, 404, 409, 413, 422, 429, 500                                                                                                           |
+| Concurrency | Last write wins; every change increments the resource's `version`, returned as data (no `ETag` / `If-Match`)                                                                                                                                      |
+| Retries     | Idempotency keys on `POST` are designed but not implemented (deferred COULD)                                                                                                                                                                      |
+| Limits      | Per client address before authentication and per user after (`429 RATE_LIMITED` + `Retry-After`); `/api/auth/*` bodies over 16 kB → `413`                                                                                                         |
+| Correlation | Every response has `X-Request-Id`; error envelopes carry the `traceId` of the request's trace                                                                                                                                                     |
 
-Implemented: teams (list, create, get, replace, delete), tasks (list with filters, search and sort; create, get, replace, change status, delete), `GET /api/v1/health/live` and `/ready`, and the four `/api/auth` routes (sign-up, sign-in, sign-out, get-session). Remaining contract items are tracked in specs [002](docs/specs/002-teams/tasks.md) and [003](docs/specs/003-tasks/tasks.md).
+Implemented: teams (list, create, get, replace, delete), tasks (list with filters, search and sort; create, get, replace, change status, delete), `GET /api/v1/health/live` and `/ready`, and the four `/api/auth` routes (sign-up, sign-in, sign-out, get-session).
 
 ## Request examples
 
@@ -205,14 +180,14 @@ TOKEN=$(curl -si -X POST $API/api/auth/sign-in/email \
 # List teams
 curl -s "$API/api/v1/teams?limit=10" -H "Authorization: Bearer $TOKEN"
 
-# Create a team (an Idempotency-Key header that makes retries safe is planned, T-002-05)
+# Create a team
 curl -s -X POST $API/api/v1/teams -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"name":"Platform","colorHex":"#0EA5E9","description":"Infra & tooling"}'
 
-# Update (replace) a team; If-Match carries the ETag you read, a stale tag answers 412
+# Update (replace) a team
 curl -s -X PUT $API/api/v1/teams/<teamId> -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -H 'If-Match: W/"1"' \
+  -H 'Content-Type: application/json' \
   -d '{"name":"Platform","colorHex":"#10B981","description":"Renamed"}'
 
 # Delete a team (tasks keep existing, only the link goes away)
@@ -227,9 +202,9 @@ curl -s -X POST $API/api/v1/tasks -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"title":"Write release notes","dueDate":"2026-11-05","teamIds":["<teamA>","<teamB>"]}'
 
-# Quick action: mark as done (task If-Match is accepted but not checked yet, T-003-17)
+# Quick action: mark as done
 curl -s -X PATCH $API/api/v1/tasks/<taskId>/status -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -H 'If-Match: W/"3"' \
+  -H 'Content-Type: application/json' \
   -d '{"status":"DONE"}'
 
 # Delete a task
@@ -249,8 +224,8 @@ The project stops deliberately where the cost only pays off with real traffic or
 
 | Topic              | Today                                                                           | In production                                                                                                                                        |
 | ------------------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cache              | `ETag` on single resources; React Query cache on the device                     | `If-None-Match` → `304`, `Cache-Control: private, no-cache`, Redis read-through cache with event-driven invalidation for hot lists                   |
-| Logs and telemetry | JSON logs to stdout, redacted (no OTLP logs); local SigNoz profile planned      | Managed backend, retention policy, tail sampling, audit log, mobile crash reporting, alerts as code                                                  |
+| Cache              | No HTTP caching; React Query cache on the device (mobile phase)                 | `If-None-Match` → `304`, `Cache-Control: private, no-cache`, Redis read-through cache with event-driven invalidation for hot lists                   |
+| Logs and telemetry | JSON logs to stdout, redacted; OTLP traces only when an endpoint is set         | Managed backend, retention policy, tail sampling, audit log, mobile crash reporting, alerts as code                                                  |
 | Scalability        | One stateless API container; offset pagination; in-memory rate limiter          | Horizontal scaling, Redis-backed throttling, PgBouncer, read replicas, cursor pagination, transactional outbox                                       |
 | Security           | Owner scoping, validation, throttler, `helmet`, env secrets with local defaults | Secrets manager, TLS/HSTS, WAF, email verification + MFA, SCA/SAST and container scanning, least-privilege DB roles, Swagger disabled or behind auth |
 
@@ -260,20 +235,20 @@ Also covered there: reliability, CD pipeline, data lifecycle, multi-tenancy. Sec
 
 ```text
 apps/
-  api/              NestJS 11 REST API (Clean Architecture, CQRS, Prisma, Better Auth)
+  api/              NestJS 11 REST API (four layers, use cases, Prisma, Better Auth)
   mobile/           Expo app — ⚠️ not created yet
 packages/
   api-client/       orval-generated client from the API's OpenAPI — ⚠️ not created yet
   tsconfig/         shared strict tsconfig bases
 docs/               constitution, product, specs, architecture, ADRs, quality, security, operations
-tools/              bruno/ + http/ (request collections), ci/ (CI scripts and checks); k6/ — ⚠️ not created yet
+tools/              bruno/ + http/ (request collections), ci/ (CI scripts), docs-checks/ (optional document checks)
 ```
 
-Full target layout of the API and the mobile app: [architecture overview §6](docs/architecture/overview.md#6-folder-structure).
+Full layout of the API: [architecture overview §6](docs/architecture/overview.md#6-folder-structure-appsapisrc).
 
 ## Testing
 
-Requires Node ≥ 24, pnpm 10 and a running Docker daemon for the Testcontainers suites. CI runs all of these; the fast ones are enough while developing.
+Requires Node ≥ 24, pnpm 10 and a running Docker daemon for the Testcontainers suites. CI runs all of these except the optional document checks; the fast ones are enough while developing.
 
 ```bash
 pnpm install
@@ -281,18 +256,19 @@ pnpm lint && pnpm typecheck && pnpm test      # fast gates; `pnpm test` = unit t
 pnpm test:integration                         # real PostgreSQL via Testcontainers (needs Docker)
 pnpm test:e2e                                 # supertest against the full Nest app (needs Docker)
 pnpm arch                                     # dependency-cruiser layer rules
-pnpm test:tools && pnpm traceability:check    # CI scripts, and AC ↔ test traceability
+pnpm test:tools                              # tests of the CI scripts (part of the required gate)
+pnpm test:docs && pnpm traceability:check && pnpm doc-check   # optional document checks (not in the gate)
 ```
 
-Every MUST acceptance criterion of a finished task is named by at least one automated test, by the AC id leading the test title; CI enforces it ([traceability matrix](docs/quality/traceability-matrix.md)). Strategy, pyramid proportions, mutation testing and test data: [test strategy](docs/quality/test-strategy.md) · [ADR-0014](docs/architecture/adr/0014-testing-strategy.md).
+Every MUST acceptance criterion of a finished task is named by at least one automated test, by the AC id leading the test title, checked by an optional script (the non-required `docs-checks` CI job, [traceability matrix](docs/quality/traceability-matrix.md)). Strategy, pyramid and test data: [test strategy](docs/quality/test-strategy.md) · [ADR-0014](docs/architecture/adr/0014-testing-strategy.md).
 
 ## Contributing
 
-The project follows **Spec-Driven Development**: no code without an approved task in `docs/specs/<id>-<feature>/tasks.md`. Order per feature: `spec.md` → `*.feature` → `plan.md` → `tasks.md` → test-first implementation → review → atomic PR. See [specs](docs/specs/README.md) and the [definition of done](docs/quality/definition-of-done.md).
+The project was built **spec-first**: each feature has `spec.md` → `*.feature` → `plan.md` → `tasks.md` in `docs/specs/`, then test-first implementation, review and an atomic PR. That material is kept as [process history](docs/README.md#process-material-optional-reading) ([specs](docs/specs/README.md), [definition of done](docs/quality/definition-of-done.md)).
 
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/), validated by commitlint. Scopes: `api`, `mobile`, `api-client`, `docs`, `adr`, `spec`, `ci`, `infra`, `deps`, `agents`.
-- **PRs:** one task = one PR, linked to its spec task and ADRs ([ADR-0017](docs/architecture/adr/0017-conventional-commits-and-atomic-prs.md)).
-- **Traceability:** test titles start with the AC id they prove (`it('AC-02.1.3 rejects …')`). CI fails when a PR removes the last test of an AC (compared with the base branch), on a MUST AC without scenario or task, and on a stale [traceability matrix](docs/quality/traceability-matrix.md); run `pnpm traceability` after changing specs, scenarios or task `Covers:` lines. A PR that completes a spec task also sets that task's `- **Status:** done` line in `tasks.md`; from then on every MUST AC the task covers needs a test (CI fails otherwise unless a waiver with a reason is recorded in `tools/ci/traceability-waivers.json`). Which ACs have automated tests is shown in the CI job summary, not committed.
+- **PRs:** one task = one PR, linked to its spec task and ADRs ([ADR-0017](docs/architecture/adr/archive/0017-conventional-commits-and-atomic-prs.md)). The required `ci-success` gate: lint, typecheck, unit, integration, e2e, build, compose smoke, gitleaks and the dependency audit.
+- **Traceability (optional):** test titles start with the AC id they prove (`it('AC-02.1.3 rejects …')`). `pnpm traceability` regenerates the [traceability matrix](docs/quality/traceability-matrix.md) and `pnpm traceability:check` reports MUST ACs without a test; both run in the non-required `docs-checks` CI job and never block a merge.
 - **Before pushing:** `pnpm lint && pnpm typecheck && pnpm test` (the husky hooks run commitlint and lint-staged on every commit; run `pnpm install` once per clone or worktree so they are installed). Secrets live only in a git-ignored `.env`; CI runs gitleaks.
 - **Branch protection (recommended for `main`, applied by the repository owner):** require a pull request with one approval, dismiss stale approvals, require the `ci-success` status and an up-to-date branch, require conversation resolution, linear history (rebase merge only), and block force pushes and deletion. Details: [plan 007](docs/specs/007-ci-and-dx/plan.md#conventions--branch-protection).
 - **Principles:** the [constitution](docs/constitution.md) is non-negotiable; decisions that change it need an ADR.

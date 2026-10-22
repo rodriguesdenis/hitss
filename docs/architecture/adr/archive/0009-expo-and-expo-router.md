@@ -51,8 +51,8 @@ The brief asks for a React Native app with a handful of screens (teams list, tas
   - `(app)/(tabs)/` — `tasks`, `teams`, `settings`;
   - stacks for `tasks/new`, `tasks/[id]`, `tasks/[id]/edit`, `teams/new`, `teams/[id]/edit`.
 - **Team filter as URL state:** tapping a team navigates to `/tasks?teamId=<id>`, so "tasks of a team" is a deep-linkable route and back navigation restores the previous filter.
-- Route files stay thin; logic lives in `src/features/*` ([overview §6.3](../overview.md#63-mobile-appsmobile)).
-- **Scheme** `teamstasks` (used by Better Auth trusted origins, [ADR-0007](0007-better-auth.md)).
+- Route files stay thin; logic lives in `src/features/*` ([overview §6.3](../../overview.md#8-mobile-app-next-phase)).
+- **Scheme** `teamstasks` (used by Better Auth trusted origins, [ADR-0007](../0007-better-auth.md)).
 
 ## Consequences
 
@@ -73,5 +73,5 @@ The brief asks for a React Native app with a handful of screens (teams list, tas
 
 ## Links
 
-- [Spec 004 — Mobile app](../../specs/004-mobile-app/spec.md)
+- [Spec 004 — Mobile app](../../../specs/004-mobile-app/spec.md)
 - Expo Router: https://docs.expo.dev/router/introduction/ · Typed routes: https://docs.expo.dev/router/reference/typed-routes/

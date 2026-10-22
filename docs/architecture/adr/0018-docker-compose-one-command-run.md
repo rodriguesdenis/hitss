@@ -48,7 +48,7 @@ Constitution §VII.1: with only Docker installed, `docker compose up` must yield
 | `migrate`                                                         | default         | One-shot, built from the `migrator` target of `apps/api/Dockerfile` (Prisma CLI + migrations); runs `prisma migrate deploy` once and exits; `restart: no`.                  |
 | `api`                                                             | default         | Built from `apps/api/Dockerfile`; `depends_on: postgres: service_healthy` and `migrate: service_completed_successfully`; healthcheck `GET /api/v1/health/ready`; port 3000. |
 | `mobile`                                                          | `mobile`        | Node image running `expo start --tunnel` so a phone with Expo Go can load the bundle from anywhere; `EXPO_PUBLIC_API_URL` points at the host/tunnel URL.                    |
-| SigNoz stack (collector, query service/UI, ClickHouse, ZooKeeper) | `observability` | ~4 GB RAM; API exports OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set ([ADR-0013](0013-opentelemetry-and-signoz.md)).                                                       |
+| SigNoz stack (collector, query service/UI, ClickHouse, ZooKeeper) | `observability` | ~4 GB RAM; API exports OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set ([ADR-0013](archive/0013-opentelemetry-and-signoz.md)).                                               |
 
 **API image** (multi-stage, `apps/api/Dockerfile`, context = repository root):
 
