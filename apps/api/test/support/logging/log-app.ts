@@ -4,6 +4,7 @@ import {
   INestApplication,
   Module,
   Param,
+  Post,
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Logger, LoggerModule, PinoLogger } from 'nestjs-pino';
@@ -18,6 +19,11 @@ export class FixtureController {
   one(@Param('id') id: string) {
     this.logger.info('inside handler');
     return { id };
+  }
+
+  @Post('api/v1/tasks')
+  create() {
+    return {};
   }
 
   @Get('api/v1/health/live')
@@ -51,6 +57,10 @@ export async function bootLogApp(level: string) {
     bufferLogs: true,
   });
   app.useLogger(app.get(Logger));
-  await app.init();
-  return { app, out };
+  // A real listening socket and fetch: no per-request listen/close of a shared server.
+  await app.listen(0, '127.0.0.1');
+  const base = await app.getUrl();
+  const call = (path: string, init?: RequestInit) =>
+    fetch(`${base}${path}`, init);
+  return { app, out, call };
 }

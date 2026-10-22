@@ -1,6 +1,4 @@
-import type { Server } from 'node:http';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
 import { LogCapture } from '../../../../test/support/logging/capture';
 import { createLoggerParams } from './logger.config';
 import { bootLogApp } from '../../../../test/support/logging/log-app';
@@ -11,76 +9,86 @@ const token = 'token-value-abcdef';
 describe('request logging', () => {
   let app: INestApplication;
   let out: LogCapture;
+  let call: Awaited<ReturnType<typeof bootLogApp>>['call'];
+
+  const completed = (path: string) => (l: Record<string, unknown>) =>
+    l.msg === 'request completed' &&
+    (l.req as { url: string } | undefined)?.url === path;
 
   beforeAll(async () => {
-    ({ app, out } = await bootLogApp('trace'));
+    ({ app, out, call } = await bootLogApp('trace'));
   });
   beforeEach(() => out.reset());
   afterAll(() => app.close());
 
   it('AC-06.3.1 AC-06.2.3 writes one completion line with method, route template, status, duration and request id', async () => {
-    const response = await request(app.getHttpServer() as Server).get(
-      '/api/v1/tasks/7f3c?search=private',
-    );
+    const response = await call('/api/v1/tasks/7f3c?search=private');
 
-    const completed = out.lines.filter((l) => l.msg === 'request completed');
-    expect(completed).toHaveLength(1);
-    expect(completed[0]).toMatchObject({
+    const line = await out.waitFor(completed('/api/v1/tasks/7f3c'));
+    expect(out.lines.filter((l) => l.msg === 'request completed')).toHaveLength(
+      1,
+    );
+    expect(line).toMatchObject({
       req: { method: 'GET', url: '/api/v1/tasks/7f3c' },
       route: '/api/v1/tasks/:id',
       res: { statusCode: 200 },
-      reqId: response.headers['x-request-id'],
+      reqId: response.headers.get('x-request-id'),
     });
-    expect(typeof completed[0]?.responseTime).toBe('number');
+    expect(typeof line.responseTime).toBe('number');
     expect(out.raw).not.toContain('private');
   });
 
   it('AC-06.3.2 entries written during the request share its request id', async () => {
-    await request(app.getHttpServer() as Server)
-      .get('/api/v1/tasks/1')
-      .set('X-Request-Id', 'abc-123');
+    await call('/api/v1/tasks/1', { headers: { 'X-Request-Id': 'abc-123' } });
 
-    const inside = out.lines.find((l) => l.msg === 'inside handler');
-    expect(inside).toMatchObject({ reqId: 'abc-123' });
-    expect(out.lines.find((l) => l.msg === 'request completed')).toMatchObject({
+    const done = await out.waitFor(completed('/api/v1/tasks/1'));
+    expect(done).toMatchObject({ reqId: 'abc-123' });
+    expect(out.lines.find((l) => l.msg === 'inside handler')).toMatchObject({
       reqId: 'abc-123',
     });
   });
 
   it('AC-06.3.3 never logs credential headers or request bodies', async () => {
-    await request(app.getHttpServer() as Server)
-      .get('/api/v1/tasks/1')
-      .set('Authorization', `Bearer ${token}`)
-      .set('Cookie', `session=${token}`)
-      .send({ password, nested: { token } });
+    await call('/api/v1/tasks', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Cookie: `session=${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password, nested: { token } }),
+    });
 
+    await out.waitFor(completed('/api/v1/tasks'));
     expect(out.raw).not.toContain(token);
     expect(out.raw).not.toContain(password);
   });
 
   it('AC-06.3.7 strips the query string of /api/auth/* URLs', async () => {
-    await request(app.getHttpServer() as Server).get(
-      `/api/auth/verify?token=${token}`,
-    );
+    await call(`/api/auth/verify?token=${token}`);
 
+    const line = await out.waitFor(completed('/api/auth/verify'));
     expect(out.raw).not.toContain(token);
-    expect(out.lines.find((l) => l.msg === 'request completed')).toMatchObject({
-      req: { url: '/api/auth/verify' },
-    });
+    expect(line).toMatchObject({ req: { url: '/api/auth/verify' } });
   });
 
   it('AC-06.1.5 does not log probe requests', async () => {
-    await request(app.getHttpServer() as Server)
-      .get('/api/v1/health/live')
-      .expect(200);
-    expect(out.lines).toHaveLength(0);
+    expect((await call('/api/v1/health/live')).status).toBe(200);
+    // Sentinel: once the next request's line is written, a probe line would be there too.
+    await call('/api/v1/tasks/sentinel');
+    await out.waitFor(completed('/api/v1/tasks/sentinel'));
+
+    expect(out.lines.filter((l) => l.msg === 'request completed')).toHaveLength(
+      1,
+    );
+    expect(out.raw).not.toContain('health');
   });
 
   it('AC-06.3.6 logs no user id when nobody is signed in and never an email', async () => {
-    await request(app.getHttpServer() as Server).get('/api/v1/tasks/1');
-    expect(
-      out.lines.find((l) => l.msg === 'request completed'),
-    ).not.toHaveProperty('userId');
+    await call('/api/v1/tasks/1');
+    expect(await out.waitFor(completed('/api/v1/tasks/1'))).not.toHaveProperty(
+      'userId',
+    );
   });
 });
 
