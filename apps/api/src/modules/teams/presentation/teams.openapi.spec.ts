@@ -62,6 +62,20 @@ describe('Teams in the OpenAPI document', () => {
     });
   });
 
+  it('AC-02.5.1 GET /api/v1/teams/{id} documents the id and 200 { data: TeamResponseDto }', async () => {
+    const doc = await document();
+    const get = doc.paths['/api/v1/teams/{id}']?.get;
+
+    expect(get?.parameters).toEqual([
+      expect.objectContaining({ name: 'id', in: 'path', required: true }),
+    ]);
+    expect(json(get?.responses['200'])).toEqual({
+      type: 'object',
+      required: ['data'],
+      properties: { data: { $ref: '#/components/schemas/TeamResponseDto' } },
+    });
+  });
+
   it('TeamResponseDto documents every response field', async () => {
     const doc = await document();
 
