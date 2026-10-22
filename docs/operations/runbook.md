@@ -4,15 +4,15 @@ Local operation of Teams & Tasks. Commands assume the repository root. Every `ma
 
 ## Run
 
-| Goal                                                       | Command                                                                              |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Start DB + API (migrate, seed, wait until healthy)         | `docker compose up --build` (foreground) · `make up` (background, waits for healthy) |
-| Stop (keep data)                                           | `make down`                                                                          |
-| Follow API logs                                            | `make logs` (`LOG_PRETTY=true make up` for human-readable logs)                      |
-| Re-apply demo data                                         | `make seed`                                                                          |
-| Wipe everything and start fresh                            | `make reset`                                                                         |
-| Smoke test (stop the dev stack first: ports 3000 and 5432) | `make smoke`                                                                         |
-| Status                                                     | `docker compose ps` (look for `healthy`)                                             |
+| Goal                                                       | Command                                                                                                                                                          |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Start DB + API (migrate, seed, wait until healthy)         | `docker compose up --build` (foreground) · `make up` (background, waits for healthy)                                                                             |
+| Stop (keep data)                                           | `make down`                                                                                                                                                      |
+| Follow API logs                                            | `make logs`; human-readable: `docker compose logs -f api \| npx pino-pretty`, or run the API on the host with `LOG_PRETTY=true` (the image has no `pino-pretty`) |
+| Re-apply demo data                                         | `make seed`                                                                                                                                                      |
+| Wipe everything and start fresh                            | `make reset`                                                                                                                                                     |
+| Smoke test (stop the dev stack first: ports 3000 and 5432) | `make smoke`                                                                                                                                                     |
+| Status                                                     | `docker compose ps` (look for `healthy`)                                                                                                                         |
 
 URLs once healthy:
 
@@ -26,11 +26,11 @@ Settings: none required. To override, create `.env` from `.env.example` (compose
 
 ### Port already in use
 
-Symptom: `Bind for 0.0.0.0:3000 failed: port is already allocated` (or `:5432`, `:8081`, `:8080`).
+Symptom: `Bind for 0.0.0.0:3000 failed: port is already allocated` (or `:5432`).
 
 1. Find the process: `lsof -i :3000` (macOS/Linux) · `netstat -ano | findstr :3000` (Windows).
 2. Stop it, or choose another port: `API_PORT=3100 make up`, `POSTGRES_PORT=5433 make up`.
-3. If the API port changes, update the app's `EXPO_PUBLIC_API_URL` and the Bruno environment `baseUrl`.
+3. If the API port changes, update the Bruno environment `baseUrl` and the `.http` files' host.
 
 A local PostgreSQL installation commonly holds `5432` — `POSTGRES_PORT=5433` avoids it (the API talks to the container over the compose network and is unaffected).
 
@@ -48,8 +48,9 @@ Symptom: `api` stays `waiting` or `dependency failed to start: container teams-t
 1. `docker compose logs migrate api | tail -50` (migrations run in the one-shot `migrate` service; if it failed, the `api` container never starts).
 2. `Invalid configuration: <VAR> …` → fix the named variable in `.env` (or delete `.env` to fall back to defaults).
 3. `prisma migrate deploy` error (`P3009` failed migration, `P1001` can't reach DB) → `make reset` for local data; for a genuinely broken migration fix it in a new migration (never edit an applied one).
-4. Production-rule errors (`APP_ENV=production`): `BETTER_AUTH_SECRET` is the local default, `BETTER_AUTH_URL` not https, `CORS_ORIGINS` has `*`/`http://`/`localhost`, `AUTH_RATE_LIMIT_ENABLED=false`, `APP_SCHEME=exp`, `SEED_DEMO=true` → fix the named variable, or use `APP_ENV=local` locally (`NODE_ENV` is always `production` inside the image; only `APP_ENV` selects these rules). `DOCS_ENABLED` is forced off in production, so `/docs` is 404 there.
-5. Readiness `503` with `database: down` → DB unreachable; see the previous section.
+4. Production-rule errors (`APP_ENV=production`): `BETTER_AUTH_SECRET` is the local default, `BETTER_AUTH_URL` not https, `CORS_ORIGINS` has `*`/`http://`/`localhost`, `AUTH_RATE_LIMIT_ENABLED=false`, `SEED_DEMO=true` → fix the named variable, or use `APP_ENV=local` locally (`NODE_ENV` is always `production` inside the image; only `APP_ENV` selects these rules). `DOCS_ENABLED` is forced off in production, so `/docs` is 404 there.
+5. `APP_SCHEME` must be a lower-case custom scheme such as `teamstasks`; `exp`, `http(s)` and `file` are rejected in every environment, not only in production.
+6. Readiness `503` with `database: down` → DB unreachable; see the previous section.
 
 ### Requests return 401
 

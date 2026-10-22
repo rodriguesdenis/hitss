@@ -239,7 +239,8 @@ Unit tests (`*.spec.ts`) sit next to the file they test; `test/integration` (Tes
 | Rule                                 | From                      | Must not import                                                                  |
 | ------------------------------------ | ------------------------- | -------------------------------------------------------------------------------- |
 | `domain-is-pure`                     | `**/domain/**`            | `application/`, `infrastructure/`, `presentation/`                               |
-| `domain-no-third-party`              | `**/domain/**`            | any npm package or Node core module; the generated Prisma client                 |
+| `domain-no-third-party`              | `**/domain/**`            | any npm package or Node core module                                              |
+| `domain-no-generated-client`         | `**/domain/**`            | the generated Prisma client                                                      |
 | `application-not-to-adapters`        | `**/application/**`       | `infrastructure/`, `presentation/`, `@prisma/*`, `express`, the generated client |
 | `infrastructure-not-to-presentation` | `**/infrastructure/**`    | `presentation/`                                                                  |
 | `persistence-not-to-use-cases`       | `**/infrastructure/**`    | `application/use-cases/`                                                         |
