@@ -47,7 +47,8 @@ flowchart LR
 
   subgraph compose["docker compose (local machine)"]
     metro["<b>mobile</b> service (optional)<br/>Metro bundler --tunnel"]
-    api["<b>api</b> service<br/>NestJS 11 on Node 24<br/>entrypoint: migrate deploy → seed → start"]
+    migrate["<b>migrate</b> service (one-shot)<br/>prisma migrate deploy, then exits"]
+    api["<b>api</b> service<br/>NestJS 11 on Node 24<br/>node --import ./dist/instrumentation.js dist/main.js"]
     pg[("<b>postgres</b> service<br/>PostgreSQL 17 + pg_trgm<br/>healthcheck")]
     subgraph obs["profile: observability"]
       otel["SigNoz OTel collector<br/>OTLP :4317/:4318"]
@@ -61,13 +62,14 @@ flowchart LR
   mobile <--> secure
   metro -. "JS bundle" .-> mobile
   mobile -- "HTTPS JSON" --> api
+  migrate -- "TCP 5432" --> pg
   api -- "TCP 5432" --> pg
   api -. "OTLP/HTTP (default endpoint;<br/>dropped silently if absent)" .-> otel
   otel --> ch
   signoz --> ch
 ```
 
-- The `api` service waits for `postgres` with `depends_on: condition: service_healthy` and is itself healthy when `GET /api/v1/health/ready` answers ([ADR-0018](adr/0018-docker-compose-one-command-run.md)).
+- Startup order ([ADR-0018](adr/0018-docker-compose-one-command-run.md)): `postgres` becomes healthy → the one-shot `migrate` service (Dockerfile target `migrator`, the only image with the Prisma CLI) applies the migrations and exits → `api` starts only if `migrate` completed successfully (`service_completed_successfully`), so a failed migration never serves traffic. The API image has no migration tooling; its entrypoint loads OpenTelemetry first (`node --import ./dist/instrumentation.js dist/main.js`). On boot the API probes the database (`SELECT 1`, 10 s bound) and exits non-zero if it does not answer (constitution §VII.3). It is healthy when `GET /api/v1/health/ready` answers (interim: TCP check until the health routes land).
 - The observability stack is behind a Compose **profile** because it needs ~4 GB RAM ([ADR-0013](adr/0013-opentelemetry-and-signoz.md)). The API always has an OTLP endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`, default `http://signoz-otel-collector:4318` in Compose). When the profile is off, exports are dropped silently and the API runs normally. `OTEL_SDK_DISABLED=true` turns telemetry off entirely.
 - The app has no backend of its own: everything persistent on the device is a cache or a queue ([ADR-0012](adr/0012-offline-first-and-optimistic-updates.md)).
 
@@ -268,11 +270,14 @@ apps/api/
 │   └── seed.ts                          # deterministic, idempotent
 ├── src/
 │   ├── instrumentation.ts               # OTel NodeSDK, loaded before anything else
-│   ├── main.ts                          # NestFactory.create(AppModule, { bodyParser: false }) → setupApp(app) → listen
-│   ├── app.setup.ts                     # setupApp(app): the single bootstrap seam, used by main.ts and test/support/app.ts; every app-level concern (shutdown hooks, prefix, versioning, helmet, CORS…) goes here, never in main.ts
-│   ├── app.module.ts
+│   ├── main.ts                          # NestFactory.create(AppModule, { bodyParser: false, bufferLogs: true }) → setupApp(app) → listen
+│   ├── app.setup.ts                     # setupApp(app): the single bootstrap seam, used by main.ts and test/support/app.ts (order below); never add app-level concerns to main.ts
+│   ├── app.module.ts                    # the only CqrsModule.forRoot() (one EventBus; feature modules import plain CqrsModule); ObservabilityModule last
 │   ├── generated/                       # Prisma client from `prisma generate` (gitignored, persistence library: infrastructure only)
 │   ├── config/                          # env schema as a class-validator class, validated via ConfigModule `validate()` (fail fast) + typed config
+│   │   ├── env.schema.ts · env.validation.ts · production-rules.ts · app-config.ts · config.module.ts
+│   │   ├── env-files.ts                 # which .env files load (ignored with APP_ENV=production); shared with prisma.config.ts and instrumentation.ts
+│   │   ├── auth.env.ts                  # Better Auth / CORS / proxy variables, composed into `validate()`
 │   │   ├── telemetry.env.ts             # TelemetryEnv (OTEL_*), composed into the same `validate()` and called directly by instrumentation.ts
 │   │   ├── transforms.ts                # class-transformer/validator helpers shared by the env classes
 │   │   └── config-validation-error.ts   # ConfigValidationError + Violation (names variables, never values)
@@ -280,11 +285,12 @@ apps/api/
 │   │   ├── domain/                      # AggregateRoot, DomainEvent, DomainError + ConcurrencyConflict, expected-version.ts (pure TS)
 │   │   ├── application/                 # Clock, IdGenerator ports, Page<T>, PageRequest
 │   │   ├── infrastructure/
-│   │   │   ├── prisma/                  # PrismaModule, PrismaService, transaction host
+│   │   │   ├── prisma/                  # PrismaModule, PrismaService (one pg pool), database-probe.ts (boot probe: SELECT 1 bounded by DATABASE_PROBE_TIMEOUT, default 10 s → DatabaseUnavailableError), transaction host (with the CLS unit of work)
 │   │   │   ├── idempotency/             # PrismaIdempotencyStore
 │   │   │   └── system-clock.ts · uuid-generator.ts
 │   │   ├── presentation/
 │   │   │   ├── http-conventions.module.ts  # global: DomainErrorMappings registry + GlobalExceptionFilter
+│   │   │   ├── cors-options.ts          # CORS allowlist from CORS_ORIGINS (none when empty)
 │   │   │   ├── filters/                 # GlobalExceptionFilter, error codes, DomainErrorMappings (modules register theirs)
 │   │   │   ├── pipes/                   # AppValidationPipe (global), ParseUuidPipe
 │   │   │   ├── interceptors/            # envelope, etag, idempotency
@@ -295,10 +301,14 @@ apps/api/
 │   │       ├── is-probe.ts              # probe requests (/api/v1/health/*) are never logged or traced
 │   │       ├── sanitize-url.ts          # strips query strings; shared by logging and the span exporter
 │   │       ├── logging/                 # logger.config, redact-paths, request-id, route-template, trace-fields, pino-bridge (Better Auth → pino)
-│   │       ├── telemetry/               # diag-logger, resource-attributes, sanitizing-span-exporter, telemetry-lifecycle, telemetry-shutdown
-│   │       └── tracing/                 # use-case spans around command/query handlers
+│   │       ├── telemetry/               # diag-logger, resource-attributes, http-metric-views (allowlisted request-duration dimensions), sanitizing-span-exporter (no query strings, no error messages/stacks), telemetry-lifecycle, telemetry-shutdown
+│   │       └── tracing/                 # traced-handler.ts: @Traced() use-case spans around command/query handlers (application may import it, see A2)
 │   └── modules/
-│       ├── identity/                    # Identity context: betterAuth instance, IdentityModule (wraps nestjs-better-auth AuthModule), global guards; @CurrentOwner() is in shared/presentation (CO-1)
+│       ├── identity/                    # Identity context (generic subdomain, no domain/ layer); @CurrentOwner() lives in shared/presentation (CO-1), teams/tasks never import identity (A5)
+│       │   ├── identity.module.ts       # wraps nestjs-better-auth AuthModule.forRootAsync (re-adds the JSON parser; global guards registered in order)
+│       │   ├── auth.factory.ts          # createAuth(config, prisma, logger, hasher): the Better Auth instance at /api/auth
+│       │   ├── auth-routes.ts · password-hasher.ts
+│       │   └── middleware/              # client-ip.middleware.ts (sets the only IP header Better Auth trusts)
 │       ├── health/                      # Terminus controller + Prisma indicator
 │       ├── teams/
 │       │   ├── contracts/               # PUBLIC: TeamDeleted, GetTeamSummariesQuery + result types
@@ -349,6 +359,8 @@ apps/api/
 
 Unit tests (`*.spec.ts`) sit next to the file they test.
 
+**Bootstrap order (`setupApp`).** 1. pino logger (every later line is JSON, redacted, trace-correlated); 2. shutdown hooks and Express `trust proxy` from `TRUSTED_PROXIES`; 3. request id (before the body parser, so 400/413 parse errors carry it); 4. helmet and CORS (before routing, so every response carries them); 5. `/api` prefix and URI versioning `v1`; 6. validation pipe, `{ data }` envelope interceptor, `{ error }` exception filter (taken from the container, with the domain-error registry). `main.ts` and the test app both call it, so tests serve exactly the production HTTP conventions.
+
 **Module layout.** Every bounded-context module uses the same shape: `domain/` holds `<agg>.ts`, `<agg>.errors.ts` (all of the module's errors), `<agg>.events.ts` (all of its events), `value-objects/` and any pure policy; `application/commands/<use-case>/` and `application/queries/<use-case>/` (message + handler + spec), `application/ports/`; `infrastructure/prisma-<agg>.repository.ts` + `<agg>.mapper.ts` and `infrastructure/adapters/` for cross-context ports; `presentation/<ctx>.controller.ts` + `dto/`; `contracts/` (the module's only public surface); and the `<ctx>.module.ts` composition root.
 
 ### 6.3 Mobile (`apps/mobile`)
@@ -397,21 +409,21 @@ apps/mobile/
 
 ## 7. Dependency rules (enforced by dependency-cruiser in CI)
 
-`dependency-cruiser` runs in CI (`pnpm lint:arch`) for both apps; a violation fails the build ([ADR-0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md), constitution §III.3).
+`dependency-cruiser` runs in CI (`pnpm arch`: the rules plus their meta-tests) for the API (mobile rules arrive with T-004-01); a violation fails the build ([ADR-0002](adr/0002-nestjs-clean-architecture-ddd-cqrs.md), constitution §III.3).
 
 ### API
 
-| #   | Rule                                      | From                         | Must not import                                                                                                                                       |
-| --- | ----------------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A1  | Domain is pure                            | `src/**/domain/**`           | `@nestjs/*`, `@prisma/*`, `better-auth`, `class-validator`, `class-transformer`, Node I/O, and any `application/`, `infrastructure/`, `presentation/` |
-| A2  | Application knows no adapters             | `src/**/application/**`      | `infrastructure/`, `presentation/`, `@prisma/*`, `express`. May import `domain/`, `@nestjs/cqrs`, `@nestjs/common` (decorators only)                  |
-| A3  | Infrastructure does not reach up          | `src/**/infrastructure/**`   | `presentation/`                                                                                                                                       |
-| A4  | Presentation uses use cases, not adapters | `src/**/presentation/**`     | `infrastructure/`, `@prisma/*`                                                                                                                        |
-| A5  | Contexts are isolated                     | `src/modules/<a>/**`         | `src/modules/<b>/**` except `src/modules/<b>/contracts/**`                                                                                            |
-| A6  | Contracts are thin                        | `src/modules/*/contracts/**` | anything but its own `domain/<agg>.events.ts`, `shared/domain` and other `contracts/`                                                                 |
-| A7  | Shared does not depend on features        | `src/shared/**`              | `src/modules/**`                                                                                                                                      |
-| A8  | No cycles                                 | any                          | circular dependencies                                                                                                                                 |
-| A9  | Tests stay out of prod                    | `src/**` (non-spec)          | `*.spec.ts`, `test/**`                                                                                                                                |
+| #   | Rule                                      | From                         | Must not import                                                                                                                                                                                                                                  |
+| --- | ----------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A1  | Domain is pure                            | `src/**/domain/**`           | `@nestjs/*`, `@prisma/*`, `better-auth`, `class-validator`, `class-transformer`, Node I/O, and any `application/`, `infrastructure/`, `presentation/`                                                                                            |
+| A2  | Application knows no adapters             | `src/**/application/**`      | `infrastructure/`, `presentation/`, `@prisma/*`, `express`. May import `domain/`, `@nestjs/cqrs`, `@nestjs/common` (decorators only) and, as the one cross-cutting exception, `shared/observability/tracing` (`@Traced()`, OTel API facade only) |
+| A3  | Infrastructure does not reach up          | `src/**/infrastructure/**`   | `presentation/`                                                                                                                                                                                                                                  |
+| A4  | Presentation uses use cases, not adapters | `src/**/presentation/**`     | `infrastructure/`, `@prisma/*`                                                                                                                                                                                                                   |
+| A5  | Contexts are isolated                     | `src/modules/<a>/**`         | `src/modules/<b>/**` except `src/modules/<b>/contracts/**`                                                                                                                                                                                       |
+| A6  | Contracts are thin                        | `src/modules/*/contracts/**` | anything but its own `domain/<agg>.events.ts`, `shared/domain` and other `contracts/`                                                                                                                                                            |
+| A7  | Shared does not depend on features        | `src/shared/**`              | `src/modules/**`                                                                                                                                                                                                                                 |
+| A8  | No cycles                                 | any                          | circular dependencies                                                                                                                                                                                                                            |
+| A9  | Tests stay out of prod                    | `src/**` (non-spec)          | `*.spec.ts`, `test/**`                                                                                                                                                                                                                           |
 
 The only files allowed to reference both `application/` ports and `infrastructure/` adapters are `*.module.ts` composition roots.
 
