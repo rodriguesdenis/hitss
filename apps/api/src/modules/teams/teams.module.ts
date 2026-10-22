@@ -6,6 +6,7 @@ import { SystemClock } from '../../shared/infrastructure/system-clock';
 import { UuidGenerator } from '../../shared/infrastructure/uuid-generator';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
 import { CreateTeamHandler } from './application/commands/create-team/create-team.handler';
+import { DeleteTeamHandler } from './application/commands/delete-team/delete-team.handler';
 import { ReplaceTeamHandler } from './application/commands/replace-team/replace-team.handler';
 import { TeamReadModel } from './application/ports/team.read-model';
 import { TeamTaskCounts } from './application/ports/team-task-counts';
@@ -29,6 +30,7 @@ import { TEAM_ERROR_MAPPINGS } from './presentation/team-error.mapping';
   controllers: [TeamsController],
   providers: [
     CreateTeamHandler,
+    DeleteTeamHandler,
     ReplaceTeamHandler,
     GetTeamHandler,
     ListTeamsHandler,

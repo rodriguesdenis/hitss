@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma/client';
 import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
-import { PrismaService } from '../../../shared/infrastructure/prisma/prisma.service';
+import type { PrismaTransactionHost } from '../../../shared/infrastructure/transactions/cls-unit-of-work';
+import { TransactionHost } from '@nestjs-cls/transactional';
 import { Team } from '../domain/team';
 import { TeamNameAlreadyExists, TeamNotFound } from '../domain/team.errors';
 import { TeamRepository } from '../domain/team.repository';
@@ -13,12 +14,20 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Write-side persistence of the Team aggregate. Every statement filters by owner_id, and
- * reads only see active rows (deleted_at IS NULL).
+ * reads only see active rows (deleted_at IS NULL). Statements run on `txHost.tx`, so they join
+ * the transaction of the current unit of work.
  */
 @Injectable()
 export class PrismaTeamRepository extends TeamRepository {
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    @Inject(TransactionHost) private readonly txHost: PrismaTransactionHost,
+  ) {
     super();
+  }
+
+  /** The client of the ambient transaction (UnitOfWork.run), or the base client outside one. */
+  private get prisma() {
+    return this.txHost.tx;
   }
 
   async findById(ownerId: string, id: string): Promise<Team | null> {
