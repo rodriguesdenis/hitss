@@ -20,7 +20,7 @@ describe('GetTeamHandler', () => {
     [string, readonly string[]]
   >();
   const handler = new GetTeamHandler(
-    { findById, page: jest.fn() },
+    { findById, page: jest.fn(), summaries: jest.fn() },
     { countByTeam },
   );
 
