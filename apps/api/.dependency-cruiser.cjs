@@ -3,8 +3,8 @@
 // renaming a folder is an architecture change, amend the ADR first. The rule `name` is what the check prints and what the meta-tests assert
 // (test/architecture/rules.test.mjs); every rule needs a violating fixture there.
 
-/** Layer rules apply to production files only; specs may import their subject and fakes. */
-const NON_SPEC = { pathNot: '\\.spec\\.ts$' };
+/** Layer rules apply to production files only; specs and files under a tests/ folder may import their subject and fakes. */
+const NON_SPEC = { pathNot: ['\\.spec\\.ts$', '(^|/)tests/'] };
 /** Generated Prisma client (gitignored): a persistence library like any other. */
 const GENERATED = '^src/generated/';
 /** A bounded context or the shared kernel. */
@@ -129,8 +129,11 @@ module.exports = {
       name: 'no-tests-in-production',
       comment: 'A9: production code never imports specs or test folders.',
       severity: 'error',
-      from: { path: '^src/', pathNot: ['\\.spec\\.ts$', '(^|/)testing/'] },
-      to: { path: '\\.spec\\.ts$|^test/|(^|/)testing/' },
+      from: {
+        path: '^src/',
+        pathNot: ['\\.spec\\.ts$', '(^|/)testing/', '(^|/)tests/'],
+      },
+      to: { path: '\\.spec\\.ts$|^test/|(^|/)testing/|(^|/)tests/' },
     },
     {
       name: 'not-to-dev-dep',
@@ -150,7 +153,8 @@ module.exports = {
       severity: 'warn',
       from: {
         orphan: true,
-        pathNot: '\\.(spec|d)\\.ts$|(^|/)main\\.ts$|(^|/)instrumentation\\.ts$',
+        pathNot:
+          '\\.(spec|d)\\.ts$|(^|/)tests/|(^|/)main\\.ts$|(^|/)instrumentation\\.ts$',
       },
       to: {},
     },

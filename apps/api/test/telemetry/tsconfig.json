@@ -8,5 +8,5 @@
     "sourceMap": false
   },
   "include": ["fixture-app.ts", "../../src/instrumentation.ts"],
-  "exclude": ["../../**/*.spec.ts", "../../**/testing/**"]
+  "exclude": ["../../**/*.spec.ts", "../../**/testing/**", "../../**/tests/**"]
 }
