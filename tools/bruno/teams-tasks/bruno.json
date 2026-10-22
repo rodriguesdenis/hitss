@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "name": "Teams & Tasks - auth",
+  "name": "Teams & Tasks",
   "type": "collection",
   "ignore": ["node_modules", ".git"]
 }

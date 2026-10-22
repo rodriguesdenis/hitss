@@ -1,0 +1,13 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+docs {
+  Run `01-auth/Sign in (demo user)` once: its post-response script saves the signed session token
+  in `token`, and every other request sends it as `Authorization: Bearer {{token}}`.
+  Requests that create data use the `[bruno]` name prefix and delete what they create.
+}

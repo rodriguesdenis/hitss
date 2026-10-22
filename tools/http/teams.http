@@ -1,0 +1,26 @@
+# Teams requests (VS Code REST Client / JetBrains HTTP Client).
+@baseUrl = http://localhost:3000
+@demoEmail = demo@teams-tasks.dev
+# The documented demo password (README); the seed creates this account.
+@demoPassword = Demo@1234
+
+### Sign in (demo user)
+# @name signIn
+POST {{baseUrl}}/api/auth/sign-in/email
+Content-Type: application/json
+
+{
+  "email": "{{demoEmail}}",
+  "password": "{{demoPassword}}"
+}
+
+### Create team
+POST {{baseUrl}}/api/v1/teams
+Authorization: Bearer {{signIn.response.headers.set-auth-token}}
+Content-Type: application/json
+
+{
+  "name": "[http] Platform {{$timestamp}}",
+  "colorHex": "#10B981",
+  "description": "Created by the request files."
+}
