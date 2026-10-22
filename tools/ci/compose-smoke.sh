@@ -67,7 +67,9 @@ token="$(curl -s -D - -o /dev/null --max-time 10 -H 'Content-Type: application/j
 [ -n "$token" ] || fail 'the demo user cannot sign in'
 teams_total="$(curl -s --max-time 5 -H "Authorization: Bearer $token" "$base/api/v1/teams?limit=1" | node -e 'process.stdin.on("data", (d) => console.log(JSON.parse(d).meta.total))')"
 [ "$teams_total" = 3 ] || fail "expected 3 seeded teams, found $teams_total"
-# TODO(T-003-14b): also assert 10 seeded tasks once GET /api/v1/tasks exists.
+tasks_total="$(curl -s --max-time 5 -H "Authorization: Bearer $token" "$base/api/v1/tasks?limit=1" \
+  | node -e 'process.stdin.on("data", (d) => console.log(JSON.parse(d).meta.total))')"
+[ "$tasks_total" = 10 ] || fail "expected 10 seeded tasks, found $tasks_total"
 
 log 'the request collection passes against the freshly seeded stack (AC-07.4.4)'
 node tools/ci/request-parity.mjs
