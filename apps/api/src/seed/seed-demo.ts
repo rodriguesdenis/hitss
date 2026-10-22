@@ -12,6 +12,8 @@ export interface SeedDemoResult {
   skippedBecause?: string;
   user?: 'created' | 'existing';
   teams?: number;
+  /** Seeded teams left as they are because the evaluator owns a team with that name. */
+  teamsSkipped?: number;
   tasks?: number;
 }
 
@@ -34,7 +36,9 @@ export async function seedDemo(deps: {
   if (skippedBecause) return { seeded: false, skippedBecause };
 
   const user = await seedDemoUser(deps.prisma, deps.auth());
-  const teams = await seedTeams(deps.prisma);
+  const { restored: teams, skipped: teamsSkipped } = await seedTeams(
+    deps.prisma,
+  );
   const tasks = await seedTasks(deps.prisma, deps.now ?? new Date());
-  return { seeded: true, user, teams, tasks };
+  return { seeded: true, user, teams, teamsSkipped, tasks };
 }

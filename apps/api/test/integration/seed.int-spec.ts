@@ -222,6 +222,37 @@ describe('demo seed (integration, T-007-07)', () => {
     ).toBe(true);
   });
 
+  it('AC-07.2.4 a seeded team renamed while the evaluator owns a team with its name does not fail the re-seed', async () => {
+    await run();
+    await prisma.team.update({
+      where: { id: DEMO_TEAM_IDS[0] },
+      data: { name: 'Renamed' },
+    });
+    const own = await prisma.team.create({
+      data: {
+        id: randomUUID(),
+        ownerId: DEMO_USER_ID,
+        name: 'mobile',
+        colorHex: '#112233',
+        createdAt: new Date('2026-10-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-10-01T00:00:00.000Z'),
+      },
+    });
+
+    const result = await run();
+
+    expect(result).toMatchObject({ seeded: true, teams: 2, teamsSkipped: 1 });
+    expect(await prisma.team.findUnique({ where: { id: own.id } })).toEqual(
+      own,
+    );
+    expect(
+      (await prisma.team.findUnique({ where: { id: DEMO_TEAM_IDS[0] } }))?.name,
+    ).toBe('Renamed');
+    expect(await prisma.task.count({ where: { ownerId: DEMO_USER_ID } })).toBe(
+      10,
+    );
+  });
+
   it('AC-07.2.5 after a reset (all data deleted) the seed recreates exactly 3 teams and 10 tasks', async () => {
     await run();
     await wipe();

@@ -24,6 +24,11 @@ async function main(): Promise<void> {
           fixedUserId: DEMO_USER_ID,
         }),
     });
+    if (result.teamsSkipped) {
+      console.warn(
+        `seed: ${result.teamsSkipped} seeded team(s) not restored: a team with that name already exists`,
+      );
+    }
     console.log(
       result.seeded
         ? `seed: demo account ${result.user}, ${result.teams} teams, ${result.tasks} tasks`
