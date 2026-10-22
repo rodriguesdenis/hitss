@@ -3,19 +3,24 @@ import {
   Controller,
   Get,
   HttpCode,
+  Param,
   Post,
   Query,
   Res,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import type { ServerResponse } from 'node:http';
 import { ApiTags } from '@nestjs/swagger';
 import type { Page } from '../../../shared/application/page';
 import type { Owner } from '../../../shared/domain/owner';
+import { EtagInterceptor } from '../../../shared/presentation/interceptors/etag.interceptor';
 import {
   ApiCreatedEnvelope,
+  ApiOkEnvelope,
   ApiPageEnvelope,
 } from '../../../shared/presentation/openapi/api-envelope';
+import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
 import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
 import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
@@ -70,9 +75,29 @@ export class TeamsController {
     };
   }
 
+  /**
+   * One of my active teams with its version tag (AC-02.5.1). Unknown, foreign and deleted ids
+   * all get the same 404 TEAM_NOT_FOUND (AC-02.5.2 to AC-02.5.4); a malformed id is a 400 naming
+   * `id` (AC-02.5.5), after authentication (AC-01.5.5).
+   */
+  @Get(':id')
+  @ApiOkEnvelope(TeamResponseDto)
+  @UseInterceptors(EtagInterceptor)
+  async findOne(
+    @CurrentOwner() { ownerId }: Owner,
+    @Param('id', ParseUuidPipe) id: string,
+  ): Promise<TeamResponseDto> {
+    return toTeamResponse(
+      await this.queries.execute<GetTeamQuery, TeamDetails>(
+        new GetTeamQuery(ownerId, id),
+      ),
+    );
+  }
+
   @Post()
   @HttpCode(201)
   @ApiCreatedEnvelope(TeamResponseDto)
+  @UseInterceptors(EtagInterceptor)
   async create(
     @CurrentOwner() { ownerId }: Owner,
     @Body() body: CreateTeamDto,
@@ -93,8 +118,6 @@ export class TeamsController {
       new GetTeamQuery(ownerId, id),
     );
     response.setHeader('Location', `/api/v1/teams/${team.id}`);
-    // Until the shared EtagInterceptor (T-002-07) takes over, in the same W/"<version>" form.
-    response.setHeader('ETag', `W/"${team.version}"`);
-    return toTeamResponse(team);
+    return toTeamResponse(team); // ETag: EtagInterceptor
   }
 }
