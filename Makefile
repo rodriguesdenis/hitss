@@ -3,7 +3,7 @@
 # `make` with no target prints this list.
 
 .DEFAULT_GOAL := help
-.PHONY: help up down logs reset test test-all test-docker smoke
+.PHONY: help up down logs reset seed test test-all test-docker smoke
 
 help: ## List the available aliases
 	@echo 'Usage: make <alias>'
@@ -11,7 +11,6 @@ help: ## List the available aliases
 	@awk 'BEGIN { FS = ":.*## " } /^[a-z-]+:.*## / { printf "  %-14s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@echo
 	@echo 'Not available yet (they land with the task that adds what they run):'
-	@echo '  seed                 re-apply the demo data (T-007-07)'
 	@echo '  observability        start with the telemetry backend (T-006-xx, SigNoz profile)'
 	@echo '  observability-down   stop the telemetry backend'
 	@echo '  mobile               Metro for Expo Go in Docker (T-007-13)'
@@ -29,6 +28,9 @@ logs: ## Follow the API logs
 reset: ## Drop the database volume and start again from scratch
 	docker compose down -v
 	docker compose up -d --build --wait
+
+seed: ## Re-apply the demo data in the running API container (idempotent)
+	docker compose exec api sh -c 'DATABASE_URL="$$(node database-url.cjs)" node dist/seed/run.js'
 
 test: ## Unit tests on the host (needs Node 24 and pnpm)
 	pnpm test

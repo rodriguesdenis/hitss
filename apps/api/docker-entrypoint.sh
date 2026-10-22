@@ -11,6 +11,11 @@ if [ -z "${DATABASE_URL:-}" ]; then
   export DATABASE_URL
 fi
 
-# TODO(T-007-07): run the idempotent seed here when SEED_ON_START=true.
+# Idempotent and deterministic (ADR-0004); it writes the demo data only when SEED_DEMO allows it.
+# A failure stops the container, so a broken seed is never hidden behind a running API.
+if [ "${SEED_ON_START:-true}" = "true" ]; then
+  node dist/seed/run.js
+fi
+
 # OpenTelemetry must be loaded before the application code (ADR-0013).
 exec node --import ./dist/instrumentation.js dist/main.js
