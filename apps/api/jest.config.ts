@@ -35,8 +35,11 @@ const withDatabase = {
   roots: ['<rootDir>/test'],
   globalSetup: '<rootDir>/test/support/global-setup.ts',
   globalTeardown: '<rootDir>/test/support/global-teardown.ts',
-  // The 120 s test timeout is set by jest.setTimeout() in after-env.ts: Jest 30 ignores a
-  // per-project `testTimeout` (test/support/effective-timeout.ts and the *timeout* specs prove it).
+  // The 120 s test timeout is set by jest.setTimeout() in after-env.ts, not by a `testTimeout`
+  // option here: Jest reads `testTimeout` from the global config only (jest-circus applies
+  // globalConfig.testTimeout; https://jestjs.io/docs/configuration#testtimeout-number), so a
+  // per-project value never takes effect. The jest-timeout specs of each project prove that the
+  // after-env.ts approach does.
   setupFilesAfterEnv: ['<rootDir>/test/support/after-env.ts'],
 } satisfies Config;
 
