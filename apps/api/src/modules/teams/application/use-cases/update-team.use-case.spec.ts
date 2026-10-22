@@ -6,7 +6,6 @@ import {
   TeamNotFound,
 } from '../../domain/errors/team.errors';
 import { ColorHex } from '../../domain/value-objects/color-hex.vo';
-import { TeamDescription } from '../../domain/value-objects/team-description.vo';
 import { TeamName } from '../../domain/value-objects/team-name.vo';
 import { UpdateTeamUseCase } from './update-team.use-case';
 
@@ -28,7 +27,7 @@ const team = (id: string, name: string, description: string | null = 'Apps') =>
     ownerId: MARINA,
     name: TeamName.create(name),
     color: ColorHex.create('#7C3AED'),
-    description: TeamDescription.create(description),
+    description: description,
     version: 1,
     createdAt: CREATED,
     updatedAt: CREATED,
@@ -73,7 +72,7 @@ describe('UpdateTeamUseCase', () => {
     const after = await stored(MOBILE_ID);
     expect(after?.name.value).toBe('Platform');
     expect(after?.color.value).toBe('#0EA5E9');
-    expect(after?.description.value).toBe('Infra');
+    expect(after?.description).toBe('Infra');
     expect(after?.version).toBe(2);
     expect(after?.updatedAt).toEqual(LATER);
     expect(after?.createdAt).toEqual(CREATED);
@@ -82,7 +81,7 @@ describe('UpdateTeamUseCase', () => {
   it('AC-02.6.3 omitting the description clears it', async () => {
     await replace(MOBILE_ID, { name: 'Mobile' });
 
-    expect((await stored(MOBILE_ID))?.description.value).toBeNull();
+    expect((await stored(MOBILE_ID))?.description).toBeNull();
   });
 
   it('AC-02.6.7 the same values after normalization are a no-op: version and updatedAt kept', async () => {

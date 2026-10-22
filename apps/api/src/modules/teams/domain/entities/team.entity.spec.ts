@@ -1,6 +1,6 @@
 import { ColorHex } from '../value-objects/color-hex.vo';
+import { InvalidTeamDescription } from '../errors/team.errors';
 import { Team } from './team.entity';
-import { TeamDescription } from '../value-objects/team-description.vo';
 import { TeamName } from '../value-objects/team-name.vo';
 
 const CREATED_ISO = '2026-10-20T10:00:00.000Z';
@@ -15,7 +15,7 @@ function backend(): Team {
     ownerId: OWNER_ID,
     name: TeamName.create('Backend'),
     color: ColorHex.create('#2563EB'),
-    description: TeamDescription.create('APIs'),
+    description: 'APIs',
     now: CREATED_AT,
   });
 }
@@ -28,7 +28,7 @@ function replacement(
   return {
     name: TeamName.create(name),
     color: ColorHex.create(color),
-    description: TeamDescription.create(description),
+    description,
     now: LATER,
   };
 }
@@ -48,7 +48,7 @@ describe('Team', () => {
       expect(team.ownerId).toBe(OWNER_ID);
       expect(team.name.value).toBe('Backend');
       expect(team.color.value).toBe('#2563EB');
-      expect(team.description.value).toBe('APIs');
+      expect(team.description).toBe('APIs');
       expect(team.version).toBe(1);
       expect(team.createdAt).toEqual(CREATED_AT);
       expect(team.updatedAt).toEqual(CREATED_AT);
@@ -64,7 +64,7 @@ describe('Team', () => {
         ownerId: OWNER_ID,
         name: TeamName.create('Mobile'),
         color: ColorHex.create('#7C3AED'),
-        description: TeamDescription.create(null),
+        description: null,
         version: 4,
         createdAt: CREATED_AT,
         updatedAt: LATER,
@@ -73,7 +73,7 @@ describe('Team', () => {
 
       expect(team.name.value).toBe('Mobile');
       expect(team.color.value).toBe('#7C3AED');
-      expect(team.description.value).toBeNull();
+      expect(team.description).toBeNull();
       expect(team.version).toBe(4);
       expect(team.createdAt).toEqual(CREATED_AT);
       expect(team.updatedAt).toEqual(LATER);
@@ -104,7 +104,7 @@ describe('Team', () => {
         expect(team.replace(next)).toBe(true);
         expect(team.name.value).toBe(next.name.value);
         expect(team.color.value).toBe(next.color.value);
-        expect(team.description.value).toBe(next.description.value);
+        expect(team.description).toBe(next.description);
         expect(team.updatedAt).toEqual(LATER);
         expect(team.createdAt).toEqual(CREATED_AT);
         expect(team.version).toBe(1); // persistence bumps the version
@@ -119,7 +119,7 @@ describe('Team', () => {
       );
       expect(team.name.value).toBe('Platform');
       expect(team.color.value).toBe('#7C3AED');
-      expect(team.description.value).toBe('Infra');
+      expect(team.description).toBe('Infra');
     });
 
     it('AC-02.6.5 a letter-case-only rename is a change', () => {
@@ -135,7 +135,7 @@ describe('Team', () => {
       const team = backend();
 
       expect(team.replace(replacement('Backend', '#2563EB'))).toBe(true);
-      expect(team.description.value).toBeNull();
+      expect(team.description).toBeNull();
     });
   });
 
@@ -164,7 +164,7 @@ describe('Team', () => {
         ownerId: OWNER_ID,
         name: TeamName.create('Backend'),
         color: ColorHex.create('#2563EB'),
-        description: TeamDescription.create(null),
+        description: null,
         now: new Date(CREATED_ISO),
       });
       team.delete(new Date(LATER_ISO));
@@ -186,7 +186,7 @@ describe('Team', () => {
         ownerId: OWNER_ID,
         name: TeamName.create('Backend'),
         color: ColorHex.create('#2563EB'),
-        description: TeamDescription.create(null),
+        description: null,
         now: created,
       });
       team.replace({ ...replacement('Platform', '#2563EB'), now: replaced });
@@ -207,7 +207,7 @@ describe('Team', () => {
         ownerId: OWNER_ID,
         name: TeamName.create('Backend'),
         color: ColorHex.create('#2563EB'),
-        description: TeamDescription.create(null),
+        description: null,
         version: 3,
         createdAt: new Date(CREATED_ISO),
         updatedAt: new Date(LATER_ISO),
@@ -229,7 +229,7 @@ describe('Team', () => {
         ownerId: OWNER_ID,
         name: TeamName.create('Backend'),
         color: ColorHex.create('#2563EB'),
-        description: TeamDescription.create(null),
+        description: null,
         now: new Date(CREATED_ISO),
       });
       const deleted = new Date(LATER_ISO);
@@ -237,6 +237,114 @@ describe('Team', () => {
       deleted.setFullYear(2000);
 
       expect(team.deletedAt?.toISOString()).toBe(LATER_ISO);
+    });
+  });
+
+  describe('description (folded from the TeamDescription value object)', () => {
+    const EMOJI = '\u{1F680}';
+    const withDescription = (raw?: string | null) =>
+      Team.create({
+        ownerId: OWNER_ID,
+        name: TeamName.create('Backend'),
+        color: ColorHex.create('#2563EB'),
+        description: raw,
+        now: CREATED_AT,
+      }).description;
+
+    it.each([
+      ['280 characters', 'd'.repeat(280)],
+      ['280 emoji (code points, not UTF-16 units)', EMOJI.repeat(280)],
+    ])('AC-02.1.4 accepts %s', (_label, raw) => {
+      expect(withDescription(raw)).toBe(raw);
+    });
+
+    it.each([
+      ['281 characters', 'd'.repeat(281)],
+      ['281 emoji', EMOJI.repeat(281)],
+      ['281 characters surrounded by spaces', `   ${'d'.repeat(281)}   `],
+    ])('AC-02.1.4 rejects %s', (_label, raw) => {
+      expect(() => withDescription(raw)).toThrow(InvalidTeamDescription);
+    });
+
+    it.each([
+      ['spaces', ' '],
+      ['NBSP', '\u00a0'],
+      ['LINE SEPARATOR', '\u2028'],
+    ])('AC-02.1.4 trims %s at the edges before measuring', (_label, edge) => {
+      const text = 'd'.repeat(280);
+
+      expect(withDescription(`${edge}${text}${edge}`)).toBe(text);
+    });
+
+    it.each([undefined, null, '', '    ', '\n\r\n ', '\u00a0\u2028'])(
+      'AC-02.1.4 %j → no description',
+      (raw) => {
+        expect(withDescription(raw)).toBeNull();
+      },
+    );
+
+    it.each([
+      ['LF', 'line 1\nline 2'],
+      ['CRLF', 'line 1\r\nline 2'],
+      ['CR', 'line 1\rline 2'],
+    ])('AC-02.1.11 keeps %s line breaks inside', (_label, raw) => {
+      expect(withDescription(raw)).toBe(raw);
+    });
+
+    it.each([
+      ['a tab', 'col 1\tcol 2'],
+      ['a NUL character', 'text\u0000'],
+      ['an escape character', 'text\u001b[31m'],
+      ['a DEL character', 'text\u007f'],
+      ['a C1 control character', 'text\u0085'],
+      ['a trailing tab (checked before trimming)', 'text\t'],
+      ['a tab-only description (not silently blank)', '\t'],
+    ])('AC-02.1.11 rejects %s', (_label, raw) => {
+      expect(() => withDescription(raw)).toThrow(InvalidTeamDescription);
+    });
+
+    it('reports the "description" field', () => {
+      const error: unknown = (() => {
+        try {
+          return withDescription('d'.repeat(281));
+        } catch (e) {
+          return e;
+        }
+      })();
+
+      expect(error).toBeInstanceOf(InvalidTeamDescription);
+      expect(error).toMatchObject({ field: 'description' });
+    });
+
+    it('AC-02.6.7 a description equal after trimming is no change; letter case is a change', () => {
+      const team = backend();
+
+      expect(team.replace(replacement('Backend', '#2563EB', ' APIs '))).toBe(
+        false,
+      );
+      expect(team.replace(replacement('Backend', '#2563EB', 'apis'))).toBe(
+        true,
+      );
+    });
+
+    it('restore re-validates a stored description', () => {
+      const props = {
+        id: TEAM_ID,
+        ownerId: OWNER_ID,
+        name: TeamName.create('Backend'),
+        color: ColorHex.create('#2563EB'),
+        version: 1,
+        createdAt: CREATED_AT,
+        updatedAt: CREATED_AT,
+        deletedAt: null,
+      };
+
+      expect(
+        Team.restore({ ...props, description: '  APIs ' }).description,
+      ).toBe('APIs');
+      expect(() =>
+        Team.restore({ ...props, description: 'd'.repeat(281) }),
+      ).toThrow(InvalidTeamDescription);
     });
   });
 });

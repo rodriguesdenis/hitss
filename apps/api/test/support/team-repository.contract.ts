@@ -6,7 +6,6 @@ import {
 } from '../../src/modules/teams/domain/errors/team.errors';
 import { TeamRepository } from '../../src/modules/teams/domain/repositories/team.repository';
 import { ColorHex } from '../../src/modules/teams/domain/value-objects/color-hex.vo';
-import { TeamDescription } from '../../src/modules/teams/domain/value-objects/team-description.vo';
 import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name.vo';
 
 export interface TeamRepositoryHarness {
@@ -27,9 +26,8 @@ export function aTeam(
     ownerId,
     name: TeamName.create(name),
     color: ColorHex.create(extra.color ?? '#7C3AED'),
-    description: TeamDescription.create(
+    description:
       extra.description === undefined ? 'iOS & Android' : extra.description,
-    ),
   };
   // A chosen id (to provoke a duplicate key) needs restore(); create() always draws a new one.
   return extra.id === undefined
@@ -80,7 +78,7 @@ export function describeTeamRepositoryContract(
         ownerId: loaded!.ownerId,
         name: loaded!.name.value,
         color: loaded!.color.value,
-        description: loaded!.description.value,
+        description: loaded!.description,
         version: loaded!.version,
         createdAt: loaded!.createdAt,
         updatedAt: loaded!.updatedAt,
@@ -104,9 +102,7 @@ export function describeTeamRepositoryContract(
 
       await repo().insert(team);
 
-      expect(
-        (await repo().findById(ownerId, team.id))!.description.value,
-      ).toBeNull();
+      expect((await repo().findById(ownerId, team.id))!.description).toBeNull();
     });
 
     it('AC-02.5.2 AC-02.5.3 AC-02.5.4 returns null for a foreign, unknown, malformed or deleted id', async () => {
@@ -233,7 +229,7 @@ export function describeTeamRepositoryContract(
         loaded.replace({
           name: TeamName.create('Mobile Squad'),
           color: ColorHex.create('#F59E0B'),
-          description: TeamDescription.create(null),
+          description: null,
           now: LATER,
         });
 
@@ -241,7 +237,7 @@ export function describeTeamRepositoryContract(
         const stored = (await repo().findById(ownerId, team.id))!;
         expect(stored.name.value).toBe('Mobile Squad');
         expect(stored.color.value).toBe('#F59E0B');
-        expect(stored.description.value).toBeNull();
+        expect(stored.description).toBeNull();
         expect(stored.version).toBe(2);
         expect(stored.createdAt).toEqual(CREATED);
         expect(stored.updatedAt).toEqual(LATER);

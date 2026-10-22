@@ -3,7 +3,6 @@ import { Clock } from '../../../../shared/domain/clock';
 import { Team } from '../../domain/entities/team.entity';
 import { TeamNotFound } from '../../domain/errors/team.errors';
 import { ColorHex } from '../../domain/value-objects/color-hex.vo';
-import { TeamDescription } from '../../domain/value-objects/team-description.vo';
 import { TeamName } from '../../domain/value-objects/team-name.vo';
 import { DeleteTeamUseCase } from './delete-team.use-case';
 
@@ -30,7 +29,7 @@ describe('DeleteTeamUseCase', () => {
         ownerId: MARINA,
         name: TeamName.create('Mobile'),
         color: ColorHex.create('#7C3AED'),
-        description: TeamDescription.create(null),
+        description: null,
         version: 1,
         createdAt: CREATED,
         updatedAt: CREATED,
