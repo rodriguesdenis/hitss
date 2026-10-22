@@ -12,6 +12,7 @@ import { TaskDescription } from '../../../domain/value-objects/task-description'
 import { TaskTeamIds } from '../../../domain/value-objects/task-team-ids';
 import { TaskTitle } from '../../../domain/value-objects/task-title';
 import { TeamDirectory } from '../../ports/team-directory';
+import { preciseUnknownTeams } from '../precise-unknown-teams';
 import { ReplaceTaskCommand } from './replace-task.command';
 
 /**
@@ -24,7 +25,8 @@ import { ReplaceTaskCommand } from './replace-task.command';
  *    changed. An identical replacement (team order ignored) is a no-op (AC-03.9.5).
  * Steps 1–3 run in one unit of work that first locks the new team links, so a team deleted
  * concurrently is either reported here or unassigned by the TeamDeleted reaction (T-003-13).
- * Events are published after commit.
+ * Events are published after commit. A team-link foreign-key violation is reported with the
+ * precise ids (preciseUnknownTeams).
  * Without an expected version the client asked for last-write-wins, so a write lost to a
  * concurrent one is reloaded and reapplied once.
  */
@@ -45,13 +47,28 @@ export class ReplaceTaskHandler implements ICommandHandler<
   async execute(command: ReplaceTaskCommand): Promise<{ id: string }> {
     let events: DomainEvent[];
     try {
-      events = await this.attempt(command);
+      events = await this.attemptOnceMoreOnConflict(command);
     } catch (error) {
-      if (!(error instanceof ConcurrencyConflict)) throw error;
-      events = await this.attempt(command);
+      throw await preciseUnknownTeams(
+        error,
+        this.teams,
+        command.ownerId,
+        command.teamIds,
+      );
     }
     this.publisher.publishAfterCommit(events);
     return { id: command.id };
+  }
+
+  private async attemptOnceMoreOnConflict(
+    command: ReplaceTaskCommand,
+  ): Promise<DomainEvent[]> {
+    try {
+      return await this.attempt(command);
+    } catch (error) {
+      if (!(error instanceof ConcurrencyConflict)) throw error;
+      return this.attempt(command);
+    }
   }
 
   private attempt(command: ReplaceTaskCommand): Promise<DomainEvent[]> {

@@ -173,4 +173,18 @@ describe('ReplaceTaskHandler', () => {
     expect(update).toHaveBeenCalledTimes(2);
     expect(stored()?.title.value).toBe('Final');
   });
+
+  it('AC-03.9.3 a team gone between the check and the write (FK violation) → UnknownTeams with its id, nothing changed', async () => {
+    jest.spyOn(directory, 'findMissing').mockResolvedValueOnce([]);
+    tasks.simulateMissingTeam(DESIGN);
+    directory.remove(DESIGN);
+
+    const error = await replace({ teamIds: [MOBILE, DESIGN] }).catch(
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(UnknownTeams);
+    expect((error as UnknownTeams).teamIds).toEqual([DESIGN]);
+    expect(stored()?.version).toBe(1);
+  });
 });

@@ -110,4 +110,20 @@ describe('CreateTaskHandler', () => {
     );
     expect(tasks.all()).toEqual([]);
   });
+
+  it('AC-03.1.6 a team gone between the check and the insert (FK violation) → UnknownTeams with its id, nothing written', async () => {
+    // The directory still sees the team at the check, then it is gone for good.
+    jest.spyOn(directory, 'findMissing').mockResolvedValueOnce([]);
+    tasks.simulateMissingTeam(team(2));
+    directory.remove(team(2));
+
+    const error = await create({ teamIds: [team(1), team(2)] }).catch(
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(UnknownTeams);
+    expect((error as UnknownTeams).teamIds).toEqual([team(2)]);
+    expect(tasks.all()).toEqual([]);
+    expect(publishAll).not.toHaveBeenCalled();
+  });
 });

@@ -18,8 +18,9 @@ const TEAM_LINK_LOCK_SPACE = 0x7474;
  * Write-side persistence of the Task aggregate: the tasks row and its task_teams links, always
  * written together. Every statement filters by owner_id; reads only see active rows.
  * Unknown team ids are the application's check (TeamDirectory.findMissing). A violation of the
- * task_teams team foreign key becomes UnknownTeams without ids (422, not 500); the command
- * handler re-runs findMissing to report the precise ids. This repository never reads Team
+ * task_teams team foreign key becomes UnknownTeams without ids (422, not 500); after the
+ * rollback the command handler asks TeamDirectory.findMissing again for the precise ids
+ * (preciseUnknownTeams). This repository never reads Team
  * Management's tables (constitution II.2).
  *
  * P2003 only covers a team row that is physically gone. A team SOFT-deleted concurrently with

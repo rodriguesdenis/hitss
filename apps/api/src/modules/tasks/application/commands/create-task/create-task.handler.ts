@@ -12,6 +12,7 @@ import { TaskDescription } from '../../../domain/value-objects/task-description'
 import { TaskTeamIds } from '../../../domain/value-objects/task-team-ids';
 import { TaskTitle } from '../../../domain/value-objects/task-title';
 import { TeamDirectory } from '../../ports/team-directory';
+import { preciseUnknownTeams } from '../precise-unknown-teams';
 import { CreateTaskCommand } from './create-task.command';
 
 /**
@@ -19,8 +20,9 @@ import { CreateTaskCommand } from './create-task.command';
  * unit of work, locks the team links, rejects teams that are not the owner's live teams and
  * inserts the task at version 1. The lock serializes this write with a concurrent TeamDeleted
  * reaction, so a team deleted meanwhile is either reported here or unassigned there (T-003-13).
- * Every check runs before the insert, so nothing is written on any error. Events are published
- * after commit. Commands return ids; the controller reads the task back through GetTaskQuery.
+ * Every check runs before the insert, so nothing is written on any error; a team-link foreign-key
+ * violation is reported with the precise ids (preciseUnknownTeams). Events are published after
+ * commit. Commands return ids; the controller reads the task back through GetTaskQuery.
  */
 @CommandHandler(CreateTaskCommand)
 export class CreateTaskHandler implements ICommandHandler<
@@ -49,18 +51,27 @@ export class CreateTaskHandler implements ICommandHandler<
       teamIds,
       now: this.clock.now(),
     });
-    await this.unitOfWork.run(async () => {
-      await this.tasks.lockTeamLinks(teamIds.values);
-      // Foreign, deleted and never-existing ids are reported alike (AC-03.1.6, AC-03.12.3).
-      const missing = await this.teams.findMissing(
+    try {
+      await this.unitOfWork.run(async () => {
+        await this.tasks.lockTeamLinks(teamIds.values);
+        // Foreign, deleted and never-existing ids are reported alike (AC-03.1.6, AC-03.12.3).
+        const missing = await this.teams.findMissing(
+          command.ownerId,
+          teamIds.values,
+        );
+        if (missing.length > 0) {
+          throw new UnknownTeams(missing);
+        }
+        await this.tasks.insert(task);
+      });
+    } catch (error) {
+      throw await preciseUnknownTeams(
+        error,
+        this.teams,
         command.ownerId,
         teamIds.values,
       );
-      if (missing.length > 0) {
-        throw new UnknownTeams(missing);
-      }
-      await this.tasks.insert(task);
-    });
+    }
     this.publisher.publishAfterCommit(task.pullEvents());
     return { id: task.id };
   }
