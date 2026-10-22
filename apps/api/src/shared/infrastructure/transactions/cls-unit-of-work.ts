@@ -21,6 +21,11 @@ export class ClsUnitOfWork extends UnitOfWork {
     super();
   }
 
+  /**
+   * Must stay READ COMMITTED (PostgreSQL's default; no isolation level is set here); the
+   * TeamDeleted/link lock relies on it (TaskRepository.lockTeamLinks). Under REPEATABLE READ the
+   * reaction would miss links committed while it waited.
+   */
   run<T>(work: () => Promise<T>): Promise<T> {
     return this.txHost.withTransaction(work);
   }
