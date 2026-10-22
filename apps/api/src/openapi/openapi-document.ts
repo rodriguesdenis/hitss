@@ -27,7 +27,15 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
       )
       .setVersion('1.0')
       .addBearerAuth(undefined, 'bearer')
-      .addCookieAuth('better-auth.session_token', undefined, 'session-cookie')
+      .addCookieAuth(
+        'better-auth.session_token',
+        {
+          type: 'apiKey',
+          description:
+            'Session cookie set by sign-in. Production (useSecureCookies) names it `__Secure-better-auth.session_token`.',
+        },
+        'session-cookie',
+      )
       .addSecurityRequirements('bearer')
       .addSecurityRequirements('session-cookie')
       .addTag(
