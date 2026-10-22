@@ -3,7 +3,7 @@ import { Client } from 'pg';
 import request, { Response, Test } from 'supertest';
 import { App } from 'supertest/types';
 import { createTestApp } from '../support/app';
-import { bearerOf, signUpAndSignIn, TestUser, twoUsers } from '../support/auth';
+import { bearerOf, signUpAndSignIn, twoUsers } from '../support/auth';
 import { useTestDatabase } from '../support/postgres';
 import { KNOWN_ID, OwnerProbeModule, writes } from './owner-probe.module';
 
@@ -12,7 +12,7 @@ const UNTRUSTED = 'https://evil.example.test';
 const PROBE = '/api/v1/owner-probe';
 const OTHER_ID = '0b7a3c1e-2d4f-4a6b-8c9d-1e2f3a4b5c6d';
 
-describe('route protection: deny by default, CSRF for cookies (e2e)', () => {
+describe('route protection: deny by default, Bearer only (e2e)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
   let sql: Client;
@@ -128,14 +128,21 @@ describe('route protection: deny by default, CSRF for cookies (e2e)', () => {
       expect(response.body).toEqual({ data: { ownerId: user.id } });
     });
 
-    it('AC-01.2.5 a session cookie alone is processed as its user', async () => {
-      const user = await signIn();
+    it.each(['get', 'post', 'put', 'patch', 'delete'] as const)(
+      'AC-08.2 a valid session cookie alone (%s) → 401: the API routes accept Bearer only, and nothing changes',
+      async (method) => {
+        const user = await signIn();
+        const before = writes.count;
 
-      const response = await http().get(PROBE).set('Cookie', user.cookie);
+        const response = await http()
+          [method](PROBE)
+          .set('Cookie', user.cookie)
+          .send({});
 
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({ data: { ownerId: user.id } });
-    });
+        expectUnauthenticated(response);
+        expect(writes.count).toBe(before);
+      },
+    );
 
     it('AC-01.5.7 a bearer token of A with a session cookie of B → processed as A', async () => {
       const { marina, rafael } = await twoUsers(app);
@@ -182,141 +189,31 @@ describe('route protection: deny by default, CSRF for cookies (e2e)', () => {
     });
   });
 
-  describe('CSRF for cookie sessions (AC-01.5.8 to AC-01.5.10)', () => {
-    const cookiePost = (user: TestUser) =>
-      http()
-        .post(PROBE)
-        .set('Cookie', user.cookie)
-        .set('Content-Type', 'application/json');
-
-    const expectRejected = (
-      response: Response,
-      status: number,
-      code: string,
-    ) => {
-      expect(response.status).toBe(status);
-      expect(response.body).toMatchObject({ error: { code } });
-    };
-
-    it.each(['post', 'put', 'patch', 'delete'] as const)(
-      'AC-01.5.8 a cookie-authenticated %s from an untrusted Origin → 403 and nothing changes',
-      async (method) => {
-        const user = await signIn();
-        const before = writes.count;
-
-        const response = await http()
-          [method](PROBE)
-          .set('Cookie', user.cookie)
-          .set('Origin', UNTRUSTED)
-          .send({});
-
-        expectRejected(response, 403, 'CSRF_REJECTED');
-        expect(writes.count).toBe(before);
-      },
-    );
-
-    it('AC-01.5.8 Sec-Fetch-Site: cross-site → 403', async () => {
+  describe('no CSRF or content-type checks: Bearer only (ADR-0020)', () => {
+    it('AC-08.2 a bearer request from any Origin, cross-site, is processed: there is no ambient credential to abuse', async () => {
       const user = await signIn();
-
-      expectRejected(
-        await cookiePost(user).set('Sec-Fetch-Site', 'cross-site').send('{}'),
-        403,
-        'CSRF_REJECTED',
-      );
-    });
-
-    it('AC-01.5.8 an untrusted Referer → 403', async () => {
-      const user = await signIn();
-
-      expectRejected(
-        await cookiePost(user).set('Referer', `${UNTRUSTED}/form`).send('{}'),
-        403,
-        'CSRF_REJECTED',
-      );
-    });
-
-    it('AC-01.5.9 a cookie-authenticated text/plain body → 415 and nothing changes', async () => {
-      const user = await signIn();
-      const before = writes.count;
 
       const response = await http()
         .post(PROBE)
-        .set('Cookie', user.cookie)
-        .set('Content-Type', 'text/plain')
-        .send('{"name":"x"}');
-
-      expectRejected(response, 415, 'UNSUPPORTED_MEDIA_TYPE');
-      expect(writes.count).toBe(before);
-    });
-
-    it('AC-01.5.8 a cookie with a trusted Origin, or with no Origin (native client), passes', async () => {
-      const user = await signIn();
-
-      expect(
-        (await cookiePost(user).set('Origin', TRUSTED).send('{}')).status,
-      ).toBe(201);
-      expect((await cookiePost(user).send('{}')).status).toBe(201);
-    });
-
-    it('AC-01.5.10 a bearer request with no Origin or an untrusted one skips the CSRF checks', async () => {
-      const user = await signIn();
-      const bearerPost = () =>
-        http().post(PROBE).set('Authorization', `Bearer ${user.bearer}`);
-
-      expect((await bearerPost().send({})).status).toBe(201);
-      expect(
-        (await bearerPost().set('Origin', UNTRUSTED).send({})).status,
-      ).toBe(201);
-    });
-
-    it('AC-01.5.9 a bearer client sending text/plain → 415 too (JSON bodies only, for every client)', async () => {
-      const user = await signIn();
-      const before = writes.count;
-
-      const response = await http()
-        .post(PROBE)
-        .set('Authorization', `Bearer ${user.bearer}`)
-        .set('Content-Type', 'text/plain')
-        .send('{}');
-
-      expectRejected(response, 415, 'UNSUPPORTED_MEDIA_TYPE');
-      expect(writes.count).toBe(before);
-    });
-
-    it('AC-01.5.8 a cross-site cookie POST to an upper-cased path → 403 (the path is not inspected)', async () => {
-      const user = await signIn();
-      const before = writes.count;
-
-      const response = await http()
-        .post('/API/V1/OWNER-PROBE')
-        .set('Cookie', user.cookie)
+        .set('Authorization', bearerOf(user))
         .set('Origin', UNTRUSTED)
+        .set('Sec-Fetch-Site', 'cross-site')
         .send({});
 
-      expectRejected(response, 403, 'CSRF_REJECTED');
-      expect(writes.count).toBe(before);
+      expect(response.status).toBe(201);
+      expect(response.body).toEqual({ data: { ownerId: user.id } });
     });
 
-    it.each([
-      ['garbage', 'Bearer garbage'],
-      // Built at runtime with low entropy: a fixture must never look like a real token.
-      ['an unsigned token', `Bearer ${'x'.repeat(32)}`],
-    ])(
-      'AC-01.5.8 a bearer header with %s, a valid session cookie and an untrusted Origin → never 2xx (Lynx)',
-      async (_label, authorization) => {
-        const user = await signIn();
-        const before = writes.count;
+    it('AC-08.2 a cookie from a trusted Origin is still not a credential → 401', async () => {
+      const user = await signIn();
 
-        const response = await http()
+      expectUnauthenticated(
+        await http()
           .post(PROBE)
-          .set('Authorization', authorization)
           .set('Cookie', user.cookie)
-          .set('Origin', UNTRUSTED)
-          .send({});
-
-        expectRejected(response, 403, 'CSRF_REJECTED');
-        expect(writes.count).toBe(before);
-      },
-    );
+          .set('Origin', TRUSTED)
+          .send({}),
+      );
+    });
   });
 });
