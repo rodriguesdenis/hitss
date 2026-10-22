@@ -1,4 +1,3 @@
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
 import { IdGenerator } from '../../../../../shared/application/ports/id-generator';
@@ -25,8 +24,6 @@ export class CreateTeamHandler implements ICommandHandler<
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
   ) {}
-
-  @Traced()
   async execute({
     ownerId,
     name,

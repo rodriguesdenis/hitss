@@ -4,7 +4,6 @@ import { DomainEventPublisher } from '../../../../../shared/application/ports/do
 import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
 import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import type { DomainEvent } from '../../../../../shared/domain/domain-event';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { TeamNotFound } from '../../../domain/team.errors';
 import { TeamRepository } from '../../../domain/team.repository';
 import { DeleteTeamCommand } from './delete-team.command';
@@ -27,8 +26,6 @@ export class DeleteTeamHandler implements ICommandHandler<
     private readonly unitOfWork: UnitOfWork,
     private readonly publisher: DomainEventPublisher,
   ) {}
-
-  @Traced()
   async execute(command: DeleteTeamCommand): Promise<void> {
     let events: DomainEvent[];
     try {

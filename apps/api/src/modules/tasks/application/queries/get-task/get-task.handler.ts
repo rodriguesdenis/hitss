@@ -1,6 +1,5 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { TaskNotFound } from '../../../domain/task.errors';
 import { DueDate } from '../../../domain/value-objects/due-date';
 import { TaskReadModel } from '../../ports/task.read-model';
@@ -20,8 +19,6 @@ export class GetTaskHandler implements IQueryHandler<GetTaskQuery, TaskView> {
     private readonly teams: TeamDirectory,
     private readonly clock: Clock,
   ) {}
-
-  @Traced()
   async execute({ ownerId, id }: GetTaskQuery): Promise<TaskView> {
     const record = await this.readModel.findById(ownerId, id);
     if (!record) {

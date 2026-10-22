@@ -4,7 +4,6 @@ import { DomainEventPublisher } from '../../../../../shared/application/ports/do
 import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
 import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import type { DomainEvent } from '../../../../../shared/domain/domain-event';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { TaskNotFound, UnknownTeams } from '../../../domain/task.errors';
 import { TaskRepository } from '../../../domain/task.repository';
 import { DueDate } from '../../../domain/value-objects/due-date';
@@ -42,8 +41,6 @@ export class ReplaceTaskHandler implements ICommandHandler<
     private readonly publisher: DomainEventPublisher,
     private readonly clock: Clock,
   ) {}
-
-  @Traced()
   async execute(command: ReplaceTaskCommand): Promise<{ id: string }> {
     let events: DomainEvent[];
     try {

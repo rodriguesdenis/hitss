@@ -1,5 +1,4 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { GetTeamSummariesQuery } from '../../../contracts/get-team-summaries.query';
 import type { TeamSummary } from '../../../contracts/team-summary';
 import { TeamReadModel } from '../../ports/team.read-model';
@@ -11,8 +10,6 @@ export class GetTeamSummariesHandler implements IQueryHandler<
   TeamSummary[]
 > {
   constructor(private readonly readModel: TeamReadModel) {}
-
-  @Traced()
   execute(query: GetTeamSummariesQuery): Promise<TeamSummary[]> {
     return this.readModel.summaries(query.ownerId, query.ids);
   }

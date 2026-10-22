@@ -1,6 +1,5 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import type { Page } from '../../../../../shared/application/page';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { TeamTaskCounts } from '../../ports/team-task-counts';
 import { TeamReadModel } from '../../ports/team.read-model';
 import type { TeamDetails } from '../../views/team.view';
@@ -16,8 +15,6 @@ export class ListTeamsHandler implements IQueryHandler<
     private readonly readModel: TeamReadModel,
     private readonly taskCounts: TeamTaskCounts,
   ) {}
-
-  @Traced()
   async execute({
     ownerId,
     criteria,

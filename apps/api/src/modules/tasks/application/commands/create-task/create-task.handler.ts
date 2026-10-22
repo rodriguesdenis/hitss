@@ -3,7 +3,6 @@ import { Clock } from '../../../../../shared/application/ports/clock';
 import { DomainEventPublisher } from '../../../../../shared/application/ports/domain-event-publisher';
 import { IdGenerator } from '../../../../../shared/application/ports/id-generator';
 import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { Task } from '../../../domain/task';
 import { UnknownTeams } from '../../../domain/task.errors';
 import { TaskRepository } from '../../../domain/task.repository';
@@ -37,8 +36,6 @@ export class CreateTaskHandler implements ICommandHandler<
     private readonly clock: Clock,
     private readonly ids: IdGenerator,
   ) {}
-
-  @Traced()
   async execute(command: CreateTaskCommand): Promise<{ id: string }> {
     const teamIds = TaskTeamIds.of(command.teamIds);
     const task = Task.create({

@@ -1,7 +1,6 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
 import type { Page } from '../../../../../shared/application/page';
-import { Traced } from '../../../../../shared/observability/tracing/traced-handler';
 import { DueDate } from '../../../domain/value-objects/due-date';
 import { TaskReadModel } from '../../ports/task.read-model';
 import { TeamDirectory } from '../../ports/team-directory';
@@ -25,8 +24,6 @@ export class ListTasksHandler implements IQueryHandler<
     private readonly teams: TeamDirectory,
     private readonly clock: Clock,
   ) {}
-
-  @Traced()
   async execute({
     ownerId,
     criteria,
