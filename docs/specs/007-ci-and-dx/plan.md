@@ -729,7 +729,7 @@ updates:
 ### Conventions & branch protection
 
 - Already in place: husky `commit-msg` (commitlint) and `pre-commit` (lint-staged → prettier) (AC-07.10.2), PR template (AC-07.10.3). CI adds commitlint on the PR range (AC-07.10.1).
-- Recommended protection for `main` (documented in README "Contributing"; applied manually by the repo owner — AC-07.10.4): require PR before merge; 1 approval; dismiss stale approvals; require status `ci-success`; require branch up to date; require conversation resolution; linear history (squash or rebase merge only); block force pushes and deletion; optional signed commits; `CODEOWNERS` for `docs/architecture/adr/` and `.github/`.
+- Recommended protection for `main` (documented in README "Contributing"; applied manually by the repo owner — AC-07.10.4): require PR before merge; 1 approval; dismiss stale approvals; require status `ci-success`; require branch up to date; require conversation resolution; linear history (rebase merge only); block force pushes and deletion; optional signed commits; `CODEOWNERS` for `docs/architecture/adr/` and `.github/`.
 
 ### Mobile dev server (profile `mobile`)
 
