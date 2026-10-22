@@ -157,6 +157,13 @@ describe('OpenTelemetry bootstrap (AC-08.7)', () => {
     expect(completed).toMatchObject({ traceId: TRACE_ID });
     expect(completed?.reqId).toBe(response.headers.get('x-request-id'));
     expect(completed?.spanId).toMatch(/^[0-9a-f]{16}$/);
+    // One correlation source (the logger mixin): the pino instrumentation is off, so no
+    // duplicate OpenTelemetry fields.
+    for (const entry of logLines(app)) {
+      for (const field of ['trace_id', 'span_id', 'trace_flags']) {
+        expect(entry).not.toHaveProperty(field);
+      }
+    }
   }, 60_000);
 
   it('AC-08.7 without the endpoint nothing is exported, even with a per-signal endpoint set, and logs still carry reqId and traceId', async () => {

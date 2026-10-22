@@ -72,6 +72,19 @@ export const otlpEndpointIsSecure: ProductionRule = (config) => {
       ];
 };
 
+const PER_SIGNAL_ENDPOINTS = [
+  'OTEL_EXPORTER_OTLP_TRACES_ENDPOINT',
+  'OTEL_EXPORTER_OTLP_METRICS_ENDPOINT',
+  'OTEL_EXPORTER_OTLP_LOGS_ENDPOINT',
+] as const;
+
+/** The SDK honours these too, so they would bypass the https rule on the generic endpoint. */
+export const otlpPerSignalEndpointsAreUnset: ProductionRule = (config) =>
+  PER_SIGNAL_ENDPOINTS.filter((name) => config[name]).map((variable) => ({
+    variable,
+    message: 'is not supported in production; use OTEL_EXPORTER_OTLP_ENDPOINT',
+  }));
+
 export const authUrlIsHttps: ProductionRule = (config) =>
   parseUrl(config.BETTER_AUTH_URL)?.protocol === 'https:'
     ? []
@@ -157,6 +170,7 @@ export const productionRules: ProductionRule[] = [
   logLevelIsNotVerbose,
   logPrettyIsOff,
   otlpEndpointIsSecure,
+  otlpPerSignalEndpointsAreUnset,
   authUrlIsHttps,
   authUrlIsNotLoopback,
   corsOriginsAreSafe,
