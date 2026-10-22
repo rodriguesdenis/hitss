@@ -24,6 +24,7 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 
 ## T-001-01 — API foundation: auth and security variables in the T-007-02 config
 
+- **Status:** done
 - **Goal:** The auth and security settings are validated at startup by the config module of T-007-02, including the production rules. No duplicate config module.
 - **Changes:** `src/config/auth.env.ts` (class-validator env class merged into the T-007-02 `validate()`): `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `CORS_ORIGINS`, `APP_SCHEME`, `TRUSTED_PROXIES`, `AUTH_RATE_LIMIT_ENABLED`, `RATE_LIMIT_MAX` (only if T-007-02 has not declared it), `RATE_LIMIT_IP_MAX`, `SEED_DEMO`, `DOCS_ENABLED`; `.env.example` entries. Production rules keyed on `APP_ENV=production` (never `NODE_ENV`).
 - **Covers:** `@AC-01.8.5`, constitution VII.3. Prerequisite for every auth scenario.
@@ -33,6 +34,7 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 
 ## T-001-02 — API foundation: Prisma module and integration-test harness
 
+- **Status:** done
 - **Goal:** One `PrismaService` with a managed lifecycle, and a reusable Testcontainers setup for integration and e2e tests.
 - **Changes:** `apps/api/prisma/schema.prisma` (datasource and generator only), `src/shared/infrastructure/prisma/{prisma.module.ts,prisma.service.ts}` (Prisma `log` as events, emitted without query params), `test/support/{postgres.ts,app.ts}` (start PG 17, run `migrate deploy`, build the Nest app), Jest projects `unit` / `integration` / `e2e`.
 - **Covers:** prerequisite for all integration and e2e scenarios.
@@ -40,6 +42,7 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 
 ## T-001-03 — API foundation: HTTP conventions
 
+- **Status:** done
 - **Goal:** Every business response and error follows the contract.
 - **Changes:** `app.setup.ts` `setupApp()` (`/api` prefix, URI versioning `v1`, request-id middleware, global pipe, interceptor and filter; shared by `main.ts` and the test app, so nothing is wired in `main.ts`), `shared/presentation/{http-conventions.module.ts,interceptors/envelope.interceptor.ts,decorators/raw-response.decorator.ts,filters/{global-exception.filter.ts,error-codes.ts,domain-error-mappings.ts},pipes/{validation.pipe.ts,parse-uuid.pipe.ts}}` (codes include `CSRF_REJECTED` 403 and `UNSUPPORTED_MEDIA_TYPE` 415), `requestIdMiddleware` in `shared/observability/logging/request-id.ts`, shared with pino's `genReqId` (reuse the incoming `X-Request-Id` only if it matches `^[A-Za-z0-9._-]{1,128}$`, otherwise generate one), a 404 for unknown routes → `ROUTE_NOT_FOUND`.
 - **Covers:** `@AC-01.6.6` (pipe level, with a probe DTO; re-verified per resource in T-002-04/08 and T-003-07/10/11), error envelope used by AC-01.5.1, AC-01.6.4, AC-01.7.3.
@@ -50,6 +53,7 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 
 ## T-001-04 — API foundation: security baseline
 
+- **Status:** done
 - **Goal:** Safe defaults before any endpoint exists.
 - **Changes:** in `setupApp()`: `helmet()` (which also removes `X-Powered-By`) and CORS from `CORS_ORIGINS` (`shared/presentation/cors-options.ts`: exact allowlist with credentials and `exposedHeaders`; `*` answers a literal `*` without credentials). The JSON body limit stays Express's default 100 kB (already asserted by T-001-03's `413` e2e) and is configured once with the Better Auth parsers in T-001-06. Logging rules (delivered by T-006-02 in `shared/observability/logging/redact-paths.ts`; pino `redact` wildcards match one level, so field names are redacted up to depth 3, and headers and bodies are never serialized at all): bodies never logged; redact `req.headers.authorization`, `req.headers.cookie`, `res.headers["set-cookie"]`, `res.headers["set-auth-token"]` and body keys `password`, `newPassword`, `currentPassword`, `token` at any depth; strip query strings from `/api/auth/*` URLs.
 - **Covers:** plan STRIDE rows "Information disclosure (secrets in logs)" and "Tampering (CSRF)".
@@ -57,6 +61,7 @@ Prerequisites from [007-ci-and-dx](../007-ci-and-dx/tasks.md): **T-007-01** (Com
 
 ## T-001-05 — Identity schema and migration
 
+- **Status:** done
 - **Goal:** Persist users, sessions, accounts and verifications with the Better Auth schema mapped to snake_case.
 - **Changes:** `schema.prisma` models `User`, `Session`, `Account`, `Verification` (`@@map`, `@map`), migration `create_identity_tables`, `docs/architecture/data-model.md` checked for drift.
 - **Covers:** data for all US-01.x scenarios.
