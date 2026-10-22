@@ -25,9 +25,16 @@ describe('request logging', () => {
     const response = await call('/api/v1/tasks/7f3c?search=private');
 
     const line = await out.waitFor(completed('/api/v1/tasks/7f3c'));
-    expect(out.lines.filter((l) => l.msg === 'request completed')).toHaveLength(
-      1,
-    );
+    // Sentinel: once the next request's line exists, a duplicate of the first would be there too.
+    await call('/api/v1/tasks/sentinel');
+    await out.waitFor(completed('/api/v1/tasks/sentinel'));
+    expect(
+      out.lines.filter(
+        (l) =>
+          l.msg === 'request completed' &&
+          (l.req as { url: string }).url === '/api/v1/tasks/7f3c',
+      ),
+    ).toHaveLength(1);
     expect(line).toMatchObject({
       req: { method: 'GET', url: '/api/v1/tasks/7f3c' },
       route: '/api/v1/tasks/:id',
