@@ -9,12 +9,6 @@ help: ## List the available aliases
 	@echo 'Usage: make <alias>'
 	@echo
 	@awk 'BEGIN { FS = ":.*## " } /^[a-z-]+:.*## / { printf "  %-14s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
-	@echo
-	@echo 'Not available yet (they land with the task that adds what they run):'
-	@echo '  observability        start with the telemetry backend (T-006-xx, SigNoz profile)'
-	@echo '  observability-down   stop the telemetry backend'
-	@echo '  mobile               Metro for Expo Go in Docker (T-007-13)'
-	@echo '  load                 k6 load test (T-006-xx)'
 
 up: ## Build and start PostgreSQL, the migrations and the API (only Docker needed)
 	docker compose up -d --build --wait
