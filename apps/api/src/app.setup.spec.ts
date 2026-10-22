@@ -17,8 +17,12 @@ describe('setupApp', () => {
     [Logger, logger],
     [GlobalExceptionFilter, filter],
     [Reflector, reflector],
-    [APP_CONFIG, { corsOrigins: ['https://app.example.test'] }],
+    [
+      APP_CONFIG,
+      { corsOrigins: ['https://app.example.test'], trustedProxies: [] },
+    ],
   ]);
+  const express = { set: jest.fn() };
   const calls: string[] = [];
   const track =
     (name: string) =>
@@ -28,6 +32,7 @@ describe('setupApp', () => {
     };
   const app = {
     get: jest.fn((token: unknown) => fromContainer.get(token)),
+    getHttpAdapter: () => ({ getInstance: () => express }),
     useLogger: jest.fn(track('useLogger')),
     enableShutdownHooks: jest.fn(track('enableShutdownHooks')),
     use: jest.fn(track('use')),
@@ -83,11 +88,13 @@ describe('setupApp', () => {
     expect(app.get).toHaveBeenCalledWith(Reflector);
   });
 
-  it('PR #29: an empty CORS_ORIGINS registers no CORS at all', () => {
+  const bareApp = (config: Record<string, unknown>) => {
     const other = new Map<unknown, unknown>(fromContainer);
-    other.set(APP_CONFIG, { corsOrigins: [] });
+    other.set(APP_CONFIG, { corsOrigins: [], trustedProxies: [], ...config });
+    const instance = { set: jest.fn<void, [string, unknown]>() };
     const bare = {
       get: jest.fn((token: unknown) => other.get(token)),
+      getHttpAdapter: () => ({ getInstance: () => instance }),
       useLogger: jest.fn(),
       enableShutdownHooks: jest.fn(),
       use: jest.fn(),
@@ -98,10 +105,24 @@ describe('setupApp', () => {
       useGlobalInterceptors: jest.fn(),
       useGlobalFilters: jest.fn(),
     };
-
     setupApp(bare as unknown as INestApplication);
+    return { bare, instance };
+  };
 
-    expect(bare.enableCors).not.toHaveBeenCalled();
+  it('PR #29: an empty CORS_ORIGINS registers no CORS at all', () => {
+    expect(bareApp({}).bare.enableCors).not.toHaveBeenCalled();
+  });
+
+  it('AC-01.7.6 trusts no proxy without TRUSTED_PROXIES: req.ip is the TCP peer', () => {
+    expect(express.set).toHaveBeenCalledWith('trust proxy', false);
+  });
+
+  it('AC-01.7.11 trusts exactly the TRUSTED_PROXIES CIDRs (copied)', () => {
+    const trustedProxies = ['10.0.0.0/8', '127.0.0.1/32'];
+    const { instance } = bareApp({ trustedProxies });
+
+    expect(instance.set).toHaveBeenCalledWith('trust proxy', trustedProxies);
+    expect(instance.set.mock.calls[0]?.[1]).not.toBe(trustedProxies);
   });
 
   it('keeps the documented order', () => {
