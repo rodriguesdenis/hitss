@@ -2,6 +2,7 @@ import { VersioningType } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
 import { buildOpenApiDocument } from '../../../openapi/openapi-document';
+import { openApiProblems } from '../../../openapi/openapi-structure';
 import { TeamsController } from './teams.controller';
 
 /** The schemas the generated client (orval, T-007-10) is built from. */
@@ -96,6 +97,38 @@ describe('Teams in the OpenAPI document', () => {
     expect(json(put?.responses['200'])).toMatchObject({
       properties: { data: { $ref: '#/components/schemas/TeamResponseDto' } },
     });
+  });
+
+  it.each([
+    ['get', '/api/v1/teams', ['400', '401']],
+    ['get', '/api/v1/teams/{id}', ['400', '401', '404']],
+    ['post', '/api/v1/teams', ['400', '401', '403', '409', '415']],
+    [
+      'put',
+      '/api/v1/teams/{id}',
+      ['400', '401', '403', '404', '409', '412', '415'],
+    ],
+    ['delete', '/api/v1/teams/{id}', ['400', '401', '403', '404', '412']],
+  ] as const)(
+    'AC-02.11.2 %s %s documents its error responses %j with the shared { error } schema',
+    async (method, path, statuses) => {
+      const doc = await document();
+      const responses = doc.paths[path]?.[method]?.responses ?? {};
+
+      const errors = Object.keys(responses).filter((status) =>
+        /^[45]/.test(status),
+      );
+      expect(errors.sort()).toEqual([...statuses]);
+      for (const status of statuses) {
+        expect(json(responses[status])).toEqual({
+          $ref: '#/components/schemas/ApiErrorResponseDto',
+        });
+      }
+    },
+  );
+
+  it('the teams document is structurally valid', async () => {
+    expect(openApiProblems(await document())).toEqual([]);
   });
 
   it('TeamResponseDto documents every response field', async () => {
