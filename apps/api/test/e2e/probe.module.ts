@@ -8,6 +8,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { IsString, Length } from 'class-validator';
+import { Public } from '../../src/shared/presentation/decorators/public.decorator';
 import { RawResponse } from '../../src/shared/presentation/decorators/raw-response.decorator';
 
 /** Text that a database error can carry (a DETAIL with a row value) and must never leak. */
@@ -20,7 +21,11 @@ class ProbeDto {
   name!: string;
 }
 
-/** Test-only routes that exercise the HTTP conventions under /api/v1/probe. */
+/**
+ * Test-only routes that exercise the HTTP conventions under /api/v1/probe. Public: they test the
+ * envelope, validation and errors, not authentication (owner-probe.module.ts does that).
+ */
+@Public()
 @Controller('probe')
 class ProbeController {
   @Get()
