@@ -5,13 +5,16 @@ import {
   HttpCode,
   Param,
   Post,
+  Put,
   Query,
   Res,
   UseInterceptors,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import type { ServerResponse } from 'node:http';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiHeader, ApiTags } from '@nestjs/swagger';
+import type { ExpectedVersion } from '../../../shared/domain/expected-version';
+import { IfMatch } from '../../../shared/presentation/decorators/if-match.decorator';
 import type { Page } from '../../../shared/application/page';
 import type { Owner } from '../../../shared/domain/owner';
 import { EtagInterceptor } from '../../../shared/presentation/interceptors/etag.interceptor';
@@ -26,12 +29,14 @@ import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
 import { CreateTeamCommand } from '../application/commands/create-team/create-team.command';
+import { ReplaceTeamCommand } from '../application/commands/replace-team/replace-team.command';
 import type { TeamSortField } from '../application/ports/team.read-model';
 import { GetTeamQuery } from '../application/queries/get-team/get-team.query';
 import { ListTeamsQuery } from '../application/queries/list-teams/list-teams.query';
 import type { TeamDetails } from '../application/views/team.view';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { ListTeamsQueryDto } from './dto/list-teams-query.dto';
+import { ReplaceTeamDto } from './dto/replace-team.dto';
 import { TeamResponseDto } from './dto/team-response.dto';
 import { toTeamResponse } from './team.presenter';
 
@@ -119,5 +124,41 @@ export class TeamsController {
     );
     response.setHeader('Location', `/api/v1/teams/${team.id}`);
     return toTeamResponse(team); // ETag: EtagInterceptor
+  }
+
+  /**
+   * Full replacement (AC-02.6.x). Order: body validation 400 → 404 → If-Match 412 (a malformed
+   * tag cannot match) → no-op → 409. Answers the team read back with its new ETag.
+   */
+  @Put(':id')
+  @ApiOkEnvelope(TeamResponseDto)
+  @ApiHeader({
+    name: 'If-Match',
+    required: false,
+    description:
+      'The ETag you read (W/"<version>"); a stale or malformed tag → 412.',
+  })
+  @UseInterceptors(EtagInterceptor)
+  async replace(
+    @CurrentOwner() { ownerId }: Owner,
+    @Param('id', ParseUuidPipe) id: string,
+    @Body() body: ReplaceTeamDto,
+    @IfMatch() expected: ExpectedVersion,
+  ): Promise<TeamResponseDto> {
+    await this.commands.execute<ReplaceTeamCommand, { id: string }>(
+      new ReplaceTeamCommand(
+        ownerId,
+        id,
+        body.name,
+        body.colorHex,
+        body.description,
+        expected,
+      ),
+    );
+    return toTeamResponse(
+      await this.queries.execute<GetTeamQuery, TeamDetails>(
+        new GetTeamQuery(ownerId, id),
+      ),
+    );
   }
 }

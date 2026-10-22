@@ -76,6 +76,28 @@ describe('Teams in the OpenAPI document', () => {
     });
   });
 
+  it('AC-02.6.1 PUT /api/v1/teams/{id} documents If-Match, the body and 200 { data: TeamResponseDto }', async () => {
+    const doc = await document();
+    const put = doc.paths['/api/v1/teams/{id}']?.put;
+
+    expect(put?.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'id', in: 'path' }),
+        expect.objectContaining({
+          name: 'If-Match',
+          in: 'header',
+          required: false,
+        }),
+      ]),
+    );
+    expect(JSON.stringify(put?.requestBody)).toContain(
+      '#/components/schemas/ReplaceTeamDto',
+    );
+    expect(json(put?.responses['200'])).toMatchObject({
+      properties: { data: { $ref: '#/components/schemas/TeamResponseDto' } },
+    });
+  });
+
   it('TeamResponseDto documents every response field', async () => {
     const doc = await document();
 
