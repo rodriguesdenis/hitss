@@ -100,15 +100,23 @@ describe('Teams in the OpenAPI document', () => {
   });
 
   it.each([
-    ['get', '/api/v1/teams', ['400', '401']],
-    ['get', '/api/v1/teams/{id}', ['400', '401', '404']],
-    ['post', '/api/v1/teams', ['400', '401', '403', '409', '415']],
+    ['get', '/api/v1/teams', ['400', '401', '429']],
+    ['get', '/api/v1/teams/{id}', ['400', '401', '404', '429']],
+    [
+      'post',
+      '/api/v1/teams',
+      ['400', '401', '403', '409', '413', '415', '429'],
+    ],
     [
       'put',
       '/api/v1/teams/{id}',
-      ['400', '401', '403', '404', '409', '412', '415'],
+      ['400', '401', '403', '404', '409', '412', '413', '415', '429'],
     ],
-    ['delete', '/api/v1/teams/{id}', ['400', '401', '403', '404', '412']],
+    [
+      'delete',
+      '/api/v1/teams/{id}',
+      ['400', '401', '403', '404', '412', '429'],
+    ],
   ] as const)(
     'AC-02.11.2 %s %s documents its error responses %j with the shared { error } schema',
     async (method, path, statuses) => {

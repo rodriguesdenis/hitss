@@ -29,12 +29,25 @@ export class ApiErrorBodyDto {
 
   @ApiPropertyOptional({
     description:
-      'Validation problems (400), or `{ currentVersion }` on 412 PRECONDITION_FAILED.',
+      'Validation problems (400); `{ currentVersion }` on 412 PRECONDITION_FAILED; `{ max, received }` on 422 TOO_MANY_TEAMS; `{ teamIds }` on 422 UNKNOWN_TEAMS.',
     oneOf: [
       { type: 'array', items: { $ref: getSchemaPath(ApiValidationDetailDto) } },
       {
         type: 'object',
         properties: { currentVersion: { type: 'integer', example: 2 } },
+      },
+      {
+        type: 'object',
+        properties: {
+          max: { type: 'integer', example: 10 },
+          received: { type: 'integer', example: 12 },
+        },
+      },
+      {
+        type: 'object',
+        properties: {
+          teamIds: { type: 'array', items: { type: 'string', format: 'uuid' } },
+        },
       },
     ],
   })
@@ -57,7 +70,18 @@ const DEFAULT_DESCRIPTIONS: Readonly<Record<number, string>> = {
   404: 'Not found: unknown, deleted, or owned by another user (never revealed which).',
   409: 'Conflict with the current state.',
   412: 'PRECONDITION_FAILED: If-Match does not match the current version; `details.currentVersion`.',
+  413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
   415: 'UNSUPPORTED_MEDIA_TYPE: the body must be application/json.',
+  422: 'The request is well formed but cannot be applied.',
+  429: 'RATE_LIMITED: too many requests; retry after `Retry-After` seconds.',
+};
+
+/** Documented on 429: when the client may retry. */
+const RETRY_AFTER = {
+  'Retry-After': {
+    description: 'Seconds to wait before retrying.',
+    schema: { type: 'integer', example: 30 },
+  },
 };
 
 const isStatusList = (
@@ -91,6 +115,7 @@ export function ApiErrorResponses(
         status,
         description,
         schema: { $ref: getSchemaPath(ApiErrorResponseDto) },
+        ...(status === 429 ? { headers: RETRY_AFTER } : {}),
       }),
     ),
   );
