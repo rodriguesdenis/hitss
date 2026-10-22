@@ -21,14 +21,15 @@ interface TeamRow {
 }
 
 /**
- * ORDER BY comes only from this whitelist (never from input). Every sort ends with id, so equal
- * keys page deterministically (ADR-0006). The default -createdAt and `name` follow
- * teams_owner_id_created_at_idx and teams_owner_id_lower_name_key.
+ * ORDER BY comes only from this whitelist (never from input). Every order is total, so equal keys
+ * page deterministically (ADR-0006): timestamps end with id; lower(name) needs no tie-break,
+ * because teams_owner_id_lower_name_key makes it unique among the owner's active teams (exactly
+ * this query's filter), and an id there would add an Incremental Sort on top of that index.
  */
 const ORDER: Record<TeamSortField, Record<SortDirection, Prisma.Sql>> = {
   name: {
-    asc: Prisma.sql`lower(name) ASC, id ASC`,
-    desc: Prisma.sql`lower(name) DESC, id DESC`,
+    asc: Prisma.sql`lower(name) ASC`,
+    desc: Prisma.sql`lower(name) DESC`,
   },
   createdAt: {
     asc: Prisma.sql`created_at ASC, id ASC`,
