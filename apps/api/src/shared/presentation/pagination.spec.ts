@@ -50,8 +50,16 @@ describe('PaginationQueryDto', () => {
     [{ offset: '2.5' }, 'offset'],
     [{ offset: 'x' }, 'offset'],
     [{ offset: '' }, 'offset'],
+    [{ offset: '1000001' }, 'offset'],
+    [{ offset: '99999999999999999999' }, 'offset'],
   ])('AC-02.2.5 %j → 400 naming %s', async (query, field) => {
     expect(await failedField(query)).toEqual([field]);
+  });
+
+  it('AC-02.2.5 offset 1 000 000 is the largest accepted', async () => {
+    await expect(parse({ offset: '1000000' })).resolves.toMatchObject({
+      offset: 1_000_000,
+    });
   });
 
   it('AC-02.2.5 the bounds 1 and 100 are accepted', async () => {
