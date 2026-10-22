@@ -4,27 +4,28 @@ Every significant or non-obvious decision in **Teams & Tasks** is recorded here,
 
 ## Index
 
-| ADR                                                       | Decision                                                                | Status   | Date       |
-| --------------------------------------------------------- | ----------------------------------------------------------------------- | -------- | ---------- |
-| [0001](0001-monorepo-pnpm-turborepo.md)                   | Monorepo with pnpm workspaces + Turborepo                               | Accepted | 2026-10-20 |
-| [0002](0002-nestjs-clean-architecture-ddd-cqrs.md)        | NestJS with Clean Architecture, DDD and CQRS                            | Accepted | 2026-10-20 |
-| [0003](0003-postgresql.md)                                | PostgreSQL as the database                                              | Accepted | 2026-10-20 |
-| [0004](0004-prisma-migrations-and-seeding.md)             | Prisma ORM, migrations and deterministic seeding                        | Accepted | 2026-10-20 |
-| [0005](0005-rest-openapi-and-response-envelope.md)        | REST + OpenAPI with response/error envelopes                            | Accepted | 2026-10-20 |
-| [0006](0006-offset-pagination.md)                         | Offset pagination (vs cursor)                                           | Accepted | 2026-10-20 |
-| [0007](0007-better-auth.md)                               | Better Auth for authentication                                          | Accepted | 2026-10-20 |
-| [0008](0008-class-validator-dtos-and-generated-client.md) | class-validator DTOs as contract source + orval client                  | Accepted | 2026-10-20 |
-| [0009](0009-expo-and-expo-router.md)                      | Expo (managed, Expo Go) + Expo Router                                   | Accepted | 2026-10-20 |
-| [0010](0010-react-query-and-zustand-immer.md)             | React Query for server state, Zustand + immer for local state           | Accepted | 2026-10-20 |
-| [0011](0011-nativewind-with-apply.md)                     | NativeWind v4 with `@apply` semantic classes                            | Accepted | 2026-10-20 |
-| [0012](0012-offline-first-and-optimistic-updates.md)      | Offline-first persistence (AsyncStorage adapter) and optimistic updates | Accepted | 2026-10-20 |
-| [0013](0013-opentelemetry-and-signoz.md)                  | OpenTelemetry + SigNoz                                                  | Accepted | 2026-10-20 |
-| [0014](0014-testing-strategy.md)                          | Testing strategy and tooling                                            | Accepted | 2026-10-20 |
-| [0015](0015-optimistic-concurrency.md)                    | Optimistic concurrency with `version` + ETag/If-Match                   | Accepted | 2026-10-20 |
-| [0016](0016-soft-delete.md)                               | Soft delete                                                             | Accepted | 2026-10-20 |
-| [0017](0017-conventional-commits-and-atomic-prs.md)       | Conventional Commits and atomic PRs                                     | Accepted | 2026-10-20 |
-| [0018](0018-docker-compose-one-command-run.md)            | Docker Compose one-command run                                          | Accepted | 2026-10-20 |
-| [0019](0019-idempotency-keys.md)                          | Idempotency keys on POST                                                | Accepted | 2026-10-20 |
+| ADR                                                       | Decision                                                                | Status                              | Date       |
+| --------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------- | ---------- |
+| [0001](0001-monorepo-pnpm-turborepo.md)                   | Monorepo with pnpm workspaces + Turborepo                               | Accepted                            | 2026-10-20 |
+| [0002](0002-nestjs-clean-architecture-ddd-cqrs.md)        | NestJS with Clean Architecture, DDD and CQRS                            | Accepted, partly superseded by 0020 | 2026-10-20 |
+| [0003](0003-postgresql.md)                                | PostgreSQL as the database                                              | Accepted                            | 2026-10-20 |
+| [0004](0004-prisma-migrations-and-seeding.md)             | Prisma ORM, migrations and deterministic seeding                        | Accepted                            | 2026-10-20 |
+| [0005](0005-rest-openapi-and-response-envelope.md)        | REST + OpenAPI with response/error envelopes                            | Accepted                            | 2026-10-20 |
+| [0006](0006-offset-pagination.md)                         | Offset pagination (vs cursor)                                           | Accepted                            | 2026-10-20 |
+| [0007](0007-better-auth.md)                               | Better Auth for authentication                                          | Accepted, partly superseded by 0020 | 2026-10-20 |
+| [0008](0008-class-validator-dtos-and-generated-client.md) | class-validator DTOs as contract source + orval client                  | Accepted                            | 2026-10-20 |
+| [0009](0009-expo-and-expo-router.md)                      | Expo (managed, Expo Go) + Expo Router                                   | Accepted                            | 2026-10-20 |
+| [0010](0010-react-query-and-zustand-immer.md)             | React Query for server state, Zustand + immer for local state           | Accepted                            | 2026-10-20 |
+| [0011](0011-nativewind-with-apply.md)                     | NativeWind v4 with `@apply` semantic classes                            | Accepted                            | 2026-10-20 |
+| [0012](0012-offline-first-and-optimistic-updates.md)      | Offline-first persistence (AsyncStorage adapter) and optimistic updates | Accepted                            | 2026-10-20 |
+| [0013](0013-opentelemetry-and-signoz.md)                  | OpenTelemetry + SigNoz                                                  | Accepted, partly superseded by 0020 | 2026-10-20 |
+| [0014](0014-testing-strategy.md)                          | Testing strategy and tooling                                            | Accepted                            | 2026-10-20 |
+| [0015](0015-optimistic-concurrency.md)                    | Optimistic concurrency with `version` + ETag/If-Match                   | Superseded by 0020                  | 2026-10-20 |
+| [0016](0016-soft-delete.md)                               | Soft delete                                                             | Accepted                            | 2026-10-20 |
+| [0017](0017-conventional-commits-and-atomic-prs.md)       | Conventional Commits and atomic PRs                                     | Accepted                            | 2026-10-20 |
+| [0018](0018-docker-compose-one-command-run.md)            | Docker Compose one-command run                                          | Accepted                            | 2026-10-20 |
+| [0019](0019-idempotency-keys.md)                          | Idempotency keys on POST                                                | Accepted                            | 2026-10-20 |
+| [0020](0020-simplify-architecture-for-the-hiring-test.md) | Simplify the architecture for the hiring test                           | Accepted                            | 2026-10-22 |
 
 ## When to write an ADR
 
