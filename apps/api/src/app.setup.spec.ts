@@ -113,6 +113,10 @@ describe('setupApp', () => {
     expect(bareApp({}).bare.enableCors).not.toHaveBeenCalled();
   });
 
+  it("AC-02.5.1 turns off Express's automatic ETag: the only ETag is the resource version", () => {
+    expect(express.set).toHaveBeenCalledWith('etag', false);
+  });
+
   it('AC-01.7.6 trusts no proxy without TRUSTED_PROXIES: req.ip is the TCP peer', () => {
     expect(express.set).toHaveBeenCalledWith('trust proxy', false);
   });
@@ -122,7 +126,10 @@ describe('setupApp', () => {
     const { instance } = bareApp({ trustedProxies });
 
     expect(instance.set).toHaveBeenCalledWith('trust proxy', trustedProxies);
-    expect(instance.set.mock.calls[0]?.[1]).not.toBe(trustedProxies);
+    const proxyCall = instance.set.mock.calls.find(
+      ([setting]) => setting === 'trust proxy',
+    );
+    expect(proxyCall?.[1]).not.toBe(trustedProxies);
   });
 
   it('keeps the documented order', () => {
