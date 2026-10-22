@@ -3,10 +3,12 @@ import { validate } from '../../config/env.validation';
 import { VALID_ENV } from '../../config/testing/expect-invalid';
 import type { PrismaService } from '../../shared/infrastructure/prisma/prisma.service';
 import { AUTH_BASE_PATH, createAuth, trustedOrigins } from './auth.factory';
-import { defaultPasswordHasher } from './password-hasher';
+import { BetterAuthPasswordHasher, PasswordHasher } from './password-hasher';
 
 const config = (env: Record<string, string> = {}) =>
   toAppConfig(validate({ ...VALID_ENV, ...env }));
+
+const hasher = new BetterAuthPasswordHasher();
 
 const logger = {
   warn: jest.fn(),
@@ -51,7 +53,7 @@ describe('createAuth', () => {
     config({ AUTH_RATE_LIMIT_ENABLED: 'false' }),
     {} as PrismaService,
     logger,
-    defaultPasswordHasher,
+    hasher,
   );
   const { options } = auth;
 
@@ -91,13 +93,27 @@ describe('createAuth', () => {
   it('takes the rate limiter switch from AUTH_RATE_LIMIT_ENABLED', () => {
     expect(options.rateLimit?.enabled).toBe(false);
     expect(
-      createAuth(config(), {} as PrismaService, logger, defaultPasswordHasher)
-        .options.rateLimit?.enabled,
+      createAuth(config(), {} as PrismaService, logger, hasher).options
+        .rateLimit?.enabled,
     ).toBe(true);
   });
 
-  it('hashes passwords with the injected hasher (Better Auth defaults in production)', () => {
-    expect(options.emailAndPassword?.password).toEqual(defaultPasswordHasher);
+  it('hashes and verifies passwords through the injected PasswordHasher', async () => {
+    const hash = jest.fn().mockResolvedValue('hashed');
+    const verify = jest.fn().mockResolvedValue(true);
+    const fake: PasswordHasher = { hash, verify };
+    const password = createAuth(config(), {} as PrismaService, logger, fake)
+      .options.emailAndPassword?.password;
+
+    await expect(password?.hash?.('secret-ish')).resolves.toBe('hashed');
+    await expect(
+      password?.verify?.({ hash: 'hashed', password: 'secret-ish' }),
+    ).resolves.toBe(true);
+    expect(hash).toHaveBeenCalledWith('secret-ish');
+    expect(verify).toHaveBeenCalledWith({
+      hash: 'hashed',
+      password: 'secret-ish',
+    });
   });
 
   it('S-L7: an unexpected auth error is logged with { name, code } only', async () => {

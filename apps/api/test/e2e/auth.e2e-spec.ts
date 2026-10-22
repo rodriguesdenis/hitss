@@ -3,8 +3,7 @@ import { Client } from 'pg';
 import request, { Response } from 'supertest';
 import { App } from 'supertest/types';
 import {
-  defaultPasswordHasher,
-  PASSWORD_HASHER,
+  BetterAuthPasswordHasher,
   PasswordHasher,
 } from '../../src/modules/identity/password-hasher';
 import { createTestApp } from '../support/app';
@@ -32,14 +31,9 @@ interface SessionBody {
 
 describe('Better Auth at /api/auth (e2e)', () => {
   const db = useTestDatabase();
-  const hasher: PasswordHasher & {
-    hash: jest.Mock<Promise<string>, [string]>;
-  } = {
-    hash: jest.fn((password: string) => defaultPasswordHasher.hash(password)),
-    verify: jest.fn((data: { hash: string; password: string }) =>
-      defaultPasswordHasher.verify(data),
-    ),
-  };
+  // The real hasher, observed: production behavior with call tracking (AC-01.2.7).
+  const hasher = new BetterAuthPasswordHasher();
+  const hashSpy = jest.spyOn(hasher, 'hash');
   let app: INestApplication;
   let wildcard: INestApplication;
   let sql: Client;
@@ -53,7 +47,7 @@ describe('Better Auth at /api/auth (e2e)', () => {
         appEnv: 'test',
         authRateLimitEnabled: false,
       },
-      providers: [{ provide: PASSWORD_HASHER, useValue: hasher }],
+      providers: [{ provide: PasswordHasher, useValue: hasher }],
     });
     wildcard = await createTestApp(db.url, {
       config: { corsOrigins: ['*'], authRateLimitEnabled: false },
@@ -204,12 +198,12 @@ describe('Better Auth at /api/auth (e2e)', () => {
     });
 
     it('AC-01.2.7 an unknown email still hashes the password (no timing oracle)', async () => {
-      hasher.hash.mockClear();
+      hashSpy.mockClear();
 
       await signIn(freshEmail(), 'any-password-77');
 
-      expect(hasher.hash).toHaveBeenCalledTimes(1);
-      expect(hasher.hash).toHaveBeenCalledWith('any-password-77');
+      expect(hashSpy).toHaveBeenCalledTimes(1);
+      expect(hashSpy).toHaveBeenCalledWith('any-password-77');
     });
 
     it.each([
