@@ -151,10 +151,12 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-12 — Add `DeleteTask` command and `DELETE /tasks/:id`
 
+- **Status:** done
+- **Owner:** Strata (database specialist; reassigned by the Maestro).
 - **Goal:** archive tasks.
 - **Changes:** `commands/delete-task/*`; controller DELETE (`204`); specs.
 - **Covers:** @AC-03.11.1, @AC-03.11.2, @AC-03.12.1 (delete).
-- **Done when:** after delete, GET/PUT/PATCH/DELETE → 404 and the task is absent from list under every filter; `deleted_at` set, `task_teams` rows kept (history) but ignored by reads.
+- **Done when:** after delete, GET/PUT/PATCH/DELETE → 404 and the task is absent from list under every filter; `deleted_at` set, `task_teams` rows kept (history) but ignored by reads. PUT and the list endpoint don't exist yet: T-003-10 and T-003-08b add their after-delete checks to `tasks-delete.e2e-spec.ts`. The list read model already ignores deleted tasks under every filter (T-003-08a).
 
 ## T-003-13 — `OnTeamDeletedHandler` (in-transaction)
 
