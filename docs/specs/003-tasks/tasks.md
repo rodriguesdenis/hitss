@@ -54,6 +54,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-04 — Add `TaskRepository` port + Prisma adapter
 
+- **Status:** done
 - **Goal:** persist the aggregate atomically with its team links and optimistic version check.
 - **Changes:** `domain/task.repository.ts`; `infrastructure/prisma-task.repository.ts`, `infrastructure/task.mapper.ts`; integration specs (Testcontainers).
 - **Covers:** @AC-03.9.2 (team set replace), @AC-03.11.1 (soft delete invisible to `findById`), @AC-03.12.1 (owner scoping), @AC-03.15.3 (race: two saves of v3 → exactly one wins).
@@ -127,7 +128,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Goal:** let 002 compute `taskCount` without touching task tables.
 - **Changes:** `modules/tasks/contracts/count-tasks-by-team.query.ts` (+ result type); `queries/count-tasks-by-team/*`; read model `countByTeams` (live tasks only); 002's `team-task-counts.adapter.ts` switched from the zero placeholder to sending the query on the `QueryBus` (placeholder deleted); integration + e2e specs.
 - **Covers:** @AC-03.11.3, and **`@AC-02.8.1 @AC-02.8.2`** from 002 (real task counts).
-- **Done when:** counts exclude deleted tasks and other owners; one query for N teams; e2e: `GET /teams` and `GET /teams/:id` show `taskCount` equal to the owner's active tasks per team (AC-02.8.1); deleting or unassigning a task decreases it by one (AC-02.8.2).
+- **Done when:** counts exclude deleted tasks and other owners; one query for N teams; e2e: `GET /teams` and `GET /teams/:id` show `taskCount` equal to the owner's active tasks per team (AC-02.8.1); deleting or unassigning a task decreases it by one (AC-02.8.2). `CountTasksByTeamQuery` joins `task_teams` to `tasks` with `tasks.deleted_at IS NULL`, so soft-deleted tasks (which keep their links) are never counted.
 
 ## T-003-15 — Seed 10 demo tasks
 
