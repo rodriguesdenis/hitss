@@ -32,28 +32,29 @@ Each piece was reasoned and tested, but together they cost more reading time tha
 
 ## Decision outcome
 
-Option 3. Per module (as built; amended 2026-10-22 in T-008-09 to the tree the code settled on):
+Option 3. Per module (amended 2026-10-22 twice: in T-008-09 to the tree the code settled on, then by the user-approved addendum T-008-10 to T-008-12, which removes policies, views and mapper files and moves tests into the module):
 
 ```
 modules/<x>s/
 ├── domain/
-│   ├── entities/<x>.entity.ts            # create() validates new data; restore() rebuilds from storage
-│   ├── value-objects/<y>.vo.ts
+│   ├── entities/<x>.entity.ts            # create() validates new data; restore() rebuilds from storage;
+│   │                                     # simple field rules and derived facts (Task.isOverdue) live here
+│   ├── value-objects/<y>.vo.ts           # only concepts with real rules: TaskTitle, TaskStatus, DueDate,
+│   │                                     # TeamName, ColorHex
 │   ├── errors/<x>.errors.ts
-│   ├── repositories/<x>.repository.ts    # abstract class (DI token), domain types only
-│   └── policies/                         # pure rules shared by write and read side (tasks: overdue)
+│   └── repositories/<x>.repository.ts    # abstract class (DI token), domain types only
 ├── application/
 │   ├── use-cases/<verb>-<x>.use-case.ts  # one class, execute(input: plain TS type)
-│   ├── ports/<x>.read-model.ts           # query side: views and pages, implemented by SQL
-│   └── views/                            # view types and assemblers when a view combines sources (tasks)
+│   └── ports/<x>.read-model.ts           # query side: view types and pages, implemented by SQL
 ├── presentation/http/
 │   ├── <x>s.controller.ts
-│   ├── dto/                              # class-validator requests, <x>-response.dto.ts with @ApiProperty
-│   └── presenters/<x>.presenter.ts       # explicit entity/row → response mapping
+│   ├── dto/                              # class-validator requests (update extends create),
+│   │                                     # <x>-response.dto.ts with @ApiProperty
+│   └── presenters/<x>.presenter.ts       # explicit view → response mapping (and assembly, e.g. team chips)
 ├── infrastructure/persistence/
-│   ├── <x>.prisma-repository.ts
-│   ├── <x>.persistence-mapper.ts
+│   ├── <x>.prisma-repository.ts          # row ⇄ entity mapping as private functions in this file
 │   └── <x>.prisma-read.ts                # implements the read model
+├── tests/{unit,integration,e2e}/         # the module's own tests; cross-cutting ones stay in apps/api/test
 ├── <x>-lookup.service.ts                 # only when other modules need it (teams: TeamLookup)
 └── <x>s.module.ts
 shared/
@@ -61,7 +62,8 @@ shared/
 ├── application/page.ts                   # Page<T>, PageRequest, Sort
 ├── infrastructure/prisma/prisma.service.ts
 ├── presentation/                         # envelope interceptor, exception filter + per-module error tables,
-│                                         # pipes, pagination query DTO, @CurrentOwner()
+│                                         # pipes, validators, pagination query DTO, @CurrentOwner(),
+│                                         # OpenAPI envelope decorators (they register their extra models)
 └── observability/                        # pino logger config
 ```
 
@@ -85,6 +87,8 @@ shared/
 - One global per-IP throttler plus Better Auth's own limiter.
 - pino JSON logs with request id, trace id and redaction; `/health/live` and `/health/ready`; OpenAPI at `/docs`.
 - Unit, integration and e2e tests; the brief's e2e contract green on every PR.
+
+**Code comments** (addendum, T-008-12): source and test files carry no explanatory comments; only functional ones stay (`eslint-disable`, `@ts-expect-error`, triple-slash and tool pragmas). The why lives in the ADRs and the README.
 
 **Docs and CI**
 
