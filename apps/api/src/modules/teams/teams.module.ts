@@ -10,6 +10,7 @@ import { TeamReadModel } from './application/ports/team.read-model';
 import { TeamTaskCounts } from './application/ports/team-task-counts';
 import { GetTeamSummariesHandler } from './application/queries/get-team-summaries/get-team-summaries.handler';
 import { GetTeamHandler } from './application/queries/get-team/get-team.handler';
+import { ListTeamsHandler } from './application/queries/list-teams/list-teams.handler';
 import { TeamRepository } from './domain/team.repository';
 import { ZeroTeamTaskCounts } from './infrastructure/adapters/team-task-counts.adapter';
 import { PrismaTeamReadModel } from './infrastructure/prisma-team.read-model';
@@ -28,6 +29,7 @@ import { TEAM_ERROR_MAPPINGS } from './presentation/team-error.mapping';
   providers: [
     CreateTeamHandler,
     GetTeamHandler,
+    ListTeamsHandler,
     // Public: answers GetTeamSummariesQuery (contracts/) for Task Management's TeamDirectory.
     GetTeamSummariesHandler,
     { provide: TeamRepository, useClass: PrismaTeamRepository },

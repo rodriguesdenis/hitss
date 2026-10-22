@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, TransformFnParams } from 'class-transformer';
 import {
   IsOptional,
@@ -23,6 +24,7 @@ const trimUnless =
 /** Body of `POST /api/v1/teams`. Any other field → 400 naming it (global pipe, AC-02.1.8). */
 export class CreateTeamDto {
   /** 2–50 characters after trimming, no control characters (AC-02.1.2, AC-02.1.10). */
+  @ApiProperty({ minLength: 2, maxLength: 50, example: 'Mobile' })
   @Transform(trimUnless(CONTROL))
   @IsString()
   @Length(2, 50)
@@ -32,6 +34,7 @@ export class CreateTeamDto {
   name!: string;
 
   /** `#RRGGBB` in any letter case; stored in upper case (AC-02.1.3). */
+  @ApiProperty({ pattern: '^#[0-9A-Fa-f]{6}$', example: '#7C3AED' })
   @IsString()
   @Matches(/^#[0-9A-Fa-f]{6}$/, {
     message: 'colorHex must be a #RRGGBB hex color',
@@ -42,6 +45,7 @@ export class CreateTeamDto {
    * Optional, at most 280 characters after trimming; blank means none (AC-02.1.4). Line breaks
    * are allowed, other control characters are not (AC-02.1.11).
    */
+  @ApiPropertyOptional({ type: String, maxLength: 280, nullable: true })
   @Transform(trimUnless(CONTROL_EXCEPT_LINE_BREAK))
   @IsOptional()
   @IsString()
