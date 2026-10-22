@@ -181,8 +181,9 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 - **Goal:** let 002 compute `taskCount` without touching task tables.
 - **Owner:** Forge (NestJS). **Depends on:** T-003-14a, T-002-10b.
-- **Changes:** `modules/tasks/contracts/count-tasks-by-team.query.ts` (+ result type); `queries/count-tasks-by-team/*` (calls `countByTeams`); 002's `team-task-counts.adapter.ts` switched from the zero placeholder to sending the query on the `QueryBus` (placeholder deleted); e2e specs.
+- **Changes:** `modules/tasks/contracts/count-tasks-by-team.query.ts` (+ result type); `queries/count-tasks-by-team/*` (calls `countByTeams`); 002's `team-task-counts.adapter.ts` switched from the zero placeholder to sending the query on the `QueryBus` (`QueryBusTeamTaskCounts`: one query for the distinct ids, every requested id answered, 0 by default; placeholder deleted); `CountTasksByTeamHandler` registered in `TasksModule`; e2e specs (`teams-task-counts.e2e-spec.ts`).
 - **Covers:** **`@AC-02.8.1 @AC-02.8.2`** from 002 (real task counts), end to end.
+- **Status:** done
 - **Done when:** e2e: `GET /teams` and `GET /teams/:id` show `taskCount` equal to the owner's active tasks per team (AC-02.8.1); deleting or unassigning a task decreases it by one (AC-02.8.2).
 
 ## T-003-15 — Seed 10 demo tasks
