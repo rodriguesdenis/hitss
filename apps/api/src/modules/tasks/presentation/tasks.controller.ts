@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   Res,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
@@ -18,18 +19,26 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 import type { ServerResponse } from 'node:http';
+import type { Page } from '../../../shared/application/page';
 import type { Owner } from '../../../shared/domain/owner';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
-import { ApiOkEnvelope } from '../../../shared/presentation/openapi/api-envelope';
+import {
+  ApiOkEnvelope,
+  ApiPageEnvelope,
+} from '../../../shared/presentation/openapi/api-envelope';
+import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
+import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
 import { ChangeTaskStatusCommand } from '../application/commands/change-task-status/change-task-status.command';
 import { CreateTaskCommand } from '../application/commands/create-task/create-task.command';
 import { ReplaceTaskCommand } from '../application/commands/replace-task/replace-task.command';
 import { DeleteTaskCommand } from '../application/commands/delete-task/delete-task.command';
+import { ListTasksQuery } from '../application/queries/list-tasks/list-tasks.query';
 import { GetTaskQuery } from '../application/queries/get-task/get-task.query';
 import type { TaskView } from '../application/views/task.view';
 import { ChangeTaskStatusDto } from './dto/change-task-status.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { ReplaceTaskDto } from './dto/replace-task.dto';
 import { TaskResponseDto } from './dto/task.response.dto';
 import { toTaskResponse } from './task.presenter';
@@ -81,6 +90,35 @@ export class TasksController {
     // Until the shared EtagInterceptor (T-002-07) takes over, in the same W/"<version>" form.
     response.setHeader('ETag', `W/"${task.version}"`);
     return toTaskResponse(task);
+  }
+
+  /**
+   * 200 with a page of the owner's active tasks as full task views, newest first, and `meta`
+   * (AC-03.2.1, AC-03.2.2). Filters combine with AND; statuses within the list with OR
+   * (AC-03.4.4). Foreign and deleted tasks are never listed nor counted (AC-03.2.3).
+   */
+  @Get()
+  @ApiPageEnvelope(TaskResponseDto)
+  async list(
+    @CurrentOwner() { ownerId }: Owner,
+    @Query() query: ListTasksQueryDto,
+  ): Promise<{ data: TaskResponseDto[]; meta: PageMeta }> {
+    const page = { limit: query.limit, offset: query.offset };
+    const { items, total } = await this.queries.execute<
+      ListTasksQuery,
+      Page<TaskView>
+    >(
+      new ListTasksQuery(ownerId, {
+        page,
+        teamId: query.teamId,
+        statuses: query.status && [...new Set(query.status)],
+        sort: { field: 'createdAt', direction: 'desc' },
+      }),
+    );
+    return {
+      data: items.map(toTaskResponse),
+      meta: toPageMeta(page, items.length, total),
+    };
   }
 
   /** 200 with the task view and its version tag (AC-03.8.1); unknown → 404 TASK_NOT_FOUND. */

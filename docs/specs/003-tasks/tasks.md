@@ -111,8 +111,9 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-08b — `ListTasks` endpoint: filters and paging
 
+- **Status:** done
 - **Goal:** `GET /api/v1/tasks` with `teamId`, `status` and paging, on top of T-003-08a.
-- **Owner:** Forge (NestJS). **Depends on:** T-003-08a, T-003-06b.
+- **Owner:** Strata (database specialist; reassigned by the Maestro). **Depends on:** T-003-08a, T-003-06b.
 - **Changes:** `queries/list-tasks/*` (`TeamDirectory` pre-check: a team that is not live and owned → empty page without querying tasks; one batched `summaries` call per page; `assembleTaskView`); `dto/list-tasks.query.dto.ts` (pagination, `teamId`, comma/repeated `status` transform); shared `PageMetaDto`; e2e specs.
 - **Covers:** @AC-03.2.2 @AC-03.3.3 @AC-03.4.3 @AC-03.7.1 @AC-03.7.4, plus the end-to-end verification of every T-003-08a AC.
 - **Done when:** all filter/pagination outline rows pass end to end; foreign/unknown/deleted `teamId` → empty page without querying tasks; query-count test ≤ 4 for a 100-item page with 3 teams each.
@@ -158,7 +159,7 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 - **Goal:** archive tasks.
 - **Changes:** `commands/delete-task/*`; controller DELETE (`204`); specs.
 - **Covers:** @AC-03.11.1, @AC-03.11.2, @AC-03.12.1 (delete).
-- **Done when:** after delete, GET/PUT/PATCH/DELETE → 404 and the task is absent from list under every filter; `deleted_at` set, `task_teams` rows kept (history) but ignored by reads. PUT is checked since T-003-10. The list endpoint doesn't exist yet: T-003-08b adds its after-delete check to `tasks-delete.e2e-spec.ts`. The list read model already ignores deleted tasks under every filter (T-003-08a).
+- **Done when:** after delete, GET/PUT/PATCH/DELETE → 404 and the task is absent from list under every filter; `deleted_at` set, `task_teams` rows kept (history) but ignored by reads. PUT is checked since T-003-10, and the list (with and without filters) since T-003-08b. The list read model already ignores deleted tasks under every filter (T-003-08a).
 
 ## T-003-13 — `OnTeamDeletedHandler` (in-transaction)
 
