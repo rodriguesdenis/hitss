@@ -37,6 +37,9 @@ export async function createTestApp(
 ): Promise<INestApplication> {
   const config: AppConfig = {
     ...toAppConfig(validate({ ...process.env })),
+    // Out of the way unless a test sets them: suites send many requests from one address.
+    rateLimitMax: 100_000,
+    rateLimitIpMax: 100_000,
     ...options.config,
     databaseUrl,
   };
