@@ -5,10 +5,19 @@ import {
   IsArray,
   IsIn,
   IsOptional,
+  IsString,
   IsUUID,
+  Length,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/presentation/dto/pagination-query.dto';
+import { sortValues } from '../../../../shared/presentation/sort';
+import { TASK_SORT_FIELDS } from '../../application/ports/task.read-model';
 import { TaskStatus } from '../../domain/value-objects/task-status';
+
+export const TASK_SORTS = sortValues(TASK_SORT_FIELDS);
+
+const trim = ({ value }: TransformFnParams): unknown =>
+  typeof value === 'string' ? value.trim() : value;
 
 /**
  * `status=A,B` and `status=A&status=B` both become `['A', 'B']`. An empty value stays an empty
@@ -51,4 +60,24 @@ export class ListTasksQueryDto extends PaginationQueryDto {
       'status must be a comma-separated list of PENDING, IN_PROGRESS, DONE',
   })
   status?: TaskStatus[];
+
+  /**
+   * Case-insensitive substring of the title or the description, matched literally (`%`, `_` and
+   * `\` too). Trimmed; blank or over 100 characters → 400 on `search` (AC-03.5.2, AC-03.5.3).
+   */
+  @ApiPropertyOptional({ minLength: 1, maxLength: 100 })
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  search?: string;
+
+  /**
+   * One field, `-` for descending; ties are broken by id in the same direction (AC-03.6.x).
+   * Anything else → 400 on `sort` (AC-03.6.5).
+   */
+  @ApiPropertyOptional({ enum: TASK_SORTS, default: '-createdAt' })
+  @IsOptional()
+  @IsIn(TASK_SORTS, { message: `sort must be one of ${TASK_SORTS.join(', ')}` })
+  sort: string = '-createdAt';
 }

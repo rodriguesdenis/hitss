@@ -128,8 +128,9 @@ MUST work (01–15) is complete and demo-able before any COULD task (17–18) st
 
 ## T-003-09b — `ListTasks` endpoint: search and sorting
 
+- **Status:** done
 - **Goal:** `search` and `sort` on `GET /api/v1/tasks`, on top of T-003-09a.
-- **Owner:** Forge (NestJS). **Depends on:** T-003-08b, T-003-09a.
+- **Owner:** Strata (database specialist; reassigned by the Maestro). **Depends on:** T-003-08b, T-003-09a.
 - **Changes:** DTO `search` (trimmed, 1–100), `sort` (`@IsIn(TASK_SORTS)` with an optional `-`); e2e specs.
 - **Covers:** @AC-03.5.2 @AC-03.6.5, plus the end-to-end verification of every T-003-09a AC.
 - **Done when:** the sort outline (10 rows) passes end to end; invalid `search` and `sort` → 400 naming the field.

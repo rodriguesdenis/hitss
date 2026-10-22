@@ -19,6 +19,8 @@ describe('ListTasksQueryDto', () => {
     expect(dto).toMatchObject({ limit: 20, offset: 0 });
     expect(dto.status).toBeUndefined();
     expect(dto.teamId).toBeUndefined();
+    expect(dto.search).toBeUndefined();
+    expect(dto.sort).toBe('-createdAt');
   });
 
   it.each([
@@ -55,5 +57,50 @@ describe('ListTasksQueryDto', () => {
     [{ offset: 'ten' }, 'offset'],
   ])('AC-03.7.4 %p → 400 on %s', async (query, field) => {
     expect((await parse(query)).fields).toEqual([field]);
+  });
+
+  it.each([
+    ['  login  ', 'login'],
+    ['a', 'a'],
+    ['x'.repeat(100), 'x'.repeat(100)],
+  ])('AC-03.5.2 search %p is trimmed to %p', async (search, expected) => {
+    const { dto, fields } = await parse({ search });
+
+    expect(fields).toEqual([]);
+    expect(dto.search).toBe(expected);
+  });
+
+  it.each(['', '   ', 'x'.repeat(101)])(
+    'AC-03.5.2 search %p → 400 on search',
+    async (search) => {
+      expect((await parse({ search })).fields).toEqual(['search']);
+    },
+  );
+
+  it.each([
+    'createdAt',
+    '-createdAt',
+    'updatedAt',
+    '-updatedAt',
+    'dueDate',
+    '-dueDate',
+    'title',
+    '-title',
+    'status',
+    '-status',
+  ])('AC-03.6.1 sort %s is accepted', async (sort) => {
+    expect((await parse({ sort })).fields).toEqual([]);
+  });
+
+  it.each([
+    'priority',
+    '--title',
+    '+title',
+    'title,-createdAt',
+    'ownerId',
+    '-',
+    ['title', '-title'],
+  ])('AC-03.6.5 sort %p → 400 on sort', async (sort) => {
+    expect((await parse({ sort })).fields).toEqual(['sort']);
   });
 });
