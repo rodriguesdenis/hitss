@@ -1,4 +1,4 @@
-import { corsOptions, EXPOSED_HEADERS } from './cors-options';
+import { ALLOWED_HEADERS, corsOptions, EXPOSED_HEADERS } from './cors-options';
 
 describe('corsOptions', () => {
   it('an allowlist reflects only listed origins, with credentials (cookie sessions)', () => {
@@ -7,6 +7,7 @@ describe('corsOptions', () => {
     ).toEqual({
       origin: ['https://app.example.test', 'http://localhost:8081'],
       credentials: true,
+      allowedHeaders: ALLOWED_HEADERS,
       exposedHeaders: EXPOSED_HEADERS,
       maxAge: 600,
     });
@@ -23,6 +24,19 @@ describe('corsOptions', () => {
       });
     },
   );
+
+  it('Lynx #36: an allowlist allows only the API request headers, never expo-origin', () => {
+    expect(ALLOWED_HEADERS.map((header) => header.toLowerCase())).toEqual([
+      'content-type',
+      'authorization',
+      'if-match',
+      'idempotency-key',
+      'x-request-id',
+    ]);
+    expect(corsOptions(['https://app.example.test'])?.allowedHeaders).toBe(
+      ALLOWED_HEADERS,
+    );
+  });
 
   it('PR #29: an empty list means no CORS at all (nothing to register)', () => {
     expect(corsOptions([])).toBeUndefined();

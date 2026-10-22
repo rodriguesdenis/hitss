@@ -63,7 +63,8 @@ const app = await NestFactory.create(AppModule, {
 app.setGlobalPrefix('api', { exclude: ['docs', 'docs/(.*)'] });
 app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' }); // → /api/v1/*
 app.use(helmet());
-// shared/presentation/cors-options.ts: exact allowlist + credentials + exposedHeaders
+// shared/presentation/cors-options.ts: exact allowlist + credentials + allowedHeaders
+// (Content-Type, Authorization, If-Match, Idempotency-Key, X-Request-Id; never expo-origin) + exposedHeaders
 // (set-auth-token, ETag, Location, X-Request-Id, Retry-After, Idempotent-Replayed);
 // CORS_ORIGINS=* (local only) → literal '*' WITHOUT credentials, never origin reflection.
 app.enableCors(corsOptions(config.corsOrigins));
