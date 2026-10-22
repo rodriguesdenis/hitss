@@ -77,20 +77,13 @@ describe('Teams in the OpenAPI document', () => {
     });
   });
 
-  it('AC-02.6.1 PUT /api/v1/teams/{id} documents If-Match, the body and 200 { data: TeamResponseDto }', async () => {
+  it('AC-02.6.1 AC-08.3 PUT /api/v1/teams/{id} documents the id, the body and 200 { data: TeamResponseDto }, and no If-Match', async () => {
     const doc = await document();
     const put = doc.paths['/api/v1/teams/{id}']?.put;
 
-    expect(put?.parameters).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ name: 'id', in: 'path' }),
-        expect.objectContaining({
-          name: 'If-Match',
-          in: 'header',
-          required: false,
-        }),
-      ]),
-    );
+    expect(put?.parameters).toEqual([
+      expect.objectContaining({ name: 'id', in: 'path' }),
+    ]);
     expect(JSON.stringify(put?.requestBody)).toContain(
       '#/components/schemas/ReplaceTeamDto',
     );
@@ -103,12 +96,8 @@ describe('Teams in the OpenAPI document', () => {
     ['get', '/api/v1/teams', ['400', '401', '429']],
     ['get', '/api/v1/teams/{id}', ['400', '401', '404', '429']],
     ['post', '/api/v1/teams', ['400', '401', '409', '413', '429']],
-    [
-      'put',
-      '/api/v1/teams/{id}',
-      ['400', '401', '404', '409', '412', '413', '429'],
-    ],
-    ['delete', '/api/v1/teams/{id}', ['400', '401', '404', '412', '429']],
+    ['put', '/api/v1/teams/{id}', ['400', '401', '404', '409', '413', '429']],
+    ['delete', '/api/v1/teams/{id}', ['400', '401', '404', '429']],
   ] as const)(
     'AC-02.11.2 %s %s documents its error responses %j with the shared { error } schema',
     async (method, path, statuses) => {

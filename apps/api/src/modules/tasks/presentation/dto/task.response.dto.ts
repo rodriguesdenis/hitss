@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { TaskStatus } from '../../domain/value-objects/task-status';
 import { TeamChipDto } from './team-chip.dto';
 
-/** A task in responses (api-contracts → Task resource). `version` is also sent as the ETag. */
+/** A task in responses (api-contracts → Task resource). */
 export class TaskResponseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ example: 'Implement login screen' }) title!: string;

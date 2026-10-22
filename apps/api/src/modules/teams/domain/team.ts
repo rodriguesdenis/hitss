@@ -1,9 +1,4 @@
 import { AggregateRoot } from '../../../shared/domain/aggregate-root';
-import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
-import {
-  ExpectedVersion,
-  matchesVersion,
-} from '../../../shared/domain/expected-version';
 import { ColorHex } from './value-objects/color-hex';
 import { TeamDeleted } from './team.events';
 import { TeamDescription } from './value-objects/team-description';
@@ -29,7 +24,8 @@ export interface TeamValues {
 
 /**
  * Team aggregate root. The `version` is incremented by persistence on every
- * write (ADR-0015); the aggregate only reports whether anything changed.
+ * write and kept as data (last write wins, ADR-0020); the aggregate only
+ * reports whether anything changed.
  * Name uniqueness per owner is enforced by the application and the database.
  */
 export class Team extends AggregateRoot {
@@ -131,12 +127,6 @@ export class Team extends AggregateRoot {
     this.raise(
       new TeamDeleted(this.props.id, this.props.ownerId, new Date(now)),
     );
-  }
-
-  assertVersion(expected: ExpectedVersion): void {
-    if (!matchesVersion(expected, this.props.version)) {
-      throw new ConcurrencyConflict(this.props.version);
-    }
   }
 }
 

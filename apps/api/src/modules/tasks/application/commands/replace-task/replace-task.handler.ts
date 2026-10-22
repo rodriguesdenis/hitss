@@ -2,7 +2,6 @@ import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
 import { DomainEventPublisher } from '../../../../../shared/application/ports/domain-event-publisher';
 import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
-import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import type { DomainEvent } from '../../../../../shared/domain/domain-event';
 import { TaskNotFound, UnknownTeams } from '../../../domain/task.errors';
 import { TaskRepository } from '../../../domain/task.repository';
@@ -44,7 +43,7 @@ export class ReplaceTaskHandler implements ICommandHandler<
   async execute(command: ReplaceTaskCommand): Promise<{ id: string }> {
     let events: DomainEvent[];
     try {
-      events = await this.attemptOnceMoreOnConflict(command);
+      events = await this.unitOfWork.run(() => this.replace(command));
     } catch (error) {
       throw await preciseUnknownTeams(
         error,
@@ -55,21 +54,6 @@ export class ReplaceTaskHandler implements ICommandHandler<
     }
     this.publisher.publishAfterCommit(events);
     return { id: command.id };
-  }
-
-  private async attemptOnceMoreOnConflict(
-    command: ReplaceTaskCommand,
-  ): Promise<DomainEvent[]> {
-    try {
-      return await this.attempt(command);
-    } catch (error) {
-      if (!(error instanceof ConcurrencyConflict)) throw error;
-      return this.attempt(command);
-    }
-  }
-
-  private attempt(command: ReplaceTaskCommand): Promise<DomainEvent[]> {
-    return this.unitOfWork.run(() => this.replace(command));
   }
 
   private async replace(command: ReplaceTaskCommand): Promise<DomainEvent[]> {
@@ -98,7 +82,7 @@ export class ReplaceTaskHandler implements ICommandHandler<
       task.changeStatus(command.status, now),
     ];
     if (changes.includes(true)) {
-      await this.tasks.update(task, task.version);
+      await this.tasks.update(task);
     }
     return task.pullEvents();
   }

@@ -33,8 +33,8 @@ export function setupApp<T extends INestApplication>(app: T): T {
   const express = app.getHttpAdapter().getInstance() as {
     set(setting: string, value: unknown): void;
   };
-  // No automatic weak ETag (W/"<length>-<hash>") on every body, errors and lists included: the
-  // only ETag is the resource version, set by EtagInterceptor and checked through If-Match.
+  // No automatic weak ETag (W/"<length>-<hash>") on any body: the API has no conditional
+  // requests (last write wins, ADR-0020), so it sends no ETag at all (AC-08.3).
   express.set('etag', false);
   express.set(
     'trust proxy',

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-/** A team in responses (api-contracts → Teams). `version` is also sent as the ETag. */
+/** A team in responses (api-contracts → Teams). */
 export class TeamResponseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
   @ApiProperty({ example: 'Mobile', minLength: 2, maxLength: 50 })
@@ -16,7 +16,7 @@ export class TeamResponseDto {
   @ApiProperty({ description: 'Active tasks assigned to the team', example: 0 })
   taskCount!: number;
   @ApiProperty({
-    description: 'Optimistic-concurrency version, also the ETag',
+    description: 'Incremented on every write (informational; last write wins)',
     example: 1,
   })
   version!: number;

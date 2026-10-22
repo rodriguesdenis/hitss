@@ -1,5 +1,3 @@
-import { ConcurrencyConflict } from '../../../shared/domain/domain-error';
-import { ExpectedVersion } from '../../../shared/domain/expected-version';
 import { ColorHex } from './value-objects/color-hex';
 import { TeamDeleted } from './team.events';
 import { Team } from './team';
@@ -252,50 +250,6 @@ describe('Team', () => {
       deleted.setFullYear(2000);
 
       expect(team.pullEvents()[0]?.occurredAt.toISOString()).toBe(LATER_ISO);
-    });
-  });
-
-  describe('assertVersion', () => {
-    it('AC-02.9.4 accepts any version when there is no precondition', () => {
-      expect(() =>
-        backend().assertVersion(ExpectedVersion.any()),
-      ).not.toThrow();
-    });
-
-    it('AC-02.9.1 accepts the current version', () => {
-      expect(() =>
-        backend().assertVersion(ExpectedVersion.exact(1)),
-      ).not.toThrow();
-    });
-
-    it('AC-02.9.2 rejects a stale version with the current version', () => {
-      const team = Team.reconstitute({
-        id: TEAM_ID,
-        ownerId: OWNER_ID,
-        name: TeamName.create('Backend'),
-        color: ColorHex.create('#2563EB'),
-        description: TeamDescription.create('APIs'),
-        version: 2,
-        createdAt: CREATED_AT,
-        updatedAt: LATER,
-        deletedAt: null,
-      });
-
-      let error: unknown;
-      try {
-        team.assertVersion(ExpectedVersion.exact(1));
-      } catch (e) {
-        error = e;
-      }
-
-      expect(error).toBeInstanceOf(ConcurrencyConflict);
-      expect(error).toMatchObject({ currentVersion: 2 });
-    });
-
-    it('AC-02.9.6 rejects an unmatchable precondition', () => {
-      expect(() =>
-        backend().assertVersion(ExpectedVersion.unmatchable()),
-      ).toThrow(ConcurrencyConflict);
     });
   });
 });

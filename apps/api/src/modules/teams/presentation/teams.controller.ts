@@ -9,17 +9,13 @@ import {
   Put,
   Query,
   Res,
-  UseInterceptors,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import type { ServerResponse } from 'node:http';
-import { ApiHeader, ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
-import type { ExpectedVersion } from '../../../shared/domain/expected-version';
-import { IfMatch } from '../../../shared/presentation/decorators/if-match.decorator';
+import { ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
 import type { Page } from '../../../shared/application/page';
 import type { Owner } from '../../../shared/domain/owner';
 import { ApiErrorResponses } from '../../../shared/presentation/openapi/api-error';
-import { EtagInterceptor } from '../../../shared/presentation/interceptors/etag.interceptor';
 import {
   ApiCreatedEnvelope,
   ApiOkEnvelope,
@@ -97,7 +93,6 @@ export class TeamsController {
     400: 'VALIDATION_FAILED: `id` is not a UUID.',
     404: 'TEAM_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
   })
-  @UseInterceptors(EtagInterceptor)
   async findOne(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
@@ -117,7 +112,6 @@ export class TeamsController {
     409: 'TEAM_NAME_ALREADY_EXISTS: you already have an active team with this name (any letter case).',
     413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
   })
-  @UseInterceptors(EtagInterceptor)
   async create(
     @CurrentOwner() { ownerId }: Owner,
     @Body() body: CreateTeamDto,
@@ -138,12 +132,12 @@ export class TeamsController {
       new GetTeamQuery(ownerId, id),
     );
     response.setHeader('Location', `/api/v1/teams/${team.id}`);
-    return toTeamResponse(team); // ETag: EtagInterceptor
+    return toTeamResponse(team);
   }
 
   /**
-   * Full replacement (AC-02.6.x). Order: body validation 400 → 404 → If-Match 412 (a malformed
-   * tag cannot match) → no-op → 409. Answers the team read back with its new ETag.
+   * Full replacement (AC-02.6.x), last write wins (ADR-0020). Order: body validation 400 → 404 →
+   * no-op → 409. Answers the team read back.
    */
   @Put(':id')
   @ApiOkEnvelope(TeamResponseDto)
@@ -151,21 +145,12 @@ export class TeamsController {
     400: 'VALIDATION_FAILED: an invalid or unknown field, or `id` not a UUID.',
     404: 'TEAM_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
     409: 'TEAM_NAME_ALREADY_EXISTS: you already have an active team with this name (any letter case).',
-    412: 'PRECONDITION_FAILED: If-Match is stale or malformed; `details.currentVersion`.',
     413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
   })
-  @ApiHeader({
-    name: 'If-Match',
-    required: false,
-    description:
-      'The ETag you read (W/"<version>"); a stale or malformed tag → 412.',
-  })
-  @UseInterceptors(EtagInterceptor)
   async replace(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
     @Body() body: ReplaceTeamDto,
-    @IfMatch() expected: ExpectedVersion,
   ): Promise<TeamResponseDto> {
     await this.commands.execute<ReplaceTeamCommand, { id: string }>(
       new ReplaceTeamCommand(
@@ -174,7 +159,6 @@ export class TeamsController {
         body.name,
         body.colorHex,
         body.description,
-        expected,
       ),
     );
     return toTeamResponse(
@@ -186,7 +170,7 @@ export class TeamsController {
 
   /**
    * Soft-deletes the team (AC-02.7.1): 204, then it is gone from get and list. Unknown, foreign
-   * and deleted ids → 404 whatever the If-Match (AC-02.9.8); a stale tag → 412 (AC-02.9.3).
+   * and deleted ids → 404 (AC-02.9.8). Last write wins (ADR-0020).
    */
   @Delete(':id')
   @HttpCode(204)
@@ -194,21 +178,13 @@ export class TeamsController {
   @ApiErrorResponses({
     400: 'VALIDATION_FAILED: `id` is not a UUID.',
     404: 'TEAM_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
-    412: 'PRECONDITION_FAILED: If-Match is stale or malformed; `details.currentVersion`.',
-  })
-  @ApiHeader({
-    name: 'If-Match',
-    required: false,
-    description:
-      'The ETag you read (W/"<version>"); a stale or malformed tag → 412.',
   })
   async remove(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
-    @IfMatch() expected: ExpectedVersion,
   ): Promise<void> {
     await this.commands.execute<DeleteTeamCommand, void>(
-      new DeleteTeamCommand(ownerId, id, expected),
+      new DeleteTeamCommand(ownerId, id),
     );
   }
 }

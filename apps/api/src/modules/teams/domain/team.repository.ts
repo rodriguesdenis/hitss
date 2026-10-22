@@ -32,14 +32,11 @@ export abstract class TeamRepository {
   abstract insert(team: Team): Promise<void>;
 
   /**
-   * Writes the team's current state (name, color, description, updatedAt, deletedAt) only if
-   * the stored row is active and still at `expectedVersion`, incrementing the version in the
-   * same statement (ADR-0015, V-1: the aggregate never changes its version). Soft-deleting is
-   * an update with `deletedAt` set.
-   * @returns the new version (`expectedVersion + 1`).
+   * Writes the team's current state (name, color, description, updatedAt, deletedAt) if the
+   * stored row is the owner's and active, incrementing `version` in the same statement (kept as
+   * data; last write wins, ADR-0020). Soft-deleting is an update with `deletedAt` set.
    * @throws TeamNotFound when the row is unknown, foreign or already deleted.
-   * @throws ConcurrencyConflict with the current version when it differs from `expectedVersion`.
    * @throws TeamNameAlreadyExists when a rename collides with another active team.
    */
-  abstract update(team: Team, expectedVersion: number): Promise<number>;
+  abstract update(team: Team): Promise<void>;
 }

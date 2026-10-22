@@ -113,7 +113,7 @@ describe('setupApp', () => {
     expect(bareApp({}).bare.enableCors).not.toHaveBeenCalled();
   });
 
-  it("AC-02.5.1 turns off Express's automatic ETag: the only ETag is the resource version", () => {
+  it("AC-08.3 turns off Express's automatic ETag: the API sends no ETag at all", () => {
     expect(express.set).toHaveBeenCalledWith('etag', false);
   });
 

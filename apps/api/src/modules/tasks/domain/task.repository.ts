@@ -24,15 +24,12 @@ export abstract class TaskRepository {
 
   /**
    * Writes the task's current state and replaces its team links with `task.teamIds`, atomically,
-   * only if the stored row is active and still at `expectedVersion`; the version is incremented
-   * in the same statement (ADR-0015, V-1: the aggregate never changes it). Soft-deleting is an
-   * update with `deletedAt` set.
-   * @returns the new version (`expectedVersion + 1`).
+   * if the stored row is the owner's and active; `version` is incremented in the same statement
+   * (kept as data; last write wins, ADR-0020). Soft-deleting is an update with `deletedAt` set.
    * @throws TaskNotFound when the row is unknown, foreign or already deleted.
-   * @throws ConcurrencyConflict with the current version when it differs from `expectedVersion`.
    * @throws UnknownTeams (without ids) when a linked team no longer exists; nothing is written.
    */
-  abstract update(task: Task, expectedVersion: number): Promise<number>;
+  abstract update(task: Task): Promise<void>;
 
   /**
    * Serializes, until the current transaction ends, every writer of links to these teams: task

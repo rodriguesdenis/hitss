@@ -1,7 +1,5 @@
 import { InMemoryTeamRepository } from '../../../../../../test/support/in-memory-team.repository';
 import { Clock } from '../../../../../shared/application/ports/clock';
-import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
-import { ExpectedVersion } from '../../../../../shared/domain/expected-version';
 import { Team } from '../../../domain/team';
 import {
   TeamNameAlreadyExists,
@@ -49,7 +47,6 @@ describe('ReplaceTeamHandler', () => {
   const replace = (
     id: string,
     values: { name: string; colorHex?: string; description?: string | null },
-    expected = ExpectedVersion.any(),
     ownerId = MARINA,
   ) =>
     handler.execute(
@@ -59,7 +56,6 @@ describe('ReplaceTeamHandler', () => {
         values.name,
         values.colorHex ?? '#7C3AED',
         values.description,
-        expected,
       ),
     );
 
@@ -67,11 +63,11 @@ describe('ReplaceTeamHandler', () => {
 
   it('AC-02.6.1 AC-02.9.1 replaces every field, bumps the version and advances updatedAt', async () => {
     await expect(
-      replace(
-        MOBILE_ID,
-        { name: ' Platform ', colorHex: '#0ea5e9', description: 'Infra' },
-        ExpectedVersion.exact(1),
-      ),
+      replace(MOBILE_ID, {
+        name: ' Platform ',
+        colorHex: '#0ea5e9',
+        description: 'Infra',
+      }),
     ).resolves.toEqual({ id: MOBILE_ID });
 
     const after = await stored(MOBILE_ID);
@@ -120,71 +116,27 @@ describe('ReplaceTeamHandler', () => {
   it.each([
     ['unknown', '00000000-0000-4000-8000-000000000099', MARINA],
     ['foreign', MOBILE_ID, 'owner-rafael'],
-  ])(
-    'AC-02.6.6 AC-02.9.7 a %s team → 404, even with a stale If-Match (404 wins over 412)',
-    async (_label, id, ownerId) => {
-      await expect(
-        replace(id, { name: 'Platform' }, ExpectedVersion.exact(9), ownerId),
-      ).rejects.toBeInstanceOf(TeamNotFound);
-    },
-  );
+  ])('AC-02.6.6 a %s team → 404', async (_label, id, ownerId) => {
+    await expect(
+      replace(id, { name: 'Platform' }, ownerId),
+    ).rejects.toBeInstanceOf(TeamNotFound);
+  });
+
+  it('AC-08.3 last write wins: two replacements in a row both apply, each bumping the version', async () => {
+    await replace(MOBILE_ID, { name: 'First' });
+    await replace(MOBILE_ID, { name: 'Second' });
+
+    expect((await stored(MOBILE_ID))?.name.value).toBe('Second');
+    expect((await stored(MOBILE_ID))?.version).toBe(3);
+  });
 
   it('AC-02.6.6 a deleted team → 404', async () => {
     const mobile = await stored(MOBILE_ID);
     mobile?.delete(LATER);
-    await repository.update(mobile!, 1);
+    await repository.update(mobile!);
 
     await expect(
       replace(MOBILE_ID, { name: 'Platform' }),
     ).rejects.toBeInstanceOf(TeamNotFound);
-  });
-
-  it('AC-02.9.2 a stale If-Match → ConcurrencyConflict with the current version, team unchanged', async () => {
-    await replace(MOBILE_ID, { name: 'Mobile v2' });
-
-    await expect(
-      replace(MOBILE_ID, { name: 'Platform' }, ExpectedVersion.exact(1)),
-    ).rejects.toEqual(new ConcurrencyConflict(2));
-    expect((await stored(MOBILE_ID))?.name.value).toBe('Mobile v2');
-  });
-
-  it('AC-02.9.6 an unmatchable If-Match → ConcurrencyConflict, before the no-op check', async () => {
-    await expect(
-      replace(
-        MOBILE_ID,
-        { name: 'Mobile', description: 'Apps' },
-        ExpectedVersion.unmatchable(),
-      ),
-    ).rejects.toBeInstanceOf(ConcurrencyConflict);
-  });
-
-  it('AC-02.9.4 without If-Match, a concurrent write between load and save is retried once', async () => {
-    const update = jest.spyOn(repository, 'update');
-    update.mockRejectedValueOnce(new ConcurrencyConflict(2));
-
-    await expect(replace(MOBILE_ID, { name: 'Platform' })).resolves.toEqual({
-      id: MOBILE_ID,
-    });
-    expect(update).toHaveBeenCalledTimes(2);
-  });
-
-  it('AC-02.9.4 the retry happens at most once', async () => {
-    jest
-      .spyOn(repository, 'update')
-      .mockRejectedValue(new ConcurrencyConflict(3));
-
-    await expect(
-      replace(MOBILE_ID, { name: 'Platform' }),
-    ).rejects.toBeInstanceOf(ConcurrencyConflict);
-  });
-
-  it('AC-02.9.5 with If-Match a lost race is a 412, never retried', async () => {
-    const update = jest.spyOn(repository, 'update');
-    update.mockRejectedValueOnce(new ConcurrencyConflict(2));
-
-    await expect(
-      replace(MOBILE_ID, { name: 'Platform' }, ExpectedVersion.exact(1)),
-    ).rejects.toBeInstanceOf(ConcurrencyConflict);
-    expect(update).toHaveBeenCalledTimes(1);
   });
 });

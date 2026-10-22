@@ -1,6 +1,5 @@
 import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
 import { Clock } from '../../../../../shared/application/ports/clock';
-import { ConcurrencyConflict } from '../../../../../shared/domain/domain-error';
 import {
   TeamNameAlreadyExists,
   TeamNotFound,
@@ -12,12 +11,9 @@ import { TeamName } from '../../../domain/value-objects/team-name';
 import { ReplaceTeamCommand } from './replace-team.command';
 
 /**
- * Check order (ADR-0015): load (404) → precondition (412, also for an unmatchable tag) → no-op
- * (AC-02.6.7, nothing written) → name taken by another active team (409) → versioned update.
- *
- * Without `If-Match` the client asked for no precondition, so a write that lands between our load
- * and our save is not its conflict: the handler reloads and reapplies once (plan 003). With
- * `If-Match` the lost race is the client's 412 (AC-02.9.5).
+ * Load (404) → no-op (AC-02.6.7, nothing written) → name taken by another active team (409) →
+ * update. Last write wins (ADR-0020): there is no precondition; the repository still increments
+ * `version` as data.
  */
 @CommandHandler(ReplaceTeamCommand)
 export class ReplaceTeamHandler implements ICommandHandler<
@@ -28,34 +24,17 @@ export class ReplaceTeamHandler implements ICommandHandler<
     private readonly teams: TeamRepository,
     private readonly clock: Clock,
   ) {}
-  async execute(command: ReplaceTeamCommand): Promise<{ id: string }> {
-    try {
-      return await this.attempt(command);
-    } catch (error) {
-      if (
-        error instanceof ConcurrencyConflict &&
-        command.expected.kind === 'any'
-      ) {
-        return this.attempt(command);
-      }
-      throw error;
-    }
-  }
-
-  private async attempt({
+  async execute({
     ownerId,
     id,
     name,
     colorHex,
     description,
-    expected,
   }: ReplaceTeamCommand): Promise<{ id: string }> {
     const team = await this.teams.findById(ownerId, id);
     if (!team) {
       throw new TeamNotFound();
     }
-    team.assertVersion(expected);
-    const loadedVersion = team.version;
     const changed = team.replace({
       name: TeamName.create(name),
       color: ColorHex.create(colorHex),
@@ -69,7 +48,7 @@ export class ReplaceTeamHandler implements ICommandHandler<
     if (await this.teams.existsActiveByName(ownerId, team.name, id)) {
       throw new TeamNameAlreadyExists();
     }
-    await this.teams.update(team, loadedVersion);
+    await this.teams.update(team);
     return { id };
   }
 }
