@@ -1,7 +1,7 @@
 import { ConfigValidationError } from './config-validation-error';
 import { validate } from './env.validation';
 import { validateTelemetryEnv } from './telemetry.env';
-import { expectInvalid } from './testing/expect-invalid';
+import { expectInvalid, VALID_ENV } from './testing/expect-invalid';
 
 describe('TelemetryEnv', () => {
   it('AC-08.7 exports nothing by default: no endpoint is configured', () => {
@@ -11,6 +11,17 @@ describe('TelemetryEnv', () => {
     });
     expect(
       validateTelemetryEnv({}).OTEL_EXPORTER_OTLP_ENDPOINT,
+    ).toBeUndefined();
+  });
+
+  it('AC-08.7 an empty endpoint (a compose pass-through of an unset variable) means telemetry is off', () => {
+    expect(
+      validateTelemetryEnv({ OTEL_EXPORTER_OTLP_ENDPOINT: '' })
+        .OTEL_EXPORTER_OTLP_ENDPOINT,
+    ).toBeUndefined();
+    expect(
+      validate({ ...VALID_ENV, OTEL_EXPORTER_OTLP_ENDPOINT: '' })
+        .OTEL_EXPORTER_OTLP_ENDPOINT,
     ).toBeUndefined();
   });
 

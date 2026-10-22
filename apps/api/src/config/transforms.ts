@@ -5,6 +5,10 @@ export const toBoolean = ({ value }: { value: unknown }): unknown => {
   return value;
 };
 
+/** An empty string means "not set". */
+export const blankToUndefined = ({ value }: { value: unknown }): unknown =>
+  value === '' ? undefined : value;
+
 export const toNumber = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' && value.trim() !== '' ? Number(value) : value;
 

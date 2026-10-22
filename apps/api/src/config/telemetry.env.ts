@@ -9,7 +9,7 @@ import {
   validateSync,
 } from 'class-validator';
 import { ConfigValidationError, toViolations } from './config-validation-error';
-import { isBoolean, toBoolean } from './transforms';
+import { blankToUndefined, isBoolean, toBoolean } from './transforms';
 
 /**
  * OpenTelemetry settings. Telemetry is exported only when OTEL_EXPORTER_OTLP_ENDPOINT is set
@@ -25,7 +25,8 @@ export class TelemetryEnv {
   @IsNotEmpty({ message: 'must not be empty' })
   OTEL_SERVICE_NAME: string = 'teams-tasks-api';
 
-  /** Absent: nothing is exported. */
+  /** Absent or empty (docker compose passes an unset variable through as ""): nothing is exported. */
+  @Transform(blankToUndefined)
   @IsOptional()
   @IsUrl(
     {
