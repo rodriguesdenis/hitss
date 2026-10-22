@@ -13,6 +13,24 @@ export const DATABASE_PROBE_TIMEOUT_MS = 10_000;
  */
 export const POOL_CLOSE_GRACE_MS = 1_000;
 
+/**
+ * Bounds on the pg driver itself, so no attempt hangs for the OS TCP timeout (minutes) against a
+ * black-holed database: opening a connection gives up after 2 s and a query after 5 s (client
+ * side). Readiness waits on one outstanding attempt, so these also decide how soon `/ready`
+ * recovers after the database comes back.
+ */
+export const PG_CONNECTION_TIMEOUT_MS = 2_000;
+export const PG_QUERY_TIMEOUT_MS = 5_000;
+
+/** Pool settings the PrismaPg adapter passes to `pg` (connection string plus the bounds above). */
+export function pgPoolConfig(connectionString: string) {
+  return {
+    connectionString,
+    connectionTimeoutMillis: PG_CONNECTION_TIMEOUT_MS,
+    query_timeout: PG_QUERY_TIMEOUT_MS,
+  };
+}
+
 /** Waits for `work` (errors ignored) for at most `ms`; never rejects. */
 export async function settleWithin(
   work: Promise<unknown>,
