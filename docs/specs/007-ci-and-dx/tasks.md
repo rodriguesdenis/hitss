@@ -104,6 +104,7 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 
 ## T-007-11 — Supply chain
 
+- **Status:** done
 - **Goal:** audit gate with expiring allowlist; weekly grouped updates.
 - **Changes:** `tools/ci/audit.mjs` + unit tests, `security/audit-allowlist.json` (empty), CI `audit` job, `.github/dependabot.yml` (npm, github-actions, docker; groups; `build(deps)` / `ci` / `build(infra)` prefixes).
 - **Covers:** @AC-07.9.1, @AC-07.9.3
