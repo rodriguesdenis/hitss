@@ -1,14 +1,21 @@
 import { type Span, SpanStatusCode, trace } from '@opentelemetry/api';
+import { DomainError } from '../../domain/domain-error';
 
 const TRACER_NAME = 'teams-tasks-api';
 
-/** Marks the span failed with the error class only: messages and stacks may carry user data. */
+/**
+ * Records the error class only: messages and stacks may carry user data. Expected outcomes
+ * (DomainError: not found, conflict, validation) keep `error.type` but are not span errors; the
+ * global exception filter marks the unexpected ones.
+ */
 function fail(span: Span, error: unknown): void {
   span.setAttribute(
     'error.type',
     error instanceof Error ? error.constructor.name : 'unknown',
   );
-  span.setStatus({ code: SpanStatusCode.ERROR });
+  if (!(error instanceof DomainError)) {
+    span.setStatus({ code: SpanStatusCode.ERROR });
+  }
   span.end();
 }
 

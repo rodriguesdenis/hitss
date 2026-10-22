@@ -5,7 +5,14 @@ import {
   SimpleSpanProcessor,
   TracerProvider,
 } from '@opentelemetry/sdk-trace';
+import { DomainError } from '../../domain/domain-error';
 import { Traced } from './traced-handler';
+
+class TaskNotFound extends DomainError {
+  constructor() {
+    super('Task 42 of someone@example.test was not found');
+  }
+}
 
 class ListTasksHandler {
   readonly dependency = 'kept';
@@ -25,6 +32,11 @@ class ListTasksHandler {
     return Promise.reject(
       new TypeError('contains someone@example.test and secret-value'),
     );
+  }
+
+  @Traced()
+  missing(): Promise<never> {
+    return Promise.reject(new TaskNotFound());
   }
 
   @Traced()
@@ -106,4 +118,21 @@ describe('@Traced', () => {
       expect(exported).not.toContain('someone@example.test');
     },
   );
+
+  it('AC-06.2.4 an expected DomainError keeps error.type but is not marked as a span error', async () => {
+    await expect(handler.missing()).rejects.toBeInstanceOf(TaskNotFound);
+
+    const [span] = exporter.getFinishedSpans();
+    expect(span?.attributes['error.type']).toBe('TaskNotFound');
+    expect(span?.status.code).toBe(0); // SpanStatusCode.UNSET
+    expect(span?.events).toHaveLength(0);
+    expect(JSON.stringify(span?.attributes)).not.toContain(
+      'someone@example.test',
+    );
+  });
+
+  it('AC-06.2.4 an unexpected error is marked as a span error', async () => {
+    await expect(handler.fail()).rejects.toThrow();
+    expect(exporter.getFinishedSpans()[0]?.status.code).toBe(2);
+  });
 });

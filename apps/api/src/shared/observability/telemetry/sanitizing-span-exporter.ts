@@ -10,11 +10,21 @@ const URL_ATTRIBUTES = ['url.full', 'http.url', 'http.target'];
 /** Attributes that exist only to carry the query string. */
 const QUERY_ATTRIBUTES = ['url.query', 'http.query'];
 
+/** Attributes that carry an error message or stack (any instrumentation, old or new names). */
+const ERROR_TEXT_ATTRIBUTE =
+  /(^|[._])(error|exception)[._](message|stacktrace)$/;
+const ERROR_TEXT_KEYS = ['http.error_message'];
+
 function sanitizeAttributes(
   attributes: ReadableSpan['attributes'],
 ): ReadableSpan['attributes'] {
   const clean = { ...attributes };
   for (const key of QUERY_ATTRIBUTES) delete clean[key];
+  for (const key of Object.keys(clean)) {
+    if (ERROR_TEXT_ATTRIBUTE.test(key) || ERROR_TEXT_KEYS.includes(key)) {
+      delete clean[key];
+    }
+  }
   for (const key of URL_ATTRIBUTES) {
     const value = clean[key];
     if (typeof value === 'string') clean[key] = sanitizeUrl(value);
