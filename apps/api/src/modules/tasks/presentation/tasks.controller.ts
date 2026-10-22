@@ -28,11 +28,13 @@ import {
 } from '../../../shared/presentation/openapi/api-envelope';
 import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
 import { toPageMeta } from '../../../shared/presentation/page-meta';
+import { parseSort } from '../../../shared/presentation/sort';
 import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
 import { ChangeTaskStatusCommand } from '../application/commands/change-task-status/change-task-status.command';
 import { CreateTaskCommand } from '../application/commands/create-task/create-task.command';
 import { ReplaceTaskCommand } from '../application/commands/replace-task/replace-task.command';
 import { DeleteTaskCommand } from '../application/commands/delete-task/delete-task.command';
+import type { TaskSortField } from '../application/ports/task.read-model';
 import { ListTasksQuery } from '../application/queries/list-tasks/list-tasks.query';
 import { GetTaskQuery } from '../application/queries/get-task/get-task.query';
 import type { TaskView } from '../application/views/task.view';
@@ -95,7 +97,9 @@ export class TasksController {
   /**
    * 200 with a page of the owner's active tasks as full task views, newest first, and `meta`
    * (AC-03.2.1, AC-03.2.2). Filters combine with AND; statuses within the list with OR
-   * (AC-03.4.4). Foreign and deleted tasks are never listed nor counted (AC-03.2.3).
+   * (AC-03.4.4). Search is literal and case-insensitive on title or description; the sort is
+   * whitelisted with an id tie-break (AC-03.5.x, AC-03.6.x). Foreign and deleted tasks are never
+   * listed nor counted (AC-03.2.3).
    */
   @Get()
   @ApiPageEnvelope(TaskResponseDto)
@@ -112,7 +116,8 @@ export class TasksController {
         page,
         teamId: query.teamId,
         statuses: query.status && [...new Set(query.status)],
-        sort: { field: 'createdAt', direction: 'desc' },
+        search: query.search,
+        sort: parseSort(query.sort as TaskSortField | `-${TaskSortField}`),
       }),
     );
     return {
