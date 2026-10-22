@@ -35,13 +35,20 @@ We want production-grade observability — distributed traces, RED metrics, stru
 ## Decision outcome
 
 - **`src/instrumentation.ts`** starts the `NodeSDK` and is loaded first (`node --import ./dist/instrumentation.js dist/main.js`). Resource attributes: `service.name=teams-tasks-api`, `service.version`, `deployment.environment`.
-- **Enabled only when** `OTEL_EXPORTER_OTLP_ENDPOINT` is set (validated by `@nestjs/config`); otherwise the SDK is not started and nothing is exported. `OTEL_SDK_DISABLED=true` also honored.
-- **Traces:** auto-instrumentation for HTTP/Express/Nest, `@prisma/instrumentation` for queries; manual spans only around use cases (`command.ChangeTaskStatus`) with attributes `owner.id` (hashed), `task.id`, `result`.
+- **Always on, never blocking** (amended 2026-10-22): the SDK starts with a default endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`, validated with the app config); when no collector listens, exports are dropped silently with one de-duplicated warning per minute. `OTEL_SDK_DISABLED=true` turns telemetry off entirely.
+- **Traces:** auto-instrumentation for HTTP/Express/Nest, `@prisma/instrumentation` for queries; manual spans only around use cases: `@Traced()` on every command/query handler (span named after the handler class, guarded by a spec), recording no arguments, results or ids.
 - **Metrics** via the OTel Metrics API (no Prometheus client): HTTP server duration histograms (auto), business counters `tasks_created_total`, `tasks_completed_total`, `tasks_deleted_total` incremented by `EventBus` handlers, DB pool gauges.
-- **Logs:** `nestjs-pino` JSON logs to stdout always; `@opentelemetry/instrumentation-pino` injects `trace_id`/`span_id` into each line and, when the exporter is enabled, forwards logs over OTLP. Redaction of `authorization`, `cookie`, `set-cookie`, `set-auth-token` and auth request bodies.
+- **Logs:** `nestjs-pino` JSON logs to **stdout only** (no OTLP log pipeline, amended 2026-10-22); a pino mixin adds `traceId`/`spanId` of the active span to each line. Redaction of `authorization`, `cookie`, `set-cookie`, `set-auth-token` and auth request bodies.
 - **Propagation:** W3C `traceparent` honored; `traceId` returned in every error envelope ([ADR-0005](0005-rest-openapi-and-response-envelope.md)); `X-Request-Id` on every response.
-- **Runtime:** SigNoz runs under `docker compose --profile observability up` (`make obs-up`), with the API's `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at the SigNoz collector. The default profile starts only postgres + api ([ADR-0018](0018-docker-compose-one-command-run.md)).
+- **Runtime:** SigNoz runs under `docker compose --profile observability up` (`make observability`), with the API's `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at the SigNoz collector. The default profile starts only postgres + api ([ADR-0018](0018-docker-compose-one-command-run.md)).
 - **Health:** `@nestjs/terminus` `GET /api/v1/health/live` and `/ready` (Prisma ping) — independent of telemetry.
+
+**Privacy and cardinality guards (amended 2026-10-22).**
+
+- A `SanitizingSpanExporter` wraps the trace exporter: URL attributes lose their query string, and exception events and span status keep the error type but drop its message and stack (they can carry user data). It covers every instrumentation, not just ours.
+- An SDK metric view allowlists the dimensions of `http.server.request.duration` (method, route template, status), so ids, hosts and raw URLs never become metric dimensions. Business counters carry no attributes.
+- No resource auto-detection (no host, process command line or owner in the resource). Probe requests (`/api/v1/health/*`) are neither logged nor traced.
+- Domain errors (expected 4xx outcomes) keep `error.type` on the use-case span without marking it `ERROR`; only unexpected failures set the error status.
 
 ## Consequences
 
