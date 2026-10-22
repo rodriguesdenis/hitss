@@ -2,9 +2,9 @@
 
 A small fullstack system for managing **teams** and **tasks**: a NestJS REST API (PostgreSQL, Better Auth) and an Expo mobile app, in one pnpm/Turborepo monorepo. Built spec-first as a senior-level hiring test. Tasks can belong to zero or more teams; every user sees only their own data.
 
-> ⚠️ **Implementation in progress — commands verified at the end of phase 4.** The design documentation is complete; the Docker setup, mobile app, generated API client, `tools/` collections and several scripts referenced below do not exist yet. Sections marked ⚠️ describe the target behavior defined in [ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md) and the [runbook](docs/operations/runbook.md), not yet-verified commands.
+> **Status.** The backend is implemented and verified end to end: `docker compose up --build` migrates, seeds and serves the API, Swagger UI and the request collection pass against a fresh stack in CI. The mobile app, the generated API client, the SigNoz profile and the k6 scripts are not in the repository yet; the sections below mark them ⚠️ and describe the target behavior ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
 
-**Contents:** [Architectural decisions](#architectural-decisions) · [Data model](#data-model) · [How to run](#how-to-run) · [Request examples](#request-examples) · [Production notes](#what-id-do-differently-in-production) · [Project structure](#project-structure) · [Testing](#testing) · [Contributing](#contributing)
+**Contents:** [Architectural decisions](#architectural-decisions) · [Data model](#data-model) · [How to run](#how-to-run) · [API contract summary](#api-contract-summary) · [Request examples](#request-examples) · [Production notes](#what-id-do-differently-in-production) · [Project structure](#project-structure) · [Testing](#testing) · [Contributing](#contributing) · [Troubleshooting](#troubleshooting)
 
 Full documentation map: [docs/README.md](docs/README.md).
 
@@ -103,7 +103,7 @@ erDiagram
 
 ## How to run
 
-> ⚠️ **Implementation in progress.** `docker compose up --build` already starts PostgreSQL and the API process (verified), but the API exposes no routes yet. The seed, Swagger UI, health routes and the `Makefile` are not in the repository yet; rows marked ⚠️ below are the specified behavior ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
+> The backend path below is verified. The `mobile` and `observability` profiles (⚠️) are not implemented yet.
 
 ### Backend (Docker)
 
@@ -114,17 +114,17 @@ git clone <repository-url> && cd hitss
 docker compose up --build
 ```
 
-This starts PostgreSQL, waits until it is healthy, runs the one-shot `migrate` service (Prisma migrations; the API starts only if it succeeded) and starts the API on port 3000 (⚠️ seeding the demo data arrives with the seed task). The API container builds its database URL from the `POSTGRES_*` settings (set `DATABASE_URL` to override it). No `.env` is required; to override settings copy `.env.example` to `.env` (for example `API_PORT=3100` when port 3000 is taken).
+This starts PostgreSQL, waits until it is healthy, runs the one-shot `migrate` service (Prisma migrations; the API starts only if it succeeded) and seeds the demo data (deterministic and idempotent; `SEED_ON_START=false` skips it) and starts the API on port 3000. The first build takes a few minutes; later starts are fast. The API container builds its database URL from the `POSTGRES_*` settings (set `DATABASE_URL` to override it). No `.env` is required; to override settings copy `.env.example` to `.env` (for example `API_PORT=3100` when port 3000 is taken).
 
-| What            | Where                                     |
-| --------------- | ----------------------------------------- |
-| API base URL ⚠️ | http://localhost:3000/api/v1              |
-| Swagger UI ⚠️   | http://localhost:3000/docs                |
-| OpenAPI JSON ⚠️ | http://localhost:3000/docs/openapi.json   |
-| Health ⚠️       | http://localhost:3000/api/v1/health/ready |
-| Demo account ⚠️ | `demo@teams-tasks.dev` / `Demo@1234`      |
+| What         | Where                                     |
+| ------------ | ----------------------------------------- |
+| API base URL | http://localhost:3000/api/v1              |
+| Swagger UI   | http://localhost:3000/docs                |
+| OpenAPI JSON | http://localhost:3000/docs/openapi.json   |
+| Health       | http://localhost:3000/api/v1/health/ready |
+| Demo account | `demo@teams-tasks.dev` / `Demo@1234`      |
 
-⚠️ Once the seed task lands, the seed is deterministic and idempotent: 3 teams and 10 tasks covering every status, tasks in several teams, a task without a team and an overdue task.
+The seed is deterministic and idempotent: the demo account owns 3 teams and 10 tasks covering every status, tasks in several teams, a task without a team and an overdue task.
 
 ### Mobile app (Expo Go)
 
@@ -151,6 +151,24 @@ docker compose --profile observability up -d --build --wait   # or: make observa
 
 Telemetry is optional: without a collector the API starts and serves normally and drops what it cannot export, `OTEL_SDK_DISABLED=true` turns it off, and logs are JSON on stdout only (no OTLP log pipeline). How to find a trace and which dashboards and alerts exist: [observability](docs/operations/observability.md).
 
+### Make aliases and scripts
+
+`make` is optional; every alias echoes the plain command it runs, so the same works without it. `make` with no target lists them.
+
+| Goal                                   | Alias              | Plain command                         |
+| -------------------------------------- | ------------------ | ------------------------------------- |
+| Build and start everything, wait ready | `make up`          | `docker compose up -d --build --wait` |
+| Stop (keeps the database volume)       | `make down`        | `docker compose down`                 |
+| Follow the API logs                    | `make logs`        | `docker compose logs -f api`          |
+| Drop the data and start from scratch   | `make reset`       | `docker compose down -v` then `up`    |
+| Re-apply the demo data                 | `make seed`        | `docker compose exec api …` (echoed)  |
+| Unit tests on the host                 | `make test`        | `pnpm test`                           |
+| Every suite (needs Docker)             | `make test-all`    | `pnpm test:all`                       |
+| Unit tests in a throwaway container    | `make test-docker` | echoed by make                        |
+| Fresh-stack smoke test                 | `make smoke`       | `tools/ci/compose-smoke.sh`           |
+
+Root scripts for the host toolchain (Node ≥ 24, pnpm 10): `pnpm start` / `pnpm stop` (compose up and down), `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:all`, `pnpm format`. More commands and failure handling: [runbook](docs/operations/runbook.md).
+
 ### Other operations
 
 Stop, reset, logs, re-seed and common failures: [runbook](docs/operations/runbook.md).
@@ -169,7 +187,7 @@ Base URL `http://localhost:3000`; business routes under `/api/v1`, authenticatio
 | Limits      | Per client address before authentication and per user after (`429 RATE_LIMITED` + `Retry-After`); `/api/auth/*` bodies over 16 kB → `413`                                                                                |
 | Correlation | Every response has `X-Request-Id`; error envelopes carry the `traceId` of the request's trace                                                                                                                            |
 
-Routes implemented on `main` today: `POST /api/v1/teams`, `GET /api/v1/tasks/:id`, `GET /api/v1/health/live` and `/ready`, and the four `/api/auth` routes (sign-up, sign-in, sign-out, get-session). The rest of the teams and tasks endpoints are the remaining MUST tasks of specs [002](docs/specs/002-teams/tasks.md) and [003](docs/specs/003-tasks/tasks.md).
+Implemented: teams (list, create, get, replace, delete), tasks (list with filters, search and sort; create, get, replace, change status, delete), `GET /api/v1/health/live` and `/ready`, and the four `/api/auth` routes (sign-up, sign-in, sign-out, get-session). Remaining contract items are tracked in specs [002](docs/specs/002-teams/tasks.md) and [003](docs/specs/003-tasks/tasks.md).
 
 ## Request examples
 
@@ -192,6 +210,14 @@ curl -s -X POST $API/api/v1/teams -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"name":"Platform","colorHex":"#0EA5E9","description":"Infra & tooling"}'
 
+# Update (replace) a team; If-Match carries the ETag you read, a stale tag answers 412
+curl -s -X PUT $API/api/v1/teams/<teamId> -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -H 'If-Match: W/"1"' \
+  -d '{"name":"Platform","colorHex":"#10B981","description":"Renamed"}'
+
+# Delete a team (tasks keep existing, only the link goes away)
+curl -s -X DELETE $API/api/v1/teams/<teamId> -H "Authorization: Bearer $TOKEN" -o /dev/null -w '%{http_code}\n'
+
 # Pending or in-progress tasks of a team, matching "login", by due date
 curl -s "$API/api/v1/tasks?teamId=<teamId>&status=PENDING,IN_PROGRESS&search=login&sort=dueDate&limit=20&offset=0" \
   -H "Authorization: Bearer $TOKEN"
@@ -206,11 +232,16 @@ curl -s -X PATCH $API/api/v1/tasks/<taskId>/status -H "Authorization: Bearer $TO
   -H 'Content-Type: application/json' -H 'If-Match: W/"3"' \
   -d '{"status":"DONE"}'
 
-# Delete
+# Delete a task
 curl -s -X DELETE $API/api/v1/tasks/<taskId> -H "Authorization: Bearer $TOKEN" -o /dev/null -w '%{http_code}\n'
 ```
 
-Ready-made requests: a [Bruno](https://www.usebruno.com/) collection in `tools/bruno/` and `.http` files in `tools/http/`. The authentication requests exist today (`tools/bruno/auth/`, `tools/http/auth.http`); the teams and tasks requests are planned with their endpoints.
+Ready-made requests that cover the same calls:
+
+- **Bruno:** the collection in [`tools/bruno/teams-tasks`](tools/bruno/teams-tasks) (health, auth, teams, tasks). Open the folder in [Bruno](https://www.usebruno.com/), pick the `local` environment, set the `demoPassword` secret to the demo password above and run `Sign in (demo user)` once: its script saves the token and every other request is authorized. The requests that create data delete what they created, and sign-out runs last. Headless: `cd tools/bruno/teams-tasks && npx @usebruno/cli@4.2.1 run --env local --env-var demoPassword=<demo password>`.
+- **`.http` files:** [`tools/http`](tools/http) (`health`, `auth`, `teams`, `tasks`) for the VS Code REST Client or the JetBrains HTTP Client; each file signs in by itself and runs top to bottom.
+
+CI runs the Bruno collection against a freshly seeded stack on every pull request and fails when a Bruno request has no `.http` twin.
 
 ## What I'd do differently in production
 
@@ -235,7 +266,7 @@ packages/
   api-client/       orval-generated client from the API's OpenAPI — ⚠️ not created yet
   tsconfig/         shared strict tsconfig bases
 docs/               constitution, product, specs, architecture, ADRs, quality, security, operations
-tools/              bruno/, http/, k6/ — ⚠️ not created yet
+tools/              bruno/ + http/ (request collections), ci/ (CI scripts and checks); k6/ — ⚠️ not created yet
 ```
 
 Full target layout of the API and the mobile app: [architecture overview §6](docs/architecture/overview.md#6-folder-structure).
@@ -262,4 +293,10 @@ The project follows **Spec-Driven Development**: no code without an approved tas
 - **Commits:** [Conventional Commits](https://www.conventionalcommits.org/), validated by commitlint. Scopes: `api`, `mobile`, `api-client`, `docs`, `adr`, `spec`, `ci`, `infra`, `deps`, `agents`.
 - **PRs:** one task = one PR, linked to its spec task and ADRs ([ADR-0017](docs/architecture/adr/0017-conventional-commits-and-atomic-prs.md)).
 - **Traceability:** test titles start with the AC id they prove (`it('AC-02.1.3 rejects …')`). CI fails when a PR removes the last test of an AC (compared with the base branch), on a MUST AC without scenario or task, and on a stale [traceability matrix](docs/quality/traceability-matrix.md); run `pnpm traceability` after changing specs, scenarios or task `Covers:` lines. A PR that completes a spec task also sets that task's `- **Status:** done` line in `tasks.md`; from then on every MUST AC the task covers needs a test (CI fails otherwise unless a waiver with a reason is recorded in `tools/ci/traceability-waivers.json`). Which ACs have automated tests is shown in the CI job summary, not committed.
+- **Before pushing:** `pnpm lint && pnpm typecheck && pnpm test` (the husky hooks run commitlint and lint-staged on every commit; run `pnpm install` once per clone or worktree so they are installed). Secrets live only in a git-ignored `.env`; CI runs gitleaks.
+- **Branch protection (recommended for `main`, applied by the repository owner):** require a pull request with one approval, dismiss stale approvals, require the `ci-success` status and an up-to-date branch, require conversation resolution, linear history (squash or rebase), and block force pushes and deletion. Details: [plan 007](docs/specs/007-ci-and-dx/plan.md#conventions--branch-protection).
 - **Principles:** the [constitution](docs/constitution.md) is non-negotiable; decisions that change it need an ADR.
+
+## Troubleshooting
+
+Port 3000 in use (`API_PORT=3100 make up`), the API waiting for the database, 401 and 429 answers, a phone that cannot reach the API, slow builds, and how to reset or clean up everything are covered in the [runbook](docs/operations/runbook.md#common-failures). `make reset` gives a clean database; `docker compose logs api` shows why a service is unhealthy.

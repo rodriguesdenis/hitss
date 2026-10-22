@@ -141,6 +141,7 @@ Each task is one PR. Sizes: **S** < 150 changed lines, **M** < 400 (lockfile and
 - **Changes:** root `README.md` with the sections the doc-check (T-007-16) requires — "Architectural decisions" (database choice and that persistence was proposed and justified, entity/relationship modelling, backend layering, key patterns such as React Query vs Zustand), "Data model" (diagram or textual description, migrations, seeding, local reproducibility), "How to run" (backend and mobile, step by step, plus API contract summary with payload/envelope examples), "What I would do differently in production" (at least caching, logging, scalability, security): overview, quick start (Docker only; with/without make), demo credentials, scripts/aliases table, request examples (cURL from api-contracts), architecture decisions (links to ADRs), data model (link), testing (link to test strategy), observability (link), production readiness (link), contributing (conventions, branch protection), troubleshooting (link to runbook).
 - **Covers:** @AC-07.3.3, @AC-07.4.1, @AC-07.4.5, @AC-07.4.6, @AC-07.4.7, @AC-07.4.8, @AC-07.10.4, @AC-06.8.3
 - **Done when:** a reviewer follows the README on a clean machine with only Docker and reaches the seeded API and Swagger without deviation; markdown link check passes.
+- **Status:** done
 
 ## T-007-16 — README doc-check
 
