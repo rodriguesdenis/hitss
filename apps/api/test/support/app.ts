@@ -9,6 +9,7 @@ import {
   toAppConfig,
 } from '../../src/config/app-config';
 import { validate } from '../../src/config/env.validation';
+import { DATABASE_PROBE_TIMEOUT } from '../../src/shared/infrastructure/prisma/database-probe';
 import { createLoggerParams } from '../../src/shared/observability/logging/logger.config';
 import { LogCapture } from './logging/capture';
 
@@ -21,6 +22,8 @@ export interface TestAppOptions {
   config?: Partial<AppConfig>;
   /** Provider overrides (e.g. spies around the password hasher). */
   providers?: { provide: unknown; useValue: unknown }[];
+  /** Bound of the startup database probe, shorter than the 10 s default (fail-fast tests). */
+  probeTimeoutMs?: number;
 }
 
 /**
@@ -54,6 +57,11 @@ export async function createTestApp(
           options.logs,
         ),
       );
+  }
+  if (options.probeTimeoutMs !== undefined) {
+    builder = builder
+      .overrideProvider(DATABASE_PROBE_TIMEOUT)
+      .useValue(options.probeTimeoutMs);
   }
   const moduleRef = await builder.compile();
 

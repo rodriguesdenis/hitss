@@ -4,12 +4,17 @@ import {
   Logger,
   OnModuleDestroy,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { APP_CONFIG } from '../../../config/app-config';
 import type { AppConfig } from '../../../config/app-config';
 import { Prisma, PrismaClient } from '../../../generated/prisma/client';
-import { DATABASE_PROBE_TIMEOUT_MS, probeDatabase } from './database-probe';
+import {
+  DATABASE_PROBE_TIMEOUT,
+  DATABASE_PROBE_TIMEOUT_MS,
+  probeDatabase,
+} from './database-probe';
 
 // Prisma logs are emitted as events and routed to the Nest logger (pino once 006 lands).
 const PRISMA_LOG = [
@@ -62,7 +67,12 @@ export class PrismaService
 {
   private readonly logger = new Logger(PrismaService.name);
 
-  constructor(@Inject(APP_CONFIG) config: AppConfig) {
+  constructor(
+    @Inject(APP_CONFIG) config: AppConfig,
+    @Optional()
+    @Inject(DATABASE_PROBE_TIMEOUT)
+    private readonly probeTimeoutMs: number = DATABASE_PROBE_TIMEOUT_MS,
+  ) {
     super({
       adapter: new PrismaPg({ connectionString: config.databaseUrl }),
       log: PRISMA_LOG,
@@ -80,10 +90,7 @@ export class PrismaService
    */
   async onModuleInit(): Promise<void> {
     await this.$connect();
-    await probeDatabase(
-      () => this.$queryRaw`SELECT 1`,
-      DATABASE_PROBE_TIMEOUT_MS,
-    );
+    await probeDatabase(() => this.$queryRaw`SELECT 1`, this.probeTimeoutMs);
   }
 
   async onModuleDestroy(): Promise<void> {

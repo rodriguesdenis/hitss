@@ -6,6 +6,9 @@
  */
 export const DATABASE_PROBE_TIMEOUT_MS = 10_000;
 
+/** DI token for the probe bound; PrismaModule provides the default, tests may shorten it. */
+export const DATABASE_PROBE_TIMEOUT = Symbol('DATABASE_PROBE_TIMEOUT');
+
 const SAFE_CODE = /^[A-Z0-9_]{1,32}$/;
 const ADVICE = 'Check DATABASE_URL and that PostgreSQL is running.';
 
