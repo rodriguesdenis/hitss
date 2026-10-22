@@ -9,7 +9,7 @@ import { TaskDescription } from '../../domain/value-objects/task-description.vo'
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import { TaskTeamIds } from '../../domain/value-objects/task-team-ids.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
-import { preciseUnknownTeams } from './precise-unknown-teams';
+import { preciseUnknownTeams } from './shared/precise-unknown-teams';
 
 export interface CreateTaskInput {
   readonly ownerId: string;

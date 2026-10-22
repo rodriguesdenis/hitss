@@ -1,5 +1,5 @@
-import type { TeamLookup } from '../../../teams/team-lookup.service';
-import { UnknownTeams } from '../../domain/errors/task.errors';
+import type { TeamLookup } from '../../../../teams/team-lookup.service';
+import { UnknownTeams } from '../../../domain/errors/task.errors';
 
 /**
  * The repository turns a team-link foreign-key violation into `UnknownTeams` without ids: it
