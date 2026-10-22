@@ -9,6 +9,9 @@ import {
   TeamSortField,
 } from '../application/ports/team.read-model';
 import type { TeamView } from '../application/views/team.view';
+import type { TeamSummary } from '../contracts/team-summary';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface TeamRow {
   id: string;
@@ -76,6 +79,23 @@ export class PrismaTeamReadModel extends TeamReadModel {
       items: rows.map(toView),
       total: counted[0]?.total ?? 0,
     };
+  }
+
+  async summaries(
+    ownerId: string,
+    ids: readonly string[],
+  ): Promise<TeamSummary[]> {
+    // Malformed ids cannot exist (and would fail the uuid cast); duplicates are asked once.
+    const wanted = [
+      ...new Set(
+        ids.filter((id) => UUID.test(id)).map((id) => id.toLowerCase()),
+      ),
+    ];
+    if (wanted.length === 0) return [];
+    return this.prisma.team.findMany({
+      where: { ownerId, deletedAt: null, id: { in: wanted } },
+      select: { id: true, name: true, colorHex: true },
+    });
   }
 }
 
