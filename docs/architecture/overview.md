@@ -81,7 +81,7 @@ flowchart LR
     repo["repositories/<br/>abstract class"]
   end
   subgraph infrastructure["infrastructure/persistence/"]
-    prepo["&lt;x&gt;.prisma-repository.ts<br/>+ persistence-mapper"]
+    prepo["&lt;x&gt;.prisma-repository.ts<br/>+ row ⇄ entity mapping"]
     pread["&lt;x&gt;.prisma-read.ts<br/>SQL for lists and views"]
   end
 
@@ -129,16 +129,16 @@ Arrows are compile-time imports; everything points toward `domain/`.
 | **Team** | `id`, `ownerId`, `name: TeamName`, `color: ColorHex`, `description?`, `version`, timestamps, `deletedAt?`                                              | `create()`, `restore()`, `replace()` (full `PUT`; `false` when nothing changes), `delete()`                                  |
 | **Task** | `id`, `ownerId`, `title: TaskTitle`, `description?`, `status`, `dueDate?`, `completedAt?`, `teamIds: TaskTeamIds`, `version`, timestamps, `deletedAt?` | `create()`, `restore()`, `edit()`, `assignTo()`, `changeStatus()`, `delete()`; each change method returns `false` on a no-op |
 
-| Value object      | Rule                                                                                                                         |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `TeamName`        | Trimmed, 2–50 characters; unique per owner, case-insensitive (checked by the use case, guaranteed by a partial unique index) |
-| `ColorHex`        | `#RRGGBB`, normalized to upper case                                                                                          |
-| `TeamDescription` | Optional, ≤ 280 characters, no control characters except line breaks; blank → `null`                                         |
-| `TaskTitle`       | Trimmed, 3–120 characters                                                                                                    |
-| `TaskDescription` | Optional, ≤ 2000 characters, same character rule; blank → `null`                                                             |
-| `TaskStatus`      | `PENDING` · `IN_PROGRESS` · `DONE`                                                                                           |
-| `DueDate`         | Calendar date `YYYY-MM-DD`; past dates allowed                                                                               |
-| `TaskTeamIds`     | 0–10 distinct ids, order-insensitive; more → `TooManyTeams`                                                                  |
+| Value object or field | Rule                                                                                                                         |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `TeamName`            | Trimmed, 2–50 characters; unique per owner, case-insensitive (checked by the use case, guaranteed by a partial unique index) |
+| `ColorHex`            | `#RRGGBB`, normalized to upper case                                                                                          |
+| Team `description`    | Optional, ≤ 280 characters, no control characters except line breaks; blank → `null`                                         |
+| `TaskTitle`           | Trimmed, 3–120 characters                                                                                                    |
+| `TaskDescription`     | Optional, ≤ 2000 characters, same character rule; blank → `null`                                                             |
+| `TaskStatus`          | `PENDING` · `IN_PROGRESS` · `DONE`                                                                                           |
+| `DueDate`             | Calendar date `YYYY-MM-DD`; past dates allowed                                                                               |
+| `TaskTeamIds`         | 0–10 distinct ids, order-insensitive; more → `TooManyTeams`                                                                  |
 
 Lengths count Unicode code points after trimming, the same as the DTOs and the `varchar(n)` columns. Ids are UUIDs drawn by the entity (`crypto.randomUUID()`). Use cases never set `version`: entities set `updatedAt`, the repository increments `version`.
 
@@ -195,7 +195,9 @@ shared/
 ├── infrastructure/                          # prisma/ (PrismaService, database probe), sql/, system-clock.ts
 ├── presentation/                            # envelope interceptor, exception filter + DomainErrorMappings,
 │                                            # validation and UUID pipes, pagination DTO, sort, page meta,
-│                                            # @CurrentOwner(), @Public(), @RawResponse(), OpenAPI helpers, CORS
+│                                            # @CurrentOwner(), @Public(), @RawResponse(), CORS,
+│                                            # validators/is-calendar-date.ts, OpenAPI envelope helpers
+│                                            # (they register their models; controllers add none)
 └── observability/                           # pino config, request id, redaction, trace fields, probe filter
 modules/
 ├── identity/                                # Better Auth factory, Bearer guard, throttler guards, client-IP and body-limit middleware
@@ -203,30 +205,29 @@ modules/
 ├── teams/
 │   ├── domain/
 │   │   ├── entities/team.entity.ts
-│   │   ├── value-objects/{team-name,color-hex,team-description}.vo.ts
+│   │   ├── value-objects/{team-name,color-hex}.vo.ts   # the description is validated by the entity
 │   │   ├── errors/team.errors.ts
 │   │   └── repositories/team.repository.ts
 │   ├── application/
 │   │   ├── ports/team.read-model.ts         # TeamView, TeamSummary, ListTeamsCriteria
 │   │   └── use-cases/{create,list,get,update,delete}-team.use-case.ts
 │   ├── infrastructure/persistence/
-│   │   ├── team.prisma-repository.ts        # incl. the single-transaction delete
-│   │   ├── team.persistence-mapper.ts
+│   │   ├── team.prisma-repository.ts        # row ⇄ entity mapping as private functions; single-transaction delete
 │   │   └── team.prisma-read.ts              # lists with taskCount, summaries
 │   ├── presentation/http/
 │   │   ├── teams.controller.ts · team-error.mapping.ts
-│   │   ├── dto/                             # create, update, list query, response
+│   │   ├── dto/                             # create (update extends it), list query, response
 │   │   └── presenters/team.presenter.ts
-│   ├── team-lookup.service.ts               # the module's only export
+│   ├── team-lookup.service.ts               # the module's only export: summaries, findMissing, assertAllLive
 │   └── teams.module.ts
 └── tasks/
     ├── domain/{entities,value-objects,errors,repositories}/ · policies/overdue.policy.ts
     ├── application/
     │   ├── ports/task.read-model.ts
-    │   ├── use-cases/                       # create, list, get, update, change-status, delete; shared/precise-unknown-teams.ts
+    │   ├── use-cases/                       # create, list, get, update, change-status, delete
     │   └── views/                           # task.view.ts, task-view.assembler.ts (rows + team chips from TeamLookup)
     ├── infrastructure/persistence/          # task.prisma-repository.ts, task.persistence-mapper.ts, task.prisma-read.ts
-    ├── presentation/http/                   # tasks.controller.ts, task-error.mapping.ts, dto/, presenters/, validators/
+    ├── presentation/http/                   # tasks.controller.ts, task-error.mapping.ts, dto/, presenters/
     └── tasks.module.ts                      # imports TeamsModule for TeamLookup
 ```
 
