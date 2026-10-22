@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { CqrsModule } from '@nestjs/cqrs';
 import { AppConfigModule } from './config/config.module';
 import { GracefulExit } from './graceful-exit';
 import { HealthModule } from './modules/health/health.module';
@@ -12,8 +11,6 @@ import { HttpConventionsModule } from './shared/presentation/http-conventions.mo
 
 @Module({
   imports: [
-    // The only CqrsModule.forRoot() of the API: one root, one EventBus (see cqrs-root.spec.ts).
-    CqrsModule.forRoot(),
     AppConfigModule.forRoot(),
     PrismaModule,
     HttpConventionsModule,
