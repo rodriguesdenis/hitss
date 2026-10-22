@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
+import { DatabaseUnavailableError } from '../../src/shared/infrastructure/prisma/database-probe';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '../support/app';
 import {
@@ -88,6 +89,28 @@ describe('Prisma module (integration)', () => {
 
     expect(probe.rows[0]?.probe).toBeNull();
     expect(exists[0]?.count).toBe(0);
+  });
+
+  it('VII.3 boots when the startup probe reaches the database', async () => {
+    const booted = await createTestApp(db.url);
+
+    await expect(
+      booted.get(PrismaService).$queryRaw`SELECT 1 AS one`,
+    ).resolves.toEqual([{ one: 1 }]);
+    await booted.close();
+  });
+
+  it('VII.3 refuses to boot when the database is unreachable, naming DATABASE_URL only', async () => {
+    // Port 1 on loopback: nothing listens, so the probe fails at once (ECONNREFUSED).
+    const unreachable = 'postgresql://probe:probe@127.0.0.1:1/none';
+
+    const error: unknown = await createTestApp(unreachable).catch(
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(DatabaseUnavailableError);
+    expect((error as Error).message).toContain('DATABASE_URL');
+    expect((error as Error).message).not.toContain('127.0.0.1');
   });
 
   it('disconnects from the database when the app closes', async () => {

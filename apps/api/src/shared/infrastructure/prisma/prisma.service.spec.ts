@@ -1,4 +1,6 @@
-import { toLogEventLog, toQueryLog } from './prisma.service';
+import type { AppConfig } from '../../../config/app-config';
+import { DatabaseUnavailableError } from './database-probe';
+import { PrismaService, toLogEventLog, toQueryLog } from './prisma.service';
 
 const EMAIL = 'someone@example.test';
 const at = new Date(0);
@@ -73,5 +75,37 @@ describe('toLogEventLog', () => {
     });
 
     expect(log).toEqual({ msg: 'prisma.error', target: '$connect' });
+  });
+});
+
+describe('PrismaService.onModuleInit', () => {
+  const service = () =>
+    new PrismaService({
+      databaseUrl: 'postgresql://user:pw@localhost:1/db',
+    } as AppConfig);
+
+  it('probes the database with SELECT 1 and starts when it answers', async () => {
+    const prisma = service();
+    jest.spyOn(prisma, '$connect').mockResolvedValue(undefined);
+    const query = jest
+      .spyOn(prisma, '$queryRaw')
+      .mockResolvedValue([{ '?column?': 1 }] as never);
+
+    await expect(prisma.onModuleInit()).resolves.toBeUndefined();
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses to start when the probe fails', async () => {
+    const prisma = service();
+    jest.spyOn(prisma, '$connect').mockResolvedValue(undefined);
+    jest
+      .spyOn(prisma, '$queryRaw')
+      .mockRejectedValue(
+        Object.assign(new Error('refused'), { code: 'ECONNREFUSED' }),
+      );
+
+    await expect(prisma.onModuleInit()).rejects.toBeInstanceOf(
+      DatabaseUnavailableError,
+    );
   });
 });

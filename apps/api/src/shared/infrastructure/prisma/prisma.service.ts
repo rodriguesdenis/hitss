@@ -9,6 +9,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { APP_CONFIG } from '../../../config/app-config';
 import type { AppConfig } from '../../../config/app-config';
 import { Prisma, PrismaClient } from '../../../generated/prisma/client';
+import { DATABASE_PROBE_TIMEOUT_MS, probeDatabase } from './database-probe';
 
 // Prisma logs are emitted as events and routed to the Nest logger (pino once 006 lands).
 const PRISMA_LOG = [
@@ -50,7 +51,10 @@ export function toLogEventLog(level: 'warn' | 'error', event: Prisma.LogEvent) {
   };
 }
 
-/** The single Prisma client of the API: one pg pool, opened on init, closed on shutdown. */
+/**
+ * The single Prisma client of the API: one pg pool, probed on init (fail fast), closed on
+ * shutdown.
+ */
 @Injectable()
 export class PrismaService
   extends PrismaClient<PrismaServiceOptions>
@@ -70,8 +74,16 @@ export class PrismaService
     );
   }
 
+  /**
+   * $connect opens nothing with the pg adapter, so a probe query proves the database answers.
+   * A failure aborts the Nest bootstrap and the process exits non-zero (VII.3).
+   */
   async onModuleInit(): Promise<void> {
     await this.$connect();
+    await probeDatabase(
+      () => this.$queryRaw`SELECT 1`,
+      DATABASE_PROBE_TIMEOUT_MS,
+    );
   }
 
   async onModuleDestroy(): Promise<void> {
