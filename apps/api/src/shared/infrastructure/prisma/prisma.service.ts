@@ -86,11 +86,17 @@ export class PrismaService
 
   /**
    * $connect opens nothing with the pg adapter, so a probe query proves the database answers.
-   * A failure aborts the Nest bootstrap and the process exits non-zero (VII.3).
+   * A failure aborts the Nest bootstrap and the process exits non-zero (VII.3). The pool is
+   * closed first (best effort), so a failed boot never leaves sockets open.
    */
   async onModuleInit(): Promise<void> {
     await this.$connect();
-    await probeDatabase(() => this.$queryRaw`SELECT 1`, this.probeTimeoutMs);
+    try {
+      await probeDatabase(() => this.$queryRaw`SELECT 1`, this.probeTimeoutMs);
+    } catch (error) {
+      await this.$disconnect().catch(() => undefined);
+      throw error;
+    }
   }
 
   async onModuleDestroy(): Promise<void> {

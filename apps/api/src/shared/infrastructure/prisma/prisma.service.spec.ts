@@ -95,9 +95,12 @@ describe('PrismaService.onModuleInit', () => {
     expect(query).toHaveBeenCalledTimes(1);
   });
 
-  it('refuses to start when the probe fails', async () => {
+  it('refuses to start when the probe fails, closing the pool first', async () => {
     const prisma = service();
     jest.spyOn(prisma, '$connect').mockResolvedValue(undefined);
+    const disconnect = jest
+      .spyOn(prisma, '$disconnect')
+      .mockRejectedValue(new Error('pool already gone'));
     jest
       .spyOn(prisma, '$queryRaw')
       .mockRejectedValue(
@@ -107,5 +110,7 @@ describe('PrismaService.onModuleInit', () => {
     await expect(prisma.onModuleInit()).rejects.toBeInstanceOf(
       DatabaseUnavailableError,
     );
+    // A failing disconnect does not mask the probe error.
+    expect(disconnect).toHaveBeenCalledTimes(1);
   });
 });
