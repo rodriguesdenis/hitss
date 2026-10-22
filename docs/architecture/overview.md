@@ -285,7 +285,7 @@ apps/api/
 │   │   ├── domain/                      # AggregateRoot, DomainEvent, DomainError + ConcurrencyConflict, expected-version.ts (pure TS)
 │   │   ├── application/                 # Clock, IdGenerator ports, Page<T>, PageRequest
 │   │   ├── infrastructure/
-│   │   │   ├── prisma/                  # PrismaModule, PrismaService (one pg pool), database-probe.ts (boot probe: SELECT 1 bounded by DATABASE_PROBE_TIMEOUT, default 10 s → DatabaseUnavailableError), transaction host (with the CLS unit of work)
+│   │   │   ├── prisma/                  # PrismaModule, PrismaService (one pg pool), database-probe.ts (pg pool bounds: connect 2 s, query 5 s; boot probe: SELECT 1 bounded by DATABASE_PROBE_TIMEOUT, default 10 s → DatabaseUnavailableError), transaction host (with the CLS unit of work)
 │   │   │   ├── idempotency/             # PrismaIdempotencyStore
 │   │   │   └── system-clock.ts · uuid-generator.ts
 │   │   ├── presentation/

@@ -74,10 +74,10 @@ One JSON object per line. Example completion entry:
 
 ## Health
 
-| Endpoint                   | Meaning                                                      | Used by                                          |
-| -------------------------- | ------------------------------------------------------------ | ------------------------------------------------ |
-| `GET /api/v1/health/live`  | Process up; no dependency check                              | liveness (orchestrator restart)                  |
-| `GET /api/v1/health/ready` | DB reachable (`SELECT 1`, 1.5 s timeout) → `200`, else `503` | compose healthcheck, `depends_on`, load balancer |
+| Endpoint                   | Meaning                                                                                                                                                                                                  | Used by                                          |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `GET /api/v1/health/live`  | Process up; no dependency check                                                                                                                                                                          | liveness (orchestrator restart)                  |
+| `GET /api/v1/health/ready` | DB reachable (`SELECT 1`, 1.5 s timeout; one attempt outstanding, bounded by the pg connect 2 s / query 5 s timeouts so a black-holed database recovers within seconds of returning) → `200`, else `503` | compose healthcheck, `depends_on`, load balancer |
 
 Public, unthrottled, not logged/traced. Liveness ships with the auth work (001); readiness is added by 006. The telemetry backend is never a readiness dependency.
 
