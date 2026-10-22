@@ -110,18 +110,21 @@ YAML
   export COMPOSE_FILE="docker-compose.yml:$TMP/otlp-sink.yml"
   docker compose up -d --wait
   assert_http_up "$API_PORT"
-  TRACE_SEEN=no
-  for _ in $(seq 1 30); do
+  # Traces are batched (500 ms here); metrics follow the SDK's 15 s export interval, hence 45 tries.
+  SEEN=no
+  for _ in $(seq 1 45); do
     curl -s -o /dev/null --max-time 5 "http://127.0.0.1:$API_PORT/api/v1/" || true
-    if docker compose logs --no-color otlp-sink 2> /dev/null | grep -q 'TRACE_RECEIVED service=teams-tasks-api'; then
-      TRACE_SEEN=yes
+    SINK_LOG="$(docker compose logs --no-color otlp-sink 2> /dev/null)"
+    if grep -q 'TRACE_RECEIVED service=teams-tasks-api' <<< "$SINK_LOG" \
+      && grep -q 'METRICS_RECEIVED service=teams-tasks-api' <<< "$SINK_LOG"; then
+      SEEN=yes
       break
     fi
     sleep 1
   done
-  [ "$TRACE_SEEN" = yes ] || fail 'the sink received no trace for teams-tasks-api: the image does not export telemetry (is the entrypoint still loading dist/instrumentation.js with --import?)'
-  echo "the sink received a trace for teams-tasks-api"
-  summary "| Telemetry hand-off: the sink received a trace for \`teams-tasks-api\` | passed |"
+  [ "$SEEN" = yes ] || fail 'the sink did not receive both a trace and a metrics export for teams-tasks-api: the image does not export telemetry (is the entrypoint still loading dist/instrumentation.js with --import?)'
+  echo "the sink received a trace and a metrics export for teams-tasks-api"
+  summary "| Telemetry hand-off: the sink received a trace and a metrics export for \`teams-tasks-api\` | passed |"
   docker compose down -v --remove-orphans
   unset COMPOSE_FILE
 fi

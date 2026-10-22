@@ -75,4 +75,8 @@ describe('compose smoke script', () => {
     assert.match(source, /ARG NODE_IMAGE/);
     assert.ok(!/image:\s*node:24\b/.test(source), 'no floating node image');
   });
+
+  it('AC-06.2.1 requires a metrics export as well as a trace from the telemetry hand-off', () => {
+    assert.match(source, /METRICS_RECEIVED service=teams-tasks-api/);
+  });
 });
