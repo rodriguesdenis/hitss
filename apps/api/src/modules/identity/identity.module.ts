@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import type { ServerResponse } from 'node:http';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthGuard, AuthModule } from '@thallesp/nestjs-better-auth';
 import { PinoLogger } from 'nestjs-pino';
 import { APP_CONFIG, AppConfig } from '../../config/app-config';
@@ -15,6 +16,12 @@ import {
 import { BetterAuthPasswordHasher, PasswordHasher } from './password-hasher';
 import { JsonBodyGuard } from '../../shared/presentation/guards/json-body.guard';
 import { CsrfGuard } from './presentation/csrf.guard';
+import { IpThrottlerGuard } from './presentation/ip-throttler.guard';
+import {
+  IP_THROTTLER,
+  USER_THROTTLER,
+} from './presentation/named-throttler.guard';
+import { OwnerThrottlerGuard } from './presentation/owner-throttler.guard';
 
 type Middleware = (
   request: ClientRequest,
@@ -54,6 +61,16 @@ export class PasswordHasherModule {}
  */
 @Module({
   imports: [
+    // Two named throttlers, one window of a minute each; the guards below pick theirs by name.
+    ThrottlerModule.forRootAsync({
+      inject: [APP_CONFIG],
+      useFactory: (config: AppConfig) => ({
+        throttlers: [
+          { name: IP_THROTTLER, ttl: 60_000, limit: config.rateLimitIpMax },
+          { name: USER_THROTTLER, ttl: 60_000, limit: config.rateLimitMax },
+        ],
+      }),
+    }),
     AuthModule.forRootAsync({
       imports: [PasswordHasherModule],
       inject: [APP_CONFIG, PrismaService, PinoLogger, PasswordHasher],
@@ -85,8 +102,10 @@ export class PasswordHasherModule {}
   // Global guards run in registration order (plan 001 → Guards, in order). The slot before
   // AuthGuard is the per-IP throttler of T-001-15; the per-user throttler follows CsrfGuard.
   providers: [
+    { provide: APP_GUARD, useClass: IpThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
+    { provide: APP_GUARD, useClass: OwnerThrottlerGuard },
     // JSON bodies only, for every client (api-contracts → 415), after authentication.
     { provide: APP_GUARD, useClass: JsonBodyGuard },
   ],
