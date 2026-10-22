@@ -45,8 +45,9 @@ import { toTeamResponse } from './team.presenter';
 
 /** `/api/v1/teams`: private (global auth guard), always scoped to the signed-in owner. */
 @ApiTags('Teams')
-// Every route needs a session; unsafe ones also run the CSRF check for cookie sessions.
-@ApiErrorResponses([401])
+// Every route needs a session and is rate limited; unsafe ones also run the CSRF check for
+// cookie sessions.
+@ApiErrorResponses([401, 429])
 @Controller('teams')
 export class TeamsController {
   constructor(
@@ -116,6 +117,7 @@ export class TeamsController {
     400: 'VALIDATION_FAILED: an invalid or unknown field; `details` names it.',
     403: 'CSRF_REJECTED: a cookie-authenticated request from an untrusted origin.',
     409: 'TEAM_NAME_ALREADY_EXISTS: you already have an active team with this name (any letter case).',
+    413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
     415: 'UNSUPPORTED_MEDIA_TYPE: the body must be application/json.',
   })
   @UseInterceptors(EtagInterceptor)
@@ -154,6 +156,7 @@ export class TeamsController {
     404: 'TEAM_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
     409: 'TEAM_NAME_ALREADY_EXISTS: you already have an active team with this name (any letter case).',
     412: 'PRECONDITION_FAILED: If-Match is stale or malformed; `details.currentVersion`.',
+    413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
     415: 'UNSUPPORTED_MEDIA_TYPE: the body must be application/json.',
   })
   @ApiHeader({
