@@ -35,8 +35,9 @@ const withDatabase = {
   roots: ['<rootDir>/test'],
   globalSetup: '<rootDir>/test/support/global-setup.ts',
   globalTeardown: '<rootDir>/test/support/global-teardown.ts',
+  // The 120 s test timeout is set by jest.setTimeout() in after-env.ts: Jest 30 ignores a
+  // per-project `testTimeout` (test/support/effective-timeout.ts and the *timeout* specs prove it).
   setupFilesAfterEnv: ['<rootDir>/test/support/after-env.ts'],
-  testTimeout: 120_000,
 } satisfies Config;
 
 // CI writes a JUnit report per run (named after the selected project); the integration job
