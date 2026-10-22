@@ -83,6 +83,27 @@ describe('setupApp', () => {
     expect(app.get).toHaveBeenCalledWith(Reflector);
   });
 
+  it('PR #29: an empty CORS_ORIGINS registers no CORS at all', () => {
+    const other = new Map<unknown, unknown>(fromContainer);
+    other.set(APP_CONFIG, { corsOrigins: [] });
+    const bare = {
+      get: jest.fn((token: unknown) => other.get(token)),
+      useLogger: jest.fn(),
+      enableShutdownHooks: jest.fn(),
+      use: jest.fn(),
+      enableCors: jest.fn(),
+      setGlobalPrefix: jest.fn(),
+      enableVersioning: jest.fn(),
+      useGlobalPipes: jest.fn(),
+      useGlobalInterceptors: jest.fn(),
+      useGlobalFilters: jest.fn(),
+    };
+
+    setupApp(bare as unknown as INestApplication);
+
+    expect(bare.enableCors).not.toHaveBeenCalled();
+  });
+
   it('keeps the documented order', () => {
     expect(calls).toEqual([
       'useLogger',

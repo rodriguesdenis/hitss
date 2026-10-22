@@ -8,6 +8,7 @@ describe('corsOptions', () => {
       origin: ['https://app.example.test', 'http://localhost:8081'],
       credentials: true,
       exposedHeaders: EXPOSED_HEADERS,
+      maxAge: 600,
     });
   });
 
@@ -18,12 +19,13 @@ describe('corsOptions', () => {
         origin: '*',
         credentials: false,
         exposedHeaders: EXPOSED_HEADERS,
+        maxAge: 600,
       });
     },
   );
 
-  it('an empty list allows no cross-origin browser access', () => {
-    expect(corsOptions([])).toMatchObject({ origin: [], credentials: true });
+  it('PR #29: an empty list means no CORS at all (nothing to register)', () => {
+    expect(corsOptions([])).toBeUndefined();
   });
 
   it('exposes the headers the app reads', () => {
@@ -42,6 +44,6 @@ describe('corsOptions', () => {
     const options = corsOptions(origins);
     origins.push('https://evil.example.test');
 
-    expect(options.origin).toEqual(['https://app.example.test']);
+    expect(options?.origin).toEqual(['https://app.example.test']);
   });
 });
