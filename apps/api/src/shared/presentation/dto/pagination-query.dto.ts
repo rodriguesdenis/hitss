@@ -10,6 +10,9 @@ import { IsInt, Max, Min } from 'class-validator';
 export const toInteger = ({ value }: TransformFnParams): unknown =>
   typeof value === 'string' && /^-?\d+$/.test(value) ? Number(value) : value;
 
+/** Far beyond any real list; keeps OFFSET inside PostgreSQL's bigint. */
+export const MAX_OFFSET = 1_000_000;
+
 /**
  * Offset pagination of every list endpoint (ADR-0006). Extend it with the endpoint's own
  * filters; the global pipe refuses unknown parameters (AC-02.2.9).
@@ -23,10 +26,15 @@ export class PaginationQueryDto {
   @Max(100)
   limit: number = 20;
 
-  /** ≥ 0, default 0; past the end is an empty page, not an error (AC-02.2.4). */
-  @ApiPropertyOptional({ minimum: 0, default: 0 })
+  /**
+   * 0–1 000 000, default 0; past the end is an empty page, not an error (AC-02.2.4). The upper
+   * bound keeps a huge value (`99999999999999999999` is a valid IsInt 1e20) from reaching
+   * PostgreSQL's OFFSET as a bigint overflow, a 500 (Lynx review of #63).
+   */
+  @ApiPropertyOptional({ minimum: 0, maximum: MAX_OFFSET, default: 0 })
   @Transform(toInteger)
   @IsInt()
   @Min(0)
+  @Max(MAX_OFFSET)
   offset: number = 0;
 }

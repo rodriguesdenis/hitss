@@ -229,6 +229,7 @@ describe('GET /api/v1/teams (e2e)', () => {
       [{ limit: ['10', '20'] }, 'limit'],
       [{ offset: '-1' }, 'offset'],
       [{ offset: 'x' }, 'offset'],
+      [{ offset: '99999999999999999999' }, 'offset'],
     ])('AC-02.2.5 %j → 400 naming the parameter', async (query, field) => {
       const user = await signUpAndSignIn(app);
 
@@ -298,6 +299,20 @@ describe('GET /api/v1/teams (e2e)', () => {
 
         expect(body.data.map((team) => team.name)).toEqual([match]);
         expect(body.meta.total).toBe(1);
+      },
+    );
+
+    it.each([`'; DROP TABLE teams;--`, 'a\\b', `" OR 1=1 --`])(
+      'AC-02.3.3 a term with quotes or backslashes (%s) is matched literally → 200, empty list',
+      async (search) => {
+        const user = await signUpAndSignIn(app);
+        await seed(user, ['Mobile']);
+
+        expect(page(await list(user, { search }))).toEqual({
+          data: [],
+          meta: { total: 0, limit: 20, offset: 0, hasNextPage: false },
+        });
+        expect(page(await list(user)).meta.total).toBe(1); // the table is still there
       },
     );
 
