@@ -1,4 +1,4 @@
-import { Clock } from '../../../../../shared/application/ports/clock';
+import { Clock } from '../../../../../shared/domain/clock';
 import { InMemoryTeamDirectory } from '../../../../../../test/support/in-memory-team-directory';
 import { TaskNotFound } from '../../../domain/task.errors';
 import { TaskStatus } from '../../../domain/value-objects/task-status';

@@ -1,10 +1,13 @@
-import { Team, TeamProps } from '../../src/modules/teams/domain/team';
+import {
+  Team,
+  TeamProps,
+} from '../../src/modules/teams/domain/entities/team.entity';
 import {
   TeamNameAlreadyExists,
   TeamNotFound,
-} from '../../src/modules/teams/domain/team.errors';
-import { TeamRepository } from '../../src/modules/teams/domain/team.repository';
-import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name';
+} from '../../src/modules/teams/domain/errors/team.errors';
+import { TeamRepository } from '../../src/modules/teams/domain/repositories/team.repository';
+import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name.vo';
 
 /**
  * In-memory TeamRepository for handler unit tests. It passes the same contract suite as the
@@ -22,13 +25,13 @@ export class InMemoryTeamRepository extends TeamRepository {
 
   /** Every stored team, deleted ones included, as fresh aggregates. */
   all(): Team[] {
-    return [...this.rows.values()].map((row) => Team.reconstitute(row));
+    return [...this.rows.values()].map((row) => Team.restore(row));
   }
 
   findById(ownerId: string, id: string): Promise<Team | null> {
     const row = this.rows.get(id);
     const visible = row && row.ownerId === ownerId && row.deletedAt === null;
-    return Promise.resolve(visible ? Team.reconstitute(row) : null);
+    return Promise.resolve(visible ? Team.restore(row) : null);
   }
 
   existsActiveByName(

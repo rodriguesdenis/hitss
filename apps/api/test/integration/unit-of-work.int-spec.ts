@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication, Injectable, Module } from '@nestjs/common';
-import { CommandBus, EventsHandler, IEventHandler } from '@nestjs/cqrs';
+import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { TransactionHost } from '@nestjs-cls/transactional';
 import { ClsService } from 'nestjs-cls';
 import { Client } from 'pg';
@@ -9,8 +9,8 @@ import {
   InTransactionHandler,
 } from '../../src/shared/application/in-transaction-handler';
 import type { PrismaTransactionHost } from '../../src/shared/infrastructure/transactions/cls-unit-of-work';
-import { DeleteTeamCommand } from '../../src/modules/teams/application/commands/delete-team/delete-team.command';
-import { TeamDeleted } from '../../src/modules/teams/domain/team.events';
+import { DeleteTeamUseCase } from '../../src/modules/teams/application/use-cases/delete-team.use-case';
+import { TeamDeleted } from '../../src/modules/teams/domain/entities/team.events';
 import { createTestApp } from '../support/app';
 import { signUpAndSignIn } from '../support/auth';
 import { useTestDatabase } from '../support/postgres';
@@ -149,7 +149,11 @@ describe('UnitOfWork and the two-phase publisher (integration, T-002-09)', () =>
   const deleteTeam = (id: string) =>
     app
       .get(ClsService)
-      .run(() => app.get(CommandBus).execute(new DeleteTeamCommand(OWNER, id)));
+      .run(() =>
+        app
+          .get(DeleteTeamUseCase, { strict: false })
+          .execute({ ownerId: OWNER, id }),
+      );
 
   it('AC-02.7.4 a failing in-transaction reaction rolls the soft delete back: the team stays active', async () => {
     const team = await insertTeam('Rollback');

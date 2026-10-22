@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { TaskStatus } from '../../src/modules/tasks/domain/value-objects/task-status';
 import { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import type { Sort } from '../../src/shared/application/page';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import type { TeamSortField } from '../../src/modules/teams/application/ports/team.read-model';
-import { PrismaTeamReadModel } from '../../src/modules/teams/infrastructure/prisma-team.read-model';
+import { PrismaTeamReadModel } from '../../src/modules/teams/infrastructure/persistence/team.prisma-read';
 import { createTestApp } from '../support/app';
 import { useTestDatabase } from '../support/postgres';
 
@@ -14,7 +15,7 @@ const NEWEST_FIRST: Sort<TeamSortField> = {
 };
 const T0 = Date.parse('2026-10-01T00:00:00.000Z');
 
-describe('PrismaTeamReadModel (integration, T-002-06a)', () => {
+describe('PrismaTeamReadModel (integration, T-002-06a, T-008-05)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
   let prisma: PrismaService;
@@ -89,6 +90,7 @@ describe('PrismaTeamReadModel (integration, T-002-06a)', () => {
         name: 'Mobile',
         colorHex: '#7C3AED',
         description: 'iOS & Android',
+        taskCount: 0,
         version: 1,
         createdAt: new Date(T0 + 60_000),
         updatedAt: new Date(T0 + 60_000),
@@ -348,6 +350,100 @@ describe('PrismaTeamReadModel (integration, T-002-06a)', () => {
     });
   });
 
+  describe('taskCount, counted in the same SQL (T-008-05, carried from T-003-14a)', () => {
+    async function task(
+      ownerId: string,
+      teams: string[],
+      extra: { status?: TaskStatus; deleted?: boolean } = {},
+    ): Promise<string> {
+      const id = randomUUID();
+      const status = extra.status ?? TaskStatus.PENDING;
+      const at = new Date(T0);
+      await prisma.task.create({
+        data: {
+          id,
+          ownerId,
+          title: `Task ${id.slice(0, 8)}`,
+          status,
+          completedAt: status === TaskStatus.DONE ? at : null,
+          createdAt: at,
+          updatedAt: at,
+          deletedAt: extra.deleted ? at : null,
+          teams: { create: teams.map((teamId) => ({ teamId })) },
+        },
+      });
+      return id;
+    }
+
+    const countOf = async (ownerId: string, id: string) =>
+      (await readModel.findById(ownerId, id))?.taskCount;
+
+    it('AC-02.8.1 counts the owner’s active tasks per team, whatever their status, in page and findById', async () => {
+      const ownerId = await newOwner();
+      const mobile = await team(ownerId, 'Mobile', 1);
+      const backend = await team(ownerId, 'Backend', 2);
+      const design = await team(ownerId, 'Design', 3);
+      await task(ownerId, [mobile, backend], { status: TaskStatus.PENDING });
+      await task(ownerId, [mobile], { status: TaskStatus.IN_PROGRESS });
+      await task(ownerId, [mobile], { status: TaskStatus.DONE });
+      await task(ownerId, []);
+
+      const { items } = await readModel.page(ownerId, {
+        page: { limit: 20, offset: 0 },
+        sort: NEWEST_FIRST,
+      });
+
+      expect(
+        Object.fromEntries(items.map((t) => [t.name, t.taskCount])),
+      ).toEqual({ Mobile: 3, Backend: 1, Design: 0 });
+      expect(await countOf(ownerId, mobile)).toBe(3);
+      expect(await countOf(ownerId, design)).toBe(0);
+    });
+
+    it('AC-03.11.3 AC-02.8.2 never counts a deleted task (its links remain) or an unassigned one', async () => {
+      const ownerId = await newOwner();
+      const id = await team(ownerId, 'Mobile', 1);
+      await task(ownerId, [id]);
+      await task(ownerId, [id], { deleted: true });
+      const unassigned = await task(ownerId, [id]);
+      await prisma.taskTeam.deleteMany({ where: { taskId: unassigned } });
+
+      expect(await prisma.taskTeam.count({ where: { teamId: id } })).toBe(2);
+      expect(await countOf(ownerId, id)).toBe(1);
+    });
+
+    it('never counts another owner’s task, and unknown or foreign teams have no count at all', async () => {
+      const [ownerId, stranger] = [await newOwner(), await newOwner()];
+      const mine = await team(ownerId, 'Mine', 1);
+      const theirs = await team(stranger, 'Theirs', 1);
+      await task(ownerId, [mine]);
+      await task(stranger, [theirs]);
+      // A cross-owner link the API never creates (task_teams has no owner column).
+      await task(stranger, [mine]);
+
+      expect(await countOf(ownerId, mine)).toBe(1);
+      expect(await readModel.findById(ownerId, theirs)).toBeNull();
+      expect(await readModel.findById(ownerId, randomUUID())).toBeNull();
+    });
+
+    it('a page of N teams is two queries (page and total), never one per team', async () => {
+      const ownerId = await newOwner();
+      for (const n of [1, 2, 3]) {
+        await task(ownerId, [await team(ownerId, `Team ${n}`, n)]);
+      }
+      const queries: string[] = [];
+      prisma.$on('query', (event) => queries.push(event.query));
+
+      const { items } = await readModel.page(ownerId, {
+        page: { limit: 20, offset: 0 },
+        sort: NEWEST_FIRST,
+      });
+
+      expect(items.map((t) => t.taskCount)).toEqual([1, 1, 1]);
+      expect(queries.filter((q) => /\bSELECT\b/i.test(q))).toHaveLength(2);
+    });
+  });
+
   describe('query plans over 1,000 teams of one owner', () => {
     let ownerId: string;
 
@@ -398,6 +494,8 @@ describe('PrismaTeamReadModel (integration, T-002-06a)', () => {
       const plan = await planOf(NEWEST_FIRST);
 
       expect(plan).toContain('"Index Name":"teams_owner_id_created_at_idx"');
+      // taskCount: one index probe per returned team, not a scan of task_teams.
+      expect(plan).toContain('"Index Name":"task_teams_team_id_task_id_idx"');
       noSort(plan);
     });
 

@@ -76,7 +76,7 @@ describe('DELETE /api/v1/teams/:id and ownership (e2e)', () => {
     expect(response.body).toMatchObject({ error: { code: 'TEAM_NOT_FOUND' } });
   };
 
-  it('AC-02.7.1 AC-02.9.1 204, then get → 404 and the list excludes it', async () => {
+  it('AC-02.7.1 204, then get → 404 and the list excludes it', async () => {
     const user = await signUpAndSignIn(app);
     const team = await createTeam(user);
     await createTeam(user, 'Kept');
@@ -114,7 +114,7 @@ describe('DELETE /api/v1/teams/:id and ownership (e2e)', () => {
   });
 
   it.each([undefined, 'W/"1"', 'W/"9"', '*', 'garbage'])(
-    "AC-02.9.8 AC-01.6.3 a foreign team with If-Match %j → 404 identical to an unknown id; Rafael's team unchanged",
+    "AC-02.7.3 AC-01.6.3 a foreign team with If-Match %j → 404 identical to an unknown id; Rafael's team unchanged",
     async (ifMatch) => {
       const { marina, rafael } = await twoUsers(app);
       const theirs = await createTeam(rafael);

@@ -89,7 +89,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
   };
 
   describe('replacement', () => {
-    it('AC-02.6.1 AC-02.9.1 replaces every field: version 1 → 2, no ETag, updatedAt advances, createdAt kept', async () => {
+    it('AC-02.6.1 replaces every field: version 1 → 2, no ETag, updatedAt advances, createdAt kept', async () => {
       const user = await signUpAndSignIn(app);
       const team = await createTeam(user);
 
@@ -276,7 +276,7 @@ describe('PUT /api/v1/teams/:id (e2e)', () => {
     });
   });
 
-  describe('not found (AC-02.6.6, AC-02.9.7, AC-01.6.3)', () => {
+  describe('not found (AC-02.6.6, AC-01.6.3)', () => {
     it("AC-02.6.6 AC-01.6.3 a foreign team → 404 and Rafael's row is unchanged in the database", async () => {
       const { marina, rafael } = await twoUsers(app);
       const theirs = await createTeam(rafael);

@@ -1,6 +1,6 @@
 import { InMemoryTaskRepository } from '../../../../../../test/support/in-memory-task.repository';
 import { InMemoryTeamDirectory } from '../../../../../../test/support/in-memory-team-directory';
-import { Clock } from '../../../../../shared/application/ports/clock';
+import { Clock } from '../../../../../shared/domain/clock';
 import { DomainEventPublisher } from '../../../../../shared/application/ports/domain-event-publisher';
 import { UnitOfWork } from '../../../../../shared/application/ports/unit-of-work';
 import { IdGenerator } from '../../../../../shared/application/ports/id-generator';

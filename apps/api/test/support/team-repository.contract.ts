@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
-import { Team } from '../../src/modules/teams/domain/team';
+import { Team } from '../../src/modules/teams/domain/entities/team.entity';
 import {
   TeamNameAlreadyExists,
   TeamNotFound,
-} from '../../src/modules/teams/domain/team.errors';
-import { TeamRepository } from '../../src/modules/teams/domain/team.repository';
-import { ColorHex } from '../../src/modules/teams/domain/value-objects/color-hex';
-import { TeamDescription } from '../../src/modules/teams/domain/value-objects/team-description';
-import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name';
+} from '../../src/modules/teams/domain/errors/team.errors';
+import { TeamRepository } from '../../src/modules/teams/domain/repositories/team.repository';
+import { ColorHex } from '../../src/modules/teams/domain/value-objects/color-hex.vo';
+import { TeamDescription } from '../../src/modules/teams/domain/value-objects/team-description.vo';
+import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name.vo';
 
 export interface TeamRepositoryHarness {
   repository: TeamRepository;
@@ -23,16 +23,25 @@ export function aTeam(
   name = 'Mobile',
   extra: { id?: string; color?: string; description?: string | null } = {},
 ): Team {
-  return Team.create({
-    id: extra.id ?? randomUUID(),
+  const values = {
     ownerId,
     name: TeamName.create(name),
     color: ColorHex.create(extra.color ?? '#7C3AED'),
     description: TeamDescription.create(
       extra.description === undefined ? 'iOS & Android' : extra.description,
     ),
-    now: CREATED,
-  });
+  };
+  // A chosen id (to provoke a duplicate key) needs restore(); create() always draws a new one.
+  return extra.id === undefined
+    ? Team.create({ ...values, now: CREATED })
+    : Team.restore({
+        ...values,
+        id: extra.id,
+        version: 1,
+        createdAt: CREATED,
+        updatedAt: CREATED,
+        deletedAt: null,
+      });
 }
 
 function rename(team: Team, name: string): Team {
@@ -100,7 +109,7 @@ export function describeTeamRepositoryContract(
       ).toBeNull();
     });
 
-    it('AC-02.9.5 returns null for a foreign, unknown, malformed or deleted id', async () => {
+    it('AC-02.5.2 AC-02.5.3 AC-02.5.4 returns null for a foreign, unknown, malformed or deleted id', async () => {
       const [ownerId, stranger] = [await owner(), await owner()];
       const team = aTeam(ownerId);
       await repo().insert(team);
@@ -251,11 +260,11 @@ export function describeTeamRepositoryContract(
         expect(stored.version).toBe(3);
       });
 
-      it('AC-02.9.5 reports a foreign or unknown team as not found', async () => {
+      it('AC-02.6.6 reports a foreign or unknown team as not found', async () => {
         const [ownerId, stranger] = [await owner(), await owner()];
         const team = aTeam(ownerId);
         await repo().insert(team);
-        const impostor = Team.reconstitute({
+        const impostor = Team.restore({
           id: team.id,
           ownerId: stranger,
           name: TeamName.create('Hijack'),
