@@ -1,6 +1,6 @@
 import { EventBus } from '@nestjs/cqrs';
 import { InMemoryTaskRepository } from '../../../../../../test/support/in-memory-task.repository';
-import { Clock } from '../../../../../shared/application/ports/clock';
+import { Clock } from '../../../../../shared/domain/clock';
 import { Task } from '../../../domain/task';
 import { TaskStatusChanged } from '../../../domain/task.events';
 import { TaskNotFound } from '../../../domain/task.errors';

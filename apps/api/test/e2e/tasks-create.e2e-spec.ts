@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import request, { Response } from 'supertest';
 import { App } from 'supertest/types';
-import { Clock } from '../../src/shared/application/ports/clock';
+import { Clock } from '../../src/shared/domain/clock';
 import { createTestApp } from '../support/app';
 import { bearerOf, signUpAndSignIn, TestUser } from '../support/auth';
 import { useTestDatabase } from '../support/postgres';

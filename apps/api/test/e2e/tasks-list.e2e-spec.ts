@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import request, { Response } from 'supertest';
 import { App } from 'supertest/types';
-import { Clock } from '../../src/shared/application/ports/clock';
+import { Clock } from '../../src/shared/domain/clock';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '../support/app';
 import { bearerOf, signUpAndSignIn, TestUser } from '../support/auth';

@@ -12,7 +12,7 @@ import { TaskRepository } from '../../src/modules/tasks/domain/task.repository';
 import { TaskDescription } from '../../src/modules/tasks/domain/value-objects/task-description';
 import { TaskTeamIds } from '../../src/modules/tasks/domain/value-objects/task-team-ids';
 import { TaskTitle } from '../../src/modules/tasks/domain/value-objects/task-title';
-import { DeleteTeamCommand } from '../../src/modules/teams/application/commands/delete-team/delete-team.command';
+import { DeleteTeamUseCase } from '../../src/modules/teams/application/use-cases/delete-team.use-case';
 import { TeamDeleted } from '../../src/modules/teams/contracts/team-deleted.event';
 import { UnitOfWork } from '../../src/shared/application/ports/unit-of-work';
 import type { PrismaTransactionHost } from '../../src/shared/infrastructure/transactions/cls-unit-of-work';
@@ -73,7 +73,11 @@ describe('OnTeamDeletedHandler (integration, T-003-13)', () => {
   /** Runs in a CLS context, as the request middleware does for HTTP. */
   const inCls = <T>(work: () => Promise<T>) => app.get(ClsService).run(work);
   const deleteTeam = (id: string) =>
-    inCls(() => app.get(CommandBus).execute(new DeleteTeamCommand(owner, id)));
+    inCls(() =>
+      app
+        .get(DeleteTeamUseCase, { strict: false })
+        .execute({ ownerId: owner, id }),
+    );
 
   const team = async (name: string): Promise<string> => {
     const id = randomUUID();

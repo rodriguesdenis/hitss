@@ -1,36 +1,22 @@
 import { randomUUID } from 'node:crypto';
-import { INestApplication, Module } from '@nestjs/common';
-import { CqrsModule, QueryBus } from '@nestjs/cqrs';
-import { GetTeamSummariesHandler } from '../../src/modules/teams/application/queries/get-team-summaries/get-team-summaries.handler';
-import { TeamReadModel } from '../../src/modules/teams/application/ports/team.read-model';
-import { GetTeamSummariesQuery } from '../../src/modules/teams/contracts/get-team-summaries.query';
-import { PrismaTeamReadModel } from '../../src/modules/teams/infrastructure/prisma-team.read-model';
+import { INestApplication } from '@nestjs/common';
+import { TeamLookup } from '../../src/modules/teams/team-lookup.service';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '../support/app';
 import { useTestDatabase } from '../support/postgres';
 
-/** The handler and its read model, as teams.module.ts will register them (T-002-04). */
-@Module({
-  imports: [CqrsModule],
-  providers: [
-    GetTeamSummariesHandler,
-    { provide: TeamReadModel, useClass: PrismaTeamReadModel },
-  ],
-})
-class SummariesProbeModule {}
-
 const AT = new Date('2026-10-01T00:00:00.000Z');
 
-describe('GetTeamSummariesQuery through the QueryBus (integration, T-002-10a)', () => {
+describe('TeamLookup, as TeamsModule exports it (integration, T-008-05)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
   let prisma: PrismaService;
-  let queryBus: QueryBus;
+  let lookup: TeamLookup;
 
   beforeAll(async () => {
-    app = await createTestApp(db.url, { imports: [SummariesProbeModule] });
+    app = await createTestApp(db.url);
     prisma = app.get(PrismaService);
-    queryBus = app.get(QueryBus);
+    lookup = app.get(TeamLookup, { strict: false });
   });
 
   afterAll(async () => {
@@ -65,7 +51,7 @@ describe('GetTeamSummariesQuery through the QueryBus (integration, T-002-10a)', 
   }
 
   const summaries = (ownerId: string, ids: readonly string[]) =>
-    queryBus.execute(new GetTeamSummariesQuery(ownerId, ids));
+    lookup.summaries(ownerId, ids);
   const byId = <T extends { id: string }>(items: T[]) =>
     [...items].sort((a, b) => (a.id < b.id ? -1 : 1));
 
@@ -108,5 +94,23 @@ describe('GetTeamSummariesQuery through the QueryBus (integration, T-002-10a)', 
     await expect(summaries(ownerId, [])).resolves.toEqual([]);
     const result = await summaries(ownerId, [live, live, live.toUpperCase()]);
     expect(result.map((t) => t.id)).toEqual([live]);
+  });
+
+  it('findMissing reports deleted, foreign, unknown and malformed ids in input order', async () => {
+    const [ownerId, stranger] = [await newOwner(), await newOwner()];
+    const live = await team(ownerId, 'Live');
+    const deleted = await team(ownerId, 'Deleted', { deleted: true });
+    const foreign = await team(stranger, 'Theirs');
+    const unknown = randomUUID();
+
+    await expect(
+      lookup.findMissing(ownerId, [
+        'not-a-uuid',
+        deleted,
+        live.toUpperCase(),
+        foreign,
+        unknown,
+      ]),
+    ).resolves.toEqual(['not-a-uuid', deleted, foreign, unknown]);
   });
 });

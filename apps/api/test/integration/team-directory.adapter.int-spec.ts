@@ -1,45 +1,31 @@
 import { randomUUID } from 'node:crypto';
-import { INestApplication, Module } from '@nestjs/common';
-import { CqrsModule } from '@nestjs/cqrs';
+import { INestApplication } from '@nestjs/common';
 import { TeamDirectory } from '../../src/modules/tasks/application/ports/team-directory';
-import { QueryBusTeamDirectory } from '../../src/modules/tasks/infrastructure/adapters/team-directory.adapter';
-import { GetTeamSummariesHandler } from '../../src/modules/teams/application/queries/get-team-summaries/get-team-summaries.handler';
-import { TeamReadModel } from '../../src/modules/teams/application/ports/team.read-model';
-import { PrismaTeamReadModel } from '../../src/modules/teams/infrastructure/prisma-team.read-model';
+import { TeamLookupDirectory } from '../../src/modules/tasks/infrastructure/adapters/team-directory.adapter';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '../support/app';
 import { useTestDatabase } from '../support/postgres';
 
-/**
- * Both sides of the seam as their modules will register them: Team Management answers the
- * query, Task Management's adapter sends it. Nothing but the QueryBus connects them.
- */
-@Module({
-  imports: [CqrsModule],
-  providers: [
-    GetTeamSummariesHandler,
-    { provide: TeamReadModel, useClass: PrismaTeamReadModel },
-    { provide: TeamDirectory, useClass: QueryBusTeamDirectory },
-  ],
-})
-class DirectoryProbeModule {}
-
 const AT = new Date('2026-10-01T00:00:00.000Z');
 
-describe('QueryBusTeamDirectory (integration, T-003-05)', () => {
+describe('TeamLookupDirectory, as TasksModule wires it (integration, T-003-05, T-008-05)', () => {
   const db = useTestDatabase();
   let app: INestApplication;
   let prisma: PrismaService;
   let directory: TeamDirectory;
 
   beforeAll(async () => {
-    app = await createTestApp(db.url, { imports: [DirectoryProbeModule] });
+    app = await createTestApp(db.url);
     prisma = app.get(PrismaService);
-    directory = app.get(TeamDirectory);
+    directory = app.get(TeamDirectory, { strict: false });
   });
 
   afterAll(async () => {
     await app?.close();
+  });
+
+  it("TasksModule's TeamDirectory is answered by TeamsModule's exported TeamLookup", () => {
+    expect(directory).toBeInstanceOf(TeamLookupDirectory);
   });
 
   const newOwner = async (): Promise<string> =>
@@ -105,7 +91,7 @@ describe('QueryBusTeamDirectory (integration, T-003-05)', () => {
     expect(missing).toEqual(['not-a-uuid', deleted, foreign, unknown]);
   });
 
-  it('answers empty input without asking Team Management, and matches ids in any case', async () => {
+  it('answers empty input, and matches ids in any case', async () => {
     const ownerId = await newOwner();
     const live = await team(ownerId, 'Mobile');
 

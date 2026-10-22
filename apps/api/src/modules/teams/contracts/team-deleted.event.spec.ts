@@ -1,4 +1,4 @@
-import { TeamDeleted as DomainTeamDeleted } from '../domain/team.events';
+import { TeamDeleted as DomainTeamDeleted } from '../domain/entities/team.events';
 import { TeamDeleted } from './team-deleted.event';
 
 describe('TeamDeleted contract', () => {

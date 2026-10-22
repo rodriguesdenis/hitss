@@ -1,5 +1,5 @@
 import { Client } from 'pg';
-import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name';
+import { TeamName } from '../../src/modules/teams/domain/value-objects/team-name.vo';
 import { postgresImage, useTestDatabase } from '../support/postgres';
 
 /**

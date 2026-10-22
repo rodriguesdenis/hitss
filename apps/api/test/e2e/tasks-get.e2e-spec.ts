@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { Clock } from '../../src/shared/application/ports/clock';
+import { Clock } from '../../src/shared/domain/clock';
 import { PrismaService } from '../../src/shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '../support/app';
 import { bearerOf, TestUser, twoUsers } from '../support/auth';
@@ -29,7 +29,7 @@ interface TaskBody {
 
 /**
  * GET /api/v1/tasks/:id on the full AppModule: TasksModule and TeamsModule wired as in
- * production, teams resolved through the QueryBus (GetTeamSummariesQuery), only the clock fixed.
+ * production, teams resolved through TeamsModule's TeamLookup, only the clock fixed.
  */
 describe('GET /api/v1/tasks/:id (e2e)', () => {
   const db = useTestDatabase();
