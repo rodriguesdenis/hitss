@@ -72,12 +72,17 @@ module.exports = {
     {
       name: 'contexts-isolated',
       comment:
-        'A5: any layer of a bounded context may reach another context only through its contracts/ folder.',
+        'A5 (ADR-0020): a module reaches another only through its exported lookup service and its module file (and contracts/ until T-008-06).',
       severity: 'error',
       from: { path: '^src/modules/([^/]+)/', ...NON_SPEC },
       to: {
         path: '^src/modules/[^/]+/',
-        pathNot: ['^src/modules/$1/', '^src/modules/[^/]+/contracts/'],
+        pathNot: [
+          '^src/modules/$1/',
+          '^src/modules/[^/]+/contracts/',
+          '^src/modules/[^/]+/[^/]+-lookup\\.service\\.ts$',
+          '^src/modules/[^/]+/[^/]+\\.module\\.ts$',
+        ],
       },
     },
     {
@@ -90,7 +95,7 @@ module.exports = {
         path: '^src/',
         pathNot: [
           '^src/modules/[^/]+/contracts/',
-          '^src/modules/$1/domain/[^/]+\\.events\\.ts$',
+          '^src/modules/$1/domain/(entities/)?[^/]+\\.events\\.ts$',
           '^src/shared/domain/',
         ],
       },

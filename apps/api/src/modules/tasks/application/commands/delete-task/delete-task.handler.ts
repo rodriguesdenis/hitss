@@ -1,5 +1,5 @@
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
-import { Clock } from '../../../../../shared/application/ports/clock';
+import { Clock } from '../../../../../shared/domain/clock';
 import { TaskNotFound } from '../../../domain/task.errors';
 import { TaskRepository } from '../../../domain/task.repository';
 import { DeleteTaskCommand } from './delete-task.command';

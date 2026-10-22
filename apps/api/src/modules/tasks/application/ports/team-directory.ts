@@ -6,9 +6,8 @@ export interface TeamSummary {
 }
 
 /**
- * Task Management's view of Team Management, in its own language (constitution II.2): no
- * import of the teams module. The adapter (T-003-05) sends GetTeamSummariesQuery from
- * teams/contracts on the QueryBus.
+ * Task Management's view of Team Management, in its own language (constitution II.2). The
+ * adapter answers it with Team Management's exported TeamLookup (ADR-0020).
  */
 export abstract class TeamDirectory {
   /** The owner's live teams among `ids`; deleted, foreign and unknown ids are omitted. */
