@@ -35,4 +35,32 @@ describe('TeamLookup', () => {
     await expect(lookup.findMissing('owner-1', [])).resolves.toEqual([]);
     expect(summaries).not.toHaveBeenCalled();
   });
+
+  describe('assertAllLive', () => {
+    const toError = (missing: string[]) =>
+      new Error(`missing: ${missing.join(',')}`);
+
+    it('AC-03.1.6 throws the caller’s error naming exactly the missing ids', async () => {
+      summaries.mockResolvedValue([
+        { id: MOBILE, name: 'Mobile', colorHex: '#7C3AED' },
+      ]);
+
+      await expect(
+        lookup.assertAllLive('owner-1', [MOBILE, BACKEND], toError),
+      ).rejects.toThrow(`missing: ${BACKEND}`);
+    });
+
+    it('resolves when every id is a live team of the owner, or there are none', async () => {
+      summaries.mockResolvedValue([
+        { id: MOBILE, name: 'Mobile', colorHex: '#7C3AED' },
+      ]);
+
+      await expect(
+        lookup.assertAllLive('owner-1', [MOBILE], toError),
+      ).resolves.toBeUndefined();
+      await expect(
+        lookup.assertAllLive('owner-1', [], toError),
+      ).resolves.toBeUndefined();
+    });
+  });
 });

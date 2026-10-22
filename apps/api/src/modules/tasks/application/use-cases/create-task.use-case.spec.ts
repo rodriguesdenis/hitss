@@ -104,4 +104,25 @@ describe('CreateTaskUseCase', () => {
     expect((error as UnknownTeams).teamIds).toEqual([team(2)]);
     expect(tasks.all()).toEqual([]);
   });
+
+  it('any other insert error, or an UnknownTeams that already names ids, passes through without asking again', async () => {
+    const boom = new Error('boom');
+    const precise = new UnknownTeams([team(9)]);
+    const insert = jest.spyOn(tasks, 'insert');
+    const findMissing = jest.spyOn(directory, 'findMissing');
+
+    insert.mockRejectedValueOnce(boom);
+    await expect(create({ teamIds: [team(1)] })).rejects.toBe(boom);
+    insert.mockRejectedValueOnce(precise);
+    await expect(create({ teamIds: [team(1)] })).rejects.toBe(precise);
+    // Only the two pre-write checks asked the directory.
+    expect(findMissing).toHaveBeenCalledTimes(2);
+  });
+
+  it('a link failure the directory cannot explain any more keeps the original error', async () => {
+    const vague = new UnknownTeams([]);
+    jest.spyOn(tasks, 'insert').mockRejectedValueOnce(vague);
+
+    await expect(create({ teamIds: [team(1)] })).rejects.toBe(vague);
+  });
 });

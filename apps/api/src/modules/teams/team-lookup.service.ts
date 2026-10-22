@@ -34,4 +34,19 @@ export class TeamLookup {
     );
     return ids.filter((id) => !live.has(id.toLowerCase()));
   }
+
+  /**
+   * Throws `toError(missing)` when any of `ids` is not a live team of the owner, so the caller
+   * keeps its own error type (Team Management knows nothing of tasks).
+   */
+  async assertAllLive(
+    ownerId: string,
+    ids: readonly string[],
+    toError: (missing: string[]) => Error,
+  ): Promise<void> {
+    const missing = await this.findMissing(ownerId, ids);
+    if (missing.length > 0) {
+      throw toError(missing);
+    }
+  }
 }
