@@ -160,6 +160,88 @@ describe('Better Auth at /api/auth (e2e)', () => {
     });
   });
 
+  describe('sign-up name rule and input normalization (T-001-07)', () => {
+    it.each([
+      ['1 character', 'M', 'M'],
+      ['100 characters', 'n'.repeat(100), 'n'.repeat(100)],
+      ['surrounding spaces', '  Marina  ', 'Marina'],
+    ])(
+      'AC-01.1.5 a name of %s is accepted and stored trimmed',
+      async (_label, name, stored) => {
+        const response = await signUp(freshEmail(), PASSWORD, name);
+
+        expect(response.status).toBe(200);
+        expect((response.body as { user: AuthUser }).user.name).toBe(stored);
+        expect(
+          (
+            await sql.query<{ name: string }>(
+              'SELECT name FROM users WHERE id = $1',
+              [(response.body as { user: AuthUser }).user.id],
+            )
+          ).rows[0]?.name,
+        ).toBe(stored);
+      },
+    );
+
+    it.each([
+      ['blank', '   '],
+      ['101 characters', 'n'.repeat(101)],
+      ['a newline', 'Mari\nna'],
+      ['a NUL', 'Marina\u0000'],
+    ])(
+      'AC-01.1.5 a name that is %s → 400 and no account is created',
+      async (_label, name) => {
+        const email = freshEmail();
+        const response = await signUp(email, PASSWORD, name);
+
+        expect(response.status).toBe(400);
+        expect(response.body).toMatchObject({ code: 'INVALID_NAME' });
+        expect(await count('users', 'email = $1', [email])).toBe(0);
+      },
+    );
+
+    it('AC-01.1.5 a missing name → 400', async () => {
+      const response = await http()
+        .post('/api/auth/sign-up/email')
+        .send({ email: freshEmail(), password: PASSWORD });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('AC-01.2.6 sign-in with a space-padded, mixed-case email succeeds', async () => {
+      const email = freshEmail();
+      await signUp(email);
+
+      expect((await signIn(`  ${email.toUpperCase()}  `)).status).toBe(200);
+    });
+
+    it('AC-01.2.6 a space-padded email at sign-up is stored trimmed', async () => {
+      const email = freshEmail();
+
+      const response = await signUp(`  ${email} `);
+
+      expect((response.body as { user: AuthUser }).user.email).toBe(email);
+    });
+
+    it('AC-01.2.6 the password is never trimmed: a trailing space is a different password', async () => {
+      const email = freshEmail();
+      await signUp(email);
+
+      expect((await signIn(email, `${PASSWORD} `)).status).toBe(401);
+      expect((await signIn(email, ` ${PASSWORD}`)).status).toBe(401);
+      expect((await signIn(email)).status).toBe(200);
+    });
+
+    it('AC-01.2.6 a password with surrounding spaces is kept as is', async () => {
+      const email = freshEmail();
+      const padded = `  ${PASSWORD}  `;
+      await signUp(email, padded);
+
+      expect((await signIn(email, padded)).status).toBe(200);
+      expect((await signIn(email, PASSWORD)).status).toBe(401);
+    });
+  });
+
   describe('sign-in (US-01.2)', () => {
     it('AC-01.2.1 issues a session cookie and a signed bearer token, without secrets in the body', async () => {
       const email = freshEmail();
