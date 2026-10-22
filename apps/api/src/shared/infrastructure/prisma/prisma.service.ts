@@ -13,7 +13,9 @@ import { Prisma, PrismaClient } from '../../../generated/prisma/client';
 import {
   DATABASE_PROBE_TIMEOUT,
   DATABASE_PROBE_TIMEOUT_MS,
+  POOL_CLOSE_GRACE_MS,
   probeDatabase,
+  settleWithin,
 } from './database-probe';
 
 // Prisma logs are emitted as events and routed to the Nest logger (pino once 006 lands).
@@ -87,14 +89,15 @@ export class PrismaService
   /**
    * $connect opens nothing with the pg adapter, so a probe query proves the database answers.
    * A failure aborts the Nest bootstrap and the process exits non-zero (VII.3). The pool is
-   * closed first (best effort), so a failed boot never leaves sockets open.
+   * closed first, best effort and bounded: closing waits for pending connection attempts, which
+   * against a black-holed host would otherwise hang the failing boot.
    */
   async onModuleInit(): Promise<void> {
     await this.$connect();
     try {
       await probeDatabase(() => this.$queryRaw`SELECT 1`, this.probeTimeoutMs);
     } catch (error) {
-      await this.$disconnect().catch(() => undefined);
+      await settleWithin(this.$disconnect(), POOL_CLOSE_GRACE_MS);
       throw error;
     }
   }

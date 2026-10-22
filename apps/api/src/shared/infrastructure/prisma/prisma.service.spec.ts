@@ -1,5 +1,8 @@
 import type { AppConfig } from '../../../config/app-config';
-import { DatabaseUnavailableError } from './database-probe';
+import {
+  DatabaseUnavailableError,
+  POOL_CLOSE_GRACE_MS,
+} from './database-probe';
 import { PrismaService, toLogEventLog, toQueryLog } from './prisma.service';
 
 const EMAIL = 'someone@example.test';
@@ -112,5 +115,26 @@ describe('PrismaService.onModuleInit', () => {
     );
     // A failing disconnect does not mask the probe error.
     expect(disconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not wait longer than the grace period for a pool that never closes', async () => {
+    jest.useFakeTimers();
+    try {
+      const prisma = service();
+      jest.spyOn(prisma, '$connect').mockResolvedValue(undefined);
+      jest.spyOn(prisma, '$disconnect').mockReturnValue(new Promise(() => {}));
+      jest
+        .spyOn(prisma, '$queryRaw')
+        .mockRejectedValue(
+          Object.assign(new Error('refused'), { code: 'ECONNREFUSED' }),
+        );
+
+      const boot = prisma.onModuleInit().catch((e: unknown) => e);
+      await jest.advanceTimersByTimeAsync(POOL_CLOSE_GRACE_MS);
+
+      await expect(boot).resolves.toBeInstanceOf(DatabaseUnavailableError);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

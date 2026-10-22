@@ -6,6 +6,31 @@
  */
 export const DATABASE_PROBE_TIMEOUT_MS = 10_000;
 
+/**
+ * How long a failed boot waits for the pool to close before giving up. Closing waits for pending
+ * connection attempts, and against a database that never answers those only end at the OS TCP
+ * timeout; an unbounded wait would turn fail fast into a hang.
+ */
+export const POOL_CLOSE_GRACE_MS = 1_000;
+
+/** Waits for `work` (errors ignored) for at most `ms`; never rejects. */
+export async function settleWithin(
+  work: Promise<unknown>,
+  ms: number,
+): Promise<void> {
+  let timer: NodeJS.Timeout | undefined;
+  await Promise.race([
+    work.then(
+      () => undefined,
+      () => undefined,
+    ),
+    new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, ms);
+    }),
+  ]);
+  clearTimeout(timer);
+}
+
 /** DI token for the probe bound; PrismaModule provides the default, tests may shorten it. */
 export const DATABASE_PROBE_TIMEOUT = Symbol('DATABASE_PROBE_TIMEOUT');
 

@@ -2,6 +2,7 @@ import {
   DATABASE_PROBE_TIMEOUT_MS,
   DatabaseUnavailableError,
   probeDatabase,
+  settleWithin,
 } from './database-probe';
 
 // Built at runtime, low entropy: only used to prove it never leaks into the error.
@@ -91,5 +92,31 @@ describe('probeDatabase', () => {
 
   it('bounds startup at 10 seconds by default', () => {
     expect(DATABASE_PROBE_TIMEOUT_MS).toBe(10_000);
+  });
+});
+
+describe('settleWithin', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('resolves when the work settles, even if it rejects', async () => {
+    await expect(
+      settleWithin(Promise.reject(new Error('x')), 1_000),
+    ).resolves.toBeUndefined();
+  });
+
+  it('gives up after the bound when the work never settles', async () => {
+    jest.useFakeTimers();
+    let done = false;
+    const waiting = settleWithin(new Promise(() => {}), 1_000).then(() => {
+      done = true;
+    });
+
+    await jest.advanceTimersByTimeAsync(999);
+    expect(done).toBe(false);
+    await jest.advanceTimersByTimeAsync(1);
+    await waiting;
+    expect(done).toBe(true);
   });
 });
