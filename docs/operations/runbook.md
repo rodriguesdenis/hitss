@@ -12,6 +12,7 @@ Local operation of Teams & Tasks. Commands assume the repository root. Every `ma
 | Re-apply demo data                                         | `make seed`                                                                                                                                                      |
 | Wipe everything and start fresh                            | `make reset`                                                                                                                                                     |
 | Smoke test (stop the dev stack first: ports 3000 and 5432) | `make smoke`                                                                                                                                                     |
+| Expo dev server for Expo Go (optional, profile `mobile`)   | `make mobile` · see [Mobile dev server](#mobile-dev-server-optional)                                                                                             |
 | Status                                                     | `docker compose ps` (look for `healthy`)                                                                                                                         |
 
 URLs once healthy:
@@ -21,6 +22,49 @@ URLs once healthy:
 - Demo account: `demo@teams-tasks.dev` / `Demo@1234`
 
 Settings: none required. To override, create `.env` from `.env.example` (compose reads it automatically) or prefix the command: `API_PORT=3100 make up`.
+
+## Mobile dev server (optional)
+
+Runs Metro (the Expo dev server) in a container so the app opens in **Expo Go** on a phone with only Docker installed. It is behind the compose profile `mobile`: a plain `docker compose up` / `make up` never starts it.
+
+```sh
+make up                                                        # the API the app talks to
+EXPO_PUBLIC_API_URL=http://192.168.0.10:3000 make mobile       # = docker compose --profile mobile up --build mobile
+```
+
+The terminal shows a QR code: scan it with Expo Go (Android) or the Camera app (iOS). Stop with `Ctrl+C`. Settings come from the shell or `.env` (see `.env.example`); the image never contains a `.env` file.
+
+**Point the app at the API (`EXPO_PUBLIC_API_URL`).** The app calls this origin from the phone, so `localhost` means the phone itself. It is read when Metro bundles the app; after changing it, stop and run `make mobile` again.
+
+| Where the app runs                     | `EXPO_PUBLIC_API_URL`                                                                    |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Phone on the same Wi-Fi                | `http://<this computer's LAN IP>:3000` (the API is published on `0.0.0.0`, `API_BIND`)   |
+| Android emulator on this computer      | `http://10.0.2.2:3000`                                                                   |
+| iOS simulator on this computer         | `http://localhost:3000` (the default)                                                    |
+| Phone on another network (mobile data) | an API origin the phone can reach from the internet; the Metro tunnel does not carry API |
+
+**How Expo Go reaches Metro (`EXPO_DEV_MODE`).**
+
+| Mode               | Use when                                              | Trade-off                                                                                                                                                                                                         |
+| ------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tunnel` (default) | the phone is on another network, or the LAN blocks it | Works from anywhere without firewall changes, but goes through Expo's ngrok tunnel (a third-party service): slower reloads and an outage there stops it. It exposes Metro only, never the API.                    |
+| `lan`              | phone and computer on the same Wi-Fi                  | Fast and local, but needs `REACT_NATIVE_PACKAGER_HOSTNAME=<this computer's LAN IP>` (inside the container Expo only sees the container IP, which the phone cannot reach) and port 8081 open on the host firewall. |
+| `localhost`        | an emulator or simulator on this computer             | Nothing leaves the machine; no phone can connect.                                                                                                                                                                 |
+
+```sh
+EXPO_DEV_MODE=lan REACT_NATIVE_PACKAGER_HOSTNAME=192.168.0.10 \
+  EXPO_PUBLIC_API_URL=http://192.168.0.10:3000 make mobile
+```
+
+**Windows with WSL 2.** Use `networkingMode=mirrored` in `%UserProfile%\.wslconfig`: WSL then shares the Windows network interfaces, so the LAN IP to use is the Windows one (`ipconfig`, the Wi-Fi adapter) and published ports are reachable on it. Inbound connections to WSL also pass the Hyper-V firewall; allow only the two ports once, in an elevated PowerShell:
+
+```powershell
+New-NetFirewallHyperVRule -Name expo-dev -DisplayName "Expo Metro and Teams & Tasks API" -Direction Inbound -VMCreatorId '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -Protocol TCP -LocalPorts 8081,3000
+```
+
+The tunnel mode needs none of this.
+
+**Expo Go cannot connect.** Check the QR's address: in `lan` mode it must be `exp://<LAN IP>:8081`; otherwise set `REACT_NATIVE_PACKAGER_HOSTNAME`. If the bundle loads but every request fails, `EXPO_PUBLIC_API_URL` is not reachable from the phone: open `<that URL>/api/v1/health/live` in the phone's browser. If the tunnel does not start, retry or switch to `lan`.
 
 ## Common failures
 
