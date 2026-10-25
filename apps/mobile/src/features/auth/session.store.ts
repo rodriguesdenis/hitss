@@ -1,22 +1,29 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
-type SessionNoticeState = {
+type SessionState = {
   expired: boolean;
+  signingOut: boolean;
   markExpired: () => void;
-  clear: () => void;
+  clearExpired: () => void;
+  setSigningOut: (signingOut: boolean) => void;
 };
 
-export const useSessionNotice = create<SessionNoticeState>()(
+export const useSessionStore = create<SessionState>()(
   immer((set) => ({
     expired: false,
+    signingOut: false,
     markExpired: () =>
       set((state) => {
         state.expired = true;
       }),
-    clear: () =>
+    clearExpired: () =>
       set((state) => {
         state.expired = false;
+      }),
+    setSigningOut: (signingOut) =>
+      set((state) => {
+        state.signingOut = signingOut;
       }),
   })),
 );
