@@ -21,6 +21,13 @@ it('AC-04.1.6 sends a 401 back to sign-in with the session-expired message', asy
       ),
     ),
   );
+  const pausedChange = queryClient()
+    .getMutationCache()
+    .build(queryClient(), {
+      mutationKey: ['tasks', 'changeStatus'],
+      mutationFn: () => new Promise(() => undefined),
+      gcTime: Infinity,
+    });
   await act(() => queryClient().refetchQueries());
 
   expect(await screen.findByText('sign-in screen')).toBeOnTheScreen();
@@ -29,4 +36,5 @@ it('AC-04.1.6 sends a 401 back to sign-in with the session-expired message', asy
   ).toBeOnTheScreen();
   await expect(getToken()).resolves.toBeNull();
   expect(queryClient().getQueryCache().getAll()).toHaveLength(0);
+  expect(queryClient().getMutationCache().getAll()).toEqual([pausedChange]);
 });

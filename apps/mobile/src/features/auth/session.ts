@@ -27,7 +27,7 @@ let expiring: Promise<void> | null = null;
 export function expireSession(queryClient: QueryClient): Promise<void> {
   expiring ??= (async () => {
     await deleteToken();
-    queryClient.clear();
+    queryClient.getQueryCache().clear();
     useSessionStore.getState().markExpired();
     refreshSession();
   })().finally(() => {
