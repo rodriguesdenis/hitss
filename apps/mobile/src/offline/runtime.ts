@@ -4,6 +4,7 @@ import type { Persister } from '@tanstack/react-query-persist-client';
 import { asyncStorage, type StorageAdapter } from '@/lib/storage';
 
 import { appCacheBuster } from './config';
+import { endSyncSession } from './durable-mutation';
 import { startNetwork } from './network';
 import { createSessionGate, type SessionGate } from './session-gate';
 import { createOwnerPersister } from './persister';
@@ -41,6 +42,7 @@ export function createOfflineRuntime({
   });
 
   const purge = async () => {
+    endSyncSession(queryClient);
     queryClient.getMutationCache().clear();
     queryClient.clear();
     await persister.removeClient();

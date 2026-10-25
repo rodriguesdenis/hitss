@@ -40,6 +40,7 @@ export function expireSession(queryClient: QueryClient): Promise<void> {
 
 export async function signOut(queryClient: QueryClient): Promise<void> {
   const { setSigningOut, clearExpired } = useSessionStore.getState();
+  setSyncAllowed(false);
   setSigningOut(true);
   try {
     await authClient.signOut().catch(() => undefined);
