@@ -7,3 +7,7 @@ packages:
 onlyBuiltDependencies:
   - '@prisma/engines'
   - prisma
+
+overrides:
+  'body-parser@>=2.0.0 <2.4.0': 2.4.0
+  'multer@>=2.0.0 <2.5.0': 2.5.0
