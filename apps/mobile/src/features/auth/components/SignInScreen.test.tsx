@@ -33,9 +33,11 @@ describe('SignInScreen', () => {
     await fireEvent.changeText(screen.getByLabelText('E-mail'), 'marina');
     await fireEvent.press(screen.getByRole('button', { name: 'Entrar' }));
     expect(
-      await screen.findByText('Informe um e-mail válido'),
+      await screen.findByLabelText('E-mail, Informe um e-mail válido'),
     ).toBeOnTheScreen();
-    expect(screen.getByText('Este campo é obrigatório')).toBeOnTheScreen();
+    expect(
+      screen.getByLabelText('Senha, Este campo é obrigatório'),
+    ).toBeOnTheScreen();
     expect(calls).not.toHaveBeenCalled();
     server.events.removeAllListeners();
   });

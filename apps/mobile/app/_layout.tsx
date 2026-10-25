@@ -8,6 +8,7 @@ import { setupApiClient } from '@/lib/api';
 import { createQueryClient } from '@/lib/query-client';
 import { QueryProvider } from '@/lib/QueryProvider';
 import { ThemeProvider } from '@/theme/ThemeProvider';
+import { Toaster } from '@/ui';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -23,6 +24,7 @@ export default function RootLayout() {
       <ThemeProvider>
         <QueryProvider client={queryClient}>
           <AuthGate />
+          <Toaster />
         </QueryProvider>
       </ThemeProvider>
     </SafeAreaProvider>

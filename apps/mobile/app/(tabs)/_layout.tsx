@@ -1,26 +1,26 @@
-import Feather from '@expo/vector-icons/Feather';
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 
 import { tokens } from '@/theme/tokens';
 import { useColorSchemeName } from '@/theme/ThemeProvider';
+import { Icon, type IconName } from '@/ui';
 
 type TabIconProps = { color: ColorValue; size: number };
 
-const tint = (color: ColorValue) =>
-  typeof color === 'string' ? color : undefined;
+const tabIcon = (name: IconName) =>
+  function TabIcon({ color, size }: TabIconProps) {
+    return (
+      <Icon
+        name={name}
+        color={typeof color === 'string' ? (color as `#${string}`) : 'fg'}
+        size={size}
+      />
+    );
+  };
 
-function TasksIcon({ color, size }: TabIconProps) {
-  return <Feather name="check-square" color={tint(color)} size={size} />;
-}
-
-function TeamsIcon({ color, size }: TabIconProps) {
-  return <Feather name="users" color={tint(color)} size={size} />;
-}
-
-function SettingsIcon({ color, size }: TabIconProps) {
-  return <Feather name="settings" color={tint(color)} size={size} />;
-}
+const TasksIcon = tabIcon('check-square');
+const TeamsIcon = tabIcon('users');
+const SettingsIcon = tabIcon('settings');
 
 export default function TabsLayout() {
   const color = tokens[useColorSchemeName()];
