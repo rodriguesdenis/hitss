@@ -3,6 +3,8 @@ export * from './generated/model/index.ts';
 export { offsetPagination } from './pagination.ts';
 export {
   ApiError,
+  ApiTimeoutError,
+  DEFAULT_TIMEOUT_MS,
   configureApiClient,
   type ApiClientConfig,
   type TokenGetter,
