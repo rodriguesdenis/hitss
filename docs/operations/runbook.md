@@ -45,14 +45,14 @@ The terminal shows a QR code: scan it with Expo Go (Android) or the Camera app (
 
 **How Expo Go reaches Metro (`EXPO_DEV_MODE`).**
 
-| Mode               | Use when                                              | Trade-off                                                                                                                                                                                                         |
-| ------------------ | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tunnel` (default) | the phone is on another network, or the LAN blocks it | Works from anywhere without firewall changes, but goes through Expo's ngrok tunnel (a third-party service): slower reloads and an outage there stops it. It exposes Metro only, never the API.                    |
-| `lan`              | phone and computer on the same Wi-Fi                  | Fast and local, but needs `REACT_NATIVE_PACKAGER_HOSTNAME=<this computer's LAN IP>` (inside the container Expo only sees the container IP, which the phone cannot reach) and port 8081 open on the host firewall. |
-| `localhost`        | an emulator or simulator on this computer             | Nothing leaves the machine; no phone can connect.                                                                                                                                                                 |
+| Mode               | Use when                                              | Trade-off                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tunnel` (default) | the phone is on another network, or the LAN blocks it | Works from anywhere without firewall changes, but goes through Expo's ngrok tunnel (a third-party service): slower reloads and an outage there stops it. It exposes Metro only, never the API, but anyone with the tunnel URL can download the dev bundle (the app source and its `EXPO_PUBLIC_*` values; no secrets today): stop it (`Ctrl+C`) when not in use. |
+| `lan`              | phone and computer on the same Wi-Fi                  | Fast and local, but needs `REACT_NATIVE_PACKAGER_HOSTNAME=<this computer's LAN IP>` (inside the container Expo only sees the container IP, which the phone cannot reach), `METRO_BIND=0.0.0.0` (Metro is published on `127.0.0.1` by default) and port 8081 open on the host firewall.                                                                           |
+| `localhost`        | an emulator or simulator on this computer             | Nothing leaves the machine; no phone can connect.                                                                                                                                                                                                                                                                                                                |
 
 ```sh
-EXPO_DEV_MODE=lan REACT_NATIVE_PACKAGER_HOSTNAME=192.168.0.10 \
+EXPO_DEV_MODE=lan METRO_BIND=0.0.0.0 REACT_NATIVE_PACKAGER_HOSTNAME=192.168.0.10 \
   EXPO_PUBLIC_API_URL=http://192.168.0.10:3000 make mobile
 ```
 

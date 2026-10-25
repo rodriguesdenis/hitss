@@ -191,7 +191,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-19 — Add Maestro flows for the main journeys
 
-- **Status:** done (flows written; first emulator run scheduled after M5)
+- **Status:** flows written, run pending (after M5)
 - **Goal:** prove the brief's mobile journeys end to end against the seeded API (run locally, outside the CI gate).
 - **Changes:** `apps/mobile/tests/maestro/{config.yaml,auth.yaml,filter-by-team.yaml,task-crud.yaml,validation.yaml}`, missing `testID`s, script `pnpm --filter @hitss/mobile e2e`, notes for Expo Go (`openLink` to the Expo URL).
 - **Covers:** @AC-04.1.2, @AC-04.2.2, @AC-04.4.1, @AC-04.6.2, @AC-04.6.4, @AC-04.7.1, @AC-04.7.2, @AC-04.8.1.

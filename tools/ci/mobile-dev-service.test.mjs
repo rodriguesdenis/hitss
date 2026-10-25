@@ -36,7 +36,7 @@ describe('Mobile dev service (T-007-13)', () => {
   it('AC-07.5.1 runs Metro in a terminal so Expo prints the QR, on port 8081', () => {
     assert.equal(mobile.tty, true);
     assert.equal(mobile.stdin_open, true);
-    assert.deepEqual(mobile.ports, ['${METRO_BIND:-0.0.0.0}:8081:8081']);
+    assert.deepEqual(mobile.ports, ['${METRO_BIND:-127.0.0.1}:8081:8081']);
     assert.equal(mobile.build.dockerfile, 'apps/mobile/Dockerfile.dev');
     assert.match(dockerfile, /^USER node$/m);
     assert.match(dockerfile, /^EXPOSE 8081$/m);
