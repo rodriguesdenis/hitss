@@ -27,3 +27,14 @@ export {
 } from './temp-ids';
 export { discardMessage, QUEUED_MESSAGE, warnDiscarded } from './messages';
 export { submitDurable, type SubmitResult } from './use-durable-submit';
+export {
+  cancelRoot,
+  insertInLists,
+  removeFromLists,
+  replaceIdInLists,
+  restoreEntity,
+  setDetail,
+  snapshotEntity,
+  updateInLists,
+  type EntitySnapshot,
+} from './optimistic';
