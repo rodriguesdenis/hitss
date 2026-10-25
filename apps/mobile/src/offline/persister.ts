@@ -19,6 +19,20 @@ export function isSyncedKey(key: readonly unknown[] | undefined): boolean {
   return SYNCED_ROOTS.has(String(key?.[0]));
 }
 
+export function pauseInterrupted(client: PersistedClient): PersistedClient {
+  return {
+    ...client,
+    clientState: {
+      ...client.clientState,
+      mutations: client.clientState.mutations.map((mutation) =>
+        mutation.state.status === 'pending'
+          ? { ...mutation, state: { ...mutation.state, isPaused: true } }
+          : mutation,
+      ),
+    },
+  };
+}
+
 export function createOwnerPersister({
   storage = asyncStorage,
   getOwnerId,
@@ -59,7 +73,9 @@ export function createOwnerPersister({
     restoreClient: async () => {
       const ownerId = getOwnerId();
       const raw = ownerId ? await storage.getItem(cacheKey(ownerId)) : null;
-      return raw ? (JSON.parse(raw) as PersistedClient) : undefined;
+      return raw
+        ? pauseInterrupted(JSON.parse(raw) as PersistedClient)
+        : undefined;
     },
     removeClient: async () => {
       if (timer) {

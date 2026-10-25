@@ -16,6 +16,7 @@ import {
   CACHE_MAX_AGE,
   cacheKey,
   createOwnerPersister,
+  pauseInterrupted,
   persistOptions,
 } from './persister';
 
@@ -213,5 +214,36 @@ describe('owner persister writes', () => {
       JSON.parse((await storage.getItem(cacheKey('user-marina')))!).clientState
         .name,
     ).toBe('marina');
+  });
+});
+
+describe('restoring interrupted changes', () => {
+  it('marks a change persisted mid-attempt as paused so it resumes', () => {
+    const restored = pauseInterrupted({
+      timestamp: 1,
+      buster: BUSTER,
+      clientState: {
+        queries: [],
+        mutations: [
+          {
+            mutationKey: ['tasks', 'create'],
+            state: { status: 'pending', isPaused: false },
+          },
+          {
+            mutationKey: ['tasks', 'delete'],
+            state: { status: 'pending', isPaused: true },
+          },
+          {
+            mutationKey: ['tasks', 'update'],
+            state: { status: 'success', isPaused: false },
+          },
+        ],
+      },
+    } as never);
+    expect(
+      restored.clientState.mutations.map(
+        (m: { state: { isPaused: boolean } }) => m.state.isPaused,
+      ),
+    ).toEqual([true, true, false]);
   });
 });
