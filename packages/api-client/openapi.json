@@ -807,7 +807,6 @@
             "name": "status",
             "required": false,
             "schema": {
-              "example": "PENDING,IN_PROGRESS",
               "items": {
                 "$ref": "#/components/schemas/TaskStatus"
               },
