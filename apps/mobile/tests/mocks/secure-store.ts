@@ -22,6 +22,10 @@ export function storedKeys(): string[] {
   return [...items.keys()];
 }
 
+export function storedEntries(): [string, string][] {
+  return [...items.entries()];
+}
+
 export function resetSecureStore() {
   items.clear();
 }

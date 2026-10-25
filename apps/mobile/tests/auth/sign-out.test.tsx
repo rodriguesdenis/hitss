@@ -11,8 +11,8 @@ import {
   screen,
   waitFor,
 } from '../app-harness';
-import { MARINA_TOKEN } from '../handlers/auth';
-import { storedKeys } from '../mocks/secure-store';
+import { marina, MARINA_TOKEN } from '../handlers/auth';
+import { storedEntries, storedKeys } from '../mocks/secure-store';
 import { server } from '../server';
 
 it('AC-04.16.1 wipes the token, the cache and local stores before leaving for sign-in', async () => {
@@ -54,7 +54,12 @@ it('AC-04.16.1 wipes the token, the cache and local stores before leaving for si
   expect(await screen.findByText('sign-in screen')).toBeOnTheScreen();
   expect(signOutCalls).toEqual([`Bearer ${MARINA_TOKEN}`]);
   await expect(getToken()).resolves.toBeNull();
-  expect(storedKeys().filter((key) => key.startsWith('teamstasks.'))).toEqual(
+  expect(
+    storedEntries().filter(
+      ([, value]) => value.includes(MARINA_TOKEN) || value.includes(marina.id),
+    ),
+  ).toEqual([]);
+  expect(storedKeys().filter((key) => key.endsWith('.session-token'))).toEqual(
     [],
   );
   expect(queryClient().getQueryCache().getAll()).toHaveLength(0);
