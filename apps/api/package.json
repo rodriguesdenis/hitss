@@ -10,6 +10,7 @@
     "start:dev": "nest start --watch --exec \"node --import ./dist/instrumentation.js\"",
     "start:debug": "nest start --debug --watch --exec \"node --import ./dist/instrumentation.js\"",
     "db:seed": "pnpm build && node dist/seed/run.js",
+    "openapi:export": "nest build && node dist/openapi/export.js ../../packages/api-client/openapi.json",
     "start:prod": "node --import ./dist/instrumentation.js dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\" prisma.config.ts jest.config.ts",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --selectProjects unit",

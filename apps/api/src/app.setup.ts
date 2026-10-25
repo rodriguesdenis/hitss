@@ -10,6 +10,11 @@ import { GlobalExceptionFilter } from './shared/presentation/filters/global-exce
 import { EnvelopeInterceptor } from './shared/presentation/interceptors/envelope.interceptor';
 import { AppValidationPipe } from './shared/presentation/pipes/validation.pipe';
 
+export function configureRouting(app: INestApplication): void {
+  app.setGlobalPrefix('api');
+  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
+}
+
 export function setupApp<T extends INestApplication>(app: T): T {
   app.useLogger(app.get(Logger));
   app.enableShutdownHooks();
@@ -28,8 +33,7 @@ export function setupApp<T extends INestApplication>(app: T): T {
   if (cors) {
     app.enableCors(cors);
   }
-  app.setGlobalPrefix('api');
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
+  configureRouting(app);
   app.useGlobalPipes(new AppValidationPipe());
   app.useGlobalInterceptors(new EnvelopeInterceptor(app.get(Reflector)));
   app.useGlobalFilters(app.get(GlobalExceptionFilter));

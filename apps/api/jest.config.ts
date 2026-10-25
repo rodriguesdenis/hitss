@@ -102,6 +102,7 @@ const config: Config = {
     '!src/generated/**',
     '!src/main.ts',
     '!src/instrumentation.ts',
+    '!src/openapi/export.ts',
   ],
   reporters,
   // Gates of AC-07.6.5, enforced when jest runs with --coverage (CI unit job): overall line

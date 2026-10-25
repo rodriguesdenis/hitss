@@ -43,7 +43,8 @@ export default tseslint.config(
     },
   },
   {
-    // Allowed readers of process.env: the config module, instrumentation, tests, and
+    // Allowed readers of process.env: the config module, instrumentation, tests, the offline
+    // OpenAPI export (placeholder env so AppModule validates without a database), and
     // prisma.config.ts, which only the Prisma CLI loads (generate/migrate). It never runs in the
     // API process, which gets DATABASE_URL through AppConfig.
     files: [
@@ -51,6 +52,7 @@ export default tseslint.config(
       'jest.config.ts',
       'src/config/**/*.ts',
       'src/instrumentation.ts',
+      'src/openapi/offline-env.ts',
       'test/**/*.ts',
       'src/modules/*/tests/**/*.ts',
       '**/*.spec.ts',
