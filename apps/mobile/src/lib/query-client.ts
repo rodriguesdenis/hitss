@@ -47,6 +47,7 @@ export function createQueryClient({
         staleTime: 30_000,
         gcTime: 24 * 60 * 60 * 1000,
         maxPages: 10,
+        refetchOnReconnect: false,
         networkMode: 'offlineFirst',
         retry: shouldRetry,
       },

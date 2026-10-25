@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 
+import { AppHeader } from '@/offline';
 import { tokens } from '@/theme/tokens';
 import { useColorSchemeName } from '@/theme/ThemeProvider';
 import { Icon, type IconName } from '@/ui';
@@ -28,6 +29,7 @@ export default function TabsLayout() {
     <Tabs
       backBehavior="history"
       screenOptions={{
+        header: AppHeader,
         tabBarActiveTintColor: color.primary,
         tabBarInactiveTintColor: color['fg-subtle'],
       }}

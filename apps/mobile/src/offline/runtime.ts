@@ -1,9 +1,10 @@
-import type { QueryClient } from '@tanstack/react-query';
+import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import type { Persister } from '@tanstack/react-query-persist-client';
 
 import { asyncStorage, type StorageAdapter } from '@/lib/storage';
 
 import { appCacheBuster } from './config';
+import { startNetwork } from './network';
 import { createOwnerPersister } from './persister';
 import { useSyncStore } from './sync.store';
 
@@ -13,6 +14,7 @@ export type OfflineRuntime = {
   buster: string;
   purge: () => Promise<void>;
   claim: (userId: string) => Promise<void>;
+  start: () => () => void;
 };
 
 export function createOfflineRuntime({
@@ -44,5 +46,20 @@ export function createOfflineRuntime({
     useSyncStore.getState().setOwner(userId);
   };
 
-  return { queryClient, persister, buster, purge, claim };
+  const start = () => {
+    const stopNetwork = startNetwork();
+    const stopReconnect = onlineManager.subscribe((online) => {
+      if (online) {
+        void queryClient
+          .resumePausedMutations()
+          .then(() => queryClient.invalidateQueries());
+      }
+    });
+    return () => {
+      stopReconnect();
+      stopNetwork();
+    };
+  };
+
+  return { queryClient, persister, buster, purge, claim, start };
 }

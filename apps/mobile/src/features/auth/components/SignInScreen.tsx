@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Controller } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, Text, View } from 'react-native';
 
+import { useIsOnline } from '@/offline';
 import { Button, Field, Icon, IconButton, Input, Screen } from '@/ui';
 
 import { useSignIn } from '../hooks/useSignIn';
@@ -11,6 +12,7 @@ export function SignInScreen() {
   const { form, submit, formError } = useSignIn();
   const expired = useSessionStore((state) => state.expired);
   const [showPassword, setShowPassword] = useState(false);
+  const online = useIsOnline();
   const submitting = form.formState.isSubmitting;
   const { errors } = form.formState;
   const banner =
@@ -100,8 +102,14 @@ export function SignInScreen() {
           label="Entrar"
           loadingLabel="Entrando…"
           loading={submitting}
+          disabled={!online}
           onPress={() => void submit()}
         />
+        {online ? null : (
+          <Text className="field-help mt-2 text-center">
+            Você precisa de conexão para entrar
+          </Text>
+        )}
       </KeyboardAvoidingView>
     </Screen>
   );
