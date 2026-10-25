@@ -33,6 +33,7 @@ export function OfflineQueryProvider({
   children: ReactNode;
 }) {
   useEffect(subscribeAppFocus, []);
+  useEffect(() => runtime.start(), [runtime]);
   return (
     <RuntimeContext.Provider value={runtime}>
       <PersistQueryClientProvider

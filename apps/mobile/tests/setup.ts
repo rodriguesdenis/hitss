@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { onlineManager } from '@tanstack/react-query';
 
 import { setupApiClient } from '@/lib/api';
 
 import { resetDb } from './db';
+import { resetNetwork } from './mocks/netinfo';
 import { resetSecureStore } from './mocks/secure-store';
 import { server } from './server';
 
@@ -21,6 +23,8 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  resetNetwork();
+  onlineManager.setOnline(true);
   server.resetHandlers();
 });
 

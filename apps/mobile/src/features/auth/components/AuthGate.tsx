@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
-import { useOwnedCache } from '@/offline';
+import { setSyncAllowed, useOwnedCache } from '@/offline';
 
 import { useAuthSession } from '../session';
 
@@ -12,6 +12,12 @@ export function AuthGate() {
     status === 'signedIn' ? (user?.id ?? null) : null,
   );
   const ready = status !== 'loading' && owned;
+
+  const signedIn = status === 'signedIn';
+
+  useEffect(() => {
+    setSyncAllowed(ready && signedIn);
+  }, [ready, signedIn]);
 
   useEffect(() => {
     if (ready) {
@@ -23,7 +29,6 @@ export function AuthGate() {
     return null;
   }
 
-  const signedIn = status === 'signedIn';
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={signedIn}>

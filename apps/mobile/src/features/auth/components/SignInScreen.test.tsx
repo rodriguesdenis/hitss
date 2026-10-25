@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { delay, http, HttpResponse } from 'msw';
 
 import { renderWithProviders } from '../../../../tests/renderWithProviders';
@@ -8,7 +8,9 @@ import {
   MARINA_PASSWORD,
   MARINA_TOKEN,
 } from '../../../../tests/handlers/auth';
+import { setNetwork } from '../../../../tests/mocks/netinfo';
 import { server } from '../../../../tests/server';
+import { startNetwork } from '@/offline/network';
 import { useSessionStore } from '../session.store';
 import { getToken } from '../token';
 import { SignInScreen } from './SignInScreen';
@@ -127,5 +129,23 @@ describe('SignInScreen', () => {
     await renderWithProviders(<SignInScreen />);
     await fillAndSubmit(marina.email, MARINA_PASSWORD);
     await waitFor(async () => expect(await getToken()).toBe(MARINA_TOKEN));
+  });
+});
+
+describe('SignInScreen offline', () => {
+  it('needs a connection to sign in', async () => {
+    const stop = startNetwork();
+    setNetwork({ isConnected: false });
+    await renderWithProviders(<SignInScreen />);
+    expect(screen.getByRole('button', { name: 'Entrar' })).toBeDisabled();
+    expect(
+      screen.getByText('Você precisa de conexão para entrar'),
+    ).toBeOnTheScreen();
+    await act(() => setNetwork({ isConnected: true }));
+    expect(screen.getByRole('button', { name: 'Entrar' })).toBeEnabled();
+    expect(
+      screen.queryByText('Você precisa de conexão para entrar'),
+    ).toBeNull();
+    stop();
   });
 });
