@@ -65,9 +65,9 @@ describe('.github/dependabot.yml', () => {
     }
   });
 
-  it('AC-07.9.3 watches the API Dockerfile base image', () => {
+  it('AC-07.9.3 watches the API and mobile Dockerfile base images', () => {
     const docker = updates.find((u) => u['package-ecosystem'] === 'docker');
-    assert.equal(docker.directory, '/apps/api');
+    assert.deepEqual(docker.directories, ['/apps/api', '/apps/mobile']);
     assert.equal(docker['commit-message'].prefix, 'build(infra)');
   });
 
