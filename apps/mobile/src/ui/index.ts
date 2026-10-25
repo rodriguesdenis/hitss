@@ -13,13 +13,18 @@ export { Field, useField, type FieldProps } from './Field';
 export { Icon, type IconColor, type IconName } from './Icon';
 export { IconButton, type IconButtonProps } from './IconButton';
 export { Input, type InputProps } from './Input';
+export { ModalHeader, type ModalHeaderProps } from './ModalHeader';
 export {
   OfflineBanner,
   type ConnectivityStatus,
   type OfflineBannerProps,
 } from './OfflineBanner';
 export { Screen, type ScreenProps } from './Screen';
-export { SearchInput, type SearchInputProps } from './SearchInput';
+export {
+  SEARCH_MAX_LENGTH,
+  SearchInput,
+  type SearchInputProps,
+} from './SearchInput';
 export {
   SegmentedControl,
   type SegmentedControlProps,

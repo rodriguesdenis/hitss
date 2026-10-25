@@ -17,6 +17,7 @@ import {
   Field,
   Icon,
   Input,
+  ModalHeader,
   Screen,
   SkeletonList,
   TextArea,
@@ -37,21 +38,6 @@ export interface TeamFormScreenProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-function Header({ title, onCancel }: { title: string; onCancel: () => void }) {
-  return (
-    <View className="flex-row items-center gap-2 border-b border-border-muted px-2 pb-2">
-      <Button label="Cancelar" variant="ghost" onPress={onCancel} />
-      <Text
-        className="type-headline flex-1 text-center"
-        accessibilityRole="header"
-      >
-        {title}
-      </Text>
-      <View className="w-touch" />
-    </View>
-  );
-}
-
 export function TeamFormScreen({
   teamId,
   onClose,
@@ -61,7 +47,7 @@ export function TeamFormScreen({
   if (teamId && !team.data) {
     return (
       <Screen>
-        <Header title="Editar time" onCancel={onClose} />
+        <ModalHeader title="Editar time" onCancel={onClose} />
         {team.isError ? (
           <ErrorState
             error={team.error}
@@ -124,7 +110,10 @@ function TeamForm({
 
   return (
     <Screen>
-      <Header title={team ? 'Editar time' : 'Novo time'} onCancel={cancel} />
+      <ModalHeader
+        title={team ? 'Editar time' : 'Novo time'}
+        onCancel={cancel}
+      />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
