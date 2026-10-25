@@ -3,6 +3,7 @@ import type {
   TaskStatus,
   TeamChipDto,
 } from '@hitss/api-client';
+import { onlineManager } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
@@ -177,11 +178,15 @@ export function TaskDetailScreen({
         onCancel={() => setConfirming(false)}
         onConfirm={() => {
           setConfirming(false);
-          if (!remove.isPending) {
-            remove.mutate(
-              { id: task.id, title: task.title },
-              { onSuccess: onDeleted },
-            );
+          if (remove.isPending && !remove.isPaused) {
+            return;
+          }
+          const variables = { id: task.id, title: task.title };
+          if (onlineManager.isOnline()) {
+            remove.mutate(variables, { onSuccess: onDeleted });
+          } else {
+            remove.mutate(variables);
+            onDeleted();
           }
         }}
       />
