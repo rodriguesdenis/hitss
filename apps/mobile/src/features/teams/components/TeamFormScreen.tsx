@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { errorCode } from '@/lib/error-messages';
+import { ConnectivityBanner } from '@/offline';
 import {
   Button,
   ConfirmDialog,
@@ -121,6 +122,7 @@ function TeamForm({
         title={team ? 'Editar time' : 'Novo time'}
         onCancel={cancel}
       />
+      <ConnectivityBanner />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

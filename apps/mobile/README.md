@@ -97,6 +97,15 @@ MAESTRO_EXPO_URL=exp://10.0.2.2:8081 pnpm --filter @hitss/mobile e2e
 
 The flows select elements by `testID` and by the seeded names; a Jest test checks that every id they use exists in the app.
 
+## Testing offline
+
+The app works offline: lists and details already seen stay readable, and every change (create, edit, status change, delete of tasks and teams) shows immediately, is marked **Sincronização pendente** and waits in one ordered queue that survives closing the app. When the connection returns the queue is sent in the order the changes were made, then the lists refresh; the banner under the header says **De volta online — sincronizando N alterações…** and then **Todas as alterações sincronizadas**. A change the server can no longer apply (task deleted elsewhere, team name taken, unknown teams) is reverted with a warning toast and dropped; temporary failures are retried. Signing in needs a connection, and signing out with pending changes asks first because they are discarded.
+
+- **Jest** covers it without a device: `pnpm --filter @hitss/mobile test` runs the offline suites in `tests/offline` (restart and replay, session gate, user switch, sign-out wipe, optimistic updates and rollbacks).
+- **Maestro** (`tests/maestro/offline.yaml`, part of `pnpm --filter @hitss/mobile e2e`) turns airplane mode on in an **Android emulator**, creates, changes and deletes tasks, turns it off and waits for the sync. iOS simulators have no airplane mode: disconnect the Mac's network instead and follow the same steps by hand.
+- **Restart while offline** is covered by Jest only: Expo Go reloads the bundle from Metro on a cold start, so it cannot relaunch without a connection. By hand: change something offline, close the app, reconnect and reopen it; the changes are still pending and then sync.
+- A creation whose answer is lost on a flaky connection may be created twice when it is resent (no idempotency keys, ADR-0020).
+
 ## Troubleshooting
 
 | Symptom                                                                             | Fix                                                                                                                                                                                    |

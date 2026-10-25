@@ -7,3 +7,4 @@ executionOrder:
     - filter-by-team
     - validation
     - task-crud
+    - offline

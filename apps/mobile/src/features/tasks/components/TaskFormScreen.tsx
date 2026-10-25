@@ -12,6 +12,7 @@ import {
 import { useCreatedTeamStore } from '@/features/teams';
 import { isPastDate } from '@/lib/dates';
 import { errorCode } from '@/lib/error-messages';
+import { ConnectivityBanner } from '@/offline';
 import {
   Button,
   ConfirmDialog,
@@ -133,6 +134,7 @@ function TaskForm({
         title={task ? 'Editar tarefa' : 'Nova tarefa'}
         onCancel={cancel}
       />
+      <ConnectivityBanner />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
