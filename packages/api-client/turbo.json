@@ -1,0 +1,15 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "generate": {
+      "inputs": [
+        "openapi.json",
+        "orval.config.ts",
+        "src/mutator.ts",
+        "package.json"
+      ],
+      "outputs": ["src/generated/**"]
+    }
+  }
+}
