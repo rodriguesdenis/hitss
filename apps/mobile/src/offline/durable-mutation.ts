@@ -59,6 +59,33 @@ export type DurableMutationSpec<TVariables, TData, TContext> = {
   afterDrain?: (variables: TVariables) => Promise<void> | void;
 };
 
+export class StaleSessionError extends Error {
+  constructor() {
+    super('The change belongs to a session that has ended');
+    this.name = 'StaleSessionError';
+  }
+}
+
+const epochs = new WeakMap<QueryClient, number>();
+const startedIn = new WeakMap<object, number>();
+
+export function endSyncSession(queryClient: QueryClient): void {
+  epochs.set(queryClient, (epochs.get(queryClient) ?? 0) + 1);
+}
+
+function isStale(queryClient: QueryClient, variables: unknown): boolean {
+  if (typeof variables !== 'object' || variables === null) {
+    return false;
+  }
+  const current = epochs.get(queryClient) ?? 0;
+  const started = startedIn.get(variables);
+  if (started === undefined) {
+    startedIn.set(variables, current);
+    return false;
+  }
+  return started !== current;
+}
+
 export function defineDurableMutation<TVariables, TData, TContext>(
   queryClient: QueryClient,
   mutationKey: MutationKey,
@@ -68,6 +95,9 @@ export function defineDurableMutation<TVariables, TData, TContext>(
     scope: SYNC_SCOPE,
     networkMode: 'offlineFirst',
     mutationFn: async (variables: TVariables) => {
+      if (isStale(queryClient, variables)) {
+        throw new StaleSessionError();
+      }
       try {
         return await spec.mutationFn(variables);
       } catch (error) {
@@ -78,6 +108,9 @@ export function defineDurableMutation<TVariables, TData, TContext>(
       }
     },
     retry: (failureCount: number, error: unknown) => {
+      if (error instanceof StaleSessionError) {
+        return false;
+      }
       const decision = classifyReplayError(error, spec.kind);
       if (decision === 'unauthenticated') {
         setSyncAllowed(false);
@@ -93,6 +126,9 @@ export function defineDurableMutation<TVariables, TData, TContext>(
       variables: TVariables,
       context: unknown,
     ) => {
+      if (isStale(queryClient, variables)) {
+        return;
+      }
       await spec.onSuccess?.(
         data as TData | typeof ALREADY_GONE,
         variables,
@@ -103,6 +139,12 @@ export function defineDurableMutation<TVariables, TData, TContext>(
       }
     },
     onError: (error: unknown, variables: TVariables, context: unknown) => {
+      if (
+        error instanceof StaleSessionError ||
+        isStale(queryClient, variables)
+      ) {
+        return;
+      }
       const decision = classifyReplayError(error, spec.kind);
       const reason: Discard =
         decision === 'gone' || decision === 'dependency-failed'
