@@ -2,7 +2,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
-import { setSyncAllowed, useOwnedCache } from '@/offline';
+import { useIsOnline, useOfflineRuntime, useOwnedCache } from '@/offline';
 
 import { useAuthSession } from '../session';
 
@@ -15,9 +15,16 @@ export function AuthGate() {
 
   const signedIn = status === 'signedIn';
 
+  const { gate } = useOfflineRuntime();
+  const online = useIsOnline();
+
   useEffect(() => {
-    setSyncAllowed(ready && signedIn);
-  }, [ready, signedIn]);
+    if (ready && signedIn && online) {
+      void gate.verify();
+    } else {
+      gate.revoke();
+    }
+  }, [gate, ready, signedIn, online]);
 
   useEffect(() => {
     if (ready) {

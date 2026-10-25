@@ -5,6 +5,7 @@ export { SettingsScreen } from './components/SettingsScreen';
 export { SignInScreen } from './components/SignInScreen';
 export {
   expireSession,
+  sessionUserId,
   useAuthSession,
   useSignOut,
   type AuthStatus,

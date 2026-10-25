@@ -2,6 +2,7 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 
 import { resetSessionState } from '@/lib/session-reset';
+import { setSyncAllowed } from '@/offline';
 
 import { authClient, refreshSession } from './auth-client';
 import { useSessionStore } from './session.store';
@@ -26,6 +27,7 @@ let expiring: Promise<void> | null = null;
 
 export function expireSession(queryClient: QueryClient): Promise<void> {
   expiring ??= (async () => {
+    setSyncAllowed(false);
     await deleteToken();
     queryClient.getQueryCache().clear();
     useSessionStore.getState().markExpired();
@@ -56,4 +58,12 @@ export function useSignOut() {
   const signingOut = useSessionStore((state) => state.signingOut);
   const run = useCallback(() => signOut(queryClient), [queryClient]);
   return { signOut: run, signingOut };
+}
+
+export async function sessionUserId(): Promise<string | null> {
+  const { data, error } = await authClient.getSession();
+  if (error) {
+    throw error;
+  }
+  return data?.user.id ?? null;
 }

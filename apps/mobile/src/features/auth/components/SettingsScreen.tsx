@@ -1,8 +1,9 @@
 import Constants from 'expo-constants';
+import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { pendingLabel, usePendingSync } from '@/offline';
-import { Button, Icon, Screen } from '@/ui';
+import { Button, ConfirmDialog, Icon, Screen } from '@/ui';
 
 import { useAuthSession, useSignOut } from '../session';
 
@@ -11,6 +12,15 @@ export function SettingsScreen() {
   const { signOut, signingOut } = useSignOut();
   const version = Constants.expoConfig?.version;
   const { count } = usePendingSync();
+  const [confirming, setConfirming] = useState(false);
+
+  const requestSignOut = () => {
+    if (count > 0) {
+      setConfirming(true);
+    } else {
+      void signOut();
+    }
+  };
 
   return (
     <Screen edges={[]}>
@@ -49,12 +59,24 @@ export function SettingsScreen() {
           label="Sair"
           testID="sign-out"
           loading={signingOut}
-          onPress={() => void signOut()}
+          onPress={requestSignOut}
         />
         {version ? (
           <Text className="type-meta">{`Versão ${version}`}</Text>
         ) : null}
       </ScrollView>
+      <ConfirmDialog
+        visible={confirming}
+        title="Sair com alterações não sincronizadas?"
+        message={`Você tem ${count} ${count === 1 ? 'alteração não sincronizada' : 'alterações não sincronizadas'}. Ao sair, ${count === 1 ? 'ela será descartada' : 'elas serão descartadas'}.`}
+        confirmLabel="Sair mesmo assim"
+        destructive
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => {
+          setConfirming(false);
+          void signOut();
+        }}
+      />
     </Screen>
   );
 }
