@@ -1,6 +1,6 @@
 # EP-05 — Offline & Responsiveness
 
-- **Owner:** product-owner · **Status:** Draft · **Priority:** SHOULD · **Spec:** [005-offline-sync](../../specs/005-offline-sync/spec.md) · **Design:** [design-spec §6](../../design/design-spec.md#6-interaction-details)
+- **Owner:** product-owner · **Status:** Draft · **Priority:** MUST (raised from SHOULD, user decision 2026-10-25) · **Spec:** [005-offline-sync](../../specs/005-offline-sync/spec.md) · **Design:** [design-spec §6](../../design/design-spec.md#6-interaction-details)
 - **Brief traceability:** brief differentials "offline-first" and "optimistic updates" — see [vision § SHOULD](../vision.md#should-briefs-differentials); vision problem 3 ("updating status must be instant, even offline") and success metric "status change perceived latency: instant, rollback on failure".
 
 ## Goal
@@ -31,15 +31,15 @@ Marina's changes feel instant and are never lost: she can read her tasks and tea
 
 ## User stories
 
-| ID      | Title                                                  | Priority | Spec                                                                                                                         |
-| ------- | ------------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| US-05.1 | See my teams and tasks without a connection            | SHOULD   | [spec § US-05.1](../../specs/005-offline-sync/spec.md#us-051--see-my-teams-and-tasks-without-a-connection-should)            |
-| US-05.2 | Know when I'm offline and when changes are pending     | SHOULD   | [spec § US-05.2](../../specs/005-offline-sync/spec.md#us-052--know-when-im-offline-and-when-changes-are-pending-should)      |
-| US-05.3 | Change status instantly                                | SHOULD   | [spec § US-05.3](../../specs/005-offline-sync/spec.md#us-053--change-status-instantly-should)                                |
-| US-05.4 | Delete instantly                                       | SHOULD   | [spec § US-05.4](../../specs/005-offline-sync/spec.md#us-054--delete-instantly-should)                                       |
-| US-05.5 | Create and edit tasks while offline                    | SHOULD   | [spec § US-05.5](../../specs/005-offline-sync/spec.md#us-055--create-and-edit-tasks-while-offline-should)                    |
-| US-05.6 | Offline changes survive restarts and sync on reconnect | SHOULD   | [spec § US-05.6](../../specs/005-offline-sync/spec.md#us-056--offline-changes-survive-restarts-and-sync-on-reconnect-should) |
-| US-05.7 | Conflicts are resolved safely and explained            | SHOULD   | [spec § US-05.7](../../specs/005-offline-sync/spec.md#us-057--conflicts-are-resolved-safely-and-explained-should)            |
+| ID      | Title                                                  | Priority | Spec                                                                                                                       |
+| ------- | ------------------------------------------------------ | -------- | -------------------------------------------------------------------------------------------------------------------------- |
+| US-05.1 | See my teams and tasks without a connection            | MUST     | [spec § US-05.1](../../specs/005-offline-sync/spec.md#us-051--see-my-teams-and-tasks-without-a-connection-must)            |
+| US-05.2 | Know when I'm offline and when changes are pending     | MUST     | [spec § US-05.2](../../specs/005-offline-sync/spec.md#us-052--know-when-im-offline-and-when-changes-are-pending-must)      |
+| US-05.3 | Change status instantly                                | MUST     | [spec § US-05.3](../../specs/005-offline-sync/spec.md#us-053--change-status-instantly-must)                                |
+| US-05.4 | Delete instantly                                       | MUST     | [spec § US-05.4](../../specs/005-offline-sync/spec.md#us-054--delete-instantly-must)                                       |
+| US-05.5 | Create and edit tasks while offline                    | MUST     | [spec § US-05.5](../../specs/005-offline-sync/spec.md#us-055--create-and-edit-tasks-while-offline-must)                    |
+| US-05.6 | Offline changes survive restarts and sync on reconnect | MUST     | [spec § US-05.6](../../specs/005-offline-sync/spec.md#us-056--offline-changes-survive-restarts-and-sync-on-reconnect-must) |
+| US-05.7 | Replay outcomes are explained                          | MUST     | [spec § US-05.7](../../specs/005-offline-sync/spec.md#us-057--replay-outcomes-are-explained-must)                          |
 
 ## Success criteria
 
