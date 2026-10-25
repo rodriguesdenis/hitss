@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { useCreatedTeamStore } from '@/features/teams';
 import { isPastDate } from '@/lib/dates';
 import { errorCode } from '@/lib/error-messages';
 import {
@@ -31,7 +32,7 @@ import {
 
 import { useTaskDetail } from '../hooks/useTaskDetail';
 import { useTaskForm } from '../hooks/useTaskForm';
-import { DESCRIPTION_MAX, TITLE_MAX } from '../task-form.schema';
+import { DESCRIPTION_MAX, TEAMS_MAX, TITLE_MAX } from '../task-form.schema';
 import { TeamPicker } from './TeamPicker';
 
 const statusOptions: SegmentOption<TaskStatus>[] = (
@@ -98,6 +99,21 @@ function TaskForm({
     formState: { isDirty },
   } = form;
   const [discarding, setDiscarding] = useState(false);
+  const createdTeamId = useCreatedTeamStore((state) => state.teamId);
+  const clearCreatedTeam = useCreatedTeamStore((state) => state.clear);
+
+  useEffect(() => {
+    if (!createdTeamId) {
+      return;
+    }
+    const teamIds = form.getValues('teamIds');
+    if (!teamIds.includes(createdTeamId) && teamIds.length < TEAMS_MAX) {
+      form.setValue('teamIds', [...teamIds, createdTeamId], {
+        shouldDirty: true,
+      });
+    }
+    clearCreatedTeam();
+  }, [createdTeamId, clearCreatedTeam, form]);
 
   useEffect(() => {
     onDirtyChange?.(isDirty);

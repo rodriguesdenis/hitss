@@ -13,7 +13,9 @@ export default function EditTaskRoute() {
       <TaskFormScreen
         taskId={id}
         onClose={() => router.back()}
-        onCreateTeam={() => router.push('/teams/new')}
+        onCreateTeam={() =>
+          router.push({ pathname: '/teams/new', params: { from: 'task' } })
+        }
         onDirtyChange={setDirty}
       />
     </>

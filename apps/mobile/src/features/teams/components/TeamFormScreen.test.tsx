@@ -24,7 +24,11 @@ beforeEach(() => {
 afterEach(() => server.events.removeAllListeners());
 
 function renderForm(teamId?: string) {
-  const props = { onClose: jest.fn(), onDeleted: jest.fn() };
+  const props = {
+    onClose: jest.fn(),
+    onDeleted: jest.fn(),
+    onCreated: jest.fn(),
+  };
   return renderWithProviders(
     <TeamFormScreen teamId={teamId} {...props} />,
   ).then((result) => ({ ...result, props }));
@@ -53,6 +57,9 @@ describe('TeamFormScreen — create', () => {
     expect(db.teams.map((team) => team.name)).toContain('Plataforma');
     expect(await screen.findByText('Time criado')).toBeOnTheScreen();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: qk.teams.lists() });
+    expect(props.onCreated).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Plataforma', colorHex: '#10B981' }),
+    );
   });
 
   it('starts with Indigo and the placeholder preview', async () => {
@@ -217,6 +224,7 @@ describe('TeamFormScreen — edit', () => {
       { id: 'team-mobile', name: 'Apps', colorHex: '#0EA5E9' },
     ]);
     expect(await screen.findByText('Time atualizado')).toBeOnTheScreen();
+    expect(props.onCreated).not.toHaveBeenCalled();
   });
 
   it('AC-04.3.4 deletes from the form after confirmation and keeps the tasks', async () => {
