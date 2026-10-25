@@ -44,7 +44,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm format:check
-      - run: pnpm turbo run lint typecheck
+      - run: pnpm turbo run lint typecheck --filter=@hitss/api
       - name: Architecture rules and their meta-tests
         run: pnpm arch
       - name: Makefile syntax (dry run of every alias)
@@ -102,7 +102,31 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Unit tests with the coverage gates (80 % overall, 90 % per domain layer)
-        run: pnpm turbo run test -- --coverage
+        run: pnpm turbo run test --filter=@hitss/api -- --coverage
+
+  mobile-static:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Mobile lint (ESLint and dependency-cruiser) and typecheck, api-client typecheck
+        run: pnpm turbo run lint typecheck --filter=@hitss/mobile --filter=@hitss/api-client
+
+  mobile-unit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: api-client mutator tests
+        run: pnpm turbo run test --filter=@hitss/api-client
+      - name: Mobile tests (time-zone runs, lint-rule fixtures, then jest-expo with coverage)
+        run: pnpm turbo run test --filter=@hitss/mobile -- --coverage
 
   integration:
     runs-on: ubuntu-24.04
@@ -186,6 +210,8 @@ jobs:
         secrets,
         audit,
         unit,
+        mobile-static,
+        mobile-unit,
         integration,
         build,
         contract,
