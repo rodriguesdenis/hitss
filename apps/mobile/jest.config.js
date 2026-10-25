@@ -1,23 +1,28 @@
 const transformed = [
-  '(jest-)?react-native',
-  '@react-native(-community)?',
-  'expo(nent)?',
-  '@expo(nent)?/.*',
-  'expo-router',
-  '@react-navigation/.*',
+  '(jest-)?react-native(-[^/]+)?',
+  '@react-native(-community)?/[^/]+',
+  'expo(nent)?(-[^/]+)?',
+  '@expo(nent)?/[^/]+',
+  '@react-navigation/[^/]+',
   'standard-navigation',
   'nativewind',
-  'react-native-css-interop',
-  '@hitss/.*',
+  '@hitss/[^/]+',
+  'rettime',
+  'until-async',
+  '@open-draft/[^/]+',
 ].join('|');
 
 module.exports = {
   preset: 'jest-expo',
   clearMocks: true,
   roots: ['<rootDir>/src', '<rootDir>/tests', '<rootDir>/app'],
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/lint/'],
   setupFiles: ['<rootDir>/tests/env.ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  transformIgnorePatterns: [`node_modules/(?!(?:\\.pnpm/)?(${transformed}))`],
+  transform: {
+    '\\.mjs$': 'babel-jest',
+  },
+  transformIgnorePatterns: [`node_modules/(?!\\.pnpm/|(${transformed})/)`],
   moduleNameMapper: {
     '^expo-secure-store$': '<rootDir>/tests/mocks/secure-store.ts',
     '^@react-native-async-storage/async-storage$':
