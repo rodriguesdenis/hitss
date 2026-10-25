@@ -6,18 +6,23 @@
  * OpenAPI spec version: 1.0
  */
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
+  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
+  InfiniteData,
   MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseInfiniteQueryOptions,
+  UseInfiniteQueryResult,
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
@@ -88,11 +93,81 @@ export const teamsList = async (params?: TeamsListParams, options?: Parameters<t
 
 
 
+export const getTeamsListInfiniteQueryKey = (params?: TeamsListParams,) => {
+    return [
+    'infinite', `/api/v1/teams`, ...(params ? [params] : [])
+    ] as const;
+    }
+
 export const getTeamsListQueryKey = (params?: TeamsListParams,) => {
     return [
     `/api/v1/teams`, ...(params ? [params] : [])
     ] as const;
     }
+
+
+export const getTeamsListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof teamsList>>, TeamsListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(params?: TeamsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof teamsList>>, TError, TData, QueryKey, TeamsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getTeamsListInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof teamsList>>, QueryKey, TeamsListParams['offset']> = ({ signal, pageParam }) => teamsList({...params, 'offset': pageParam ?? params?.['offset']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof teamsList>>, TError, TData, QueryKey, TeamsListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TeamsListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof teamsList>>>
+export type TeamsListInfiniteQueryError = ErrorType<ApiErrorResponseDto>
+
+
+export function useTeamsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof teamsList>>, TeamsListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(
+ params: undefined |  TeamsListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof teamsList>>, TError, TData, QueryKey, TeamsListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof teamsList>>,
+          TError,
+          Awaited<ReturnType<typeof teamsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTeamsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof teamsList>>, TeamsListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(
+ params?: TeamsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof teamsList>>, TError, TData, QueryKey, TeamsListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof teamsList>>,
+          TError,
+          Awaited<ReturnType<typeof teamsList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTeamsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof teamsList>>, TeamsListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(
+ params?: TeamsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof teamsList>>, TError, TData, QueryKey, TeamsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useTeamsListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof teamsList>>, TeamsListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(
+ params?: TeamsListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof teamsList>>, TError, TData, QueryKey, TeamsListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getTeamsListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
 
 
 export const getTeamsListQueryOptions = <TData = Awaited<ReturnType<typeof teamsList>>, TError = ErrorType<ApiErrorResponseDto>>(params?: TeamsListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof teamsList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}

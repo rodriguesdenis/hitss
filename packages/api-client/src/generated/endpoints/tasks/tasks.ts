@@ -6,18 +6,23 @@
  * OpenAPI spec version: 1.0
  */
 import {
+  useInfiniteQuery,
   useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
+  DefinedUseInfiniteQueryResult,
   DefinedUseQueryResult,
+  InfiniteData,
   MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseInfiniteQueryOptions,
+  UseInfiniteQueryResult,
   UseMutationOptions,
   UseMutationResult,
   UseQueryOptions,
@@ -98,11 +103,81 @@ export const tasksList = async (params?: TasksListParams, options?: Parameters<t
 
 
 
+export const getTasksListInfiniteQueryKey = (params?: TasksListParams,) => {
+    return [
+    'infinite', `/api/v1/tasks`, ...(params ? [params] : [])
+    ] as const;
+    }
+
 export const getTasksListQueryKey = (params?: TasksListParams,) => {
     return [
     `/api/v1/tasks`, ...(params ? [params] : [])
     ] as const;
     }
+
+
+export const getTasksListInfiniteQueryOptions = <TData = InfiniteData<Awaited<ReturnType<typeof tasksList>>, TasksListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(params?: TasksListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof tasksList>>, TError, TData, QueryKey, TasksListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getTasksListInfiniteQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof tasksList>>, QueryKey, TasksListParams['offset']> = ({ signal, pageParam }) => tasksList({...params, 'offset': pageParam ?? params?.['offset']}, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseInfiniteQueryOptions<Awaited<ReturnType<typeof tasksList>>, TError, TData, QueryKey, TasksListParams['offset']> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type TasksListInfiniteQueryResult = NonNullable<Awaited<ReturnType<typeof tasksList>>>
+export type TasksListInfiniteQueryError = ErrorType<ApiErrorResponseDto>
+
+
+export function useTasksListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof tasksList>>, TasksListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(
+ params: undefined |  TasksListParams, options: { query:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof tasksList>>, TError, TData, QueryKey, TasksListParams['offset']>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof tasksList>>,
+          TError,
+          Awaited<ReturnType<typeof tasksList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTasksListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof tasksList>>, TasksListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(
+ params?: TasksListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof tasksList>>, TError, TData, QueryKey, TasksListParams['offset']>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof tasksList>>,
+          TError,
+          Awaited<ReturnType<typeof tasksList>>, QueryKey
+        > , 'initialData'
+      >, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useTasksListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof tasksList>>, TasksListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(
+ params?: TasksListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof tasksList>>, TError, TData, QueryKey, TasksListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+  ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useTasksListInfinite<TData = InfiniteData<Awaited<ReturnType<typeof tasksList>>, TasksListParams['offset']>, TError = ErrorType<ApiErrorResponseDto>>(
+ params?: TasksListParams, options?: { query?:Partial<UseInfiniteQueryOptions<Awaited<ReturnType<typeof tasksList>>, TError, TData, QueryKey, TasksListParams['offset']>>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient
+ ):  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getTasksListInfiniteQueryOptions(params,options)
+
+  const query = useInfiniteQuery(queryOptions, queryClient) as  UseInfiniteQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
 
 
 export const getTasksListQueryOptions = <TData = Awaited<ReturnType<typeof tasksList>>, TError = ErrorType<ApiErrorResponseDto>>(params?: TasksListParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof tasksList>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
