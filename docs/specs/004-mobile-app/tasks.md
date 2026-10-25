@@ -151,6 +151,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-14 — Build the Tasks list (global and per team)
 
+- **Status:** done
 - **Goal:** design S3/S6 list with infinite scroll and pull to refresh (filters in T-004-15).
 - **Changes:** `src/features/tasks/components/{TasksListScreen,TaskRow,TaskRowSkeleton,TeamTasksHeader,ListFooter}.tsx` (`teamId?` from the `?teamId=` search param; header with a "show all tasks" action), `features/tasks/hooks/useTasksList.ts`, route `app/(tabs)/tasks.tsx`.
 - **Covers:** @AC-04.2.2, @AC-04.4.1, @AC-04.4.2, @AC-04.4.3, @AC-04.4.4, @AC-04.4.5, @AC-04.4.6, @AC-04.8.1, @AC-04.8.4, @AC-04.9.1, @AC-04.9.2, @AC-04.9.3.
@@ -158,6 +159,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-15 — Add task filters: status and search
 
+- **Status:** done
 - **Goal:** filter bar with per-list session filters.
 - **Changes:** `src/features/tasks/filters.store.ts` (`byScope[scope].status: TaskStatus | 'ALL'`, default `'ALL'`, single-select; `search`), `features/tasks/components/{TaskFilterBar,StatusFilter}.tsx` (Todas · Pendente · Em andamento · Concluída), debounced search via `useDebouncedValue`, filtered empty state with "Limpar filtros".
 - **Covers:** @AC-04.5.1, @AC-04.5.2, @AC-04.5.4, @AC-04.5.5.
@@ -165,6 +167,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-16 — Build task detail with quick actions
 
+- **Status:** done
 - **Goal:** design S7: detail, status change, delete with confirmation; long-press status from the list.
 - **Changes:** `src/features/tasks/components/{TaskDetailScreen,StatusQuickActions,StatusSheet,TaskMeta}.tsx`, `features/tasks/hooks/{useTaskDetail,useChangeTaskStatus,useDeleteTask}.ts` (mutation keys `['tasks','changeStatus']`, `['tasks','delete']`), route `app/tasks/[id].tsx`; long-press on `TaskRow` opens `StatusSheet`.
 - **Covers:** @AC-04.6.1, @AC-04.6.2, @AC-04.6.3, @AC-04.6.4, @AC-04.6.5, @AC-04.6.6, @AC-04.6.7, @AC-04.8.3 (detail shows all chips).
@@ -172,6 +175,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-17 — Build the create/edit task form
 
+- **Status:** done
 - **Goal:** design S8/S9 with validation and server-error mapping.
 - **Changes:** `src/features/tasks/components/{TaskFormScreen,TeamPicker,StatusField}.tsx`, `features/tasks/hooks/{useTaskForm,useSaveTask}.ts`, routes `app/tasks/new.tsx` (`?teamId`), `app/tasks/[id]/edit.tsx`.
 - **Covers:** @AC-04.7.1, @AC-04.7.2, @AC-04.7.3, @AC-04.7.4, @AC-04.7.5, @AC-04.7.6, @AC-04.7.7, @AC-04.7.8, @AC-04.9.6, @AC-04.15.2 (stack-guard test: every form hook under `src/features/**` uses `useForm` with `zodResolver`).
