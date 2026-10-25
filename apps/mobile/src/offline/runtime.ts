@@ -5,6 +5,7 @@ import { asyncStorage, type StorageAdapter } from '@/lib/storage';
 
 import { appCacheBuster } from './config';
 import { startNetwork } from './network';
+import { createSessionGate, type SessionGate } from './session-gate';
 import { createOwnerPersister } from './persister';
 import { useSyncStore } from './sync.store';
 
@@ -15,20 +16,28 @@ export type OfflineRuntime = {
   purge: () => Promise<void>;
   claim: (userId: string) => Promise<void>;
   start: () => () => void;
+  gate: SessionGate;
 };
 
 export function createOfflineRuntime({
   queryClient,
   storage = asyncStorage,
   buster = appCacheBuster(),
+  getSessionUserId = async () => null,
+  onSessionLost = () => undefined,
+  throttleTime,
 }: {
   queryClient: QueryClient;
   storage?: StorageAdapter;
   buster?: string;
+  getSessionUserId?: () => Promise<string | null>;
+  onSessionLost?: () => void;
+  throttleTime?: number;
 }): OfflineRuntime {
   const persister = createOwnerPersister({
     storage,
     getOwnerId: () => useSyncStore.getState().ownerId,
+    throttleTime,
   });
 
   const purge = async () => {
@@ -61,5 +70,7 @@ export function createOfflineRuntime({
     };
   };
 
-  return { queryClient, persister, buster, purge, claim, start };
+  const gate = createSessionGate({ getSessionUserId, claim, onSessionLost });
+
+  return { queryClient, persister, buster, purge, claim, start, gate };
 }

@@ -3,7 +3,12 @@ import '../src/theme/global.css';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { AuthGate, expireSession, getToken } from '@/features/auth';
+import {
+  AuthGate,
+  expireSession,
+  getToken,
+  sessionUserId,
+} from '@/features/auth';
 import { registerTaskMutationDefaults } from '@/features/tasks';
 import { registerTeamMutationDefaults } from '@/features/teams';
 import { setupApiClient } from '@/lib/api';
@@ -30,7 +35,11 @@ registerTeamMutationDefaults(queryClient);
 registerTaskMutationDefaults(queryClient);
 setDurableUnauthenticatedHandler(() => void expireSession(queryClient));
 
-const offline = createOfflineRuntime({ queryClient });
+const offline = createOfflineRuntime({
+  queryClient,
+  getSessionUserId: sessionUserId,
+  onSessionLost: () => void expireSession(queryClient),
+});
 
 onSessionReset(offline.purge);
 

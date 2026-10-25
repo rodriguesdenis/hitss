@@ -15,11 +15,23 @@ export const MARINA_PASSWORD = 'senha-segura-123';
 
 export const MARINA_TOKEN = 'tok_marina.signature';
 
-const session = {
-  id: 'session-1',
-  userId: marina.id,
-  expiresAt: '2099-01-01T00:00:00.000Z',
+export const ana = {
+  id: 'user-ana',
+  name: 'Ana Lima',
+  email: 'ana@example.com',
+  emailVerified: true,
+  createdAt: '2026-09-02T12:00:00.000Z',
+  updatedAt: '2026-09-02T12:00:00.000Z',
 };
+
+export const ANA_PASSWORD = 'senha-da-ana-123';
+
+export const ANA_TOKEN = 'tok_ana.signature';
+
+const accounts = [
+  { user: marina, password: MARINA_PASSWORD, token: MARINA_TOKEN },
+  { user: ana, password: ANA_PASSWORD, token: ANA_TOKEN },
+];
 
 export const authHandlers = [
   http.post(`${API_URL}/api/auth/sign-in/email`, async ({ request }) => {
@@ -27,7 +39,11 @@ export const authHandlers = [
       email?: string;
       password?: string;
     };
-    if (body.email !== marina.email || body.password !== MARINA_PASSWORD) {
+    const account = accounts.find(
+      ({ user, password }) =>
+        user.email === body.email && password === body.password,
+    );
+    if (!account) {
       return HttpResponse.json(
         {
           code: 'INVALID_EMAIL_OR_PASSWORD',
@@ -37,15 +53,27 @@ export const authHandlers = [
       );
     }
     return HttpResponse.json(
-      { token: MARINA_TOKEN, user: marina },
-      { headers: { 'set-auth-token': MARINA_TOKEN } },
+      { token: account.token, user: account.user },
+      { headers: { 'set-auth-token': account.token } },
     );
   }),
-  http.get(`${API_URL}/api/auth/get-session`, ({ request }) =>
-    request.headers.get('authorization') === `Bearer ${MARINA_TOKEN}`
-      ? HttpResponse.json({ session, user: marina })
-      : HttpResponse.json(null),
-  ),
+  http.get(`${API_URL}/api/auth/get-session`, ({ request }) => {
+    const account = accounts.find(
+      ({ token }) => request.headers.get('authorization') === `Bearer ${token}`,
+    );
+    return HttpResponse.json(
+      account
+        ? {
+            session: {
+              id: `session-${account.user.id}`,
+              userId: account.user.id,
+              expiresAt: '2099-01-01T00:00:00.000Z',
+            },
+            user: account.user,
+          }
+        : null,
+    );
+  }),
   http.post(`${API_URL}/api/auth/sign-out`, () =>
     HttpResponse.json({ success: true }),
   ),

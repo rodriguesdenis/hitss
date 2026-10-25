@@ -9,6 +9,7 @@ import {
   AuthGate,
   AuthRedirect,
   expireSession,
+  sessionUserId,
   getToken,
   setToken,
   useSessionStore,
@@ -18,6 +19,7 @@ import { setupApiClient } from '@/lib/api';
 import { createMemoryStorage } from '@/lib/storage';
 import { onSessionReset } from '@/lib/session-reset';
 import {
+  setDurableUnauthenticatedHandler,
   createOfflineRuntime,
   OfflineQueryProvider,
   type OfflineRuntime,
@@ -82,8 +84,12 @@ export async function renderApp({
     queryClient: client,
     storage,
     buster: 'test',
+    throttleTime: 0,
+    getSessionUserId: sessionUserId,
+    onSessionLost: () => void expireSession(client),
   });
   onSessionReset(runtime.purge);
+  setDurableUnauthenticatedHandler(() => void expireSession(client));
   return renderRouter(
     {
       _layout: () => (
