@@ -6,7 +6,12 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthGate, expireSession, getToken } from '@/features/auth';
 import { setupApiClient } from '@/lib/api';
 import { createQueryClient } from '@/lib/query-client';
-import { QueryProvider } from '@/lib/QueryProvider';
+import { onSessionReset } from '@/lib/session-reset';
+import {
+  createOfflineRuntime,
+  OfflineQueryProvider,
+  useSyncStoreReady,
+} from '@/offline';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { Toaster } from '@/ui';
 
@@ -18,14 +23,22 @@ const queryClient = createQueryClient({
   onUnauthenticated: () => void expireSession(queryClient),
 });
 
+const offline = createOfflineRuntime({ queryClient });
+
+onSessionReset(offline.purge);
+
 export default function RootLayout() {
+  const ready = useSyncStoreReady();
+  if (!ready) {
+    return null;
+  }
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <QueryProvider client={queryClient}>
+        <OfflineQueryProvider runtime={offline}>
           <AuthGate />
           <Toaster />
-        </QueryProvider>
+        </OfflineQueryProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );
