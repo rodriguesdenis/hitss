@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { createQueryClient } from '@/lib/query-client';
 import { ThemeProvider } from '@/theme/ThemeProvider';
+import { hideToast, Toaster } from '@/ui';
 
 export function createTestQueryClient(
   options: Parameters<typeof createQueryClient>[0] = {},
@@ -17,6 +18,10 @@ export function createTestQueryClient(
       retry: false,
       gcTime: Infinity,
     },
+    mutations: {
+      ...client.getDefaultOptions().mutations,
+      gcTime: Infinity,
+    },
   });
   return client;
 }
@@ -25,6 +30,7 @@ export async function renderWithProviders(
   ui: ReactElement,
   { queryClient = createTestQueryClient() }: { queryClient?: QueryClient } = {},
 ) {
+  hideToast();
   const result = await render(
     <SafeAreaProvider
       initialMetrics={{
@@ -33,7 +39,10 @@ export async function renderWithProviders(
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>{ui}</ThemeProvider>
+        <ThemeProvider>
+          {ui}
+          <Toaster />
+        </ThemeProvider>
       </QueryClientProvider>
     </SafeAreaProvider>,
   );
