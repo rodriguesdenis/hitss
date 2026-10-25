@@ -5,6 +5,7 @@ import { useForm, type FieldErrors } from 'react-hook-form';
 import { AccessibilityInfo } from 'react-native';
 
 import { errorCode, errorMessage } from '@/lib/error-messages';
+import { errorCountMessage, validationFields } from '@/lib/form-errors';
 
 import { DEFAULT_TEAM_COLOR } from '../palette';
 import {
@@ -28,25 +29,11 @@ function isField(field: string): field is keyof TeamFormValues {
   return Object.hasOwn(fieldMessages, field);
 }
 
-function validationDetails(error: unknown): string[] {
-  const details = (error as { body?: { error?: { details?: unknown } } }).body
-    ?.error?.details;
-  return Array.isArray(details)
-    ? details.map((detail: { field?: unknown }) => String(detail.field))
-    : [];
-}
-
 let tempCounter = 0;
 
 function nextTempId(): string {
   tempCounter += 1;
   return `temp-team-${tempCounter}`;
-}
-
-export function errorCountMessage(count: number): string {
-  return count === 1
-    ? 'Corrija 1 erro para continuar'
-    : `Corrija ${count} erros para continuar`;
 }
 
 export function teamFormDefaults(team?: TeamResponseDto): TeamFormValues {
@@ -87,7 +74,7 @@ export function useTeamForm({
       return;
     }
     if (code === 'VALIDATION_FAILED') {
-      const fields = validationDetails(error).filter(isField);
+      const fields = validationFields(error).filter(isField);
       fields.forEach((field) =>
         form.setError(field, { message: fieldMessages[field] }),
       );
