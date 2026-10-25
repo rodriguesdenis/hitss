@@ -1,9 +1,3 @@
-import { Text, View } from 'react-native';
+import { AuthRedirect } from '@/features/auth';
 
-export default function Index() {
-  return (
-    <View className="screen items-center justify-center">
-      <Text className="type-title">Teams & Tasks</Text>
-    </View>
-  );
-}
+export default AuthRedirect;

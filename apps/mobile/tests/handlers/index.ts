@@ -1,4 +1,5 @@
+import { authHandlers } from './auth';
 import { tasksHandlers } from './tasks';
 import { teamsHandlers } from './teams';
 
-export const handlers = [...teamsHandlers, ...tasksHandlers];
+export const handlers = [...authHandlers, ...teamsHandlers, ...tasksHandlers];

@@ -1,6 +1,13 @@
 import * as SecureStore from 'expo-secure-store';
 
-export const TOKEN_KEY = 'teamstasks.session-token';
+export const AUTH_STORAGE_PREFIX = 'teamstasks';
+
+export const TOKEN_KEY = `${AUTH_STORAGE_PREFIX}.session-token`;
+
+const authClientKeys = [
+  `${AUTH_STORAGE_PREFIX}_cookie`,
+  `${AUTH_STORAGE_PREFIX}_session_data`,
+];
 
 export function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync(TOKEN_KEY);
@@ -11,5 +18,9 @@ export async function setToken(token: string): Promise<void> {
 }
 
 export async function deleteToken(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await Promise.all(
+    [TOKEN_KEY, ...authClientKeys].map((key) =>
+      SecureStore.deleteItemAsync(key),
+    ),
+  );
 }
