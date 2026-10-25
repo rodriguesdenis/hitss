@@ -40,5 +40,5 @@ export function useStatusChange() {
     );
   }
 
-  return { change, pending: mutation.isPending };
+  return { change, pending: mutation.isPending && !mutation.isPaused };
 }
