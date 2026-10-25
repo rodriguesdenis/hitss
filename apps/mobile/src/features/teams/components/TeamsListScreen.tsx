@@ -155,7 +155,7 @@ export function TeamsListScreen({
         label="Carregando times"
       />
       {body()}
-      <Fab label="Novo time" onPress={onCreateTeam} />
+      <Fab testID="new-team" label="Novo time" onPress={onCreateTeam} />
       <TeamOptionsSheet
         team={optionsFor}
         onClose={() => setOptionsFor(undefined)}

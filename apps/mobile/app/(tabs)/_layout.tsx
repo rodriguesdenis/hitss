@@ -34,15 +34,27 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="tasks"
-        options={{ title: 'Tarefas', tabBarIcon: TasksIcon }}
+        options={{
+          title: 'Tarefas',
+          tabBarButtonTestID: 'tab-tasks',
+          tabBarIcon: TasksIcon,
+        }}
       />
       <Tabs.Screen
         name="teams"
-        options={{ title: 'Times', tabBarIcon: TeamsIcon }}
+        options={{
+          title: 'Times',
+          tabBarButtonTestID: 'tab-teams',
+          tabBarIcon: TeamsIcon,
+        }}
       />
       <Tabs.Screen
         name="settings"
-        options={{ title: 'Ajustes', tabBarIcon: SettingsIcon }}
+        options={{
+          title: 'Ajustes',
+          tabBarButtonTestID: 'tab-settings',
+          tabBarIcon: SettingsIcon,
+        }}
       />
     </Tabs>
   );

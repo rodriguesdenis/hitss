@@ -35,6 +35,7 @@ export function SignInScreen() {
             name="email"
             render={({ field }) => (
               <Input
+                testID="sign-in-email"
                 value={field.value}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
@@ -57,6 +58,7 @@ export function SignInScreen() {
               name="password"
               render={({ field }) => (
                 <Input
+                  testID="sign-in-password"
                   className="pr-12"
                   value={field.value}
                   onChangeText={field.onChange}
@@ -94,6 +96,7 @@ export function SignInScreen() {
         ) : null}
 
         <Button
+          testID="sign-in-submit"
           label="Entrar"
           loadingLabel="Entrando…"
           loading={submitting}

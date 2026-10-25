@@ -40,6 +40,7 @@ export function TaskFilterBar({ scope, teamName }: TaskFilterBarProps) {
         placeholder={teamName ? `Buscar em ${teamName}` : 'Buscar tarefas'}
       />
       <SegmentedControl
+        testID="status-filter"
         label="Filtrar por status"
         options={options}
         value={filters.status}

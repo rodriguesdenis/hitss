@@ -38,6 +38,7 @@ export function SegmentedControl<T extends string>({
         return (
           <Pressable
             key={option.value}
+            testID={testID && `${testID}-${option.value}`}
             onPress={() => {
               if (!active) {
                 onChange(option.value);

@@ -33,6 +33,7 @@ export function SettingsScreen() {
           className="mb-4 border border-border-strong"
           icon="logout"
           label="Sair"
+          testID="sign-out"
           loading={signingOut}
           onPress={() => void signOut()}
         />
