@@ -1,0 +1,9 @@
+appId: host.exp.exponent
+---
+- tapOn:
+    id: 'tab-settings'
+- tapOn:
+    id: 'sign-out'
+- extendedWaitUntil:
+    visible: 'Entre para continuar'
+    timeout: 30000

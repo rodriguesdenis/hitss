@@ -1,0 +1,20 @@
+appId: host.exp.exponent
+---
+- runFlow: open-app.yaml
+- runFlow:
+    when:
+      visible: 'Entre para continuar'
+    commands:
+      - tapOn:
+          id: 'sign-in-email'
+      - inputText: 'demo@teams-tasks.dev'
+      - tapOn:
+          id: 'sign-in-password'
+      - inputText: 'Demo@1234'
+      - hideKeyboard
+      - tapOn:
+          id: 'sign-in-submit'
+- extendedWaitUntil:
+    visible:
+      id: 'tab-tasks'
+    timeout: 30000

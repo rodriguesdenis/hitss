@@ -1,0 +1,40 @@
+appId: host.exp.exponent
+name: Sign in, wrong password, sign out
+tags:
+  - auth
+---
+- runFlow: common/open-app.yaml
+- runFlow:
+    when:
+      notVisible: 'Entre para continuar'
+    file: common/sign-out.yaml
+- tapOn:
+    id: 'sign-in-email'
+- inputText: 'demo@teams-tasks.dev'
+- tapOn:
+    id: 'sign-in-password'
+- inputText: 'wrong-password'
+- hideKeyboard
+- tapOn:
+    id: 'sign-in-submit'
+- assertVisible: 'E-mail ou senha incorretos'
+- tapOn:
+    id: 'sign-in-password'
+- eraseText: 40
+- inputText: 'Demo@1234'
+- hideKeyboard
+- tapOn:
+    id: 'sign-in-submit'
+- extendedWaitUntil:
+    visible:
+      id: 'tab-tasks'
+    timeout: 30000
+- assertVisible: 'Implement the offline cache'
+- tapOn:
+    id: 'tab-settings'
+- assertVisible: 'demo@teams-tasks.dev'
+- tapOn:
+    id: 'sign-out'
+- extendedWaitUntil:
+    visible: 'Entre para continuar'
+    timeout: 30000

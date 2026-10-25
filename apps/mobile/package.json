@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test": "pnpm run test:tz && pnpm run test:lint-rules && jest",
     "test:tz": "TZ=Pacific/Kiritimati jest src/lib/dates && TZ=Pacific/Pago_Pago jest src/lib/dates",
-    "test:lint-rules": "node --test \"tests/lint/**/*.test.mjs\""
+    "test:lint-rules": "node --test \"tests/lint/**/*.test.mjs\"",
+    "e2e": "maestro test tests/maestro"
   },
   "dependencies": {
     "@better-auth/core": "1.7.7",

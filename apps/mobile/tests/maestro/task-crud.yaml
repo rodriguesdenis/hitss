@@ -1,0 +1,41 @@
+appId: host.exp.exponent
+name: Create, change status, edit and delete a task
+tags:
+  - tasks
+---
+- runFlow: common/sign-in.yaml
+- tapOn:
+    id: 'tab-tasks'
+- tapOn:
+    id: 'new-task'
+- tapOn:
+    id: 'task-title'
+- inputText: 'Tarefa criada pelo Maestro'
+- hideKeyboard
+- tapOn: 'Mobile'
+- tapOn:
+    id: 'task-save'
+- assertVisible: 'Tarefa criada'
+- tapOn: 'Tarefa criada pelo Maestro'
+- assertVisible: 'Sem descrição'
+- assertVisible: 'Mobile'
+- tapOn:
+    id: 'status-change-IN_PROGRESS'
+- assertVisible: 'Marcada como Em andamento'
+- tapOn:
+    id: 'task-edit'
+- tapOn:
+    id: 'task-title'
+- eraseText: 60
+- inputText: 'Tarefa editada pelo Maestro'
+- hideKeyboard
+- tapOn:
+    id: 'task-save'
+- assertVisible: 'Alterações salvas'
+- assertVisible: 'Tarefa editada pelo Maestro'
+- tapOn:
+    id: 'task-delete'
+- assertVisible: 'Excluir esta tarefa?'
+- tapOn: 'Excluir'
+- assertVisible: 'Tarefa excluída'
+- assertNotVisible: 'Tarefa editada pelo Maestro'

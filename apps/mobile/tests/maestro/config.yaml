@@ -1,0 +1,9 @@
+flows:
+  - '*.yaml'
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - auth
+    - filter-by-team
+    - validation
+    - task-crud
