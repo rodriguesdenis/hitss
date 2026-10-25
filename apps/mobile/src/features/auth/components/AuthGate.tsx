@@ -27,6 +27,7 @@ export function AuthGate() {
           name="teams/[id]/edit"
           options={{ presentation: 'modal' }}
         />
+        <Stack.Screen name="tasks/[id]/index" />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="(auth)" />
