@@ -1,0 +1,44 @@
+{
+  "name": "@hitss/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Teams & Tasks mobile app (Expo Router, runs in Expo Go)",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "export": "expo export --platform android --output-dir dist",
+    "lint": "eslint . && depcruise --config .dependency-cruiser.cjs app src",
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@expo/log-box": "58.0.13",
+    "@expo/metro-runtime": "58.0.15",
+    "expo": "58.0.19",
+    "expo-constants": "58.0.13",
+    "expo-linking": "58.0.14",
+    "expo-router": "58.0.26",
+    "expo-status-bar": "58.0.4",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "5.10.1",
+    "react-native-screens": "4.30.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@hitss/tsconfig": "workspace:*",
+    "@react-native/jest-preset": "0.88.0",
+    "@types/jest": "30.0.0",
+    "@types/react": "19.3.0",
+    "babel-preset-expo": "58.0.20",
+    "dependency-cruiser": "18.7.0",
+    "eslint": "9.39.5",
+    "eslint-config-expo": "58.0.4",
+    "jest": "30.5.2",
+    "jest-expo": "58.0.12",
+    "react-dom": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}
