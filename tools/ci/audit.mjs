@@ -22,6 +22,7 @@ function isIsoDate(value) {
 /**
  * Pure gate: fails on any high/critical advisory that has no valid, unexpired allowlist entry.
  * Entries need an id, an owner, a justification and an expiry date at most 90 days away (valid through that day, UTC).
+ * An entry with `paths` covers the advisory only when every path that reaches it starts with one of those prefixes.
  * Lower severities and stale entries are reported, never failing.
  */
 export function evaluateAudit(report, allowlist, today = new Date()) {
@@ -67,6 +68,15 @@ export function evaluateAudit(report, allowlist, today = new Date()) {
       failures.push(
         `${label}: expires ${entry.expires}, more than ${MAX_ALLOWLIST_DAYS} days from today (latest ${horizon})`,
       );
+    else if (
+      entry.paths !== undefined &&
+      (!Array.isArray(entry.paths) ||
+        entry.paths.length === 0 ||
+        !entry.paths.every((p) => typeof p === 'string' && p !== ''))
+    )
+      failures.push(
+        `${label}: paths must be a non-empty list of path prefixes`,
+      );
     else usable.set(entry.id, entry);
   }
 
@@ -83,6 +93,18 @@ export function evaluateAudit(report, allowlist, today = new Date()) {
     if (!entry) failures.push(`${summary} — not allowlisted`);
     else if (entry.expires < todayIso)
       failures.push(`${summary} — allowlist entry expired on ${entry.expires}`);
+    else if (entry.paths) {
+      const paths = (advisory.findings ?? []).flatMap((f) => f.paths ?? []);
+      const outside = paths.filter(
+        (path) => !entry.paths.some((prefix) => path.startsWith(prefix)),
+      );
+      if (paths.length === 0)
+        failures.push(
+          `${summary} — report has no paths to match the scoped entry`,
+        );
+      else if (outside.length > 0)
+        failures.push(`${summary} — not allowlisted for ${outside.join(', ')}`);
+    }
   }
 
   for (const entry of usable.values()) {
