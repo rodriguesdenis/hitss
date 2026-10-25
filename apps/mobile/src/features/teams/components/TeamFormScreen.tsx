@@ -35,6 +35,7 @@ export interface TeamFormScreenProps {
   teamId?: string;
   onClose: () => void;
   onDeleted?: () => void;
+  onCreated?: (team: TeamResponseDto) => void;
   onDirtyChange?: (dirty: boolean) => void;
 }
 
@@ -73,11 +74,17 @@ function TeamForm({
   team,
   onClose,
   onDeleted,
+  onCreated,
   onDirtyChange,
 }: Omit<TeamFormScreenProps, 'teamId'> & { team?: TeamResponseDto }) {
   const { form, submit, formError, saving } = useTeamForm({
     team,
-    onSaved: onClose,
+    onSaved: (saved) => {
+      if (!team) {
+        onCreated?.(saved);
+      }
+      onClose();
+    },
   });
   const {
     control,

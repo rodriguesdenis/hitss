@@ -1,6 +1,7 @@
 import type { TeamResponseDto } from '@hitss/api-client';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 
+import { offerCreatedTeam, useCreatedTeamStore } from '@/features/teams';
 import { toCalendarDate } from '@/lib/dates';
 
 import { db } from '../../../../tests/db';
@@ -217,6 +218,17 @@ describe('TaskFormScreen — create', () => {
     );
     await fireEvent.press(screen.getByRole('button', { name: 'Descartar' }));
     expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('AC-04.7.4 comes back from "Novo time" with the new team selected', async () => {
+    await renderForm();
+    await fireEvent.press(
+      await screen.findByRole('checkbox', { name: 'Mobile' }),
+    );
+    await act(async () => offerCreatedTeam('team-design'));
+    expect(teamChip('Design')).toBeChecked();
+    expect(teamChip('Mobile')).toBeChecked();
+    expect(useCreatedTeamStore.getState().teamId).toBeUndefined();
   });
 
   it('opens the new-team form', async () => {

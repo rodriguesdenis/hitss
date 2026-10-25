@@ -51,7 +51,7 @@ export function useTeamForm({
   onSaved,
 }: {
   team?: TeamResponseDto;
-  onSaved: () => void;
+  onSaved: (saved: TeamResponseDto) => void;
 }) {
   const create = useCreateTeam();
   const update = useUpdateTeam();
@@ -89,15 +89,10 @@ export function useTeamForm({
     async (values) => {
       setFormError(undefined);
       try {
-        if (team) {
-          await update.mutateAsync({ id: team.id, body: values });
-        } else {
-          await create.mutateAsync({
-            tempId: nextTempId(),
-            body: values,
-          });
-        }
-        onSaved();
+        const response = team
+          ? await update.mutateAsync({ id: team.id, body: values })
+          : await create.mutateAsync({ tempId: nextTempId(), body: values });
+        onSaved(response.data);
       } catch (error) {
         applyServerError(error);
       }
