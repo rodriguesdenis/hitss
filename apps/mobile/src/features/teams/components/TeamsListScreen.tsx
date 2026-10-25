@@ -10,6 +10,7 @@ import {
 
 import { useColorSchemeName } from '@/theme/ThemeProvider';
 import { tokens } from '@/theme/tokens';
+import { useBackgroundErrorToast } from '@/lib/useBackgroundErrorToast';
 import {
   Button,
   EmptyState,
@@ -44,10 +45,11 @@ export function TeamsListScreen({
   const [deleting, setDeleting] = useState<TeamResponseDto>();
   const [refreshing, setRefreshing] = useState(false);
   const list = useTeamsInfiniteList(search);
+  const refreshManually = useBackgroundErrorToast(list, list.teams.length > 0);
 
   async function refresh() {
     setRefreshing(true);
-    const result = await list.refetch();
+    const result = await refreshManually(() => list.refetch());
     setRefreshing(false);
     if (result.isError) {
       showToast({

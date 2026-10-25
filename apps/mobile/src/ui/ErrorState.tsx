@@ -6,11 +6,7 @@ import { Button } from './Button';
 import type { StateAction } from './EmptyState';
 import { Icon } from './Icon';
 
-const NOT_FOUND: readonly ErrorCode[] = [
-  'TASK_NOT_FOUND',
-  'TEAM_NOT_FOUND',
-  'ROUTE_NOT_FOUND',
-];
+const NOT_FOUND: readonly ErrorCode[] = ['TASK_NOT_FOUND', 'TEAM_NOT_FOUND'];
 
 function presentation(code: ErrorCode) {
   if (code === 'NETWORK') {
