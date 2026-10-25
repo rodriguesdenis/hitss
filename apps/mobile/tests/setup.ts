@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { setupApiClient } from '@/lib/api';
 
+import { resetDb } from './db';
 import { resetSecureStore } from './mocks/secure-store';
 import { server } from './server';
 
@@ -14,6 +15,7 @@ server.listen({ onUnhandledRequest: 'error' });
 
 beforeEach(async () => {
   resetSecureStore();
+  resetDb();
   await AsyncStorage.clear();
   setupApiClient(async () => null);
 });
