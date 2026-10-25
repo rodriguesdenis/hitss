@@ -19,6 +19,7 @@ export {
   type ConnectivityStatus,
   type OfflineBannerProps,
 } from './OfflineBanner';
+export { ProgressBar, type ProgressBarProps } from './ProgressBar';
 export { Screen, type ScreenProps } from './Screen';
 export {
   SEARCH_MAX_LENGTH,

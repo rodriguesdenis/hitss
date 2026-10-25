@@ -15,6 +15,7 @@ import {
   EmptyState,
   ErrorState,
   Fab,
+  ProgressBar,
   Screen,
   SearchInput,
   showToast,
@@ -147,6 +148,10 @@ export function TeamsListScreen({
           placeholder="Buscar times"
         />
       </View>
+      <ProgressBar
+        visible={list.isPlaceholderData && list.isFetching}
+        label="Carregando times"
+      />
       {body()}
       <Fab label="Novo time" onPress={onCreateTeam} />
       <TeamOptionsSheet

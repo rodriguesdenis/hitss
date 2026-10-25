@@ -249,6 +249,31 @@ describe('TasksListScreen — filters', () => {
     ).toEqual(['login']);
   });
 
+  it('keeps the previous results under a progress bar while searching', async () => {
+    let release = () => {};
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(`${API_URL}/api/v1/tasks`, async ({ request }) => {
+        if (new URL(request.url).searchParams.has('search')) {
+          await pending;
+        }
+      }),
+    );
+    await renderList();
+    await screen.findByText('Implement login screen');
+    expect(screen.queryByLabelText('Carregando tarefas')).toBeNull();
+    await fireEvent.changeText(screen.getByRole('search'), 'login');
+    expect(
+      await screen.findByRole('progressbar', { name: 'Carregando tarefas' }),
+    ).toBeBusy();
+    expect(titles()).toHaveLength(4);
+    release();
+    await waitFor(() => expect(titles()).toEqual(['Implement login screen']));
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
   it('AC-04.5.4 explains filters that match nothing and clears them', async () => {
     await renderList();
     await screen.findByText('Implement login screen');
