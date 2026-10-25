@@ -19,7 +19,7 @@ The design lives **in this document** (text, tables, ASCII wireframes, Mermaid).
 
 ### 1.1 Color — semantic roles
 
-Each role is a **CSS variable** holding space-separated RGB channels, defined once for light under `:root` and once for dark under `.dark` in `global.css` (§2.1), and mapped to a semantic Tailwind color name in `tailwind.config.js` (§1.6). Components therefore use **one** class (`bg-surface`, `text-fg`, `border-border-muted`) that switches theme automatically — no `dark:` pairs. Components never use raw palette names (`indigo-600`). The `dark:` variant is reserved for the documented exceptions in §2.2. Contrast ratios are WCAG 2.1 against the role's intended background.
+Each role is a **CSS variable** holding space-separated RGB channels, defined once for light under `:root` and once for dark under `.dark:root` in `global.css` (§2.1), and mapped to a semantic Tailwind color name in `tailwind.config.js` (§1.6). Components therefore use **one** class (`bg-surface`, `text-fg`, `border-border-muted`) that switches theme automatically — no `dark:` pairs. Components never use raw palette names (`indigo-600`). The `dark:` variant is reserved for the documented exceptions in §2.2. Contrast ratios are WCAG 2.1 against the role's intended background.
 
 | Role (= Tailwind color / CSS variable `--color-<role>`) | Light            | Dark             | Use                                              | Contrast (L / D)                        |
 | ------------------------------------------------------- | ---------------- | ---------------- | ------------------------------------------------ | --------------------------------------- |
@@ -185,7 +185,7 @@ module.exports = {
 
 Utility names are the contract between design and implementation: `bg-canvas`, `bg-surface`, `bg-surface-muted`, `text-fg`, `text-fg-muted`, `text-fg-subtle`, `border-border-muted`, `border-border-strong`, `bg-primary`, `bg-primary-pressed`, `text-on-primary`, `bg-danger`, `bg-danger-pressed`, `text-on-danger`, `bg-danger-soft`, `text-danger`, `text-success`, `text-warning`, `bg-warning-soft`, `bg-info-soft`, `text-on-info-soft`, `border-focus`, `bg-inverse`, `text-on-inverse`, `text-inverse-action`, `bg-overlay`, `bg-status-{pending,progress,done}-bg`, `text-status-{pending,progress,done}-fg`.
 
-**TypeScript mirror.** Values needed outside `className` (navigation theme, status bar, `RefreshControl` tint, placeholder color, icon colors, `contrastingText` surface) are exported from `src/shared/theme/tokens.ts` as `{ light, dark }` hex maps keyed by the role names above. `global.css` is the styling source; a unit test parses `global.css` and fails if any role differs from `tokens.ts` (no silent drift).
+**TypeScript mirror.** Values needed outside `className` (navigation theme, status bar, `RefreshControl` tint, placeholder color, icon colors, `contrastingText` surface) are exported from `src/theme/tokens.ts` as `{ light, dark }` hex maps keyed by the role names above. `global.css` is the styling source; a unit test parses `global.css` and fails if any role differs from `tokens.ts` (no silent drift).
 
 ---
 
@@ -195,7 +195,7 @@ Components use these classes; raw utilities are allowed only for one-off layout 
 
 ### 2.1 Theme variables
 
-Light values under `:root`, dark values under `.dark` (NativeWind toggles the class from `preferences.theme` via `colorScheme.set()`). Variable names and values are normative; if the installed NativeWind version needs a different dark selector (`.dark:root`, or `@media (prefers-color-scheme: dark)`), change the selector only.
+Light values under `:root`, dark values under `.dark:root` (react-native-css-interop reads root variables only as `:root` and `.dark:root`). The theme follows the device; NativeWind `colorScheme.set()` is used only by the COULD theme choice (T-004-23). Variable names and values are normative.
 
 ```css
 @tailwind base;
@@ -237,7 +237,7 @@ Light values under `:root`, dark values under `.dark` (NativeWind toggles the cl
     --color-status-done-fg: 22 101 52; /* #166534 */
     --alpha-overlay: 0.5;
   }
-  .dark {
+  .dark:root {
     --color-canvas: 11 17 32; /* #0B1120 */
     --color-surface: 17 24 39; /* #111827 */
     --color-surface-muted: 31 41 55; /* #1F2937 */
@@ -547,7 +547,7 @@ A team chip shows the **team name** on the **team color**. Color is decorative; 
    - `ratio(a,b) = (Lmax + 0.05) / (Lmin + 0.05)`;
    - choose black if `ratio(bg, black) ≥ ratio(bg, white)` (equivalently `L > ≈ 0.179`).
    - Mathematically one of the two always reaches **≥ 4.58:1**, so every chip meets AA for small text.
-   - Computed only in the app (the API returns just `colorHex`); the app implements a pure function `contrastingText(hex)` in `src/shared/theme/contrast.ts` with table-driven tests from §1.3.
+   - Computed only in the app (the API returns just `colorHex`); the app implements a pure function `contrastingText(hex)` in `src/theme/contrast.ts` with table-driven tests from §1.3.
 3. **Outline:** if `ratio(bg, current surface)` < **3:1** (WCAG 1.4.11 non-text contrast), add `.chip-outline` (1 px `border-strong`). Evaluated against the surface of the active theme, so the same color may need an outline in dark mode and not in light (e.g. Ink `#1E293B`) or vice versa (e.g. Yellow).
 4. **Truncation:** label truncates at 160 pt with an ellipsis; the full name is in the accessibility label.
 5. **Overflow:** a list row shows at most **3** chips, then `+N` (`.chip-overflow`). The detail screen shows all chips, wrapping.

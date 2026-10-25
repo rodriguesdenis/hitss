@@ -55,7 +55,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 ## T-004-02 — Add NativeWind, CSS-variable tokens and the `@apply` catalog
 
 - **Goal:** design spec §1–§2 available as Tailwind theme and semantic classes.
-- **Changes:** `src/theme/global.css` (color tokens as CSS variables under `:root` / `.dark`, then the §2 catalog; `dark:` only for the design-spec exceptions), `tailwind.config.js` (design §1.6, colors as `rgb(var(--color-…) / <alpha-value>)`), NativeWind babel/metro setup, `nativewind-env.d.ts`, `src/theme/tokens.ts`, `src/theme/contrast.ts` (`contrastingText`, `needsOutline`, `contrastRatio`).
+- **Changes:** `src/theme/global.css` (color tokens as CSS variables under `:root` / `.dark:root`, then the §2 catalog; `dark:` only for the design-spec exceptions), `tailwind.config.js` (design §1.6, colors as `rgb(var(--color-…) / <alpha-value>)`), NativeWind babel/metro setup, `nativewind-env.d.ts`, `src/theme/tokens.ts`, `src/theme/contrast.ts` (`contrastingText`, `needsOutline`, `contrastRatio`).
 - **Covers:** @AC-04.8.2, @AC-04.12.2 (baseline: token contrast unit test).
 - **Done when:** table-driven tests for every preset in design §1.3 and the feature's chip examples; all text token pairs in §1.1/§1.2 ≥ 4.5:1; a smoke screen renders each catalog class in light and dark; `tokens.ts` parity with `global.css`.
 
