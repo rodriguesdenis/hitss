@@ -4,12 +4,15 @@ import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthGate, expireSession, getToken } from '@/features/auth';
+import { registerTaskMutationDefaults } from '@/features/tasks';
+import { registerTeamMutationDefaults } from '@/features/teams';
 import { setupApiClient } from '@/lib/api';
 import { createQueryClient } from '@/lib/query-client';
 import { onSessionReset } from '@/lib/session-reset';
 import {
   createOfflineRuntime,
   OfflineQueryProvider,
+  setDurableUnauthenticatedHandler,
   useSyncStoreReady,
 } from '@/offline';
 import { ThemeProvider } from '@/theme/ThemeProvider';
@@ -22,6 +25,10 @@ setupApiClient(getToken);
 const queryClient = createQueryClient({
   onUnauthenticated: () => void expireSession(queryClient),
 });
+
+registerTeamMutationDefaults(queryClient);
+registerTaskMutationDefaults(queryClient);
+setDurableUnauthenticatedHandler(() => void expireSession(queryClient));
 
 const offline = createOfflineRuntime({ queryClient });
 
