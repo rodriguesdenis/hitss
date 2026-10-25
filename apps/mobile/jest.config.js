@@ -9,6 +9,7 @@ const transformed = [
   '@hitss/[^/]+',
   'rettime',
   'until-async',
+  'immer',
   '@open-draft/[^/]+',
 ].join('|');
 
