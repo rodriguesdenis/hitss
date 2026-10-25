@@ -5,6 +5,7 @@ import { useForm, type FieldErrors } from 'react-hook-form';
 import { AccessibilityInfo } from 'react-native';
 
 import { errorCode, errorMessage } from '@/lib/error-messages';
+import { newTempId, submitDurable } from '@/offline';
 import {
   errorCountMessage,
   errorDetails,
@@ -31,13 +32,6 @@ const fieldMessages: Partial<Record<keyof TaskFormValues, string>> = {
 
 function isField(field: string): field is keyof TaskFormValues {
   return Object.hasOwn(fieldMessages, field);
-}
-
-let tempCounter = 0;
-
-function nextTempId(): string {
-  tempCounter += 1;
-  return `temp-task-${tempCounter}`;
 }
 
 export function taskFormDefaults(
@@ -116,9 +110,9 @@ export function useTaskForm({
       setFormError(undefined);
       try {
         if (task) {
-          await update.mutateAsync({ id: task.id, body: values });
+          await submitDurable(update, { id: task.id, body: values });
         } else {
-          await create.mutateAsync({ tempId: nextTempId(), body: values });
+          await submitDurable(create, { tempId: newTempId(), body: values });
         }
         onSaved();
       } catch (error) {

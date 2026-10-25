@@ -189,7 +189,7 @@ describe('TaskDetailScreen', () => {
     );
     expect(
       await screen.findByText(
-        'Algo deu errado do nosso lado. Tente novamente.',
+        'Não foi possível salvar “Fix crash on Android”: Algo deu errado do nosso lado. Tente novamente.',
       ),
     ).toBeOnTheScreen();
     expect(statusBar().getByRole('radio', { name: 'Pendente' })).toBeSelected();
@@ -233,7 +233,7 @@ describe('TaskDetailScreen', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Excluir' }));
     expect(
       await screen.findByText(
-        'Não foi possível conectar ao servidor. Verifique sua conexão.',
+        'Não foi possível salvar “Fix crash on Android”: Não foi possível conectar ao servidor. Verifique sua conexão.',
       ),
     ).toBeOnTheScreen();
     expect(props.onDeleted).not.toHaveBeenCalled();

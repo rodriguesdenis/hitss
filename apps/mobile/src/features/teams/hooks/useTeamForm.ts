@@ -5,6 +5,7 @@ import { useForm, type FieldErrors } from 'react-hook-form';
 import { AccessibilityInfo } from 'react-native';
 
 import { errorCode, errorMessage } from '@/lib/error-messages';
+import { newTempId, submitDurable } from '@/offline';
 import { errorCountMessage, validationFields } from '@/lib/form-errors';
 
 import { DEFAULT_TEAM_COLOR } from '../palette';
@@ -27,13 +28,6 @@ const fieldMessages: Record<keyof TeamFormValues, string> = {
 
 function isField(field: string): field is keyof TeamFormValues {
   return Object.hasOwn(fieldMessages, field);
-}
-
-let tempCounter = 0;
-
-function nextTempId(): string {
-  tempCounter += 1;
-  return `temp-team-${tempCounter}`;
 }
 
 export function teamFormDefaults(team?: TeamResponseDto): TeamFormValues {
@@ -89,10 +83,25 @@ export function useTeamForm({
     async (values) => {
       setFormError(undefined);
       try {
-        const response = team
-          ? await update.mutateAsync({ id: team.id, body: values })
-          : await create.mutateAsync({ tempId: nextTempId(), body: values });
-        onSaved(response.data);
+        const tempId = newTempId();
+        const result = team
+          ? await submitDurable(update, { id: team.id, body: values })
+          : await submitDurable(create, { tempId, body: values });
+        onSaved(
+          result.outcome === 'saved'
+            ? result.data.data
+            : team
+              ? { ...team, ...values }
+              : {
+                  ...values,
+                  id: tempId,
+                  description: values.description ?? null,
+                  taskCount: 0,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  version: 0,
+                },
+        );
       } catch (error) {
         applyServerError(error);
       }

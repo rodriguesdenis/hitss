@@ -13,7 +13,7 @@ import {
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
 
 import { applyCacheEffects } from '@/lib/cache-effects';
-import { mk } from '@/lib/query-keys';
+import { mk, qk } from '@/lib/query-keys';
 import {
   defineDurableMutation,
   discardMessage,
@@ -22,7 +22,7 @@ import {
   useSyncStore,
   warnDiscarded,
 } from '@/offline';
-import { showToast, statusLabels } from '@/ui';
+import { showToast } from '@/ui';
 
 export type TaskCreateVars = { tempId: string; body: CreateTaskDto };
 export type TaskUpdateVars = { id: string; body: UpdateTaskDto };
@@ -54,7 +54,8 @@ export function registerTaskMutationDefaults(queryClient: QueryClient): void {
           showToast({ message: 'Tarefa criada' });
         }
       },
-      onDiscard: (reason, error, { body }) =>
+      onDiscard: (reason, error, { body }, context) =>
+        context?.queued &&
         warnDiscarded(discardMessage(reason, error, body.title)),
       afterDrain: () =>
         applyCacheEffects(queryClient, 'tasks.create', { id: '' }),
@@ -77,7 +78,8 @@ export function registerTaskMutationDefaults(queryClient: QueryClient): void {
           showToast({ message: 'Alterações salvas' });
         }
       },
-      onDiscard: (reason, error, { body }) =>
+      onDiscard: (reason, error, { body }, context) =>
+        context?.queued &&
         warnDiscarded(discardMessage(reason, error, body.title)),
       afterDrain: ({ id }) =>
         applyCacheEffects(queryClient, 'tasks.update', { id }),
@@ -92,10 +94,8 @@ export function registerTaskMutationDefaults(queryClient: QueryClient): void {
       mutationFn: ({ id, status }) =>
         tasksChangeStatus(resolveId(id), { status }),
       onMutate: queued,
-      onSuccess: (_response, { status }, context) => {
-        if (!context?.queued) {
-          showToast({ message: `Marcada como ${statusLabels[status]}` });
-        }
+      onSuccess: (response, { id }) => {
+        queryClient.setQueryData(qk.tasks.detail(resolveId(id)), response);
       },
       onDiscard: (reason, error, { title }) =>
         warnDiscarded(discardMessage(reason, error, title)),

@@ -12,7 +12,7 @@ export function useStatusChange() {
     task: Pick<TaskResponseDto, 'id' | 'status' | 'title'>,
     status: TaskStatus,
   ) {
-    if (status === task.status || mutation.isPending) {
+    if (status === task.status) {
       return;
     }
     const previous = task.status;

@@ -3,7 +3,10 @@ import { render } from '@testing-library/react-native';
 import type { ReactElement } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { registerTaskMutationDefaults } from '@/features/tasks';
+import { registerTeamMutationDefaults } from '@/features/teams';
 import { createQueryClient } from '@/lib/query-client';
+import { mk } from '@/lib/query-keys';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { hideToast, Toaster } from '@/ui';
 
@@ -23,6 +26,14 @@ export function createTestQueryClient(
       gcTime: Infinity,
     },
   });
+  registerTeamMutationDefaults(client);
+  registerTaskMutationDefaults(client);
+  for (const key of [...Object.values(mk.teams), ...Object.values(mk.tasks)]) {
+    client.setMutationDefaults(key, {
+      ...client.getMutationDefaults(key),
+      retryDelay: 0,
+    });
+  }
   return client;
 }
 

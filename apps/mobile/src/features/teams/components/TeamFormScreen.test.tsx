@@ -157,11 +157,21 @@ describe('TeamFormScreen — create', () => {
     expect(bodies).toHaveLength(1);
   });
 
-  it('shows a network failure above the footer and keeps the input', async () => {
+  it('AC-05.6.4 retries a network blip and saves', async () => {
     server.use(
       http.post(`${API_URL}/api/v1/teams`, () => HttpResponse.error(), {
         once: true,
       }),
+    );
+    const { props } = await renderForm();
+    await fireEvent.changeText(nameInput(), 'Infra');
+    await fireEvent.press(screen.getByRole('button', { name: 'Criar time' }));
+    await waitFor(() => expect(props.onClose).toHaveBeenCalled());
+  });
+
+  it('shows a network failure above the footer and keeps the input', async () => {
+    server.use(
+      http.post(`${API_URL}/api/v1/teams`, () => HttpResponse.error()),
     );
     await renderForm();
     await fireEvent.changeText(nameInput(), 'Infra');

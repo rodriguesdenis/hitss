@@ -10,7 +10,7 @@ import {
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
 
 import { applyCacheEffects } from '@/lib/cache-effects';
-import { mk } from '@/lib/query-keys';
+import { mk, qk } from '@/lib/query-keys';
 import {
   defineDurableMutation,
   discardMessage,
@@ -49,7 +49,8 @@ export function registerTeamMutationDefaults(queryClient: QueryClient): void {
           showToast({ message: 'Time criado' });
         }
       },
-      onDiscard: (reason, error, { body }) =>
+      onDiscard: (reason, error, { body }, context) =>
+        context?.queued &&
         warnDiscarded(
           discardMessage(reason, error, body.name, goneTeam(body.name)),
         ),
@@ -65,12 +66,14 @@ export function registerTeamMutationDefaults(queryClient: QueryClient): void {
       kind: 'update',
       mutationFn: ({ id, body }) => teamsReplace(resolveId(id), body),
       onMutate: queued,
-      onSuccess: (_response, _vars, context) => {
+      onSuccess: (response, { id }, context) => {
+        queryClient.setQueryData(qk.teams.detail(resolveId(id)), response);
         if (!context?.queued) {
           showToast({ message: 'Time atualizado' });
         }
       },
-      onDiscard: (reason, error, { body }) =>
+      onDiscard: (reason, error, { body }, context) =>
+        context?.queued &&
         warnDiscarded(
           discardMessage(reason, error, body.name, goneTeam(body.name)),
         ),
