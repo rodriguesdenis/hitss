@@ -11,7 +11,7 @@
     "export": "expo export --platform android --output-dir dist",
     "lint": "eslint . && depcruise --config .dependency-cruiser.cjs app src",
     "typecheck": "tsc --noEmit",
-    "test": "jest && pnpm run test:tz && pnpm run test:lint-rules",
+    "test": "pnpm run test:tz && pnpm run test:lint-rules && jest",
     "test:tz": "TZ=Pacific/Kiritimati jest src/lib/dates && TZ=Pacific/Pago_Pago jest src/lib/dates",
     "test:lint-rules": "node --test \"tests/lint/**/*.test.mjs\""
   },
