@@ -2,18 +2,24 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
+import { useOwnedCache } from '@/offline';
+
 import { useAuthSession } from '../session';
 
 export function AuthGate() {
-  const { status } = useAuthSession();
+  const { status, user } = useAuthSession();
+  const owned = useOwnedCache(
+    status === 'signedIn' ? (user?.id ?? null) : null,
+  );
+  const ready = status !== 'loading' && owned;
 
   useEffect(() => {
-    if (status !== 'loading') {
+    if (ready) {
       void SplashScreen.hideAsync();
     }
-  }, [status]);
+  }, [ready]);
 
-  if (status === 'loading') {
+  if (!ready) {
     return null;
   }
 

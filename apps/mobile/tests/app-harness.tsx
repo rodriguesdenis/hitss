@@ -1,5 +1,5 @@
 import { useTeamsList } from '@hitss/api-client';
-import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import { Stack, Tabs } from 'expo-router';
 import { renderRouter } from 'expo-router/testing-library';
 import type { JSX } from 'react';
@@ -15,6 +15,13 @@ import {
   useSignOut,
 } from '@/features/auth';
 import { setupApiClient } from '@/lib/api';
+import { createMemoryStorage } from '@/lib/storage';
+import { onSessionReset } from '@/lib/session-reset';
+import {
+  createOfflineRuntime,
+  OfflineQueryProvider,
+  type OfflineRuntime,
+} from '@/offline';
 
 import { createTestQueryClient } from './renderWithProviders';
 
@@ -22,8 +29,10 @@ export { act, fireEvent, screen, waitFor } from 'expo-router/testing-library';
 export { getToken };
 
 let client: QueryClient;
+let runtime: OfflineRuntime;
 
 export const queryClient = () => client;
+export const offlineRuntime = () => runtime;
 
 function SignIn() {
   const expired = useSessionStore((s) => s.expired);
@@ -54,11 +63,13 @@ export async function renderApp({
   initialUrl,
   fetchTeams = false,
   routes = {},
+  storage = createMemoryStorage(),
 }: {
   token?: string;
   initialUrl: string;
   fetchTeams?: boolean;
   routes?: Record<string, () => JSX.Element | null>;
+  storage?: ReturnType<typeof createMemoryStorage>;
 }) {
   if (token) {
     await setToken(token);
@@ -67,12 +78,18 @@ export async function renderApp({
   client = createTestQueryClient({
     onUnauthenticated: () => void expireSession(client),
   });
+  runtime = createOfflineRuntime({
+    queryClient: client,
+    storage,
+    buster: 'test',
+  });
+  onSessionReset(runtime.purge);
   return renderRouter(
     {
       _layout: () => (
-        <QueryClientProvider client={client}>
+        <OfflineQueryProvider runtime={runtime}>
           <AuthGate />
-        </QueryClientProvider>
+        </OfflineQueryProvider>
       ),
       index: AuthRedirect,
       '(auth)/_layout': () => <Stack screenOptions={{ headerShown: false }} />,
