@@ -7,9 +7,10 @@
 **/node_modules
 **/dist
 **/coverage
-.env
-.env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+**/.expo
 *.log
 docs
 *.pem
