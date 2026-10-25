@@ -5,3 +5,5 @@ coverage
 pnpm-lock.yaml
 *.pdf
 apps/api/src/generated
+packages/api-client/openapi.json
+packages/api-client/src/generated
