@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": "GHSA-86w9-cpqp-85rv",
+    "owner": "devops-ci",
+    "reason": "dev-time CLI, not in the app bundle; no patch reachable",
+    "expires": "2026-11-24",
+    "paths": ["apps__mobile>expo>@expo/cli>"]
+  },
+  {
+    "id": "GHSA-mrhx-c7xc-m3w5",
+    "owner": "devops-ci",
+    "reason": "dev-time CLI, not in the app bundle; no patch reachable",
+    "expires": "2026-11-24",
+    "paths": ["apps__mobile>expo>@expo/cli>"]
+  }
+]
