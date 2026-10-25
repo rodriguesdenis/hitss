@@ -2,7 +2,7 @@
 
 A small fullstack system for managing **teams** and **tasks**: a NestJS REST API (PostgreSQL, Better Auth) and an Expo mobile app, in one pnpm/Turborepo monorepo. Built spec-first as a senior-level hiring test. Tasks can belong to zero or more teams; every user sees only their own data.
 
-> **Status.** The backend is implemented and verified end to end: `docker compose up --build` migrates, seeds and serves the API, Swagger UI and the request collection pass against a fresh stack in CI. The mobile app and the generated API client are the next phase; the sections below mark them ⚠️ ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md)).
+> **Status.** The API and the mobile app are implemented. `docker compose up --build` migrates, seeds and serves the API (Swagger UI and the request collection pass against a fresh stack in CI); the Expo app runs in Expo Go against it, from the host or from Docker with `make mobile` ([ADR-0018](docs/architecture/adr/0018-docker-compose-one-command-run.md), [runbook](docs/operations/runbook.md), [mobile app](apps/mobile/README.md)).
 
 **Contents:** [Architectural decisions](#architectural-decisions) · [Data model](#data-model) · [How to run](#how-to-run) · [API contract summary](#api-contract-summary) · [Request examples](#request-examples) · [Production notes](#what-id-do-differently-in-production) · [Project structure](#project-structure) · [Testing](#testing) · [Contributing](#contributing) · [Troubleshooting](#troubleshooting)
 
@@ -25,7 +25,7 @@ Every significant decision is an [ADR](docs/architecture/adr/README.md) with the
 | Testing          | Unit (no Nest, no DB) → integration (Testcontainers) → e2e (supertest)                                                                   | Fast feedback, with realism where SQL and migrations matter                                   | [0014](docs/architecture/adr/0014-testing-strategy.md)                                                                                                     |
 | Local run        | Docker Compose one-command run                                                                                                           | One command, deterministic startup order (database → migrate → seed → API)                    | [0018](docs/architecture/adr/0018-docker-compose-one-command-run.md)                                                                                       |
 
-Also decided, in the [ADR archive](docs/architecture/adr/README.md#archive): class-validator DTOs as the contract source, soft delete, Conventional Commits and atomic PRs, and the mobile platform choices (Expo, React Query + Zustand, NativeWind, offline-first) for the next phase.
+Also decided, in the [ADR archive](docs/architecture/adr/README.md#archive): class-validator DTOs as the contract source, soft delete, Conventional Commits and atomic PRs, and the mobile platform choices (Expo, React Query + Zustand, NativeWind, offline-first).
 
 ## Data model
 
@@ -85,8 +85,6 @@ erDiagram
 
 ## How to run
 
-> The backend path below is verified. The `mobile` profile (⚠️) arrives with the mobile app.
-
 ### Backend (Docker)
 
 Requirements: **Docker with Compose v2**. Nothing else is needed for the API.
@@ -108,9 +106,17 @@ This starts PostgreSQL, waits until it is healthy, runs the one-shot `migrate` s
 
 The seed is deterministic and idempotent: the demo account owns 3 teams and 10 tasks covering every status, tasks in several teams, a task without a team and an overdue task.
 
-### Mobile app (next phase)
+### Mobile app (Expo Go)
 
-⚠️ Not built yet. The Expo app (Expo Go, no native toolchain) is specified in [spec 004](docs/specs/004-mobile-app/spec.md); how to start it will be added here with the app.
+Requirements: **Expo Go for SDK 58** on a phone on the same Wi-Fi as the computer, or an Android emulator. With the API running, start the Expo dev server and scan the QR code:
+
+```bash
+EXPO_PUBLIC_API_URL=http://<this computer's LAN IP>:3000 make mobile   # Docker only, profile `mobile`
+# or, with Node ≥ 24 and pnpm 10 on the host (EXPO_PUBLIC_API_URL in apps/mobile/.env):
+pnpm install && pnpm --filter @hitss/mobile start
+```
+
+`EXPO_PUBLIC_API_URL` is the API as the device sees it: the LAN IP for a phone, `http://10.0.2.2:3000` on the Android emulator. Sign in with the demo account. Emulator, WSL2, Maestro flows and troubleshooting: [mobile app README](apps/mobile/README.md); the container options (`EXPO_DEV_MODE=tunnel|lan`, firewall): [runbook](docs/operations/runbook.md#mobile-dev-server-optional).
 
 ### Observability (optional)
 
@@ -120,17 +126,18 @@ Logs are JSON on stdout (`docker compose logs api`), one line per request with `
 
 `make` is optional; every alias echoes the plain command it runs, so the same works without it. `make` with no target lists them.
 
-| Goal                                                                            | Alias              | Plain command                         |
-| ------------------------------------------------------------------------------- | ------------------ | ------------------------------------- |
-| Build and start everything, wait ready                                          | `make up`          | `docker compose up -d --build --wait` |
-| Stop (keeps the database volume)                                                | `make down`        | `docker compose down`                 |
-| Follow the API logs                                                             | `make logs`        | `docker compose logs -f api`          |
-| Drop the data and start from scratch                                            | `make reset`       | `docker compose down -v` then `up`    |
-| Re-apply the demo data                                                          | `make seed`        | `docker compose exec api …` (echoed)  |
-| Unit tests on the host                                                          | `make test`        | `pnpm test`                           |
-| Every suite (needs Docker)                                                      | `make test-all`    | `pnpm test:all`                       |
-| Unit tests in a throwaway container                                             | `make test-docker` | echoed by make                        |
-| Fresh-stack smoke test (stop the dev stack first: it needs ports 3000 and 5432) | `make smoke`       | `tools/ci/compose-smoke.sh`           |
+| Goal                                                                            | Alias              | Plain command                                       |
+| ------------------------------------------------------------------------------- | ------------------ | --------------------------------------------------- |
+| Build and start everything, wait ready                                          | `make up`          | `docker compose up -d --build --wait`               |
+| Stop (keeps the database volume)                                                | `make down`        | `docker compose down`                               |
+| Follow the API logs                                                             | `make logs`        | `docker compose logs -f api`                        |
+| Drop the data and start from scratch                                            | `make reset`       | `docker compose down -v` then `up`                  |
+| Re-apply the demo data                                                          | `make seed`        | `docker compose exec api …` (echoed)                |
+| Unit tests on the host                                                          | `make test`        | `pnpm test`                                         |
+| Every suite (needs Docker)                                                      | `make test-all`    | `pnpm test:all`                                     |
+| Unit tests in a throwaway container                                             | `make test-docker` | echoed by make                                      |
+| Fresh-stack smoke test (stop the dev stack first: it needs ports 3000 and 5432) | `make smoke`       | `tools/ci/compose-smoke.sh`                         |
+| Expo dev server for Expo Go (optional)                                          | `make mobile`      | `docker compose --profile mobile up --build mobile` |
 
 Root scripts for the host toolchain (Node ≥ 24, pnpm 10): `pnpm start` / `pnpm stop` (compose up and down), `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:all`, `pnpm format`. More commands and failure handling: [runbook](docs/operations/runbook.md).
 
@@ -214,7 +221,7 @@ The project stops deliberately where the cost only pays off with real traffic or
 
 | Topic              | Today                                                                           | In production                                                                                                                                        |
 | ------------------ | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cache              | No HTTP caching; React Query cache on the device (mobile phase)                 | `If-None-Match` → `304`, `Cache-Control: private, no-cache`, Redis read-through cache with event-driven invalidation for hot lists                   |
+| Cache              | No HTTP caching; React Query cache on the device                                | `If-None-Match` → `304`, `Cache-Control: private, no-cache`, Redis read-through cache with event-driven invalidation for hot lists                   |
 | Logs and telemetry | JSON logs to stdout, redacted; OTLP traces only when an endpoint is set         | Managed backend, retention policy, tail sampling, audit log, mobile crash reporting, alerts as code                                                  |
 | Scalability        | One stateless API container; offset pagination; in-memory rate limiter          | Horizontal scaling, Redis-backed throttling, PgBouncer, read replicas, cursor pagination, transactional outbox                                       |
 | Security           | Owner scoping, validation, throttler, `helmet`, env secrets with local defaults | Secrets manager, TLS/HSTS, WAF, email verification + MFA, SCA/SAST and container scanning, least-privilege DB roles, Swagger disabled or behind auth |
@@ -226,9 +233,9 @@ Also covered there: reliability, CD pipeline, data lifecycle, multi-tenancy. Sec
 ```text
 apps/
   api/              NestJS 11 REST API (four layers, use cases, Prisma, Better Auth)
-  mobile/           Expo app — ⚠️ not created yet
+  mobile/           Expo app (Expo Router, NativeWind, React Query) for Expo Go
 packages/
-  api-client/       orval-generated client from the API's OpenAPI — ⚠️ not created yet
+  api-client/       orval-generated hooks, types and zod schemas from the API's OpenAPI
   tsconfig/         shared strict tsconfig bases
 docs/               constitution, product, specs, architecture, ADRs, quality, security, operations
 tools/              bruno/ + http/ (request collections), ci/ (CI scripts), docs-checks/ (optional document checks)
