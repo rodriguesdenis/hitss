@@ -1,4 +1,8 @@
 export {
+  TeamFormScreen,
+  type TeamFormScreenProps,
+} from './components/TeamFormScreen';
+export {
   TeamsListScreen,
   type TeamsListScreenProps,
 } from './components/TeamsListScreen';
