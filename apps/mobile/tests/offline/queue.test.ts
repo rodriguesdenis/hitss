@@ -263,7 +263,7 @@ describe('durable mutation queue', () => {
     expect(sent).toHaveLength(2);
   });
 
-  it('resending a PUT ends in the same server state', async () => {
+  it('AC-05.6.3 resending a PUT ends in the same server state', async () => {
     const client = newClient();
     const body = { name: 'Backend', colorHex: '#0EA5E9', description: null };
     await mutate<TeamUpdateVars>(client, mk.teams.update, {
