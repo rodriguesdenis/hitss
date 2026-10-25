@@ -11,6 +11,12 @@ const transformed = [
   'until-async',
   'immer',
   '@open-draft/[^/]+',
+  'better-auth',
+  '@better-auth/[^/]+',
+  '@better-fetch/[^/]+',
+  'better-call',
+  'immer',
+  'nanostores',
 ].join('|');
 
 module.exports = {
