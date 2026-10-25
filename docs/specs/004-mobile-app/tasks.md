@@ -89,6 +89,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-07 — Build UI kit primitives
 
+- **Status:** done
 - **Goal:** lean, accessible building blocks using only catalog classes.
 - **Changes:** `src/ui/{Button,IconButton,Fab,Input,TextArea,Field,SearchInput,Skeleton,EmptyState,ErrorState,Screen}.tsx`, `src/ui/useDebouncedValue.ts` (300 ms).
 - **Covers:** @AC-04.12.1 (baseline: name, role and 44 pt target on every shared component).
@@ -96,6 +97,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-08 — Build UI kit feedback and selection components
 
+- **Status:** done
 - **Goal:** the remaining shared components of the design.
 - **Changes:** `src/ui/{TeamChip,TeamChipGroup,StatusBadge,SegmentedControl,Toast,Toaster,Sheet,ConfirmDialog,DatePickerField,OfflineBanner}.tsx`, `src/ui/toast.store.ts`.
 - **Covers:** @AC-04.8.1, @AC-04.8.2, @AC-04.8.3, @AC-04.8.5, @AC-04.9.4, @AC-04.12.5 (baseline).
