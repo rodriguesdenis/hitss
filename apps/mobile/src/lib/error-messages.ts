@@ -39,10 +39,11 @@ export function errorCode(error: unknown): ErrorCode {
 
 export function errorMessage(
   error: unknown,
-  { retryAfterSeconds = 60 }: { retryAfterSeconds?: number } = {},
+  { retryAfterSeconds }: { retryAfterSeconds?: number } = {},
 ): string {
-  return errorMessages[errorCode(error)].replace(
-    '{seconds}',
-    String(retryAfterSeconds),
-  );
+  const seconds =
+    retryAfterSeconds ??
+    (error instanceof ApiError ? error.retryAfter : undefined) ??
+    60;
+  return errorMessages[errorCode(error)].replace('{seconds}', String(seconds));
 }
