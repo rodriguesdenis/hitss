@@ -144,6 +144,17 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm turbo run build
 
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Contract drift (offline OpenAPI export, orval, git diff on packages/api-client)
+        run: tools/ci/api-client-drift.sh
+
   # Not part of the required gate (ADR-0020, AC-08.8): process documents are checked here for
   # information, and `pnpm traceability:check`, `pnpm doc-check` and `pnpm test:docs` run locally.
   docs-checks:
@@ -177,6 +188,7 @@ jobs:
         unit,
         integration,
         build,
+        contract,
         compose-smoke,
       ]
     runs-on: ubuntu-24.04
