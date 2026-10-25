@@ -9,9 +9,7 @@ export default function EditTeamRoute() {
   const [dirty, setDirty] = useState(false);
   return (
     <>
-      <Stack.Screen
-        options={{ presentation: 'modal', gestureEnabled: !dirty }}
-      />
+      <Stack.Screen options={{ gestureEnabled: !dirty }} />
       <TeamFormScreen
         teamId={id}
         onClose={() => router.back()}
