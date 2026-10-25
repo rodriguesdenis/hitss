@@ -53,12 +53,12 @@ export async function renderApp({
   token,
   initialUrl,
   fetchTeams = false,
-  signInScreen = SignIn,
+  routes = {},
 }: {
   token?: string;
   initialUrl: string;
   fetchTeams?: boolean;
-  signInScreen?: () => JSX.Element;
+  routes?: Record<string, () => JSX.Element | null>;
 }) {
   if (token) {
     await setToken(token);
@@ -76,7 +76,7 @@ export async function renderApp({
       ),
       index: AuthRedirect,
       '(auth)/_layout': () => <Stack screenOptions={{ headerShown: false }} />,
-      '(auth)/sign-in': signInScreen,
+      '(auth)/sign-in': SignIn,
       '(tabs)/_layout': () => (
         <Tabs>
           <Tabs.Screen name="tasks" />
@@ -89,6 +89,7 @@ export async function renderApp({
           <SignOutButton />
         </>
       ),
+      ...routes,
     },
     { initialUrl },
   );

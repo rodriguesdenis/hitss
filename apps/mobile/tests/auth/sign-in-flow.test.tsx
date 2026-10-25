@@ -4,7 +4,10 @@ import { fireEvent, getToken, renderApp, screen } from '../app-harness';
 import { marina, MARINA_PASSWORD, MARINA_TOKEN } from '../handlers/auth';
 
 it('AC-04.1.2 signs in with valid credentials and lands on the tasks list', async () => {
-  await renderApp({ initialUrl: '/', signInScreen: SignInScreen });
+  await renderApp({
+    initialUrl: '/',
+    routes: { '(auth)/sign-in': SignInScreen },
+  });
   await fireEvent.changeText(
     await screen.findByLabelText('E-mail'),
     marina.email,
