@@ -119,3 +119,10 @@ Non-obvious facts about the API that the code no longer carries as comments ([AC
 - **Every list under `qk.*.lists()` is infinite.** Detail seeding (`useTaskDetail`, `useTeam`) and 005's optimistic updates read `InfiniteData` pages, so the task form's team picker also uses `useTeamsListInfinite` (one page of 100) rather than the plain list hook.
 - **Undo is built at the call site.** Only `useStatusChange` knows the previous status, so it shows "Marcada como …" with Desfazer and announces "Status alterado para …"; the mutation hook itself only applies the cache effects and maps errors to a toast.
 - **Overdue comes from the API.** Rows and the detail use `isOverdue` (UTC, never for DONE) and always pair it with the word "Atrasada" and an icon; the app does not recompute it from the device clock.
+
+## Mobile finishing
+
+- **A created team returns to the task form through a store.** The task form stays mounted under the team-form modal, so `/teams/new?from=task` hands the new team's id over `created-team.store.ts` (session-scoped, reset on sign-out) and the task form adds it while there is room; route params cannot carry a result back through `router.back()`.
+- **Background refetch errors over cached data become a toast.** `useBackgroundErrorToast` shows the mapped message with Tentar novamente when a list that already has rows fails to refetch; a pull to refresh records the error it produced (`errorUpdatedAt`) so only its own "Não foi possível atualizar" toast appears.
+- **The state matrix is one suite.** `tests/state-matrix.test.tsx` has one `describe` per screen of design §7 and one test per cell; offline and pending-sync cells are spec 005's, S1/S5 cells are in the auth suites.
+- **Maestro selects by `testID` and seeded names.** Segments expose `<control>-<value>` ids because the status words also appear as badge labels; `tests/maestro-ids.test.ts` fails when a flow references an id the app no longer has. Flows read the Expo URL from `MAESTRO_EXPO_URL` (Maestro passes `MAESTRO_*` variables through) and run outside CI.
