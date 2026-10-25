@@ -15,7 +15,6 @@ const transformed = [
   '@better-auth/[^/]+',
   '@better-fetch/[^/]+',
   'better-call',
-  'immer',
   'nanostores',
 ].join('|');
 

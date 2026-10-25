@@ -2,6 +2,7 @@ import { useTeamsList } from '@hitss/api-client';
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 import { Stack, Tabs } from 'expo-router';
 import { renderRouter } from 'expo-router/testing-library';
+import type { JSX } from 'react';
 import { Pressable, Text } from 'react-native';
 
 import {
@@ -52,10 +53,12 @@ export async function renderApp({
   token,
   initialUrl,
   fetchTeams = false,
+  signInScreen = SignIn,
 }: {
   token?: string;
   initialUrl: string;
   fetchTeams?: boolean;
+  signInScreen?: () => JSX.Element;
 }) {
   if (token) {
     await setToken(token);
@@ -73,7 +76,7 @@ export async function renderApp({
       ),
       index: AuthRedirect,
       '(auth)/_layout': () => <Stack screenOptions={{ headerShown: false }} />,
-      '(auth)/sign-in': SignIn,
+      '(auth)/sign-in': signInScreen,
       '(tabs)/_layout': () => (
         <Tabs>
           <Tabs.Screen name="tasks" />
