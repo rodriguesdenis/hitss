@@ -11,8 +11,9 @@
     "export": "expo export --platform android --output-dir dist",
     "lint": "eslint . && depcruise --config .dependency-cruiser.cjs app src",
     "typecheck": "tsc --noEmit",
-    "test": "jest && pnpm run test:tz",
-    "test:tz": "TZ=Pacific/Kiritimati jest src/lib/dates && TZ=Pacific/Pago_Pago jest src/lib/dates"
+    "test": "jest && pnpm run test:tz && pnpm run test:lint-rules",
+    "test:tz": "TZ=Pacific/Kiritimati jest src/lib/dates && TZ=Pacific/Pago_Pago jest src/lib/dates",
+    "test:lint-rules": "node --test \"tests/lint/**/*.test.mjs\""
   },
   "dependencies": {
     "@expo/log-box": "58.0.13",
@@ -51,6 +52,7 @@
     "eslint-config-expo": "58.0.4",
     "jest": "30.5.2",
     "jest-expo": "58.0.12",
+    "msw": "2.15.0",
     "react-dom": "19.3.0",
     "tailwindcss": "3.4.19",
     "test-renderer": "1.3.1",
