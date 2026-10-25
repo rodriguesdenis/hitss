@@ -13,6 +13,7 @@ module.exports = defineConfig([
   },
   {
     rules: {
+      'no-console': 'error',
       'no-restricted-globals': [
         'error',
         {
