@@ -53,6 +53,7 @@ function fail(
   status: number,
   code: string,
   headers = {},
+  once = true,
 ) {
   server.use(
     http[method](
@@ -62,7 +63,7 @@ function fail(
           { error: { code, message: 'server text', traceId: 't' } },
           { status, headers },
         ),
-      { once: true },
+      { once },
     ),
   );
 }
@@ -377,7 +378,7 @@ describe('S8/S9 Task form', () => {
   });
 
   it('error — AC-04.7.8 banner for a failed save, input kept', async () => {
-    offline('post', '/tasks');
+    offline('post', '/tasks', false);
     await renderWithProviders(<TaskFormScreen onClose={noop} />);
     await fireEvent.changeText(screen.getByTestId('task-title'), 'Sem rede');
     await fireEvent.press(screen.getByRole('button', { name: 'Criar tarefa' }));
@@ -452,7 +453,7 @@ describe('S10/S11 Team form', () => {
   });
 
   it('error — banner for a failed save', async () => {
-    fail('post', '/teams', 500, 'INTERNAL_ERROR');
+    fail('post', '/teams', 500, 'INTERNAL_ERROR', {}, false);
     await renderWithProviders(<TeamFormScreen onClose={noop} />);
     await fireEvent.changeText(screen.getByTestId('team-name'), 'Infra');
     await fireEvent.press(screen.getByRole('button', { name: 'Criar time' }));
@@ -489,9 +490,11 @@ describe('Team delete', () => {
   }
 
   it('error — toast and the row stays', async () => {
-    fail('delete', '/teams/:id', 500, 'INTERNAL_ERROR');
+    fail('delete', '/teams/:id', 500, 'INTERNAL_ERROR', {}, false);
     await deleteFromList('Design');
-    expect(await screen.findByText(SERVER)).toBeOnTheScreen();
+    expect(
+      await screen.findByText(`Não foi possível salvar “Design”: ${SERVER}`),
+    ).toBeOnTheScreen();
     expect(screen.getByText('Design')).toBeOnTheScreen();
   });
 
