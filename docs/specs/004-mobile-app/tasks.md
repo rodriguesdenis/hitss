@@ -135,6 +135,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-12 — Build the Teams list
 
+- **Status:** done
 - **Goal:** design S4 with tap → team tasks.
 - **Changes:** `src/features/teams/components/{TeamsListScreen,TeamCard,TeamCardSkeleton,TeamOptionsSheet}.tsx`, `features/teams/hooks/useTeamsList.ts` (infinite, `sort=name`, debounced search), route `app/(tabs)/teams.tsx`.
 - **Covers:** @AC-04.2.1, @AC-04.2.2 (navigation), @AC-04.2.3, @AC-04.2.4, @AC-04.9.1, @AC-04.9.2, @AC-04.9.3.
@@ -142,6 +143,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-13 — Build the team form (create, edit, delete)
 
+- **Status:** done
 - **Goal:** design S10/S11.
 - **Changes:** `src/features/teams/components/{TeamFormScreen,ColorSwatchGrid,ChipPreview}.tsx`, `features/teams/hooks/{useTeamForm,useTeamMutations}.ts` (mutation keys from `qk`, invalidation per plan), routes `app/teams/new.tsx`, `app/teams/[id]/edit.tsx`; delete from the options sheet and the form.
 - **Covers:** @AC-04.3.1, @AC-04.3.2, @AC-04.3.3, @AC-04.3.4, @AC-04.3.5.
