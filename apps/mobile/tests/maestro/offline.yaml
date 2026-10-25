@@ -1,0 +1,52 @@
+appId: host.exp.exponent
+name: Change tasks offline and sync when the connection returns
+tags:
+  - offline
+---
+- runFlow: common/sign-in.yaml
+- tapOn:
+    id: 'tab-tasks'
+- setAirplaneMode: enabled
+- extendedWaitUntil:
+    visible: 'Você está offline. As alterações serão sincronizadas ao reconectar.'
+    timeout: 15000
+- tapOn:
+    id: 'new-task'
+- tapOn:
+    id: 'task-title'
+- inputText: 'Tarefa offline do Maestro'
+- hideKeyboard
+- tapOn:
+    id: 'task-save'
+- assertVisible: 'Salvo. Será sincronizado quando você estiver online.'
+- assertVisible: 'Tarefa offline do Maestro'
+- assertVisible: 'Sincronização pendente'
+- tapOn: 'Tarefa offline do Maestro'
+- tapOn:
+    id: 'status-change-IN_PROGRESS'
+- tapOn:
+    id: 'status-change-DONE'
+- assertVisible: 'Sincronização pendente'
+- tapOn: 'Voltar'
+- tapOn:
+    id: 'new-task'
+- tapOn:
+    id: 'task-title'
+- inputText: 'Tarefa offline descartável'
+- hideKeyboard
+- tapOn:
+    id: 'task-save'
+- tapOn: 'Tarefa offline descartável'
+- tapOn:
+    id: 'task-delete'
+- tapOn: 'Excluir'
+- assertNotVisible: 'Tarefa offline descartável'
+- setAirplaneMode: disabled
+- extendedWaitUntil:
+    visible: 'Todas as alterações sincronizadas'
+    timeout: 60000
+- assertNotVisible: 'Sincronização pendente'
+- tapOn: 'Tarefa offline do Maestro'
+- assertVisible:
+    id: 'status-badge'
+- assertVisible: 'Concluída'

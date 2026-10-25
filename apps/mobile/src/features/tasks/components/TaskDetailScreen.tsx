@@ -8,7 +8,7 @@ import { useState, type ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { errorCode } from '@/lib/error-messages';
-import { PendingSyncBadge } from '@/offline';
+import { ConnectivityBanner, PendingSyncBadge } from '@/offline';
 import {
   Button,
   ConfirmDialog,
@@ -118,6 +118,7 @@ export function TaskDetailScreen({
   return (
     <Screen edges={['top', 'bottom']}>
       <Header onBack={onBack} onEdit={() => onEdit(task)} />
+      <ConnectivityBanner />
       <ScrollView className="flex-1" contentContainerClassName="gap-4 p-4">
         <Text className="type-title" accessibilityRole="header">
           {task.title}
