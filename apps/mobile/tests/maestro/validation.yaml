@@ -1,0 +1,27 @@
+appId: host.exp.exponent
+name: A short title is rejected and the draft can be discarded
+tags:
+  - tasks
+---
+- runFlow: common/sign-in.yaml
+- tapOn:
+    id: 'tab-tasks'
+- tapOn:
+    id: 'new-task'
+- tapOn:
+    id: 'task-title'
+- inputText: 'ab'
+- hideKeyboard
+- tapOn:
+    id: 'task-save'
+- assertVisible: 'O título deve ter pelo menos 3 caracteres'
+- tapOn:
+    id: 'task-title'
+- inputText: 'c'
+- hideKeyboard
+- assertNotVisible: 'O título deve ter pelo menos 3 caracteres'
+- tapOn: 'Cancelar'
+- assertVisible: 'Descartar alterações?'
+- tapOn: 'Descartar'
+- assertVisible:
+    id: 'new-task'

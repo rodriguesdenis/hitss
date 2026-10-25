@@ -1,0 +1,8 @@
+appId: host.exp.exponent
+---
+- launchApp:
+    stopApp: true
+- openLink: ${MAESTRO_EXPO_URL}
+- extendedWaitUntil:
+    visible: 'Entre para continuar|Tarefas'
+    timeout: 90000

@@ -1,0 +1,22 @@
+appId: host.exp.exponent
+name: Tapping a team shows only its tasks with team chips
+tags:
+  - teams
+---
+- runFlow: common/sign-in.yaml
+- tapOn:
+    id: 'tab-teams'
+- tapOn:
+    id: 'team-00000000-0000-4000-8000-0000000000a2'
+- extendedWaitUntil:
+    visible: 'Buscar em Backend'
+    timeout: 20000
+- assertVisible: 'Write the API contract examples'
+- assertVisible: '.*Times: Backend, Mobile.*'
+- assertNotVisible: 'Review the dark mode palette'
+- tapOn:
+    id: 'status-filter-PENDING'
+- assertVisible: 'Migrate the legacy reports to the new schema'
+- assertNotVisible: 'Write the API contract examples'
+- tapOn:
+    id: 'status-filter-ALL'
