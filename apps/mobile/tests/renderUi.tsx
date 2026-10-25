@@ -1,9 +1,13 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { colorScheme, render } from 'nativewind/test';
+import { cssToReactNativeRuntimeOptions } from 'nativewind/dist/metro/common';
+import { colorScheme } from 'nativewind/test';
+import postcss from 'postcss';
 import type { ReactElement } from 'react';
 import { StyleSheet, type Insets } from 'react-native';
+import { render } from 'react-native-css-interop/test';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import tailwind from 'tailwindcss';
 import type { TestInstance } from 'test-renderer';
 
 import { tokens, type ColorRole, type ColorScheme } from '@/theme/tokens';
@@ -16,20 +20,33 @@ const { content: _content, ...config } = tailwindConfig;
 
 const css = readFileSync(join(__dirname, '../src/theme/global.css'), 'utf8');
 
-const uiDir = join(__dirname, '../src/ui');
+const sourceDir = join(__dirname, '../src');
 
 const safelist = [
   ...new Set(
-    readdirSync(uiDir)
+    readdirSync(sourceDir, { recursive: true, encoding: 'utf8' })
       .filter((file) => file.endsWith('.tsx') && !file.endsWith('.test.tsx'))
       .flatMap((file) =>
-        readFileSync(join(uiDir, file), 'utf8').split(/[^\w:\-[\].%/]+/),
+        readFileSync(join(sourceDir, file), 'utf8').split(/[^\w:\-[\].%/]+/),
       )
       .filter((word) => /^[a-z][\w:\-[\].%/]*$/.test(word)),
   ),
 ];
 
 const TOUCH_MIN = 44;
+
+const REM = 16;
+
+let compiled: Promise<string> | undefined;
+
+function compiledCss(): Promise<string> {
+  compiled ??= postcss([
+    tailwind({ ...config, content: [{ raw: '' }], safelist }),
+  ])
+    .process(css, { from: undefined })
+    .then((result) => result.css);
+  return compiled;
+}
 
 const metrics = {
   frame: { x: 0, y: 0, width: 375, height: 812 },
@@ -44,8 +61,8 @@ export async function renderUi(
   return render(
     <SafeAreaProvider initialMetrics={metrics}>{ui}</SafeAreaProvider>,
     {
-      config: { ...config, safelist },
-      css,
+      css: await compiledCss(),
+      cssOptions: { ...cssToReactNativeRuntimeOptions, inlineRem: REM },
     },
   );
 }

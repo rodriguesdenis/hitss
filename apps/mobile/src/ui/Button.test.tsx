@@ -105,3 +105,12 @@ describe('Fab', () => {
     });
   });
 });
+
+describe('spacing scale', () => {
+  it('uses a 16 pt rem so the 4 pt grid matches the design spec', async () => {
+    await renderUi(<Button label="Entrar" onPress={jest.fn()} />);
+    expect(
+      styleOf(screen.getByRole('button', { name: 'Entrar' })),
+    ).toMatchObject({ paddingLeft: 16, columnGap: 8 });
+  });
+});
