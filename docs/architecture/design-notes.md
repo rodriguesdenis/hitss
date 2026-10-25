@@ -101,3 +101,12 @@ Non-obvious facts about the API that the code no longer carries as comments ([AC
 - **Jest needs the app scheme and sync SecureStore.** `expo-linking` cannot read the scheme without a manifest, so `tests/setup.ts` mocks `createURL`; `expoClient` calls the synchronous `getItem`/`setItem`, so the SecureStore fake implements them.
 - **No console in the app.** There is no mobile logger in MUST, so `no-console` is an error everywhere in `apps/mobile` (no allowed methods); `tests/lint/no-console.test.mjs` proves it, which is how T-004-06 keeps the token out of log output.
 - **`renderRouter` uses fake timers.** Tests wait with `waitFor`/`findBy*`; a real `setTimeout` inside `act` never fires there.
+
+## Mobile teams
+
+- **The MSW API keeps state.** `tests/db.ts` holds teams and tasks and `tests/setup.ts` resets it before each test, so a create, rename or delete is visible to the next request: renames rewrite task chips and deletes drop them, as the API does, and tests assert on `db` that tasks survive a team deletion.
+- **Test mutations are never garbage collected.** A settled mutation starts a 5-minute `gcTime` timer, which kept Jest from exiting after any test that saved something; `createTestQueryClient` sets `gcTime: Infinity` for mutations as it already did for queries.
+- **A team detail starts from the list.** `useTeam` seeds `initialData` from any cached Teams list page that holds the team and passes that page's `dataUpdatedAt`, so the edit form opens at once from the list and still refetches once the copy is older than `staleTime`.
+- **Double submit is blocked by a ref.** Two presses in the same tick both see `formState.isSubmitting` as false, so `useTeamForm.submit` keeps an in-flight ref set until `handleSubmit` settles. Tests press twice inside one `act`; two concurrent `fireEvent` calls overlap their `act` scopes and break the renderer for the following tests.
+- **Screens stay router-free.** `TeamFormScreen` reports `onDirtyChange` and the route turns off the modal's swipe-to-dismiss while there are unsaved changes; Cancelar shows the discard dialog. Navigation callbacks come from the `app/` files, so screens are tested without a router.
+- **Mutation variables follow the M5 contract.** `{ tempId, body }`, `{ id, body }`, `{ id, name }` under `mk.teams.*`, so 005's mutation defaults can take over the hooks; `tempId` is a local counter until `newTempId()` from `@/offline` lands.
