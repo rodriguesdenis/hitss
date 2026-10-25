@@ -192,7 +192,11 @@ describe('TaskDetailScreen', () => {
         'Não foi possível salvar “Fix crash on Android”: Algo deu errado do nosso lado. Tente novamente.',
       ),
     ).toBeOnTheScreen();
-    expect(statusBar().getByRole('radio', { name: 'Pendente' })).toBeSelected();
+    await waitFor(() =>
+      expect(
+        statusBar().getByRole('radio', { name: 'Pendente' }),
+      ).toBeSelected(),
+    );
   });
 
   it('AC-04.6.4 deletes after confirmation and goes back', async () => {
