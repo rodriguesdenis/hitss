@@ -12,6 +12,7 @@ const compose = parse(readFileSync(`${root}docker-compose.yml`, 'utf8'));
 const dockerfile = readFileSync(`${root}apps/mobile/Dockerfile.dev`, 'utf8');
 const script = `${root}apps/mobile/docker-metro.sh`;
 const mobile = compose.services.mobile;
+const pkg = JSON.parse(readFileSync(`${root}package.json`, 'utf8'));
 
 function runMetro(env) {
   const bin = mkdtempSync(join(tmpdir(), 'metro-'));
@@ -93,5 +94,30 @@ describe('Mobile dev service (T-007-13)', () => {
     ]) {
       assert.ok(ignored.includes(pattern), pattern);
     }
+  });
+
+  it('installs and runs as node, so Metro and NativeWind can write their caches in the workspace', () => {
+    const lines = dockerfile.split('\n');
+    const user = lines.findIndex((line) => line === 'USER node');
+    const install = lines.findIndex((line) => /pnpm install/.test(line));
+    assert.ok(
+      user > -1 && user < install,
+      'USER node comes before the install',
+    );
+    for (const line of lines.filter((l) => /^COPY .* \.\/?/.test(l))) {
+      assert.match(line, /--chown=node:node/, line);
+    }
+    assert.doesNotMatch(dockerfile, /chown -R/);
+  });
+
+  it('activates the repo pnpm version at build time, so starting needs no download', () => {
+    const version = pkg.packageManager.replace(/^pnpm@/, '');
+    assert.match(
+      dockerfile,
+      new RegExp(
+        `corepack prepare pnpm@${version.replaceAll('.', '\\.')} --activate`,
+      ),
+    );
+    assert.match(dockerfile, /COREPACK_ENABLE_NETWORK=0/);
   });
 });

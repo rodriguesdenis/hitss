@@ -2,26 +2,28 @@
 ARG NODE_IMAGE=node:24.22.0-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f
 
 FROM ${NODE_IMAGE} AS base
-ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
-RUN corepack enable
+RUN corepack enable && mkdir /repo && chown node:node /repo
+USER node
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 PNPM_STORE=/home/node/.pnpm-store
+RUN corepack prepare pnpm@10.34.7 --activate
 WORKDIR /repo
 
 FROM base AS pruner
-COPY . .
+COPY --chown=node:node . .
 RUN pnpm dlx turbo@2.11.10 prune @hitss/mobile --docker
 
 FROM base AS deps
-COPY --from=pruner /repo/out/json/ ./
-COPY --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm fetch --frozen-lockfile
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --offline --ignore-scripts
+COPY --chown=node:node --from=pruner /repo/out/json/ ./
+COPY --chown=node:node --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN --mount=type=cache,id=pnpm-node,target=/home/node/.pnpm-store,uid=1000,gid=1000 \
+    pnpm fetch --frozen-lockfile --store-dir "$PNPM_STORE"
+RUN --mount=type=cache,id=pnpm-node,target=/home/node/.pnpm-store,uid=1000,gid=1000 \
+    pnpm install --frozen-lockfile --offline --ignore-scripts --store-dir "$PNPM_STORE" --package-import-method copy
 
 FROM deps AS metro
-COPY --from=pruner /repo/out/full/ ./
+COPY --chown=node:node --from=pruner /repo/out/full/ ./
 COPY --chmod=755 apps/mobile/docker-metro.sh /usr/local/bin/docker-metro
-RUN chown -R node:node /repo/apps/mobile
-USER node
 WORKDIR /repo/apps/mobile
-ENV EXPO_NO_TELEMETRY=1 EXPO_DEV_MODE=tunnel
+ENV EXPO_NO_TELEMETRY=1 EXPO_DEV_MODE=tunnel COREPACK_ENABLE_NETWORK=0
 EXPOSE 8081
 CMD ["docker-metro"]
