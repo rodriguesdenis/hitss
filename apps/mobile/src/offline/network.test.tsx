@@ -33,7 +33,7 @@ afterEach(() => {
 
 function pausedChange(client: QueryClient) {
   return client.getMutationCache().build(client, {
-    mutationKey: ['tasks', 'changeStatus'],
+    mutationKey: ['tasks', 'probe'],
     mutationFn: () => new Promise(() => undefined),
     networkMode: 'online',
     gcTime: Infinity,
@@ -128,7 +128,7 @@ describe('reconnect', () => {
     const order: string[] = [];
     let release: () => void = () => undefined;
     const mutation = queryClient.getMutationCache().build(queryClient, {
-      mutationKey: ['tasks', 'changeStatus'],
+      mutationKey: ['tasks', 'probe'],
       networkMode: 'online',
       mutationFn: () =>
         new Promise<void>((resolve) => {

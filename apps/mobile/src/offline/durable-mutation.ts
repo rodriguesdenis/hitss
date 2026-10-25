@@ -88,12 +88,20 @@ export function defineDurableMutation<TVariables, TData, TContext>(
     },
     retryDelay,
     onMutate: spec.onMutate,
-    onSuccess: (data: unknown, variables: TVariables, context: unknown) =>
-      spec.onSuccess?.(
+    onSuccess: async (
+      data: unknown,
+      variables: TVariables,
+      context: unknown,
+    ) => {
+      await spec.onSuccess?.(
         data as TData | typeof ALREADY_GONE,
         variables,
         context as TContext | undefined,
-      ),
+      );
+      if (spec.afterDrain) {
+        afterQueueDrains(queryClient, () => spec.afterDrain?.(variables));
+      }
+    },
     onError: (error: unknown, variables: TVariables, context: unknown) => {
       const decision = classifyReplayError(error, spec.kind);
       const reason: Discard =
@@ -106,11 +114,6 @@ export function defineDurableMutation<TVariables, TData, TContext>(
         variables,
         context as TContext | undefined,
       );
-    },
-    onSettled: (_data: unknown, _error: unknown, variables: TVariables) => {
-      if (spec.afterDrain) {
-        afterQueueDrains(queryClient, () => spec.afterDrain?.(variables));
-      }
     },
   });
 }
