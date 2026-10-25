@@ -107,7 +107,7 @@ services:
       EXPO_DEV_MODE: ${EXPO_DEV_MODE:-tunnel}
       EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://localhost:3000}
       REACT_NATIVE_PACKAGER_HOSTNAME: ${REACT_NATIVE_PACKAGER_HOSTNAME:-}
-    ports: ['${METRO_BIND:-0.0.0.0}:8081:8081']
+    ports: ['${METRO_BIND:-127.0.0.1}:8081:8081']
 
 volumes:
   pgdata: {}
