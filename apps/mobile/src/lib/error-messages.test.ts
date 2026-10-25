@@ -49,6 +49,17 @@ describe('error messages', () => {
     ).toBe('Muitas requisições. Tente novamente em 12 s.');
   });
 
+  it('uses the Retry-After seconds the mutator parsed', () => {
+    const error = new ApiError(
+      429,
+      { error: { code: 'RATE_LIMITED', message: 'x', traceId: 't' } },
+      7,
+    );
+    expect(errorMessage(error)).toBe(
+      'Muitas requisições. Tente novamente em 7 s.',
+    );
+  });
+
   it('maps a fetch network failure', () => {
     expect(errorMessage(new TypeError('Network request failed'))).toBe(
       'Não foi possível conectar ao servidor. Verifique sua conexão.',
