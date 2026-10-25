@@ -157,4 +157,61 @@ describe('dependency audit gate', () => {
       true,
     );
   });
+  describe('path-scoped entries', () => {
+    const reached = (...paths) => ({
+      advisories: {
+        1: {
+          github_advisory_id: 'GHSA-aaaa-bbbb-cccc',
+          severity: 'high',
+          module_name: 'left-pad',
+          title: 'bad',
+          findings: [{ version: '1.0.0', paths }],
+        },
+      },
+    });
+    const scoped = entry({ paths: ['apps__mobile>expo>@expo/cli>'] });
+
+    it('AC-07.9.1 passes when every path to the advisory is under an allowlisted prefix', () => {
+      const result = evaluateAudit(
+        reached('apps__mobile>expo>@expo/cli>left-pad'),
+        [scoped],
+        TODAY,
+      );
+      assert.equal(result.ok, true);
+    });
+
+    it('AC-07.9.1 fails naming the path when the advisory is also reached elsewhere', () => {
+      const result = evaluateAudit(
+        reached(
+          'apps__mobile>expo>@expo/cli>left-pad',
+          'apps__mobile>left-pad',
+        ),
+        [scoped],
+        TODAY,
+      );
+      assert.equal(result.ok, false);
+      assert.match(
+        result.failures[0],
+        /not allowlisted for apps__mobile>left-pad/,
+      );
+    });
+
+    it('AC-07.9.1 fails when the advisory report carries no paths to check', () => {
+      const result = evaluateAudit(report('high'), [scoped], TODAY);
+      assert.equal(result.ok, false);
+    });
+
+    it('AC-07.9.1 rejects an entry whose paths is not a list of prefixes', () => {
+      const result = evaluateAudit(
+        reached('apps__mobile>expo>@expo/cli>left-pad'),
+        [entry({ paths: 'apps__mobile>expo>@expo/cli>' })],
+        TODAY,
+      );
+      assert.equal(result.ok, false);
+      assert.match(
+        result.failures.join('\n'),
+        /paths must be a non-empty list/,
+      );
+    });
+  });
 });
