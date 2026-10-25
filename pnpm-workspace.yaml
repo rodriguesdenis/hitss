@@ -11,3 +11,5 @@ onlyBuiltDependencies:
 overrides:
   'body-parser@>=2.0.0 <2.4.0': 2.4.0
   'multer@>=2.0.0 <2.5.0': 2.5.0
+  react: 19.3.0
+  react-dom: 19.3.0

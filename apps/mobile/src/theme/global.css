@@ -1,0 +1,308 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-canvas: 248 250 252;
+    --color-surface: 255 255 255;
+    --color-surface-muted: 241 245 249;
+    --color-border-muted: 226 232 240;
+    --color-border-strong: 100 116 139;
+    --color-fg: 15 23 42;
+    --color-fg-muted: 71 85 105;
+    --color-fg-subtle: 100 116 139;
+    --color-primary: 79 70 229;
+    --color-primary-pressed: 67 56 202;
+    --color-on-primary: 255 255 255;
+    --color-danger: 220 38 38;
+    --color-danger-pressed: 185 28 28;
+    --color-on-danger: 255 255 255;
+    --color-danger-soft: 254 226 226;
+    --color-success: 21 128 61;
+    --color-warning: 180 83 9;
+    --color-warning-soft: 254 243 199;
+    --color-info-soft: 224 231 255;
+    --color-on-info-soft: 55 48 163;
+    --color-focus: 79 70 229;
+    --color-inverse: 15 23 42;
+    --color-on-inverse: 255 255 255;
+    --color-inverse-action: 129 140 248;
+    --color-overlay: 15 23 42;
+    --color-status-pending-bg: 254 243 199;
+    --color-status-pending-fg: 146 64 14;
+    --color-status-progress-bg: 219 234 254;
+    --color-status-progress-fg: 30 64 175;
+    --color-status-done-bg: 220 252 231;
+    --color-status-done-fg: 22 101 52;
+    --alpha-overlay: 0.5;
+  }
+  .dark:root {
+    --color-canvas: 11 17 32;
+    --color-surface: 17 24 39;
+    --color-surface-muted: 31 41 55;
+    --color-border-muted: 51 65 85;
+    --color-border-strong: 148 163 184;
+    --color-fg: 241 245 249;
+    --color-fg-muted: 203 213 225;
+    --color-fg-subtle: 148 163 184;
+    --color-primary: 129 140 248;
+    --color-primary-pressed: 99 102 241;
+    --color-on-primary: 11 17 32;
+    --color-danger: 248 113 113;
+    --color-danger-pressed: 239 68 68;
+    --color-on-danger: 11 17 32;
+    --color-danger-soft: 69 10 10;
+    --color-success: 74 222 128;
+    --color-warning: 251 191 36;
+    --color-warning-soft: 66 32 6;
+    --color-info-soft: 30 27 75;
+    --color-on-info-soft: 199 210 254;
+    --color-focus: 165 180 252;
+    --color-inverse: 31 41 55;
+    --color-on-inverse: 241 245 249;
+    --color-inverse-action: 129 140 248;
+    --color-overlay: 0 0 0;
+    --color-status-pending-bg: 66 32 6;
+    --color-status-pending-fg: 252 211 77;
+    --color-status-progress-bg: 23 37 84;
+    --color-status-progress-fg: 147 197 253;
+    --color-status-done-bg: 5 46 22;
+    --color-status-done-fg: 134 239 172;
+    --alpha-overlay: 0.6;
+  }
+}
+
+@layer components {
+  .screen {
+    @apply flex-1 bg-canvas;
+  }
+  .screen-padded {
+    @apply flex-1 bg-canvas px-4 pt-4;
+  }
+  .section {
+    @apply gap-3 mb-6;
+  }
+  .section-title {
+    @apply text-caption uppercase tracking-wide text-fg-subtle;
+  }
+
+  .type-display {
+    @apply text-display text-fg;
+  }
+  .type-title {
+    @apply text-title text-fg;
+  }
+  .type-headline {
+    @apply text-headline text-fg;
+  }
+  .type-body {
+    @apply text-body text-fg;
+  }
+  .type-muted {
+    @apply text-callout text-fg-muted;
+  }
+  .type-meta {
+    @apply text-caption text-fg-subtle;
+  }
+  .type-link {
+    @apply text-label text-primary underline;
+  }
+
+  .card {
+    @apply bg-surface rounded-lg p-4 border border-border-muted shadow-sm dark:shadow-none;
+  }
+  .list-item {
+    @apply bg-surface rounded-lg px-4 py-3 min-h-row-min gap-1.5 border border-border-muted active:bg-surface-muted;
+  }
+  .list-item-pending {
+    @apply opacity-80;
+  }
+  .divider {
+    @apply h-px bg-border-muted;
+  }
+
+  .btn {
+    @apply min-h-control min-w-touch flex-row items-center justify-center gap-2 rounded-md px-4;
+  }
+  .btn-label {
+    @apply text-label;
+  }
+  .btn-primary {
+    @apply btn bg-primary active:bg-primary-pressed;
+  }
+  .btn-primary-label {
+    @apply btn-label text-on-primary;
+  }
+  .btn-secondary {
+    @apply btn bg-transparent border border-border-strong active:bg-surface-muted;
+  }
+  .btn-secondary-label {
+    @apply btn-label text-fg;
+  }
+  .btn-danger {
+    @apply btn bg-danger active:bg-danger-pressed;
+  }
+  .btn-danger-label {
+    @apply btn-label text-on-danger;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent active:bg-surface-muted;
+  }
+  .btn-ghost-label {
+    @apply btn-label text-primary;
+  }
+  .btn-ghost-danger-label {
+    @apply btn-label text-danger;
+  }
+  .btn-disabled {
+    @apply opacity-50;
+  }
+  .icon-btn {
+    @apply h-touch w-touch items-center justify-center rounded-full active:bg-surface-muted;
+  }
+  .fab {
+    @apply absolute bottom-6 right-4 h-fab w-fab items-center justify-center rounded-full bg-primary shadow-lg active:bg-primary-pressed;
+  }
+
+  .field {
+    @apply gap-1.5 mb-4;
+  }
+  .field-label {
+    @apply text-label text-fg;
+  }
+  .field-help {
+    @apply text-caption text-fg-subtle;
+  }
+  .field-error {
+    @apply text-caption text-danger;
+  }
+  .input {
+    @apply min-h-control rounded-md border border-border-strong bg-surface px-3 text-body text-fg;
+  }
+  .input-focused {
+    @apply border-2 border-focus;
+  }
+  .input-error {
+    @apply border-2 border-danger;
+  }
+  .input-multiline {
+    @apply input min-h-[112px] py-3;
+  }
+  .search-input {
+    @apply input flex-1 pl-10 rounded-full;
+  }
+
+  .chip {
+    @apply h-chip flex-row items-center rounded-sm px-2 max-w-[160px];
+  }
+  .chip-label {
+    @apply text-caption font-medium;
+  }
+  .chip-outline {
+    @apply border border-border-strong;
+  }
+  .chip-overflow {
+    @apply chip bg-surface-muted;
+  }
+  .chip-overflow-label {
+    @apply chip-label text-fg-muted;
+  }
+  .badge {
+    @apply flex-row items-center gap-1 self-start rounded-sm px-2 py-0.5;
+  }
+  .badge-label {
+    @apply text-caption font-medium;
+  }
+  .badge-status-pending {
+    @apply badge bg-status-pending-bg;
+  }
+  .badge-status-pending-label {
+    @apply badge-label text-status-pending-fg;
+  }
+  .badge-status-in_progress {
+    @apply badge bg-status-progress-bg;
+  }
+  .badge-status-in_progress-label {
+    @apply badge-label text-status-progress-fg;
+  }
+  .badge-status-done {
+    @apply badge bg-status-done-bg;
+  }
+  .badge-status-done-label {
+    @apply badge-label text-status-done-fg;
+  }
+  .badge-pending-sync {
+    @apply badge bg-info-soft;
+  }
+  .badge-pending-sync-label {
+    @apply badge-label text-on-info-soft;
+  }
+
+  .segmented {
+    @apply flex-row rounded-full bg-surface-muted p-1 gap-1;
+  }
+  .segment {
+    @apply flex-1 min-h-touch flex-row items-center justify-center gap-1.5 rounded-full px-2;
+  }
+  .segment-active {
+    @apply bg-primary;
+  }
+  .segment-label {
+    @apply text-label text-fg;
+  }
+  .segment-label-active {
+    @apply text-label text-on-primary;
+  }
+
+  .banner-offline {
+    @apply flex-row items-center gap-2 px-4 py-2 bg-warning-soft;
+  }
+  .banner-error {
+    @apply flex-row items-center gap-2 rounded-md p-3 bg-danger-soft;
+  }
+  .toast {
+    @apply mx-4 mb-4 flex-row items-center gap-3 rounded-md px-4 py-3 bg-inverse shadow-lg;
+  }
+  .toast-label {
+    @apply flex-1 text-callout text-on-inverse;
+  }
+  .toast-action {
+    @apply min-h-touch justify-center px-2 text-label text-inverse-action;
+  }
+  .empty-state {
+    @apply flex-1 items-center justify-center gap-3 px-8 py-12;
+  }
+  .error-state {
+    @apply flex-1 items-center justify-center gap-3 px-8 py-12;
+  }
+  .skeleton {
+    @apply rounded-md bg-surface-muted;
+  }
+  .skeleton-line {
+    @apply skeleton h-3;
+  }
+  .skeleton-row {
+    @apply list-item;
+  }
+
+  .scrim {
+    @apply absolute inset-0 bg-overlay;
+    opacity: var(--alpha-overlay);
+  }
+  .sheet {
+    @apply bg-surface rounded-t-lg px-4 pt-3 pb-8 gap-2;
+  }
+  .sheet-handle {
+    @apply self-center h-1 w-10 rounded-full bg-border-strong mb-2;
+  }
+  .sheet-option {
+    @apply min-h-touch flex-row items-center gap-3 px-2 rounded-md active:bg-surface-muted;
+  }
+  .dialog {
+    @apply mx-6 rounded-lg bg-surface p-6 gap-4 border border-border-muted shadow-xl;
+  }
+  .form-footer {
+    @apply flex-row gap-3 px-4 pt-3 pb-6 bg-surface border-t border-border-muted;
+  }
+}
