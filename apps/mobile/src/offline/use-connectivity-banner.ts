@@ -28,13 +28,19 @@ export function nextPhase(
   return phase;
 }
 
-function useStable<T>(value: T, delay: number): T {
-  const [stable, setStable] = useState(value);
+function useOfflineAfter(online: boolean, delay: number): boolean {
+  const [offline, setOffline] = useState(!online);
   useEffect(() => {
-    const timer = setTimeout(() => setStable(value), delay);
+    if (online) {
+      return;
+    }
+    const timer = setTimeout(() => setOffline(true), delay);
     return () => clearTimeout(timer);
-  }, [value, delay]);
-  return stable;
+  }, [online, delay]);
+  if (online && offline) {
+    setOffline(false);
+  }
+  return online ? false : offline;
 }
 
 export function usePendingCount(): number {
@@ -47,7 +53,7 @@ export function useConnectivityBanner(): {
   status?: ConnectivityStatus;
   pendingCount: number;
 } {
-  const online = useStable(useIsOnline(), FLAP_MS);
+  const online = !useOfflineAfter(useIsOnline(), FLAP_MS);
   const pendingCount = usePendingCount();
   const [phase, setPhase] = useState<BannerPhase>('idle');
 
