@@ -47,6 +47,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-01 — Scaffold Expo app in the monorepo
 
+- **Status:** done
 - **Goal:** an empty Expo Router app `@hitss/mobile` that boots in Expo Go and joins the Turborepo tasks.
 - **Changes:** `apps/mobile/` from the Expo Router template (latest stable SDK, TypeScript strict, `noUncheckedIndexedAccess`), `app.config.ts` (scheme `teamstasks` = the API's `APP_SCHEME`, typed routes), `src/lib/env.ts` (zod-validated `EXPO_PUBLIC_API_URL`), `.dependency-cruiser.cjs` with the plan's rules, `.env.example`, monorepo-aware `metro.config.js`, ESLint (`eslint-config-expo`) + Prettier, `jest.config.js` (`jest-expo`), scripts `start`, `lint`, `typecheck`, `test`; root `turbo.json` entries.
 - **Covers:** @AC-04.15.1 (`styled-components` / `@emotion/*` banned in `apps/mobile/package.json` by a dependency check).
@@ -54,6 +55,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-02 — Add NativeWind, CSS-variable tokens and the `@apply` catalog
 
+- **Status:** done
 - **Goal:** design spec §1–§2 available as Tailwind theme and semantic classes.
 - **Changes:** `src/theme/global.css` (color tokens as CSS variables under `:root` / `.dark:root`, then the §2 catalog; `dark:` only for the design-spec exceptions), `tailwind.config.js` (design §1.6, colors as `rgb(var(--color-…) / <alpha-value>)`), NativeWind babel/metro setup, `nativewind-env.d.ts`, `src/theme/tokens.ts`, `src/theme/contrast.ts` (`contrastingText`, `needsOutline`, `contrastRatio`).
 - **Covers:** @AC-04.8.2, @AC-04.12.2 (baseline: token contrast unit test).
@@ -61,6 +63,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-03 — Add the theme provider and the storage adapter
 
+- **Status:** done
 - **Goal:** theme from CSS variables following the device and a storage seam for 005. No i18n library: copy is pt-BR literals.
 - **Changes:** `src/theme/ThemeProvider.tsx` (NativeWind `system` color scheme, `StatusBar` style, navigation theme from `tokens.ts`), `src/lib/storage.ts` (`StorageAdapter` interface, AsyncStorage implementation, memory implementation for tests), `src/lib/dates.ts` (pt-BR `Intl` formatting; due dates parsed as local calendar dates).
 - **Covers:** infrastructure (BR-04.10 date handling).
@@ -68,6 +71,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-04 — Generate the API client with orval and the Bearer mutator
 
+- **Status:** done
 - **Goal:** typed React Query hooks and zod schemas from the API's OpenAPI; one place for the token and error mapping.
 - **Changes:** `packages/api-client/` (`@hitss/api-client`, `orval.config.ts` per plan reading the exported `openapi.json`, `src/mutator.ts` `customFetch` + `configureApiClient({ baseUrl, getToken, onUnauthenticated })`, `src/errors.ts` `ApiError` / `isApiError` / `fieldErrors`, `src/index.ts`), Turborepo `generate` task; `apps/mobile/src/lib/error-messages.ts` (code → pt-BR message, unknown → generic).
 - **Covers:** @AC-04.1.7 (unit: Bearer header), @AC-04.9.5 (unit), @AC-04.1.6 (unit: 401 hook).
@@ -75,6 +79,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-05 — Wire QueryClient, query key factory and test harness
 
+- **Status:** done
 - **Goal:** server-state infrastructure and a reusable test render.
 - **Changes:** `src/lib/query-client.ts` (defaults per plan, `focusManager` ↔ `AppState`), `src/lib/query-keys.ts` (`qk`, mutation keys), `QueryProvider`, provider composition in `app/_layout.tsx`, `tests/setup.ts` (MSW server, RNTL matchers), `tests/handlers/*.ts` (fixtures mirroring the feature Background), `tests/renderWithProviders.tsx`.
 - **Covers:** @AC-04.15.3 (ESLint `no-restricted-imports`: `src/features/**/components/**` and `app/**` import only generated `use*` hooks from `@hitss/api-client`, never raw request functions or `customFetch`; a lint fixture proves the rule fails).
