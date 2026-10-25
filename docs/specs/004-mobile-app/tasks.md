@@ -82,6 +82,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-06 — Add auth client and the protected-route gate
 
+- **Status:** done
 - **Goal:** only signed-in users reach the tabs; session restored on launch without a sign-in flash.
 - **Changes:** `src/features/auth/auth-client.ts` (`expoClient` + `expo-secure-store`; `set-auth-token` captured into SecureStore; Better Auth calls also use `Bearer`), `features/auth/token.ts` (`getToken`, `setToken`, `deleteToken`), `configureApiClient` wiring in `app/_layout.tsx` (`getToken`; `onUnauthenticated` → delete token, clear the query cache, session-expired message), `AuthGate` redirects between `(auth)` and `(tabs)`.
 - **Covers:** @AC-04.1.1, @AC-04.1.6, @AC-04.1.7.
@@ -105,6 +106,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-09 — Build the sign-in screen
 
+- **Status:** done
 - **Goal:** design S1 with validation and mapped errors.
 - **Changes:** `src/features/auth/components/SignInScreen.tsx`, `features/auth/hooks/useSignIn.ts` (rhf + zod), route `app/(auth)/sign-in.tsx` (no "Criar conta" link until T-004-21).
 - **Covers:** @AC-04.1.2, @AC-04.1.3.
@@ -112,6 +114,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-10 — Add tab navigation shell and Settings screen
 
+- **Status:** done
 - **Goal:** Tarefas / Times / Ajustes tabs; Settings per design S5 with the account card (no language row; the theme row is COULD, T-004-23).
 - **Changes:** `app/(tabs)/_layout.tsx`, placeholder tab routes, `src/features/auth/components/SettingsScreen.tsx`.
 - **Covers:** infrastructure (navigation shell for US-04.2/04.4).
@@ -119,6 +122,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-11 — Add sign-out
 
+- **Status:** done
 - **Goal:** sign out from Settings removes the token and all local data (US-04.16).
 - **Changes:** `src/features/auth/hooks/useSignOut.ts`, Sair row + confirmation in `SettingsScreen`; sequence per plan: **await** `authClient.signOut()` and token deletion (and, from M5, persisted cache and queue removal), then `queryClient.clear()`, reset the filter store, then navigate.
 - **Covers:** @AC-04.16.1.
