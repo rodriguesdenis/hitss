@@ -1,10 +1,11 @@
 import Constants from 'expo-constants';
-import { ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
-import { useAuthSession } from '../session';
+import { useAuthSession, useSignOut } from '../session';
 
 export function SettingsScreen() {
   const { user } = useAuthSession();
+  const { signOut, signingOut } = useSignOut();
   const version = Constants.expoConfig?.version;
 
   return (
@@ -22,6 +23,17 @@ export function SettingsScreen() {
           <Text className="type-muted">{user?.email}</Text>
         </View>
       </View>
+      <Pressable
+        className={
+          signingOut ? 'btn-secondary btn-disabled mb-4' : 'btn-secondary mb-4'
+        }
+        accessibilityRole="button"
+        accessibilityState={{ disabled: signingOut, busy: signingOut }}
+        disabled={signingOut}
+        onPress={() => void signOut()}
+      >
+        <Text className="btn-ghost-danger-label">Sair</Text>
+      </Pressable>
       {version ? (
         <Text className="type-meta">{`Versão ${version}`}</Text>
       ) : null}

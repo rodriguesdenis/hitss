@@ -80,6 +80,7 @@ export async function renderApp({
       '(tabs)/_layout': () => (
         <Tabs>
           <Tabs.Screen name="tasks" />
+          <Tabs.Screen name="settings" />
         </Tabs>
       ),
       '(tabs)/tasks': () => (
