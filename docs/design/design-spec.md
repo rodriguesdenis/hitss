@@ -1037,88 +1037,96 @@ The app ships pt-BR only, as literals (no i18n library). Domain terms follow the
 | {count, plural, =0 {Nenhuma tarefa} one {1 tarefa} other {# tarefas}} |
 | Opções do time {name}                                                 |
 | Mostra as tarefas deste time                                          |
+| Abre os detalhes da tarefa                                            |
+| Ver todas as tarefas                                                  |
+| Fechar                                                                |
 
 ### 9.2 Status, filters, sort
 
-| pt-BR                                  |
-| -------------------------------------- |
-| Pendente                               |
-| Em andamento                           |
-| Concluída                              |
-| Todas                                  |
-| Filtrar por status                     |
-| {status}, filtro {position} de {total} |
-| Buscar tarefas                         |
-| Buscar em {team}                       |
-| Buscar times                           |
-| Limpar busca                           |
-| Limpar filtros                         |
-| Ordenar por                            |
-| Ordenar tarefas                        |
-| Ordenado por: {option}                 |
-| Mais recentes                          |
-| Mais antigas                           |
-| Prazo (mais próximo)                   |
-| Atualizadas recentemente               |
-| Título A–Z                             |
-| Status                                 |
-| Carregando mais…                       |
-| Não foi possível carregar mais.        |
-| Isso é tudo ({total} tarefas)          |
+| pt-BR                                                                         |
+| ----------------------------------------------------------------------------- |
+| Pendente                                                                      |
+| Em andamento                                                                  |
+| Concluída                                                                     |
+| Todas                                                                         |
+| Filtrar por status                                                            |
+| {status}, filtro {position} de {total}                                        |
+| Buscar tarefas                                                                |
+| Buscar em {team}                                                              |
+| Buscar times                                                                  |
+| Limpar busca                                                                  |
+| Limpar filtros                                                                |
+| Ordenar por                                                                   |
+| Ordenar tarefas                                                               |
+| Ordenado por: {option}                                                        |
+| Mais recentes                                                                 |
+| Mais antigas                                                                  |
+| Prazo (mais próximo)                                                          |
+| Atualizadas recentemente                                                      |
+| Título A–Z                                                                    |
+| Status                                                                        |
+| Carregando mais…                                                              |
+| Não foi possível carregar mais.                                               |
+| {total, plural, one {Isso é tudo (1 tarefa)} other {Isso é tudo (# tarefas)}} |
 
 ### 9.3 Task detail and form
 
-| pt-BR                                                                                       |
-| ------------------------------------------------------------------------------------------- |
-| Times                                                                                       |
-| Sem times                                                                                   |
-| Prazo                                                                                       |
-| Sem prazo                                                                                   |
-| Atrasada                                                                                    |
-| Sem descrição                                                                               |
-| Criada em {date}                                                                            |
-| Atualizada em {date}                                                                        |
-| Concluída em {date}                                                                         |
-| Alterar status                                                                              |
-| Marcada como {status}                                                                       |
-| Status alterado para {status}                                                               |
-| Excluir tarefa                                                                              |
-| Excluir esta tarefa?                                                                        |
-| “{title}” será removida. Isso não pode ser desfeito.                                        |
-| Título                                                                                      |
-| O título deve ter pelo menos 3 caracteres                                                   |
-| O título deve ter no máximo 120 caracteres                                                  |
-| O título é obrigatório                                                                      |
-| Descrição                                                                                   |
-| A descrição deve ter no máximo {max} caracteres                                             |
-| Status                                                                                      |
-| Selecione uma data                                                                          |
-| Remover prazo                                                                               |
-| Esta data já passou                                                                         |
-| {count} de 10                                                                               |
-| Você pode escolher até 10 times                                                             |
-| Alguns times não existem mais e foram removidos                                             |
-| Nenhum time ainda                                                                           |
-| Não foi possível carregar os times.                                                         |
-| {count, plural, one {Corrija 1 erro para continuar} other {Corrija # erros para continuar}} |
-| Descartar alterações?                                                                       |
-| Continuar editando                                                                          |
-| Descartar                                                                                   |
-| Nome                                                                                        |
-| O nome deve ter de 2 a 50 caracteres                                                        |
-| Cor                                                                                         |
-| Use uma cor como #6366F1                                                                    |
-| Prévia                                                                                      |
-| Nome do time                                                                                |
-| Cor em hexadecimal                                                                          |
-| {color}, {hex}                                                                              |
-| Este time não existe mais                                                                   |
-| Voltar para times                                                                           |
-| A descrição deve ter no máximo 280 caracteres                                               |
-| Excluir “{name}”?                                                                           |
-| As tarefas serão mantidas e deixarão de estar atribuídas a este time.                       |
-| Times: {names}                                                                              |
-| +{count}                                                                                    |
+| pt-BR                                                                                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+| Times                                                                                                                              |
+| Sem times                                                                                                                          |
+| Prazo                                                                                                                              |
+| Sem prazo                                                                                                                          |
+| Atrasada                                                                                                                           |
+| Sem descrição                                                                                                                      |
+| Criada em {date}                                                                                                                   |
+| Atualizada em {date}                                                                                                               |
+| Concluída em {date}                                                                                                                |
+| Alterar status                                                                                                                     |
+| Marcada como {status}                                                                                                              |
+| Status alterado para {status}                                                                                                      |
+| Excluir tarefa                                                                                                                     |
+| Excluir esta tarefa?                                                                                                               |
+| “{title}” será removida. Isso não pode ser desfeito.                                                                               |
+| Título                                                                                                                             |
+| O título deve ter pelo menos 3 caracteres                                                                                          |
+| O título deve ter no máximo 120 caracteres                                                                                         |
+| O título é obrigatório                                                                                                             |
+| Descrição                                                                                                                          |
+| A descrição deve ter no máximo {max} caracteres                                                                                    |
+| Status                                                                                                                             |
+| Selecione uma data                                                                                                                 |
+| Remover prazo                                                                                                                      |
+| Esta data já passou                                                                                                                |
+| {count} de 10                                                                                                                      |
+| Você pode escolher até 10 times                                                                                                    |
+| Alguns times não existem mais e foram removidos                                                                                    |
+| Nenhum time ainda                                                                                                                  |
+| Não foi possível carregar os times.                                                                                                |
+| {count, plural, one {Corrija 1 erro para continuar} other {Corrija # erros para continuar}}                                        |
+| Descartar alterações?                                                                                                              |
+| Continuar editando                                                                                                                 |
+| Descartar                                                                                                                          |
+| Nome                                                                                                                               |
+| O nome deve ter de 2 a 50 caracteres                                                                                               |
+| Cor                                                                                                                                |
+| Use uma cor como #6366F1                                                                                                           |
+| Prévia                                                                                                                             |
+| Nome do time                                                                                                                       |
+| Cor em hexadecimal                                                                                                                 |
+| {color}, {hex}                                                                                                                     |
+| Vermelho · Laranja · Âmbar · Amarelo · Lima · Esmeralda · Verde-azulado · Céu · Azul · Índigo · Violeta · Rosa · Ardósia · Grafite |
+| {label}, obrigatório, {error}                                                                                                      |
+| {count} de {max} caracteres                                                                                                        |
+| Prévia, {name}                                                                                                                     |
+| Este time não existe mais                                                                                                          |
+| Voltar para times                                                                                                                  |
+| Voltar para tarefas                                                                                                                |
+| A descrição deve ter no máximo 280 caracteres                                                                                      |
+| Excluir “{name}”?                                                                                                                  |
+| As tarefas serão mantidas e deixarão de estar atribuídas a este time.                                                              |
+| Times: {names}                                                                                                                     |
+| +{count}                                                                                                                           |
 
 ### 9.4 Empty, loading, success, offline
 
@@ -1126,6 +1134,8 @@ The app ships pt-BR only, as literals (no i18n library). Domain terms follow the
 | --------------------------------------------------------------------------------------------------------- |
 | Carregando tarefas                                                                                        |
 | Carregando times                                                                                          |
+| Carregando tarefa                                                                                         |
+| Carregando time                                                                                           |
 | Nenhuma tarefa ainda                                                                                      |
 | Registre sua primeira tarefa — leva segundos.                                                             |
 | Nenhuma tarefa em {team} ainda                                                                            |
