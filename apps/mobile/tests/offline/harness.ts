@@ -99,8 +99,12 @@ export function goOffline() {
   setNetwork({ isConnected: false });
 }
 
-export async function goOnline(client: QueryClient) {
+export async function goOnline(
+  client: QueryClient,
+  ...handlers: Parameters<typeof server.use>
+) {
   server.resetHandlers();
+  server.use(...handlers);
   setNetwork({ isConnected: true });
   await client.resumePausedMutations();
   await settle();
