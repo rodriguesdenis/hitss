@@ -11,16 +11,20 @@
     "export": "expo export --platform android --output-dir dist",
     "lint": "eslint . && depcruise --config .dependency-cruiser.cjs app src",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest && pnpm run test:tz",
+    "test:tz": "TZ=Pacific/Kiritimati jest src/lib/dates && TZ=Pacific/Pago_Pago jest src/lib/dates"
   },
   "dependencies": {
     "@expo/log-box": "58.0.13",
     "@expo/metro-runtime": "58.0.15",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "58.0.19",
     "expo-constants": "58.0.13",
     "expo-linking": "58.0.14",
     "expo-router": "58.0.26",
+    "expo-secure-store": "58.0.2",
     "expo-status-bar": "58.0.4",
+    "expo-system-ui": "58.0.6",
     "nativewind": "4.2.7",
     "react": "19.3.0",
     "react-native": "0.88.0",
