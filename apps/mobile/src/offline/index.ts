@@ -24,6 +24,7 @@ export {
   newTempId,
   resolveId,
   UnresolvedTempIdError,
+  useResolvedId,
 } from './temp-ids';
 export { discardMessage, QUEUED_MESSAGE, warnDiscarded } from './messages';
 export { submitDurable, type SubmitResult } from './use-durable-submit';

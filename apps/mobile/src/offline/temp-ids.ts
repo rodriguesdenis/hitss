@@ -33,3 +33,7 @@ export function resolveId(id: string): string {
   }
   return real;
 }
+
+export function useResolvedId(id: string): string {
+  return useSyncStore((state) => (isTempId(id) ? (state.idMap[id] ?? id) : id));
+}

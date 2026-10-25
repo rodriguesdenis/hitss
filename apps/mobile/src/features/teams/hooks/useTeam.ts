@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-query';
 
 import { qk } from '@/lib/query-keys';
+import { isTempId, useResolvedId } from '@/offline';
 
 function fromLists(queryClient: QueryClient, id: string) {
   for (const query of queryClient
@@ -26,13 +27,15 @@ function fromLists(queryClient: QueryClient, id: string) {
   return undefined;
 }
 
-export function useTeam(id: string | undefined) {
+export function useTeam(requestedId: string | undefined) {
   const queryClient = useQueryClient();
+  const resolved = useResolvedId(requestedId ?? '');
+  const id = requestedId ? resolved : undefined;
   const cached = id ? fromLists(queryClient, id) : undefined;
   return useTeamsFindOne(id ?? '', {
     query: {
       queryKey: qk.teams.detail(id ?? ''),
-      enabled: Boolean(id),
+      enabled: Boolean(id) && !isTempId(id ?? ''),
       initialData: cached && { data: cached.team },
       initialDataUpdatedAt: cached?.updatedAt,
       select: (response): TeamResponseDto => response.data,
