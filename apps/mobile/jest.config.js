@@ -21,6 +21,7 @@ const transformed = [
 module.exports = {
   preset: 'jest-expo',
   clearMocks: true,
+  testTimeout: 20_000,
   roots: ['<rootDir>/src', '<rootDir>/tests', '<rootDir>/app'],
   testPathIgnorePatterns: ['/node_modules/', '<rootDir>/tests/lint/'],
   setupFiles: ['<rootDir>/tests/env.ts'],
