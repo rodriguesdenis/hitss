@@ -25,6 +25,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-01 — Persist the query cache through the StorageAdapter
 
+- **Status:** done
 - **Goal:** last-seen data available offline and after restart, per user.
 - **Changes:** `src/offline/persister.ts` (over `src/lib/storage.ts`; memory adapter for tests), `PersistQueryClientProvider` (`maxAge` 24 h, `buster` with the API contract hash), `gcTime` 24 h, `maxPages: 10`, `src/offline/sync.store.ts` (`ownerId`).
 - **Covers:** @AC-05.1.1, @AC-05.1.2, @AC-05.1.3, @AC-05.1.4, @AC-05.1.5.
@@ -32,6 +33,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-02 — Wire connectivity and the offline banner
 
+- **Status:** done
 - **Goal:** the app knows and shows when it is offline.
 - **Changes:** `src/offline/network.ts` (`onlineManager` ↔ NetInfo, `focusManager` ↔ AppState, `useIsOnline`), `OfflineBanner` connected (offline / syncing / synced, ≥ 1 s flap debounce), `refetchOnReconnect: false` + `resumePausedMutations().then(invalidateQueries)`; sign-in submit disabled offline (BR-05.9).
 - **Covers:** @AC-05.2.1, @AC-05.1.3 (auto-load on reconnect).
@@ -39,6 +41,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-03 — Register durable mutation defaults in one ordered queue
 
+- **Status:** done
 - **Goal:** mutations survive restarts and replay in the user's order.
 - **Changes:** `src/offline/durable-mutation.ts` (`defineDurableMutation`), `features/tasks/mutations.ts` `registerTaskMutationDefaults` and `features/teams/mutations.ts` `registerTeamMutationDefaults` (called in `app/_layout.tsx` before restore) for the seven keys, without optimistic logic yet: `mutationFn` + `scope: { id: 'sync' }` + `networkMode: 'offlineFirst'` + `retry`/`retryDelay` for network, timeout, 5xx and `429` (honoring `retryAfter`); feature hooks refactored to `useMutation({ mutationKey })` with serializable variables carrying `title`.
 - **Covers:** @AC-05.6.2, @AC-05.6.3, @AC-05.6.4 (mechanism).
@@ -46,6 +49,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-04 — Make status change optimistic with rollback
 
+- **Status:** done
 - **Goal:** status changes render in the same frame and revert on rejection.
 - **Changes:** list-page helpers in `src/offline/optimistic.ts`, `applyStatus` in `features/tasks/mutations.ts` (detail and every cached list page; drop from non-matching status-filtered lists; `completedAt` set/cleared), `cancelQueries` before writing.
 - **Covers:** @AC-05.3.1, @AC-05.3.2, @AC-05.3.3, @AC-05.3.4, @AC-05.3.5.
@@ -53,6 +57,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-05 — Make task and team deletion optimistic with rollback
 
+- **Status:** done
 - **Goal:** deletions disappear immediately; already deleted is a success.
 - **Changes:** `removeTask` (lists, detail, team `taskCount`), `removeTeam` (team lists, chips in cached tasks, team task lists), `404 → success` on `tasks.delete` / `teams.delete`.
 - **Covers:** @AC-05.4.1, @AC-05.4.2, @AC-05.4.3, @AC-05.4.4.
@@ -60,6 +65,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-06 — Make creation optimistic with temporary ids
 
+- **Status:** done
 - **Goal:** created tasks and teams appear instantly; dependants wait for them.
 - **Changes:** `insertTask`, `insertTeam`, `src/offline/temp-ids.ts` (`tmp-<uuid>` via `expo-crypto`, `resolveId`), `sync.store` `idMap` / `failedTmpIds`, `replaceId` across caches, `router.setParams` on the open detail, dependants of a failed creation failed unsent, queued-save toast on offline submit.
 - **Covers:** @AC-05.5.1, @AC-05.5.3, @AC-05.5.4, @AC-05.5.6.
@@ -67,6 +73,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-07 — Make task and team edits optimistic
 
+- **Status:** done
 - **Goal:** edits render instantly; the last write wins.
 - **Changes:** `mergeTask` (moves between team lists when `teamIds` change), `mergeTeam` (embedded chips).
 - **Covers:** @AC-05.5.2, @AC-05.7.1, @AC-05.7.4.
@@ -74,6 +81,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-08 — Discard rejected changes on replay with a warning
 
+- **Status:** done
 - **Goal:** a change that can no longer be applied is reverted, explained and dropped; the queue continues.
 - **Changes:** `src/offline/replay-errors.ts#classifyReplayError` (decision table in the plan): `404` on status/edit → remove from caches + "“<title>” foi excluída em outro lugar."; `400`/`409`/`422` → rollback + "Não foi possível salvar “<title>”: <reason>"; both discard the mutation; invalidation deferred until the scope is idle.
 - **Covers:** @AC-05.5.5, @AC-05.7.2, @AC-05.7.3, @AC-05.7.5.
@@ -81,6 +89,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-09 — Show pending-sync indicators and the sync summary
 
+- **Status:** done
 - **Goal:** users see what is not confirmed yet.
 - **Changes:** `src/offline/use-pending-sync.ts` (`useMutationState` → entity id set + count), row/card/detail badge, Tasks tab dot, Settings count, banner syncing/synced counts.
 - **Covers:** @AC-05.2.2, @AC-05.2.3, @AC-05.2.4.
@@ -88,6 +97,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-10 — Tie the queue to the session (session gate, 401, sign-out, user switch)
 
+- **Status:** done
 - **Goal:** pending changes never leak across users and survive re-authentication.
 - **Changes:** `src/offline/session-gate.ts` (`createSessionGate({ getSessionUserId })`, source injected from `features/auth` by `app/_layout.tsx`; `onlineManager` forced offline at startup and after `401` until the session user id equals `ownerId`, otherwise discard queue and cache before rendering or sending); `onUnauthenticated` deletes the token and clears queries only; Settings sign-out warning when pending; sign-out awaits `authClient.signOut()`, token deletion and `persister.removeClient()`, then clears caches, queue and `sync.store` before navigating.
 - **Covers:** @AC-05.6.5, @AC-05.6.6, @AC-05.1.5.
@@ -95,6 +105,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 
 ## T-005-11 — Add restart/replay integration suite and Maestro offline flow
 
+- **Status:** done
 - **Goal:** prove the offline journey end to end.
 - **Changes:** `tests/offline/restart-replay.test.tsx` (feature Background, all US-05.6 scenarios), `tests/maestro/offline.yaml` (airplane mode on an Android emulator; manual step documented for iOS), README section "Testing offline".
 - **Covers:** @AC-05.6.1, @AC-05.6.2, @AC-05.2.3 (E2E).
