@@ -1,6 +1,6 @@
 # 004 — Mobile app
 
-- **Epic:** [EP-04 Mobile Experience](../../product/epics/EP-04-mobile-experience.md) · **Status:** Draft · **Priority:** MUST (US-04.1–04.9, 04.15, 04.16); COULD: sign-up UX (US-04.13), sort (US-04.14), theme, language, accessibility (US-04.10–04.12)
+- **Epic:** [EP-04 Mobile Experience](../../product/epics/EP-04-mobile-experience.md) · **Status:** Draft · **Priority:** MUST (US-04.1–04.9, 04.15, 04.16); COULD: sign-up UX (US-04.13), sort (US-04.14), theme switching (US-04.10), accessibility hardening (US-04.12). Language switching (US-04.11) is dropped: the UI is pt-BR only.
 - **Design:** [design-spec.md](../../design/design-spec.md) · **Behavior:** [mobile-app.feature](mobile-app.feature) · **Plan:** [plan.md](plan.md) · **Tasks:** [tasks.md](tasks.md)
 
 ## Problem
@@ -13,7 +13,7 @@ Marina coordinates work across a few small teams from her phone, between meeting
 
 - Every brief mobile screen: teams list with tap-to-filter, tasks list (global and per team), create/edit form with validation, task detail with quick actions (change status, delete), team color chips on tasks.
 - Clear feedback on every screen (loading, empty, error with retry, success).
-- Comfortable for everyone: light/dark theme, English and Brazilian Portuguese, WCAG 2.1 AA.
+- Comfortable for everyone: light/dark theme following the phone, Brazilian Portuguese copy (quoted below exactly as shown), WCAG 2.1 AA.
 
 **Non-goals**
 
@@ -30,9 +30,9 @@ As Marina, I want to sign in with my email and password, so that only I can see 
 
 - **AC-04.1.1** Given I am not signed in, when I open the app, then I see the sign-in screen and cannot reach any other screen.
 - **AC-04.1.2** Given valid credentials, when I sign in, then I land on the tasks list; when I reopen the app later, I am still signed in.
-- **AC-04.1.3** Given wrong credentials, when I sign in, then I stay on the sign-in screen and see "Incorrect email or password"; my password is not shown in clear text unless I choose to reveal it.
-- **AC-04.1.6** Given my session has expired, when any action reaches the server, then I am taken to the sign-in screen with "Your session has expired. Please sign in again."
-- **AC-04.1.7** Given I am signed in, then every request to the API carries the session cookie read from the authentication client (`authClient.getCookie()`) — the app has no browser cookie jar and never uses the bearer token (that is for cURL and API collections only).
+- **AC-04.1.3** Given wrong credentials, when I sign in, then I stay on the sign-in screen and see "E-mail ou senha incorretos"; my password is not shown in clear text unless I choose to reveal it.
+- **AC-04.1.6** Given my session has expired, when any action reaches the server, then I am taken to the sign-in screen with "Sua sessão expirou. Entre novamente."
+- **AC-04.1.7** Given I am signed in, then every request to the API carries `Authorization: Bearer <token>`, where the token is the one received at sign-in and kept only in the phone's secure storage; it never appears in logs or in locally kept data.
 
 ### US-04.13 — Sign up (`COULD`)
 
@@ -68,10 +68,10 @@ As Marina, I want to manage my teams from the app, so that I can organize new wo
 **Acceptance criteria**
 
 - **AC-04.3.1** Given the team form, when I enter a name of 2–50 characters and pick a color, then the team is created and appears in the teams list.
-- **AC-04.3.2** Given a name already used by another of my teams (ignoring case), when I save, then I see "You already have a team with this name." on the name field and nothing is saved.
+- **AC-04.3.2** Given a name already used by another of my teams (ignoring case), when I save, then I see "Você já tem um time com este nome." on the name field and nothing is saved.
 - **AC-04.3.3** Given an existing team, when I change its name or color, then the teams list and every task chip of that team show the new name and color.
 - **AC-04.3.4** Given an existing team, when I delete it and confirm, then it disappears from the list and its tasks remain, no longer showing that team's chip.
-- **AC-04.3.5** Given the color picker, when I choose a preset or type a `#RRGGBB` value, then I see a live preview of the chip; an invalid value shows "Use a color like #6366F1".
+- **AC-04.3.5** Given the color picker, when I choose a preset or type a `#RRGGBB` value, then I see a live preview of the chip; an invalid value shows "Use uma cor como #6366F1".
 
 ### US-04.4 — Browse tasks globally and per team (`MUST`)
 
@@ -81,9 +81,9 @@ As Marina, I want a list of all my tasks and a list per team, so that I can see 
 
 - **AC-04.4.1** Given I have tasks, when I open the Tasks tab, then I see all my tasks regardless of team (including tasks with no team), newest first, each with title, status, team chips and due date.
 - **AC-04.4.2** Given a team's tasks list, then only tasks assigned to that team are shown, and a task assigned to several teams appears in each of those teams' lists.
-- **AC-04.4.3** Given more tasks than one page, when I scroll near the end, then the next page loads automatically, until a "That's all" end marker is shown.
+- **AC-04.4.3** Given more tasks than one page, when I scroll near the end, then the next page loads automatically, until an "Isso é tudo" end marker is shown.
 - **AC-04.4.4** Given any list, when I pull down, then the list reloads from the first page keeping my current filters.
-- **AC-04.4.5** Given a task not Done whose due date is before today, then it is marked "Overdue" with text and icon, not color alone.
+- **AC-04.4.5** Given a task not Done whose due date is before today, then it is marked "Atrasada" with text and icon, not color alone.
 - **AC-04.4.6** Given I tap a task, then its detail opens.
 
 ### US-04.5 — Filter and search tasks (`MUST`, brief: "listagem suporta filtros teamId e status, search e paginação")
@@ -92,9 +92,9 @@ As Marina, I want to narrow tasks by status and text, so that I find the right t
 
 **Acceptance criteria**
 
-- **AC-04.5.1** Given a tasks list (global or team), when I choose one status from a single-select control (All, Pending, In progress, Done), then only tasks with that status are shown (All = no status filter); combined with the team when in a team list.
+- **AC-04.5.1** Given a tasks list (global or team), when I choose one status from a single-select control (Todas, Pendente, Em andamento, Concluída), then only tasks with that status are shown (All = no status filter); combined with the team when in a team list.
 - **AC-04.5.2** Given I type a search term, when I pause typing for a moment, then only tasks whose title or description contains the term are shown; clearing the term restores the list. Fast typing triggers a single search, not one per keystroke.
-- **AC-04.5.4** Given filters that match nothing, then I see "No tasks match your filters" with a "Clear filters" action that restores the unfiltered list.
+- **AC-04.5.4** Given filters that match nothing, then I see "Nenhuma tarefa corresponde aos filtros" with a "Limpar filtros" action that restores the unfiltered list.
 - **AC-04.5.5** Given I set filters on the global list and on a team list, then each list remembers its own filters while the app is running; after a restart or sign-out, lists start unfiltered.
 
 ### US-04.14 — Sort tasks (`COULD`)
@@ -117,7 +117,7 @@ As Marina, I want to see a task's details and change its status or delete it rig
 - **AC-04.6.4** Given the detail, when I choose Delete, then I am asked to confirm; if I confirm, the task is deleted, I return to the list and it no longer appears in any list; if I cancel, nothing changes.
 - **AC-04.6.5** Given the server rejects a status change or deletion, then the task shows its previous state and I see why.
 - **AC-04.6.6** Given a task row in a list, when I long-press it, then I can change its status without opening the detail, with the same result as AC-04.6.2.
-- **AC-04.6.7** Given the task was deleted elsewhere, when I open its detail, then I see "This task no longer exists." and a way back to the list.
+- **AC-04.6.7** Given the task was deleted elsewhere, when I open its detail, then I see "Esta tarefa não existe mais." and a way back to the list.
 
 ### US-04.7 — Create and edit a task with validation (`MUST`)
 
@@ -126,11 +126,11 @@ As Marina, I want a form to capture or change a task, with clear validation, so 
 **Acceptance criteria**
 
 - **AC-04.7.1** Given the form, when I enter a title of at least 3 characters (after trimming spaces) and save, then the task is created with status Pending unless I chose another, and appears at the top of the list.
-- **AC-04.7.2** Given a title shorter than 3 characters (after trimming), when I save or leave the field, then I see "Title must be at least 3 characters" and nothing is saved.
+- **AC-04.7.2** Given a title shorter than 3 characters (after trimming), when I save or leave the field, then I see "O título deve ter pelo menos 3 caracteres" and nothing is saved.
 - **AC-04.7.3** Given a title longer than 120 characters or a description longer than 2000, then the form prevents saving and explains the limit.
 - **AC-04.7.4** Given the form, I can optionally set a description, status, a due date (past dates allowed with a hint) and assign 0 to 10 of my teams shown as colored chips; an 11th team cannot be selected.
-- **AC-04.7.5** Given I open "New task" from a team's list, then that team is preselected.
-- **AC-04.7.6** Given an existing task, when I edit and save, then the detail and lists show the new values; when the task was changed elsewhere meanwhile, I am told and can reload the latest version.
+- **AC-04.7.5** Given I open "Nova tarefa" from a team's list, then that team is preselected.
+- **AC-04.7.6** Given an existing task, when I edit and save, then the detail and lists show the new values; if it was changed elsewhere meanwhile, the last save wins.
 - **AC-04.7.7** Given unsaved changes, when I cancel, then I am asked whether to discard them.
 - **AC-04.7.8** Given the server rejects the form (invalid field, unknown teams, too many teams), then the message appears next to the related field and my input is preserved.
 
@@ -143,8 +143,8 @@ As Marina, I want each task to show colored chips of its teams, so that I recogn
 - **AC-04.8.1** Given a task assigned to teams, then each team appears as a chip with the team's name on the team's color, in lists and in the detail.
 - **AC-04.8.2** Given any team color, then the chip text is black or white, whichever is more readable (contrast at least 4.5:1), and a chip whose color is too close to the background gets an outline.
 - **AC-04.8.3** Given a task with more than 3 teams, then lists show 3 chips and a "+N" marker; the detail shows all of them.
-- **AC-04.8.4** Given a task without teams, then no chips are shown in lists and the detail says "No teams".
-- **AC-04.8.5** Given a screen reader, then the chip group is read as "Teams: <names>".
+- **AC-04.8.4** Given a task without teams, then no chips are shown in lists and the detail says "Sem times".
+- **AC-04.8.5** Given a screen reader, then the chip group is read as "Times: <names>".
 
 ### US-04.9 — Clear loading, empty, error and success feedback (`MUST`)
 
@@ -154,9 +154,9 @@ As Marina, I want to always know what the app is doing, so that I never wonder w
 
 - **AC-04.9.1** Given data is loading for the first time, then I see placeholders shaped like the content, not a blank screen.
 - **AC-04.9.2** Given there is nothing to show, then I see a message explaining why and the action to create the first item.
-- **AC-04.9.3** Given loading fails, then I see a message explaining the failure (connection vs server) and a "Try again" action that retries; content already shown stays visible.
+- **AC-04.9.3** Given loading fails, then I see a message explaining the failure (connection vs server) and a "Tentar novamente" action that retries; content already shown stays visible.
 - **AC-04.9.4** Given I create, edit or delete something successfully, then I see a short confirmation message that disappears on its own and is announced to screen readers.
-- **AC-04.9.5** Given any error returned by the server, then the message shown is the user-friendly text for that error in my language, never a technical code.
+- **AC-04.9.5** Given any error returned by the server, then the message shown is the user-friendly pt-BR text for that error, never a technical code.
 - **AC-04.9.6** Given I press a save button twice quickly, then the action happens once.
 
 ### US-04.15 — Mandated front-end stack (`MUST`, brief: "Formulários com validação", "React Query", "Estilização sem styled-components")
@@ -175,17 +175,8 @@ As Marina, I want the app to follow my phone's appearance or a theme I choose, s
 
 **Acceptance criteria**
 
-- **AC-04.10.1** Given the default setting "System", then the app follows the phone's light/dark appearance, including changes while it is open.
-- **AC-04.10.2** Given I choose Light or Dark in Settings, then the whole app switches immediately and keeps my choice after restart.
-
-### US-04.11 — Use the app in English or Brazilian Portuguese (`COULD`)
-
-As Marina, I want the app in my language, so that every label, message and date reads naturally.
-
-**Acceptance criteria**
-
-- **AC-04.11.1** Given my phone is in Portuguese, when I first open the app, then it is in Brazilian Portuguese; any other language falls back to English.
-- **AC-04.11.2** Given I choose a language in Settings among `system` (default, follows the phone), `en` and `pt-BR`, then all text, including error messages and dates, switches immediately and the choice is kept after restart.
+- **AC-04.10.1** Given the default setting "Sistema", then the app follows the phone's light/dark appearance, including changes while it is open.
+- **AC-04.10.2** Given I choose "Claro" or "Escuro" in Settings, then the whole app switches immediately and keeps my choice after restart.
 
 ### US-04.12 — Accessible to assistive technologies (`COULD`)
 
@@ -211,14 +202,14 @@ As a user who relies on a screen reader, larger text or reduced motion, I want t
 | BR-04.6  | Search waits for a pause in typing (300 ms) and uses the trimmed term (1–100 chars); empty term = no search filter.                                                                                                                                |
 | BR-04.7  | Page size is 20; lists load the next page automatically near the end.                                                                                                                                                                              |
 | BR-04.8  | Filters (status, search, sort) are kept per list (global list and each team list) for the running session; they reset on restart and sign-out. The team of a team list is part of the screen's address, so it can be opened directly.              |
-| BR-04.9  | Server error codes are always mapped to localized, user-friendly messages; unknown codes use the generic message.                                                                                                                                  |
-| BR-04.10 | Dates are calendar dates shown in the user's locale and never shifted by time zone.                                                                                                                                                                |
+| BR-04.9  | Server error codes are always mapped to user-friendly pt-BR messages; unknown codes use the generic message.                                                                                                                                       |
+| BR-04.10 | Dates are calendar dates shown in pt-BR format and never shifted by time zone.                                                                                                                                                                     |
 
 ## Edge cases
 
-- Team deleted elsewhere while I am viewing its tasks → "This team no longer exists." with a way back to Teams.
-- Task opened through a link for a task that belongs to another user → "This task no longer exists." (same as not found; no existence leak).
-- Task edited elsewhere while my form is open → on save, conflict message with reload option (AC-04.7.6).
+- Team deleted elsewhere while I am viewing its tasks → "Este time não existe mais." with a way back to Teams.
+- Task opened through a link for a task that belongs to another user → "Esta tarefa não existe mais." (same as not found; no existence leak).
+- Task edited elsewhere while my form is open → my save wins; the API has no conflict detection (last write wins, AC-04.7.6).
 - A selected team in the form was deleted elsewhere → it is removed from the selection with an explanation (AC-04.7.8).
 - Very long titles/team names → truncated with ellipsis in lists; full text in detail and in screen-reader labels.
 - Emoji and accents in titles and search terms work as typed.
@@ -229,6 +220,7 @@ As a user who relies on a screen reader, larger text or reduced motion, I want t
 ## Out of scope
 
 - Offline behavior and instant feedback (spec 005).
+- Language switching and any language other than pt-BR (US-04.11 dropped).
 - Swipe-to-delete in lists, bulk actions, drag-and-drop ordering.
 - Team sharing, assignees, comments, attachments, notifications, password reset, email verification.
 
@@ -238,4 +230,4 @@ As a user who relies on a screen reader, larger text or reduced motion, I want t
 | ------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | OQ-04.1 | Should Undo be offered after delete?                                                         | No — the API has no restore; confirm dialog instead. Revisit if a restore endpoint is added. |
 | OQ-04.2 | Should status filter allow multiple statuses at once (API supports a list)?                  | Single-select in the UI for simplicity; multi-select is a later enhancement.                 |
-| OQ-04.3 | Exact sign-in/sign-up error codes from the identity provider are not in the API error table. | Confirm with spec 001 and map them to `auth.invalidCredentials` / `auth.emailTaken`.         |
+| OQ-04.3 | Exact sign-in/sign-up error codes from the identity provider are not in the API error table. | Confirm with spec 001 and map them to the invalid-credentials and email-taken messages.      |
