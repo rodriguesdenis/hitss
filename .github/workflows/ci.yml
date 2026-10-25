@@ -48,7 +48,7 @@ jobs:
       - name: Architecture rules and their meta-tests
         run: pnpm arch
       - name: Makefile syntax (dry run of every alias)
-        run: make -n help up down logs reset seed test test-all test-docker smoke
+        run: make -n help up down logs reset seed test test-all test-docker smoke mobile
       - name: CI tooling tests
         run: pnpm test:tools
       - name: No tracked .env files

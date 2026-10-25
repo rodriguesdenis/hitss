@@ -59,6 +59,7 @@ const schema = schemaFiles.flatMap((name) =>
 const EMPTY_ALLOWED = new Set([
   'TRUSTED_PROXIES', // empty = trust no proxy
   'OTEL_EXPORTER_OTLP_ENDPOINT', // empty = telemetry off
+  'REACT_NATIVE_PACKAGER_HOSTNAME', // empty = Expo picks the host; lan mode refuses to start without it
 ]);
 const defaults = composeDefaults(read('docker-compose.yml'));
 const example = envEntries(read('.env.example'));

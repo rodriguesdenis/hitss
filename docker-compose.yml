@@ -91,5 +91,23 @@ services:
       retries: 30
       start_period: 20s
 
+  # Optional Expo dev server for Expo Go (profile mobile): `make mobile`. Not started by a plain
+  # `docker compose up`. Tunnel mode works from any network; lan needs the host's LAN IP below.
+  mobile:
+    profiles: [mobile]
+    build:
+      context: .
+      dockerfile: apps/mobile/Dockerfile.dev
+    init: true
+    tty: true
+    stdin_open: true
+    security_opt: ['no-new-privileges:true']
+    cap_drop: [ALL]
+    environment:
+      EXPO_DEV_MODE: ${EXPO_DEV_MODE:-tunnel}
+      EXPO_PUBLIC_API_URL: ${EXPO_PUBLIC_API_URL:-http://localhost:3000}
+      REACT_NATIVE_PACKAGER_HOSTNAME: ${REACT_NATIVE_PACKAGER_HOSTNAME:-}
+    ports: ['${METRO_BIND:-0.0.0.0}:8081:8081']
+
 volumes:
   pgdata: {}

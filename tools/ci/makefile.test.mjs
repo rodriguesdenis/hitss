@@ -21,9 +21,10 @@ const TARGETS = [
   'test-all',
   'test-docker',
   'smoke',
+  'mobile',
 ];
 /** Aliases for things that are not in the repository: `make help` must not advertise them. */
-const ABSENT = ['observability', 'observability-down', 'mobile', 'load'];
+const ABSENT = ['observability', 'observability-down', 'load'];
 
 const make = (...args) =>
   spawnSync('make', args, { cwd: root, encoding: 'utf8' });
@@ -87,7 +88,7 @@ describe('Makefile', { skip: !hasMake && 'make is not installed' }, () => {
     }
   });
 
-  it('AC-07.3.2 make help lists only aliases that exist: nothing for the telemetry backend, Metro or k6', () => {
+  it('AC-07.3.2 make help lists only aliases that exist: nothing for the telemetry backend or k6', () => {
     const { stdout } = make('help');
     assert.doesNotMatch(stdout, /not available yet/i);
     for (const target of ABSENT) {

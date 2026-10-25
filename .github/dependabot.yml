@@ -45,10 +45,10 @@ updates:
       interval: weekly
     commit-message:
       prefix: 'ci'
-  # Container base images: the API Dockerfile (node image pinned by minor and digest) and the
-  # compose images. The mobile Dockerfile entry is added with T-007-13.
+  # Container base images: the API and mobile Dockerfiles (node image pinned by minor and digest)
+  # and the compose images.
   - package-ecosystem: docker
-    directory: /apps/api
+    directories: [/apps/api, /apps/mobile]
     schedule:
       interval: weekly
     commit-message:

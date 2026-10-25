@@ -3,7 +3,7 @@
 # `make` with no target prints this list.
 
 .DEFAULT_GOAL := help
-.PHONY: help up down logs reset seed test test-all test-docker smoke
+.PHONY: help up down logs reset seed test test-all test-docker smoke mobile
 
 help: ## List the available aliases
 	@echo 'Usage: make <alias>'
@@ -51,3 +51,6 @@ test-docker: ## Run the unit tests in a throwaway container (TARGET=test:all for
 
 smoke: ## Fresh-stack smoke test: the evaluator's one command and its failure modes
 	tools/ci/compose-smoke.sh
+
+mobile: ## Expo dev server for Expo Go, QR in the terminal (EXPO_DEV_MODE=tunnel|lan, see the runbook)
+	docker compose --profile mobile up --build mobile
