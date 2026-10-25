@@ -229,9 +229,6 @@ importers:
       orval:
         specifier: 8.43.0
         version: 8.43.0(@tanstack/react-query@5.104.4(@types/react@19.3.0)(react@19.3.0))(effect@3.20.0)(prettier@3.9.10)(typescript@5.9.3)(zod@4.6.7)
-      prettier:
-        specifier: 3.9.10
-        version: 3.9.10
       react:
         specifier: 19.3.0
         version: 19.3.0
