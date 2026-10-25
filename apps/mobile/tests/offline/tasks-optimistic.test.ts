@@ -86,7 +86,7 @@ describe('status change', () => {
     await done;
   });
 
-  it('AC-05.3.4 drops the task from a list filtered on another status', async () => {
+  it('AC-05.3.4 AC-05.3.5 drops the task from a list filtered on another status', async () => {
     const client = await seeded();
     void mutate<TaskStatusVars>(client, mk.tasks.changeStatus, {
       ...crash,
@@ -136,16 +136,22 @@ describe('status change', () => {
     expect(db.tasks.find((t) => t.id === crash.id)?.status).toBe('DONE');
   });
 
-  it('AC-05.7.2 removes a task deleted elsewhere and explains it', async () => {
+  it('AC-05.7.2 AC-05.7.5 removes a task deleted elsewhere, explains it and sends the next change', async () => {
     const client = await seeded();
     goOffline();
     void mutate<TaskStatusVars>(client, mk.tasks.changeStatus, {
       ...crash,
       status: 'DONE',
     });
+    void mutate<TaskStatusVars>(client, mk.tasks.changeStatus, {
+      id: 'task-deps',
+      title: 'Update dependencies',
+      status: 'DONE',
+    });
     await settle();
     db.tasks = db.tasks.filter((t) => t.id !== crash.id);
     await goOnline(client);
+    expect(db.tasks.find((t) => t.id === 'task-deps')?.status).toBe('DONE');
     expect(taskTitles(client, all)).not.toContain(crash.title);
     expect(detail(client, crash.id)).toBeUndefined();
     expect(toast()).toBe('“Fix crash on Android” foi excluída em outro lugar.');
