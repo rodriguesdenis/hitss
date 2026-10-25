@@ -17,6 +17,7 @@ import {
   EmptyState,
   ErrorState,
   Fab,
+  ProgressBar,
   Screen,
   showToast,
   SkeletonList,
@@ -205,6 +206,10 @@ export function TasksListScreen({
         )}
         <TaskFilterBar scope={scope} teamName={team.data?.name} />
       </View>
+      <ProgressBar
+        visible={list.isPlaceholderData && list.isFetching}
+        label="Carregando tarefas"
+      />
       {body()}
       <Fab label="Nova tarefa" onPress={() => onCreateTask(teamId)} />
       <StatusSheet task={statusFor} onClose={() => setStatusFor(undefined)} />
