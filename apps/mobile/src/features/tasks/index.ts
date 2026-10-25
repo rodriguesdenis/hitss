@@ -10,3 +10,10 @@ export {
   TasksListScreen,
   type TasksListScreenProps,
 } from './components/TasksListScreen';
+export {
+  registerTaskMutationDefaults,
+  type TaskCreateVars,
+  type TaskDeleteVars,
+  type TaskStatusVars,
+  type TaskUpdateVars,
+} from './mutations';
