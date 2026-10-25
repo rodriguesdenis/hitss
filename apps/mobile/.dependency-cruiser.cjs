@@ -10,7 +10,7 @@ module.exports = {
     {
       name: 'shared-never-imports-features-or-app',
       severity: 'error',
-      from: { path: '^src/(ui|theme|lib)/' },
+      from: { path: '^src/(ui|theme|lib|offline)/' },
       to: { path: '^(src/features|app)/' },
     },
     {
