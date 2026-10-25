@@ -264,6 +264,7 @@ function TaskForm({
             className="flex-1"
           />
           <Button
+            testID="task-save"
             label={task ? 'Salvar alterações' : 'Criar tarefa'}
             loading={saving}
             loadingLabel="Salvando…"

@@ -237,6 +237,7 @@ function TeamForm({
             className="flex-1"
           />
           <Button
+            testID="team-save"
             label={team ? 'Salvar alterações' : 'Criar time'}
             loading={saving}
             loadingLabel="Salvando…"

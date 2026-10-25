@@ -54,7 +54,14 @@ function Header({
   return (
     <View className="flex-row items-center justify-between px-2">
       <IconButton icon="chevron-left" label="Voltar" onPress={onBack} />
-      {onEdit && <Button label="Editar" variant="ghost" onPress={onEdit} />}
+      {onEdit && (
+        <Button
+          testID="task-edit"
+          label="Editar"
+          variant="ghost"
+          onPress={onEdit}
+        />
+      )}
     </View>
   );
 }
@@ -144,6 +151,7 @@ export function TaskDetailScreen({
           Alterar status
         </Text>
         <SegmentedControl
+          testID="status-change"
           label="Alterar status"
           options={statusOptions}
           value={task.status}
@@ -151,6 +159,7 @@ export function TaskDetailScreen({
           onChange={(status) => change(task, status)}
         />
         <Button
+          testID="task-delete"
           label="Excluir tarefa"
           icon="trash"
           variant="ghost-danger"

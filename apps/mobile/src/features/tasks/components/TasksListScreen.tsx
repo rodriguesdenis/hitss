@@ -213,7 +213,11 @@ export function TasksListScreen({
         label="Carregando tarefas"
       />
       {body()}
-      <Fab label="Nova tarefa" onPress={() => onCreateTask(teamId)} />
+      <Fab
+        testID="new-task"
+        label="Nova tarefa"
+        onPress={() => onCreateTask(teamId)}
+      />
       <StatusSheet task={statusFor} onClose={() => setStatusFor(undefined)} />
     </Screen>
   );
