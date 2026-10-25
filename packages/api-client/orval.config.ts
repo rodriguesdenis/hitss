@@ -2,6 +2,14 @@ import { defineConfig } from 'orval';
 
 const input = { target: './openapi.json' };
 
+const infiniteByOffset = {
+  query: {
+    useQuery: true,
+    useInfinite: true,
+    useInfiniteQueryParam: 'offset',
+  },
+};
+
 export default defineConfig({
   hooks: {
     input,
@@ -15,6 +23,10 @@ export default defineConfig({
       override: {
         mutator: { path: 'src/mutator.ts', name: 'apiFetch' },
         fetch: { includeHttpResponseReturnType: false },
+        operations: {
+          teamsList: infiniteByOffset,
+          tasksList: infiniteByOffset,
+        },
       },
     },
   },
