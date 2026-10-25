@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 
-import { AppHeader } from '@/offline';
+import { AppHeader, usePendingCount } from '@/offline';
 import { tokens } from '@/theme/tokens';
 import { useColorSchemeName } from '@/theme/ThemeProvider';
 import { Icon, type IconName } from '@/ui';
@@ -25,6 +25,7 @@ const SettingsIcon = tabIcon('settings');
 
 export default function TabsLayout() {
   const color = tokens[useColorSchemeName()];
+  const pending = usePendingCount() > 0;
   return (
     <Tabs
       backBehavior="history"
@@ -40,6 +41,16 @@ export default function TabsLayout() {
           title: 'Tarefas',
           tabBarButtonTestID: 'tab-tasks',
           tabBarIcon: TasksIcon,
+          tabBarBadge: pending ? '' : undefined,
+          tabBarBadgeStyle: {
+            minWidth: 10,
+            maxHeight: 10,
+            borderRadius: 5,
+            backgroundColor: color.primary,
+          },
+          tabBarAccessibilityLabel: pending
+            ? 'Tarefas, alterações aguardando sincronização'
+            : undefined,
         }}
       />
       <Tabs.Screen

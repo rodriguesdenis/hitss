@@ -1,7 +1,8 @@
 import Constants from 'expo-constants';
 import { ScrollView, Text, View } from 'react-native';
 
-import { Button, Screen } from '@/ui';
+import { pendingLabel, usePendingSync } from '@/offline';
+import { Button, Icon, Screen } from '@/ui';
 
 import { useAuthSession, useSignOut } from '../session';
 
@@ -9,6 +10,7 @@ export function SettingsScreen() {
   const { user } = useAuthSession();
   const { signOut, signingOut } = useSignOut();
   const version = Constants.expoConfig?.version;
+  const { count } = usePendingSync();
 
   return (
     <Screen edges={[]}>
@@ -26,6 +28,18 @@ export function SettingsScreen() {
           >
             <Text className="type-headline">{user?.name}</Text>
             <Text className="type-muted">{user?.email}</Text>
+          </View>
+        </View>
+        <View className="section">
+          <Text className="section-title" accessibilityRole="header">
+            Sincronização
+          </Text>
+          <View className="card flex-row items-center gap-2" accessible>
+            <Icon
+              name={count > 0 ? 'clock' : 'check-circle'}
+              color={count > 0 ? 'on-info-soft' : 'success'}
+            />
+            <Text className="type-body flex-1">{pendingLabel(count)}</Text>
           </View>
         </View>
         <Button
