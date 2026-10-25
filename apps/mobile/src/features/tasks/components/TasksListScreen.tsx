@@ -12,6 +12,7 @@ import { useTeam } from '@/features/teams';
 import { errorCode } from '@/lib/error-messages';
 import { useColorSchemeName } from '@/theme/ThemeProvider';
 import { tokens } from '@/theme/tokens';
+import { useBackgroundErrorToast } from '@/lib/useBackgroundErrorToast';
 import {
   Button,
   EmptyState,
@@ -61,6 +62,7 @@ export function TasksListScreen({
   const list = useTasksInfiniteList(teamId, filters);
   const [statusFor, setStatusFor] = useState<TaskResponseDto>();
   const [refreshing, setRefreshing] = useState(false);
+  const refreshManually = useBackgroundErrorToast(list, list.tasks.length > 0);
 
   if (teamId && team.isError && errorCode(team.error) === 'TEAM_NOT_FOUND') {
     return (
@@ -75,7 +77,7 @@ export function TasksListScreen({
 
   async function refresh() {
     setRefreshing(true);
-    const result = await list.refetch();
+    const result = await refreshManually(() => list.refetch());
     setRefreshing(false);
     if (result.isError) {
       showToast({
