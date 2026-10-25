@@ -25,6 +25,7 @@ module.exports = {
   transformIgnorePatterns: [`node_modules/(?!\\.pnpm/|(${transformed})/)`],
   moduleNameMapper: {
     '^expo-secure-store$': '<rootDir>/tests/mocks/secure-store.ts',
+    '^@expo/vector-icons/(.*)$': '<rootDir>/tests/mocks/vector-icons.tsx',
     '^@react-native-async-storage/async-storage$':
       '@react-native-async-storage/async-storage/jest/async-storage-mock',
     '^@/(.*)$': '<rootDir>/src/$1',
