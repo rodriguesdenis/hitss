@@ -183,6 +183,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-18 — Harden error handling and empty/loading states
 
+- **Status:** done
 - **Goal:** close every cell of the design state matrix.
 - **Changes:** state-matrix suite `tests/state-matrix.test.tsx` (each screen × state), `RATE_LIMITED` toast with seconds, `ROUTE_NOT_FOUND` copy, missing error mappings fixed.
 - **Covers:** @AC-04.9.1, @AC-04.9.2, @AC-04.9.3, @AC-04.9.4, @AC-04.9.5.
@@ -190,6 +191,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-19 — Add Maestro flows for the main journeys
 
+- **Status:** done (flows written; first emulator run scheduled after M5)
 - **Goal:** prove the brief's mobile journeys end to end against the seeded API (run locally, outside the CI gate).
 - **Changes:** `apps/mobile/tests/maestro/{config.yaml,auth.yaml,filter-by-team.yaml,task-crud.yaml,validation.yaml}`, missing `testID`s, script `pnpm --filter @hitss/mobile e2e`, notes for Expo Go (`openLink` to the Expo URL).
 - **Covers:** @AC-04.1.2, @AC-04.2.2, @AC-04.4.1, @AC-04.6.2, @AC-04.6.4, @AC-04.7.1, @AC-04.7.2, @AC-04.8.1.
@@ -197,6 +199,7 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-20 — Document running the app on a device
 
+- **Status:** done
 - **Goal:** an evaluator runs the app against `docker compose up` without guessing.
 - **Changes:** `apps/mobile/README.md` (prerequisites, `.env` setup, LAN IP / emulator options, WSL2 note, demo credentials `demo@teams-tasks.dev`, scripts, troubleshooting the network error).
 - **Covers:** —
