@@ -11,6 +11,11 @@ export const OPENAPI_JSON_PATH = 'docs/openapi.json';
 
 const PUBLIC_PATH_PREFIXES = ['/api/v1/health'];
 
+function operationId(controllerKey: string, methodKey: string): string {
+  const resource = controllerKey.replace(/Controller$/, '');
+  return `${resource.charAt(0).toLowerCase()}${resource.slice(1)}${methodKey.charAt(0).toUpperCase()}${methodKey.slice(1)}`;
+}
+
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
   const document = SwaggerModule.createDocument(
     app,
@@ -27,6 +32,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         'Email and password sign-up, sign-in and sessions (Better Auth)',
       )
       .build(),
+    { operationIdFactory: operationId },
   );
 
   for (const [path, item] of Object.entries(document.paths)) {

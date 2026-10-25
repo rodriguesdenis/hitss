@@ -79,4 +79,26 @@ describe('OpenAPI document', () => {
       headers: { 'set-auth-token': { schema: { type: 'string' } } },
     });
   });
+  it('names operations <resource><Action> so the generated client reads well', async () => {
+    const document = await build();
+
+    expect(document.paths['/api/v1/things']?.get?.operationId).toBe(
+      'thingsProbeList',
+    );
+    expect(document.paths['/api/v1/health/live']?.get?.operationId).toBe(
+      'healthProbeLive',
+    );
+    expect(
+      [
+        ['/api/auth/sign-up/email', 'post'],
+        ['/api/auth/sign-in/email', 'post'],
+        ['/api/auth/sign-out', 'post'],
+        ['/api/auth/get-session', 'get'],
+      ].map(
+        ([path, method]) =>
+          document.paths[path as string]?.[method as 'get' | 'post']
+            ?.operationId,
+      ),
+    ).toEqual(['authSignUp', 'authSignIn', 'authSignOut', 'authGetSession']);
+  });
 });

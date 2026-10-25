@@ -65,6 +65,7 @@ const SET_AUTH_TOKEN: HeadersObject = {
 export const AUTH_PATHS: Paths = {
   '/api/auth/sign-up/email': {
     post: {
+      operationId: 'authSignUp',
       tags: [IDENTITY_TAG],
       summary: 'Create an account and sign in',
       security: [],
@@ -91,6 +92,7 @@ export const AUTH_PATHS: Paths = {
   },
   '/api/auth/sign-in/email': {
     post: {
+      operationId: 'authSignIn',
       tags: [IDENTITY_TAG],
       summary: 'Sign in with email and password',
       security: [],
@@ -108,6 +110,7 @@ export const AUTH_PATHS: Paths = {
   },
   '/api/auth/sign-out': {
     post: {
+      operationId: 'authSignOut',
       tags: [IDENTITY_TAG],
       summary: 'Revoke the current session',
       security: SESSION_SECURITY,
@@ -121,6 +124,7 @@ export const AUTH_PATHS: Paths = {
   },
   '/api/auth/get-session': {
     get: {
+      operationId: 'authGetSession',
       tags: [IDENTITY_TAG],
       summary: 'The current session and user, or null',
       security: SESSION_SECURITY,
