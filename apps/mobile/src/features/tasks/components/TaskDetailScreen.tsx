@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import { errorCode } from '@/lib/error-messages';
+import { PendingSyncBadge } from '@/offline';
 import {
   Button,
   ConfirmDialog,
@@ -121,6 +122,7 @@ export function TaskDetailScreen({
           {task.title}
         </Text>
         <StatusBadge testID="status-badge" status={task.status} />
+        <PendingSyncBadge id={task.id} />
         <Text className={task.description ? 'type-body' : 'type-meta'}>
           {task.description ?? 'Sem descrição'}
         </Text>

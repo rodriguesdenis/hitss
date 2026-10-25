@@ -26,7 +26,10 @@ export function dueLabel(
   return task.isOverdue ? `Atrasada · ${date}` : date;
 }
 
-export function taskAccessibilityLabel(task: TaskResponseDto): string {
+export function taskAccessibilityLabel(
+  task: TaskResponseDto,
+  pendingSync = false,
+): string {
   const parts = [task.title, statusLabels[task.status]];
   if (task.teams.length > 0) {
     parts.push(`Times: ${task.teams.map((team) => team.name).join(', ')}`);
@@ -35,6 +38,9 @@ export function taskAccessibilityLabel(task: TaskResponseDto): string {
     parts.push(
       `Prazo ${formatShortDate(task.dueDate)}${task.isOverdue ? ', atrasada' : ''}`,
     );
+  }
+  if (pendingSync) {
+    parts.push('Sincronização pendente');
   }
   return `${parts.join('. ')}.`;
 }

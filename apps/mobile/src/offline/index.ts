@@ -39,3 +39,5 @@ export {
   updateInLists,
   type EntitySnapshot,
 } from './optimistic';
+export { PENDING_LABEL, PendingSyncBadge } from './components/PendingSyncBadge';
+export { pendingLabel, usePendingSync } from './use-pending-sync';

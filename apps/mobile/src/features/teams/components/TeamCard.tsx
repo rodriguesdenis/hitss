@@ -1,6 +1,7 @@
 import type { TeamResponseDto } from '@hitss/api-client';
 import { Pressable, Text, View } from 'react-native';
 
+import { PendingSyncBadge } from '@/offline';
 import { Icon, IconButton } from '@/ui';
 
 import { taskCountLabel } from '../format';
@@ -45,6 +46,7 @@ export function TeamCard({ team, onPress, onOptions }: TeamCardProps) {
           </Text>
         )}
         <Text className="type-meta">{count}</Text>
+        <PendingSyncBadge id={team.id} />
       </Pressable>
       <IconButton
         icon="more"
