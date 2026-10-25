@@ -4,5 +4,18 @@ appId: host.exp.exponent
     stopApp: true
 - openLink: ${MAESTRO_EXPO_URL}
 - extendedWaitUntil:
-    visible: 'Entre para continuar|Tarefas'
+    visible: 'Entre para continuar|Tarefas|Continue|SDK version.*'
     timeout: 90000
+- runFlow:
+    when:
+      visible: 'Continue'
+    commands:
+      - tapOn: 'Continue'
+- runFlow:
+    when:
+      visible: 'SDK version.*'
+    commands:
+      - tapOn: 'Close'
+- extendedWaitUntil:
+    visible: 'Entre para continuar|Tarefas'
+    timeout: 30000
