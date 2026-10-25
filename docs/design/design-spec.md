@@ -573,7 +573,7 @@ A team chip shows the **team name** on the **team color**. Color is decorative; 
 | S11 | Team form — edit                                  | `app/(app)/teams/[id]/edit.tsx`                                              | modal                 | US-04.3              |
 | —   | Sort sheet, status sheet, confirm dialogs, toasts | in-screen components                                                         | bottom sheet / dialog | —                    |
 
-**Priority (MoSCoW, per spec 004):** MUST — S1 sign in, S3/S6 task lists with **status filter and search**, S4 teams list, **S10/S11 team create / edit / delete** (S4 `⋯` menu, S11 footer, confirm dialog), S5 settings (theme, language, sign out), S7, S8, S9. COULD — **S2 sign up** (an account can be seeded/created via the API; if cut, S1 drops the “New here?” link and S2 is not routed) and **task sort** (`⇅` button, sort sheet and “Sorted by” caption; if cut, lists use the default `-createdAt`). Everything below is fully specified (wireframe, states, copy) even for COULD items, so cutting one is a deletion, not a redesign.
+**Priority (MoSCoW, per spec 004):** MUST — S1 sign in, S3/S6 task lists with **status filter and search**, S4 teams list, **S10/S11 team create / edit / delete** (S4 `⋯` menu, S11 footer, confirm dialog), S5 settings (account, sign out; theme row COULD), S7, S8, S9. COULD — **S2 sign up** (an account can be seeded/created via the API; if cut, S1 drops the “New here?” link and S2 is not routed) and **task sort** (`⇅` button, sort sheet and “Sorted by” caption; if cut, lists use the default `-createdAt`). Everything below is fully specified (wireframe, states, copy) even for COULD items, so cutting one is a deletion, not a redesign.
 
 ```mermaid
 flowchart TD
@@ -797,7 +797,7 @@ S3 (global)                              S6 (filtered by team "Mobile")
 | Create (S10)      | Closes the modal on submit; the new row appears immediately with `◷ Pending sync` until confirmed; toast “Team created”. If opened from the task form's “+ New team”, it returns there with the team selected.                                                                                                                                                        |
 | Edit (S11)        | Row updates immediately (name, color, description); toast “Team updated”; chips on tasks update in place.                                                                                                                                                                                                                                                             |
 | Delete            | Dialog “Delete “{name}”?” / “Its tasks are kept and will no longer be assigned to this team.” `[Cancel] [Delete]` (focus on Cancel). Confirm → row disappears at once, toast “Team deleted”; if the user was on S6 for that team, navigate to Teams. On failure the row reappears and a toast explains. Offline: queued, row marked `◷ Pending sync` until confirmed. |
-| Deleted elsewhere | Opening S6/S11 for a missing team → `.error-state` “This team no longer exists” + `[ Back to teams ]`; a queued edit that conflicts shows the sync toast (§6.5).                                                                                                                                                                                                      |
+| Deleted elsewhere | Opening S6/S11 for a missing team → `.error-state` “This team no longer exists” + `[ Back to teams ]`; a queued edit of a deleted team is discarded with a warning toast (§6.5).                                                                                                                                                                                      |
 
 ### S5 — Settings
 
@@ -814,12 +814,6 @@ S3 (global)                              S6 (filtered by team "Mobile")
 │ ┌────────────────────────────────┐ │
 │ │ Theme ⟦System│●Light│Dark⟧       │ │  segmented control, radiogroup
 │ └────────────────────────────────┘ │
-│ LANGUAGE                           │
-│ ┌────────────────────────────────┐ │
-│ │ ◉ System                       │ │  value `system`; caption “Currently: Português”
-│ │ ○ English                      │ │  value `en`
-│ │ ○ Português (Brasil)           │ │  value `pt-BR`
-│ └────────────────────────────────┘ │
 │ SYNC                               │
 │ ┌────────────────────────────────┐ │
 │ │ ◷ 2 changes waiting to sync    │ │  only when queue non-empty; "All changes synced ✓" otherwise
@@ -829,8 +823,7 @@ S3 (global)                              S6 (filtered by team "Mobile")
 └────────────────────────────────────┘
 ```
 
-- Language options are **System / English / Português (Brasil)**, stored as `system` | `en` | `pt-BR`; `system` follows the device locale (`pt*` → `pt-BR`, anything else → `en`) and shows the resolved language as a caption. Option names `English` and `Português (Brasil)` are never translated (each is shown in its own language). Single-select radio list, each row ≥ 44 pt, `accessibilityRole="radio"`.
-- Theme and language apply **immediately** (no save button) and persist across restarts.
+- The theme row is COULD (T-004-23); until then the theme follows the system. A choice applies **immediately** (no save button) and persists across restarts.
 - **Sign out:** if the offline queue is non-empty, confirm dialog "You have {n} changes that haven't synced. Signing out will discard them." `[Cancel] [Sign out anyway]` (danger). Otherwise sign out directly. Sign-out clears the session, the persisted cache and the queue, then shows S1.
 
 ### S7 — Task detail
@@ -910,7 +903,7 @@ S3 (global)                              S6 (filtered by team "Mobile")
 | Teams       | 0–10 distinct; picker disables unselected chips at 10 with helper "You can pick up to 10 teams"        | on change                                                                     |
 
 - Submit button is **always enabled** (disabled-until-valid hides why); pressing it with errors focuses the first invalid field and announces "Fix 1 error to continue".
-- **Server errors:** `VALIDATION_FAILED` details map to their fields; `UNKNOWN_TEAMS` removes the missing teams from the selection with field error "Some teams no longer exist and were removed"; `TOO_MANY_TEAMS` on Teams field; `PRECONDITION_FAILED` (edit) → dialog "This task was changed elsewhere" `[Reload] ` (reload replaces form with latest values) / `[Keep editing]`.
+- **Server errors:** `VALIDATION_FAILED` details map to their fields; `UNKNOWN_TEAMS` removes the missing teams from the selection with field error "Some teams no longer exist and were removed"; `TOO_MANY_TEAMS` on Teams field. Edits are last write wins: no conflict dialog.
 - **Submitting:** footer button spinner + "Saving…"; fields stay visible. Success → modal closes, toast "Task created" / "Changes saved"; new task appears at the top of the relevant list (with pending-sync badge until confirmed).
 - **Edit form** preloads current values; if the task was deleted elsewhere → error-state "This task no longer exists".
 - **Dirty-cancel:** "Discard changes?" `[Keep editing] [Discard]`.
@@ -941,23 +934,23 @@ S3 (global)                              S6 (filtered by team "Mobile")
 ```
 
 - Swatch a11y label: "Indigo, #6366F1" + selected state.
-- Errors: name length (2–50), duplicate name (`TEAM_NAME_ALREADY_EXISTS`, on Name field), invalid hex, description length. Concurrency conflict as task form.
+- Errors: name length (2–50), duplicate name (`TEAM_NAME_ALREADY_EXISTS`, on Name field), invalid hex, description length.
 - Success: toast "Team created" / "Team updated"; team lists and task chips reflect the new name/color.
 - Hex field: accepts with or without `#`, case-insensitive, normalized to `#RRGGBB` uppercase on blur; typing a valid value selects the matching swatch (or none) and updates the preview; typing an invalid value shows `team.color.invalid` and keeps the last valid color in the preview.
 
 **States (S10 / S11):**
 
-| State                                                  | Rendering                                                                                                                                                                                                                                    |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Initial (S10)                                          | Name autofocused; color preselected `#6366F1` (Indigo); preview shows the placeholder name “Team name”.                                                                                                                                      |
-| Loading (S11, opened by deep link with nothing cached) | Skeleton: name field, 2 swatch rows, description box; footer buttons disabled. From the list it renders instantly from cached data.                                                                                                          |
-| Validation                                             | Name 2–50 (trimmed), hex `#RRGGBB`, description ≤ 280; errors on blur/submit, same rules as the task form (button always enabled, first invalid field focused, “Fix 1 error to continue” announced).                                         |
-| Submitting                                             | Footer button spinner + “Saving…”; fields remain visible and disabled.                                                                                                                                                                       |
-| Server errors                                          | `TEAM_NAME_ALREADY_EXISTS` on Name; `VALIDATION_FAILED` mapped to fields; `PRECONDITION_FAILED` → dialog “This team was changed elsewhere” `[Reload] [Keep editing]`; network/other → `.banner-error` above the footer with `[ Try again ]`. |
-| Not found (S11)                                        | `.error-state` “This team no longer exists” + `[ Back to teams ]`.                                                                                                                                                                           |
-| Offline                                                | Banner; save is queued, toast “Saved. It will sync when you're back online.” (a queued create whose name later collides surfaces as a sync toast, §6.5).                                                                                     |
-| Dirty-cancel                                           | “Discard changes?” `[Keep editing] [Discard]`.                                                                                                                                                                                               |
-| Delete (S11)                                           | `[🗑 Delete team]` → same confirm dialog as S4; confirm closes the modal and returns to Teams.                                                                                                                                                |
+| State                                                  | Rendering                                                                                                                                                                                            |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Initial (S10)                                          | Name autofocused; color preselected `#6366F1` (Indigo); preview shows the placeholder name “Team name”.                                                                                              |
+| Loading (S11, opened by deep link with nothing cached) | Skeleton: name field, 2 swatch rows, description box; footer buttons disabled. From the list it renders instantly from cached data.                                                                  |
+| Validation                                             | Name 2–50 (trimmed), hex `#RRGGBB`, description ≤ 280; errors on blur/submit, same rules as the task form (button always enabled, first invalid field focused, “Fix 1 error to continue” announced). |
+| Submitting                                             | Footer button spinner + “Saving…”; fields remain visible and disabled.                                                                                                                               |
+| Server errors                                          | `TEAM_NAME_ALREADY_EXISTS` on Name; `VALIDATION_FAILED` mapped to fields; network/other → `.banner-error` above the footer with `[ Try again ]`.                                                     |
+| Not found (S11)                                        | `.error-state` “This team no longer exists” + `[ Back to teams ]`.                                                                                                                                   |
+| Offline                                                | Banner; save is queued, toast “Saved. It will sync when you're back online.” (a queued create whose name later collides surfaces as a sync toast, §6.5).                                             |
+| Dirty-cancel                                           | “Discard changes?” `[Keep editing] [Discard]`.                                                                                                                                                       |
+| Delete (S11)                                           | `[🗑 Delete team]` → same confirm dialog as S4; confirm closes the modal and returns to Teams.                                                                                                        |
 
 ---
 
@@ -967,29 +960,29 @@ S3 (global)                              S6 (filtered by team "Mobile")
 2. **Undo.** Status-change toasts offer `Undo` (4 s; 8 s when a screen reader is on). Delete does **not** offer undo (the API has no restore); it is protected by the confirm dialog instead.
 3. **Toasts.** One at a time, newest replaces older; 4 s default, 6 s for errors; `accessibilityLiveRegion="polite"` / `AccessibilityInfo.announceForAccessibility`; not shown for silent background syncs. Position: bottom, above tab bar / form footer, respects safe area.
 4. **Offline banner.** Appears within 1 s of losing connectivity, slides down (`base`), stays while offline; on reconnect becomes "Back online — syncing {n} changes…" then "All changes synced ✓" for 2 s, then hides.
-5. **Conflicts on sync.** If a queued change can't be applied because the item changed or was deleted elsewhere, the app refreshes the item and shows a toast: "“{title}” was changed elsewhere. Showing the latest version." or "“{title}” was deleted elsewhere." No modal interruptions for background sync.
+5. **Rejected changes on sync.** Edits are last write wins. If a queued change can't be applied (item deleted elsewhere, invalid data), the app rolls it back, discards it and shows a warning toast: "“{title}” foi excluída em outro lugar." or "Não foi possível salvar “{title}”: {reason}". A deletion of something already deleted is silent. No modal interruptions for background sync.
 6. **Destructive confirmations.** Delete task, delete team, discard form, sign out with pending changes — dialog with neutral default focus (Cancel), destructive button on the right in `btn-danger`.
 7. **Keyboard.** Forms scroll the focused field into view; `returnKeyType="next"` chains fields; the footer stays above the keyboard; tapping outside dismisses the keyboard.
 8. **Haptics** (if available in Expo Go via the standard SDK): light impact on status change, notification-warning on destructive confirm; disabled when the OS disables haptics.
 9. **Double-submit protection.** Primary buttons ignore presses while their action is in flight.
-10. **Date display.** Locale-aware (`Intl.DateTimeFormat`): "Oct 31" / "31 de out." in lists; full weekday + date on detail. Due dates are calendar dates — never shifted by timezone.
+10. **Date display.** pt-BR (`Intl.DateTimeFormat('pt-BR')`): "31 de out." in lists; full weekday + date on detail. Due dates are calendar dates — never shifted by timezone.
 
 ---
 
 ## 7. Screen-state matrix (checklist for component tests)
 
-| Screen               | Loading                                  | Empty           | Error + retry                                | Offline                | Pending sync        | Success feedback     |
-| -------------------- | ---------------------------------------- | --------------- | -------------------------------------------- | ---------------------- | ------------------- | -------------------- |
-| S1 Sign in           | button spinner                           | —               | banner                                       | banner + disabled      | —                   | navigate             |
-| S2 Sign up           | button spinner                           | —               | banner / field                               | banner + disabled      | —                   | toast "Welcome"      |
-| S3 Tasks             | skeleton rows                            | none / filtered | error-state / toast                          | banner + cache         | row badge + tab dot | mutation toasts      |
-| S4 Teams             | skeleton rows                            | none / filtered | error-state / toast                          | banner + cache         | row badge           | toasts               |
-| S5 Settings          | —                                        | —               | —                                            | banner                 | queue count         | immediate apply      |
-| S6 Team tasks        | skeleton rows                            | none / filtered | error-state / not-found                      | banner + cache         | row badge           | toasts               |
-| S7 Detail            | skeleton (deep link)                     | —               | error-state / not-found                      | banner, actions queued | badge               | toast + Undo         |
-| S8/S9 Task form      | footer spinner; teams skeleton           | no teams        | field + banner / conflict dialog             | banner, queued save    | —                   | toast + close        |
-| S10/S11 Team form    | footer spinner; skeleton (S11 deep link) | —               | field + banner / conflict dialog / not-found | banner, queued save    | —                   | toast + close        |
-| Team delete (S4/S11) | —                                        | —               | toast, row restored                          | queued, row badge      | row badge           | toast “Team deleted” |
+| Screen               | Loading                                  | Empty           | Error + retry              | Offline                | Pending sync        | Success feedback     |
+| -------------------- | ---------------------------------------- | --------------- | -------------------------- | ---------------------- | ------------------- | -------------------- |
+| S1 Sign in           | button spinner                           | —               | banner                     | banner + disabled      | —                   | navigate             |
+| S2 Sign up           | button spinner                           | —               | banner / field             | banner + disabled      | —                   | toast "Welcome"      |
+| S3 Tasks             | skeleton rows                            | none / filtered | error-state / toast        | banner + cache         | row badge + tab dot | mutation toasts      |
+| S4 Teams             | skeleton rows                            | none / filtered | error-state / toast        | banner + cache         | row badge           | toasts               |
+| S5 Settings          | —                                        | —               | —                          | banner                 | queue count         | immediate apply      |
+| S6 Team tasks        | skeleton rows                            | none / filtered | error-state / not-found    | banner + cache         | row badge           | toasts               |
+| S7 Detail            | skeleton (deep link)                     | —               | error-state / not-found    | banner, actions queued | badge               | toast + Undo         |
+| S8/S9 Task form      | footer spinner; teams skeleton           | no teams        | field + banner             | banner, queued save    | —                   | toast + close        |
+| S10/S11 Team form    | footer spinner; skeleton (S11 deep link) | —               | field + banner / not-found | banner, queued save    | —                   | toast + close        |
+| Team delete (S4/S11) | —                                        | —               | toast, row restored        | queued, row badge      | row badge           | toast “Team deleted” |
 
 ---
 
@@ -1009,228 +1002,212 @@ S3 (global)                              S6 (filtered by team "Mobile")
 | Reduce motion   | When the OS reports reduce motion: no shimmer (static skeleton), no slide/scale animations (fade ≤ 150 ms or instant), no animated segment indicator.                                                                                                                     |
 | Focus order     | Matches visual order; modals trap focus; on open, focus moves to the screen title; after closing a modal, focus returns to the element that opened it.                                                                                                                    |
 | Screen readers  | Verified with VoiceOver (iOS) and TalkBack (Android) for the main journeys (sign in, filter by team, change status, create task, delete).                                                                                                                                 |
-| Language        | `accessibilityLanguage` follows the selected app language; copy is plain and short.                                                                                                                                                                                       |
+| Language        | `accessibilityLanguage` is `pt-BR`; copy is plain and short.                                                                                                                                                                                                              |
 
 ---
 
-## 9. UX copy (en / pt-BR)
+## 9. UX copy (pt-BR)
 
-Keys map 1:1 to i18n resource keys (`src/i18n/locales/{en,pt-BR}.json`). Domain terms follow the [ubiquitous language](../architecture/overview.md#ubiquitous-language): Team = **Time**, Task = **Tarefa**, Pending = **Pendente**, In progress = **Em andamento**, Done = **Concluída**. Interpolations in `{braces}`.
+The app ships pt-BR only, as literals (no i18n library). Domain terms follow the [ubiquitous language](../architecture/overview.md#ubiquitous-language): Team = **Time**, Task = **Tarefa**, Pending = **Pendente**, In progress = **Em andamento**, Done = **Concluída**. Interpolations in `{braces}`.
 
 ### 9.1 Navigation, titles, actions
 
-| Key                   | en                                                          | pt-BR                                                                 |
-| --------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------- |
-| `app.name`            | Teams & Tasks                                               | Teams & Tasks                                                         |
-| `tabs.tasks`          | Tasks                                                       | Tarefas                                                               |
-| `tabs.teams`          | Teams                                                       | Times                                                                 |
-| `tabs.settings`       | Settings                                                    | Ajustes                                                               |
-| `tasks.title`         | Tasks                                                       | Tarefas                                                               |
-| `tasks.count`         | {count} tasks                                               | {count} tarefas                                                       |
-| `tasks.new`           | New task                                                    | Nova tarefa                                                           |
-| `tasks.edit`          | Edit task                                                   | Editar tarefa                                                         |
-| `tasks.create.submit` | Create task                                                 | Criar tarefa                                                          |
-| `common.save`         | Save changes                                                | Salvar alterações                                                     |
-| `common.saving`       | Saving…                                                     | Salvando…                                                             |
-| `common.cancel`       | Cancel                                                      | Cancelar                                                              |
-| `common.delete`       | Delete                                                      | Excluir                                                               |
-| `common.edit`         | Edit                                                        | Editar                                                                |
-| `common.retry`        | Try again                                                   | Tentar novamente                                                      |
-| `common.undo`         | Undo                                                        | Desfazer                                                              |
-| `common.back`         | Back                                                        | Voltar                                                                |
-| `teams.title`         | Teams                                                       | Times                                                                 |
-| `teams.new`           | New team                                                    | Novo time                                                             |
-| `teams.edit`          | Edit team                                                   | Editar time                                                           |
-| `teams.create.submit` | Create team                                                 | Criar time                                                            |
-| `teams.delete`        | Delete team                                                 | Excluir time                                                          |
-| `teams.taskCount`     | {count, plural, =0 {No tasks} one {1 task} other {# tasks}} | {count, plural, =0 {Nenhuma tarefa} one {1 tarefa} other {# tarefas}} |
-| `teams.options`       | Team options for {name}                                     | Opções do time {name}                                                 |
-| `teams.openHint`      | Shows the tasks of this team                                | Mostra as tarefas deste time                                          |
+| pt-BR                                                                 |
+| --------------------------------------------------------------------- |
+| Teams & Tasks                                                         |
+| Tarefas                                                               |
+| Times                                                                 |
+| Ajustes                                                               |
+| {count} tarefas                                                       |
+| Nova tarefa                                                           |
+| Editar tarefa                                                         |
+| Criar tarefa                                                          |
+| Salvar alterações                                                     |
+| Salvando…                                                             |
+| Cancelar                                                              |
+| Excluir                                                               |
+| Editar                                                                |
+| Tentar novamente                                                      |
+| Desfazer                                                              |
+| Voltar                                                                |
+| Novo time                                                             |
+| Editar time                                                           |
+| Criar time                                                            |
+| Excluir time                                                          |
+| {count, plural, =0 {Nenhuma tarefa} one {1 tarefa} other {# tarefas}} |
+| Opções do time {name}                                                 |
+| Mostra as tarefas deste time                                          |
 
 ### 9.2 Status, filters, sort
 
-| Key                     | en                                     | pt-BR                                  |
-| ----------------------- | -------------------------------------- | -------------------------------------- |
-| `status.PENDING`        | Pending                                | Pendente                               |
-| `status.IN_PROGRESS`    | In progress                            | Em andamento                           |
-| `status.DONE`           | Done                                   | Concluída                              |
-| `filters.all`           | All                                    | Todas                                  |
-| `filters.status`        | Filter by status                       | Filtrar por status                     |
-| `filters.status.a11y`   | {status}, filter {position} of {total} | {status}, filtro {position} de {total} |
-| `filters.search.global` | Search tasks                           | Buscar tarefas                         |
-| `filters.search.team`   | Search in {team}                       | Buscar em {team}                       |
-| `filters.search.teams`  | Search teams                           | Buscar times                           |
-| `filters.clearSearch`   | Clear search                           | Limpar busca                           |
-| `filters.clear`         | Clear filters                          | Limpar filtros                         |
-| `sort.sheetTitle`       | Sort by                                | Ordenar por                            |
-| `sort.button`           | Sort tasks                             | Ordenar tarefas                        |
-| `sort.current`          | Sorted by: {option}                    | Ordenado por: {option}                 |
-| `sort.-createdAt`       | Newest first                           | Mais recentes                          |
-| `sort.createdAt`        | Oldest first                           | Mais antigas                           |
-| `sort.dueDate`          | Due date (soonest)                     | Prazo (mais próximo)                   |
-| `sort.-updatedAt`       | Recently updated                       | Atualizadas recentemente               |
-| `sort.title`            | Title A–Z                              | Título A–Z                             |
-| `sort.status`           | Status                                 | Status                                 |
-| `list.loadingMore`      | Loading more…                          | Carregando mais…                       |
-| `list.loadMoreFailed`   | Couldn't load more.                    | Não foi possível carregar mais.        |
-| `list.end`              | That's all ({total} tasks)             | Isso é tudo ({total} tarefas)          |
+| pt-BR                                  |
+| -------------------------------------- |
+| Pendente                               |
+| Em andamento                           |
+| Concluída                              |
+| Todas                                  |
+| Filtrar por status                     |
+| {status}, filtro {position} de {total} |
+| Buscar tarefas                         |
+| Buscar em {team}                       |
+| Buscar times                           |
+| Limpar busca                           |
+| Limpar filtros                         |
+| Ordenar por                            |
+| Ordenar tarefas                        |
+| Ordenado por: {option}                 |
+| Mais recentes                          |
+| Mais antigas                           |
+| Prazo (mais próximo)                   |
+| Atualizadas recentemente               |
+| Título A–Z                             |
+| Status                                 |
+| Carregando mais…                       |
+| Não foi possível carregar mais.        |
+| Isso é tudo ({total} tarefas)          |
 
 ### 9.3 Task detail and form
 
-| Key                        | en                                                                              | pt-BR                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `task.teams`               | Teams                                                                           | Times                                                                                       |
-| `task.noTeams`             | No teams                                                                        | Sem times                                                                                   |
-| `task.dueDate`             | Due date                                                                        | Prazo                                                                                       |
-| `task.noDueDate`           | No due date                                                                     | Sem prazo                                                                                   |
-| `task.overdue`             | Overdue                                                                         | Atrasada                                                                                    |
-| `task.noDescription`       | No description                                                                  | Sem descrição                                                                               |
-| `task.created`             | Created {date}                                                                  | Criada em {date}                                                                            |
-| `task.updated`             | Updated {date}                                                                  | Atualizada em {date}                                                                        |
-| `task.completed`           | Completed {date}                                                                | Concluída em {date}                                                                         |
-| `task.changeStatus`        | Change status                                                                   | Alterar status                                                                              |
-| `task.statusChanged`       | Marked as {status}                                                              | Marcada como {status}                                                                       |
-| `task.statusChangedA11y`   | Status changed to {status}                                                      | Status alterado para {status}                                                               |
-| `task.delete`              | Delete task                                                                     | Excluir tarefa                                                                              |
-| `task.delete.title`        | Delete this task?                                                               | Excluir esta tarefa?                                                                        |
-| `task.delete.body`         | “{title}” will be removed. This can't be undone.                                | “{title}” será removida. Isso não pode ser desfeito.                                        |
-| `form.title`               | Title                                                                           | Título                                                                                      |
-| `form.title.min`           | Title must be at least 3 characters                                             | O título deve ter pelo menos 3 caracteres                                                   |
-| `form.title.max`           | Title must be at most 120 characters                                            | O título deve ter no máximo 120 caracteres                                                  |
-| `form.title.required`      | Title is required                                                               | O título é obrigatório                                                                      |
-| `form.description`         | Description                                                                     | Descrição                                                                                   |
-| `form.description.max`     | Description must be at most {max} characters                                    | A descrição deve ter no máximo {max} caracteres                                             |
-| `form.status`              | Status                                                                          | Status                                                                                      |
-| `form.dueDate`             | Due date                                                                        | Prazo                                                                                       |
-| `form.dueDate.placeholder` | Select a date                                                                   | Selecione uma data                                                                          |
-| `form.dueDate.clear`       | Clear due date                                                                  | Remover prazo                                                                               |
-| `form.dueDate.past`        | This date is in the past                                                        | Esta data já passou                                                                         |
-| `form.teams`               | Teams                                                                           | Times                                                                                       |
-| `form.teams.counter`       | {count} of 10                                                                   | {count} de 10                                                                               |
-| `form.teams.max`           | You can pick up to 10 teams                                                     | Você pode escolher até 10 times                                                             |
-| `form.teams.removed`       | Some teams no longer exist and were removed                                     | Alguns times não existem mais e foram removidos                                             |
-| `form.teams.empty`         | No teams yet                                                                    | Nenhum time ainda                                                                           |
-| `form.teams.loadFailed`    | Couldn't load teams.                                                            | Não foi possível carregar os times.                                                         |
-| `form.errorsSummary`       | {count, plural, one {Fix 1 error to continue} other {Fix # errors to continue}} | {count, plural, one {Corrija 1 erro para continuar} other {Corrija # erros para continuar}} |
-| `form.discard.title`       | Discard changes?                                                                | Descartar alterações?                                                                       |
-| `form.discard.keep`        | Keep editing                                                                    | Continuar editando                                                                          |
-| `form.discard.confirm`     | Discard                                                                         | Descartar                                                                                   |
-| `team.name`                | Name                                                                            | Nome                                                                                        |
-| `team.name.length`         | Name must be 2 to 50 characters                                                 | O nome deve ter de 2 a 50 caracteres                                                        |
-| `team.color`               | Color                                                                           | Cor                                                                                         |
-| `team.color.invalid`       | Use a color like #6366F1                                                        | Use uma cor como #6366F1                                                                    |
-| `team.preview`             | Preview                                                                         | Prévia                                                                                      |
-| `team.name.placeholder`    | Team name                                                                       | Nome do time                                                                                |
-| `team.hex`                 | Hex color                                                                       | Cor em hexadecimal                                                                          |
-| `team.swatch.a11y`         | {color}, {hex}                                                                  | {color}, {hex}                                                                              |
-| `team.description`         | Description                                                                     | Descrição                                                                                   |
-| `team.notFound`            | This team no longer exists                                                      | Este time não existe mais                                                                   |
-| `team.backToTeams`         | Back to teams                                                                   | Voltar para times                                                                           |
-| `team.conflict.title`      | This team was changed elsewhere                                                 | Este time foi alterado em outro lugar                                                       |
-| `team.conflict.reload`     | Reload                                                                          | Recarregar                                                                                  |
-| `team.description.max`     | Description must be at most 280 characters                                      | A descrição deve ter no máximo 280 caracteres                                               |
-| `team.delete.title`        | Delete “{name}”?                                                                | Excluir “{name}”?                                                                           |
-| `team.delete.body`         | Its tasks are kept and will no longer be assigned to this team.                 | As tarefas serão mantidas e deixarão de estar atribuídas a este time.                       |
-| `chips.a11y`               | Teams: {names}                                                                  | Times: {names}                                                                              |
-| `chips.more`               | +{count}                                                                        | +{count}                                                                                    |
+| pt-BR                                                                                       |
+| ------------------------------------------------------------------------------------------- |
+| Times                                                                                       |
+| Sem times                                                                                   |
+| Prazo                                                                                       |
+| Sem prazo                                                                                   |
+| Atrasada                                                                                    |
+| Sem descrição                                                                               |
+| Criada em {date}                                                                            |
+| Atualizada em {date}                                                                        |
+| Concluída em {date}                                                                         |
+| Alterar status                                                                              |
+| Marcada como {status}                                                                       |
+| Status alterado para {status}                                                               |
+| Excluir tarefa                                                                              |
+| Excluir esta tarefa?                                                                        |
+| “{title}” será removida. Isso não pode ser desfeito.                                        |
+| Título                                                                                      |
+| O título deve ter pelo menos 3 caracteres                                                   |
+| O título deve ter no máximo 120 caracteres                                                  |
+| O título é obrigatório                                                                      |
+| Descrição                                                                                   |
+| A descrição deve ter no máximo {max} caracteres                                             |
+| Status                                                                                      |
+| Selecione uma data                                                                          |
+| Remover prazo                                                                               |
+| Esta data já passou                                                                         |
+| {count} de 10                                                                               |
+| Você pode escolher até 10 times                                                             |
+| Alguns times não existem mais e foram removidos                                             |
+| Nenhum time ainda                                                                           |
+| Não foi possível carregar os times.                                                         |
+| {count, plural, one {Corrija 1 erro para continuar} other {Corrija # erros para continuar}} |
+| Descartar alterações?                                                                       |
+| Continuar editando                                                                          |
+| Descartar                                                                                   |
+| Nome                                                                                        |
+| O nome deve ter de 2 a 50 caracteres                                                        |
+| Cor                                                                                         |
+| Use uma cor como #6366F1                                                                    |
+| Prévia                                                                                      |
+| Nome do time                                                                                |
+| Cor em hexadecimal                                                                          |
+| {color}, {hex}                                                                              |
+| Este time não existe mais                                                                   |
+| Voltar para times                                                                           |
+| A descrição deve ter no máximo 280 caracteres                                               |
+| Excluir “{name}”?                                                                           |
+| As tarefas serão mantidas e deixarão de estar atribuídas a este time.                       |
+| Times: {names}                                                                              |
+| +{count}                                                                                    |
 
 ### 9.4 Empty, loading, success, offline
 
-| Key                       | en                                                                                | pt-BR                                                                                                     |
-| ------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `loading.tasks`           | Loading tasks                                                                     | Carregando tarefas                                                                                        |
-| `loading.teams`           | Loading teams                                                                     | Carregando times                                                                                          |
-| `empty.tasks.title`       | No tasks yet                                                                      | Nenhuma tarefa ainda                                                                                      |
-| `empty.tasks.body`        | Capture your first task — it takes seconds.                                       | Registre sua primeira tarefa — leva segundos.                                                             |
-| `empty.teamTasks.title`   | No tasks in {team} yet                                                            | Nenhuma tarefa em {team} ainda                                                                            |
-| `empty.filtered.title`    | No tasks match your filters                                                       | Nenhuma tarefa corresponde aos filtros                                                                    |
-| `empty.filtered.body`     | Try another status or search term.                                                | Tente outro status ou termo de busca.                                                                     |
-| `empty.teams.title`       | No teams yet                                                                      | Nenhum time ainda                                                                                         |
-| `empty.teams.body`        | Teams group related tasks and give them a color.                                  | Times agrupam tarefas relacionadas e dão uma cor a elas.                                                  |
-| `empty.teamsSearch.title` | No teams match “{term}”                                                           | Nenhum time corresponde a “{term}”                                                                        |
-| `toast.taskCreated`       | Task created                                                                      | Tarefa criada                                                                                             |
-| `toast.taskSaved`         | Changes saved                                                                     | Alterações salvas                                                                                         |
-| `toast.taskDeleted`       | Task deleted                                                                      | Tarefa excluída                                                                                           |
-| `toast.teamCreated`       | Team created                                                                      | Time criado                                                                                               |
-| `toast.teamUpdated`       | Team updated                                                                      | Time atualizado                                                                                           |
-| `toast.teamDeleted`       | Team deleted                                                                      | Time excluído                                                                                             |
-| `toast.welcome`           | Welcome, {name}!                                                                  | Boas-vindas, {name}!                                                                                      |
-| `toast.queued`            | Saved. It will sync when you're back online.                                      | Salvo. Será sincronizado quando você estiver online.                                                      |
-| `offline.banner`          | You're offline. Changes will sync when you reconnect.                             | Você está offline. As alterações serão sincronizadas ao reconectar.                                       |
-| `offline.syncing`         | Back online — syncing {count} changes…                                            | De volta online — sincronizando {count} alterações…                                                       |
-| `offline.synced`          | All changes synced                                                                | Todas as alterações sincronizadas                                                                         |
-| `offline.refresh`         | You're offline. Showing saved data.                                               | Você está offline. Exibindo dados salvos.                                                                 |
-| `offline.refreshFailed`   | Couldn't refresh. Showing saved data.                                             | Não foi possível atualizar. Exibindo dados salvos.                                                        |
-| `sync.pending`            | Pending sync                                                                      | Sincronização pendente                                                                                    |
-| `sync.queueCount`         | {count, plural, one {1 change waiting to sync} other {# changes waiting to sync}} | {count, plural, one {1 alteração aguardando sincronização} other {# alterações aguardando sincronização}} |
-| `sync.conflictChanged`    | “{title}” was changed elsewhere. Showing the latest version.                      | “{title}” foi alterada em outro lugar. Exibindo a versão mais recente.                                    |
-| `sync.conflictDeleted`    | “{title}” was deleted elsewhere.                                                  | “{title}” foi excluída em outro lugar.                                                                    |
-| `sync.rejected`           | Couldn't save “{title}”: {reason}                                                 | Não foi possível salvar “{title}”: {reason}                                                               |
+| pt-BR                                                                                                     |
+| --------------------------------------------------------------------------------------------------------- |
+| Carregando tarefas                                                                                        |
+| Carregando times                                                                                          |
+| Nenhuma tarefa ainda                                                                                      |
+| Registre sua primeira tarefa — leva segundos.                                                             |
+| Nenhuma tarefa em {team} ainda                                                                            |
+| Nenhuma tarefa corresponde aos filtros                                                                    |
+| Tente outro status ou termo de busca.                                                                     |
+| Nenhum time ainda                                                                                         |
+| Times agrupam tarefas relacionadas e dão uma cor a elas.                                                  |
+| Nenhum time corresponde a “{term}”                                                                        |
+| Tarefa criada                                                                                             |
+| Alterações salvas                                                                                         |
+| Tarefa excluída                                                                                           |
+| Time criado                                                                                               |
+| Time atualizado                                                                                           |
+| Time excluído                                                                                             |
+| Boas-vindas, {name}!                                                                                      |
+| Salvo. Será sincronizado quando você estiver online.                                                      |
+| Você está offline. As alterações serão sincronizadas ao reconectar.                                       |
+| De volta online — sincronizando {count} alterações…                                                       |
+| Todas as alterações sincronizadas                                                                         |
+| Você está offline. Exibindo dados salvos.                                                                 |
+| Não foi possível atualizar. Exibindo dados salvos.                                                        |
+| Sincronização pendente                                                                                    |
+| {count, plural, one {1 alteração aguardando sincronização} other {# alterações aguardando sincronização}} |
+| “{title}” foi excluída em outro lugar.                                                                    |
+| Não foi possível salvar “{title}”: {reason}                                                               |
 
 ### 9.5 Auth and settings
 
-| Key                             | en                                                                           | pt-BR                                                                           |
-| ------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `auth.signIn.title`             | Sign in to continue                                                          | Entre para continuar                                                            |
-| `auth.signIn.submit`            | Sign in                                                                      | Entrar                                                                          |
-| `auth.signIn.submitting`        | Signing in…                                                                  | Entrando…                                                                       |
-| `auth.signIn.toSignUp`          | New here? Create an account                                                  | Novo por aqui? Crie uma conta                                                   |
-| `auth.signUp.title`             | Create your account                                                          | Crie sua conta                                                                  |
-| `auth.signUp.submit`            | Create account                                                               | Criar conta                                                                     |
-| `auth.signUp.toSignIn`          | Already have an account? Sign in                                             | Já tem uma conta? Entre                                                         |
-| `auth.name`                     | Name                                                                         | Nome                                                                            |
-| `auth.email`                    | Email                                                                        | E-mail                                                                          |
-| `auth.password`                 | Password                                                                     | Senha                                                                           |
-| `auth.password.show`            | Show password                                                                | Mostrar senha                                                                   |
-| `auth.password.hide`            | Hide password                                                                | Ocultar senha                                                                   |
-| `auth.password.help`            | At least 8 characters                                                        | Pelo menos 8 caracteres                                                         |
-| `auth.email.invalid`            | Enter a valid email                                                          | Informe um e-mail válido                                                        |
-| `auth.required`                 | This field is required                                                       | Este campo é obrigatório                                                        |
-| `auth.password.length`          | Password must be 8 to 128 characters                                         | A senha deve ter de 8 a 128 caracteres                                          |
-| `auth.invalidCredentials`       | Incorrect email or password                                                  | E-mail ou senha incorretos                                                      |
-| `auth.emailTaken`               | An account with this email already exists                                    | Já existe uma conta com este e-mail                                             |
-| `auth.offline`                  | You need a connection to sign in                                             | Você precisa de conexão para entrar                                             |
-| `settings.account`              | Account                                                                      | Conta                                                                           |
-| `settings.appearance`           | Appearance                                                                   | Aparência                                                                       |
-| `settings.theme`                | Theme                                                                        | Tema                                                                            |
-| `settings.theme.system`         | System                                                                       | Sistema                                                                         |
-| `settings.theme.light`          | Light                                                                        | Claro                                                                           |
-| `settings.theme.dark`           | Dark                                                                         | Escuro                                                                          |
-| `settings.language`             | Language                                                                     | Idioma                                                                          |
-| `settings.language.system`      | System                                                                       | Sistema                                                                         |
-| `settings.language.systemHint`  | Currently: {language}                                                        | Atual: {language}                                                               |
-| `settings.language.en`          | English                                                                      | English                                                                         |
-| `settings.language.pt-BR`       | Português (Brasil)                                                           | Português (Brasil)                                                              |
-| `settings.sync`                 | Sync                                                                         | Sincronização                                                                   |
-| `settings.synced`               | All changes synced                                                           | Todas as alterações sincronizadas                                               |
-| `settings.signOut`              | Sign out                                                                     | Sair                                                                            |
-| `settings.signOut.pendingTitle` | Sign out with unsynced changes?                                              | Sair com alterações não sincronizadas?                                          |
-| `settings.signOut.pendingBody`  | You have {count} changes that haven't synced. Signing out will discard them. | Você tem {count} alterações não sincronizadas. Ao sair, elas serão descartadas. |
-| `settings.signOut.confirm`      | Sign out anyway                                                              | Sair mesmo assim                                                                |
-| `settings.version`              | Version {version}                                                            | Versão {version}                                                                |
+| pt-BR                                                                           |
+| ------------------------------------------------------------------------------- |
+| Entre para continuar                                                            |
+| Entrar                                                                          |
+| Entrando…                                                                       |
+| Novo por aqui? Crie uma conta                                                   |
+| Crie sua conta                                                                  |
+| Criar conta                                                                     |
+| Já tem uma conta? Entre                                                         |
+| Nome                                                                            |
+| E-mail                                                                          |
+| Senha                                                                           |
+| Mostrar senha                                                                   |
+| Ocultar senha                                                                   |
+| Pelo menos 8 caracteres                                                         |
+| Informe um e-mail válido                                                        |
+| Este campo é obrigatório                                                        |
+| A senha deve ter de 8 a 128 caracteres                                          |
+| E-mail ou senha incorretos                                                      |
+| Já existe uma conta com este e-mail                                             |
+| Você precisa de conexão para entrar                                             |
+| Conta                                                                           |
+| Aparência                                                                       |
+| Tema                                                                            |
+| Sistema                                                                         |
+| Claro                                                                           |
+| Escuro                                                                          |
+| Sincronização                                                                   |
+| Todas as alterações sincronizadas                                               |
+| Sair                                                                            |
+| Sair com alterações não sincronizadas?                                          |
+| Você tem {count} alterações não sincronizadas. Ao sair, elas serão descartadas. |
+| Sair mesmo assim                                                                |
+| Versão {version}                                                                |
 
 ### 9.6 Error messages by API error code
 
-The API client maps `error.code` → key `errors.<CODE>`; unknown codes fall back to `errors.INTERNAL_ERROR`. Field-level messages for `VALIDATION_FAILED` use the client-side field copy (§9.3) when the field is known, otherwise `errors.VALIDATION_FAILED`.
+The app maps `error.code` to the message below; unknown codes fall back to the `INTERNAL_ERROR` message. Field-level messages for `VALIDATION_FAILED` use the field copy (§9.3) when the field is known, otherwise the `VALIDATION_FAILED` message.
 
-| Code (HTTP)                                       | Key                                      | en                                                                 | pt-BR                                                                             | Where shown                                                                                |
-| ------------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `VALIDATION_FAILED` (400)                         | `errors.VALIDATION_FAILED`               | Some fields are invalid. Check the highlighted fields.             | Alguns campos são inválidos. Verifique os campos destacados.                      | form banner + fields                                                                       |
-| `UNAUTHENTICATED` (401)                           | `errors.UNAUTHENTICATED`                 | Your session has expired. Please sign in again.                    | Sua sessão expirou. Entre novamente.                                              | Sign in banner after redirect                                                              |
-| `TASK_NOT_FOUND` (404)                            | `errors.TASK_NOT_FOUND`                  | This task no longer exists.                                        | Esta tarefa não existe mais.                                                      | error-state / toast                                                                        |
-| `TEAM_NOT_FOUND` (404)                            | `errors.TEAM_NOT_FOUND`                  | This team no longer exists.                                        | Este time não existe mais.                                                        | error-state / toast                                                                        |
-| `ROUTE_NOT_FOUND` (404)                           | `errors.ROUTE_NOT_FOUND`                 | Something's out of date. Please update the app.                    | Algo está desatualizado. Atualize o aplicativo.                                   | toast                                                                                      |
-| `TEAM_NAME_ALREADY_EXISTS` (409)                  | `errors.TEAM_NAME_ALREADY_EXISTS`        | You already have a team with this name.                            | Você já tem um time com este nome.                                                | Name field                                                                                 |
-| `PRECONDITION_FAILED` (412)                       | `errors.PRECONDITION_FAILED`             | This item was changed elsewhere. Reload to see the latest version. | Este item foi alterado em outro lugar. Recarregue para ver a versão mais recente. | conflict dialog / sync toast                                                               |
-| `UNKNOWN_TEAMS` (422)                             | `errors.UNKNOWN_TEAMS`                   | Some teams no longer exist and were removed.                       | Alguns times não existem mais e foram removidos.                                  | Teams field                                                                                |
-| `TOO_MANY_TEAMS` (422)                            | `errors.TOO_MANY_TEAMS`                  | A task can have up to 10 teams.                                    | Uma tarefa pode ter até 10 times.                                                 | Teams field                                                                                |
-| `IDEMPOTENCY_REQUEST_IN_PROGRESS` (409, ADR-0019) | `errors.IDEMPOTENCY_REQUEST_IN_PROGRESS` | Still saving your previous change…                                 | Ainda salvando sua alteração anterior…                                            | normally invisible (auto-retried after `Retry-After`); toast only if retries are exhausted |
-| `IDEMPOTENCY_KEY_REUSED` (422)                    | `errors.IDEMPOTENCY_KEY_REUSED`          | This change conflicts with one already sent. Please try again.     | Esta alteração conflita com outra já enviada. Tente novamente.                    | toast                                                                                      |
-| `RATE_LIMITED` (429)                              | `errors.RATE_LIMITED`                    | Too many requests. Try again in {seconds} s.                       | Muitas requisições. Tente novamente em {seconds} s.                               | toast / banner                                                                             |
-| `INTERNAL_ERROR` (500)                            | `errors.INTERNAL_ERROR`                  | Something went wrong on our side. Please try again.                | Algo deu errado do nosso lado. Tente novamente.                                   | error-state / toast                                                                        |
-| (client) network failure                          | `errors.NETWORK`                         | Can't reach the server. Check your connection.                     | Não foi possível conectar ao servidor. Verifique sua conexão.                     | error-state / toast                                                                        |
-| (client) timeout                                  | `errors.TIMEOUT`                         | The server is taking too long. Please try again.                   | O servidor está demorando demais. Tente novamente.                                | error-state / toast                                                                        |
-| (auth) invalid credentials                        | `auth.invalidCredentials`                | Incorrect email or password                                        | E-mail ou senha incorretos                                                        | Sign in banner                                                                             |
-| (auth) email already registered                   | `auth.emailTaken`                        | An account with this email already exists                          | Já existe uma conta com este e-mail                                               | Sign up Email field                                                                        |
+| Code (HTTP)                      | pt-BR                                                         | Where shown                   |
+| -------------------------------- | ------------------------------------------------------------- | ----------------------------- |
+| `VALIDATION_FAILED` (400)        | Alguns campos são inválidos. Verifique os campos destacados.  | form banner + fields          |
+| `UNAUTHENTICATED` (401)          | Sua sessão expirou. Entre novamente.                          | Sign in banner after redirect |
+| `TASK_NOT_FOUND` (404)           | Esta tarefa não existe mais.                                  | error-state / toast           |
+| `TEAM_NOT_FOUND` (404)           | Este time não existe mais.                                    | error-state / toast           |
+| `ROUTE_NOT_FOUND` (404)          | Algo está desatualizado. Atualize o aplicativo.               | toast                         |
+| `TEAM_NAME_ALREADY_EXISTS` (409) | Você já tem um time com este nome.                            | Name field                    |
+| `UNKNOWN_TEAMS` (422)            | Alguns times não existem mais e foram removidos.              | Teams field                   |
+| `TOO_MANY_TEAMS` (422)           | Uma tarefa pode ter até 10 times.                             | Teams field                   |
+| `RATE_LIMITED` (429)             | Muitas requisições. Tente novamente em {seconds} s.           | toast / banner                |
+| `INTERNAL_ERROR` (500)           | Algo deu errado do nosso lado. Tente novamente.               | error-state / toast           |
+| (client) network failure         | Não foi possível conectar ao servidor. Verifique sua conexão. | error-state / toast           |
+| (client) timeout                 | O servidor está demorando demais. Tente novamente.            | error-state / toast           |
+| (auth) invalid credentials       | E-mail ou senha incorretos                                    | Sign in banner                |
+| (auth) email already registered  | Já existe uma conta com este e-mail                           | Sign up Email field           |
 
-Error-state titles: `errors.title.network` "You're offline" / "Você está offline"; `errors.title.generic` "Couldn't load" / "Não foi possível carregar"; `errors.title.notFound` "Not found" / "Não encontrado".
+Error-state titles: network "Você está offline"; generic "Não foi possível carregar"; not found "Não encontrado".
