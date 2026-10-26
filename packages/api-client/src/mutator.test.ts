@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { afterEach, describe, it } from 'node:test';
-import { ApiError, apiFetch, configureApiClient } from './mutator.ts';
+import {
+  ApiError,
+  ApiNetworkError,
+  apiFetch,
+  configureApiClient,
+} from './mutator.ts';
 
 type Call = { url: string; init: RequestInit };
 
@@ -123,6 +128,24 @@ describe('apiFetch', () => {
     await assert.rejects(
       request,
       (error: Error) => error.name === 'TimeoutError',
+    );
+  });
+
+  it('turns any fetch rejection into a network TypeError', async () => {
+    configureApiClient({ baseUrl: 'http://api.test', getToken: () => null });
+    const cause = new Error('fetch failed: Unable to resolve host');
+    globalThis.fetch = (async () => {
+      throw cause;
+    }) as typeof fetch;
+
+    await assert.rejects(
+      apiFetch('/api/v1/teams', { method: 'GET' }),
+      (error: Error) => {
+        assert.ok(error instanceof ApiNetworkError);
+        assert.ok(error instanceof TypeError);
+        assert.equal(error.cause, cause);
+        return true;
+      },
     );
   });
 

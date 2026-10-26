@@ -33,6 +33,13 @@ export class ApiTimeoutError extends Error {
   }
 }
 
+export class ApiNetworkError extends TypeError {
+  constructor(cause: unknown) {
+    super('API request could not reach the server', { cause });
+    this.name = 'NetworkError';
+  }
+}
+
 export type ErrorType<TBody> = ApiError<TBody>;
 
 export type BodyType<TBody> = TBody;
@@ -122,11 +129,19 @@ export async function apiFetch<T>(url: string, init: RequestInit): Promise<T> {
     if (!headers.has('X-Request-Id')) {
       headers.set('X-Request-Id', requestId());
     }
-    const response = await fetch(target, {
-      ...init,
-      headers,
-      signal: controller.signal,
-    });
+    let response: Response;
+    try {
+      response = await fetch(target, {
+        ...init,
+        headers,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw error;
+      }
+      throw new ApiNetworkError(error);
+    }
     const body = await readBody(response);
     if (!response.ok) {
       throw new ApiError(
