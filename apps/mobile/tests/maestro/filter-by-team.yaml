@@ -11,9 +11,14 @@ tags:
 - extendedWaitUntil:
     visible: 'Buscar em Backend'
     timeout: 20000
-- assertVisible: 'Write the API contract examples'
+- scrollUntilVisible:
+    element: 'Write the API contract examples'
 - assertVisible: '.*Times: Backend, Mobile.*'
 - assertNotVisible: 'Review the dark mode palette'
+- scrollUntilVisible:
+    element:
+      id: 'status-filter-PENDING'
+    direction: UP
 - tapOn:
     id: 'status-filter-PENDING'
 - assertVisible: 'Migrate the legacy reports to the new schema'
