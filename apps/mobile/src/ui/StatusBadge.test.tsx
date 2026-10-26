@@ -57,11 +57,18 @@ describe('SegmentedControl', () => {
     })),
   ] as const;
 
-  function Harness({ onChange }: { onChange: (value: string) => void }) {
+  function Harness({
+    onChange,
+    scrollable,
+  }: {
+    onChange: (value: string) => void;
+    scrollable?: boolean;
+  }) {
     const [value, setValue] = useState<'ALL' | TaskStatus>('ALL');
     return (
       <SegmentedControl
         label="Filtrar por status"
+        scrollable={scrollable}
         options={options}
         value={value}
         onChange={(next) => {
@@ -99,6 +106,17 @@ describe('SegmentedControl', () => {
     expect(styleOf(screen.getByText('Concluída', hidden)).color).toBe(
       token('on-primary'),
     );
+  });
+
+  it('keeps every label on one line when scrollable', async () => {
+    const onChange = jest.fn();
+    await renderUi(<Harness onChange={onChange} scrollable />);
+    expect(screen.getByText('Em andamento', hidden).props.numberOfLines).toBe(
+      1,
+    );
+    await fireEvent.press(screen.getByRole('radio', { name: 'Em andamento' }));
+    expect(onChange).toHaveBeenCalledWith('IN_PROGRESS');
+    expect(screen.getByRole('radio', { name: 'Em andamento' })).toBeSelected();
   });
 
   it('tapping the active segment does nothing', async () => {

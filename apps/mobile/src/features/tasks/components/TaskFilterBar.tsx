@@ -45,6 +45,7 @@ export function TaskFilterBar({ scope, teamName }: TaskFilterBarProps) {
         options={options}
         value={filters.status}
         onChange={(status) => setStatus(scope, status)}
+        scrollable
       />
     </View>
   );
