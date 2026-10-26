@@ -167,6 +167,9 @@ describe('TaskFormScreen — create', () => {
       await screen.findByRole('checkbox', { name: 'Design' }),
     ).toBeChecked();
     expect(teamChip('Mobile')).not.toBeChecked();
+    expect(
+      screen.getByText('1 de 10 times', { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
   });
 
   it('AC-04.7.8 removes teams deleted elsewhere and keeps the input', async () => {
@@ -206,16 +209,12 @@ describe('TaskFormScreen — create', () => {
   it('AC-04.7.7 asks before discarding changes', async () => {
     const { props } = await renderForm();
     await fireEvent.changeText(title(), 'Rascunho');
-    await fireEvent.press(
-      screen.getAllByRole('button', { name: 'Cancelar' })[0]!,
-    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
     await fireEvent.press(
       screen.getByRole('button', { name: 'Continuar editando' }),
     );
     expect(props.onClose).not.toHaveBeenCalled();
-    await fireEvent.press(
-      screen.getAllByRole('button', { name: 'Cancelar' })[0]!,
-    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Descartar' }));
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
