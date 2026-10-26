@@ -1,6 +1,7 @@
 import '../src/theme/global.css';
 
 import * as SplashScreen from 'expo-splash-screen';
+import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import {
@@ -22,6 +23,8 @@ import {
 } from '@/offline';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { Toaster } from '@/ui';
+
+LogBox.ignoreLogs(['ImageBackground is deprecated']);
 
 void SplashScreen.preventAutoHideAsync();
 
