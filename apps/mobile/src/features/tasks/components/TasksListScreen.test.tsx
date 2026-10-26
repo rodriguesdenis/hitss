@@ -301,10 +301,10 @@ describe('TasksListScreen — filters', () => {
 });
 
 describe('TasksListScreen — team', () => {
-  it('AC-04.4.2 shows only the team tasks under the team name', async () => {
+  it('AC-04.4.2 shows only the team tasks', async () => {
     await renderList('team-mobile');
     expect(
-      await screen.findByRole('header', { name: 'Mobile' }),
+      await screen.findByRole('button', { name: 'Opções do time Mobile' }),
     ).toBeOnTheScreen();
     await screen.findByText('Fix crash on Android');
     expect(titles()).toEqual([

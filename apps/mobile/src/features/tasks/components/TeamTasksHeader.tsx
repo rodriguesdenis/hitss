@@ -7,42 +7,28 @@ import { IconButton, Sheet, SheetOption } from '@/ui';
 
 export interface TeamTasksHeaderProps {
   team: TeamResponseDto;
-  onBack: () => void;
   onEditTeam: () => void;
   onShowAll: () => void;
 }
 
 export function TeamTasksHeader({
   team,
-  onBack,
   onEditTeam,
   onShowAll,
 }: TeamTasksHeaderProps) {
   const [options, setOptions] = useState(false);
   return (
-    <View className="gap-1">
-      <View className="flex-row items-center gap-1">
-        <IconButton icon="chevron-left" label="Voltar" onPress={onBack} />
-        <View
-          className="h-3 w-3 rounded-full"
-          style={{ backgroundColor: team.colorHex }}
-        />
-        <Text
-          className="type-title flex-1"
-          numberOfLines={2}
-          accessibilityRole="header"
-        >
-          {team.name}
-        </Text>
-        <IconButton
-          icon="more"
-          label={`Opções do time ${team.name}`}
-          onPress={() => setOptions(true)}
-        />
-      </View>
-      <Text className="type-meta pl-touch">
-        {taskCountLabel(team.taskCount)}
-      </Text>
+    <View className="flex-row items-center gap-2">
+      <View
+        className="h-3 w-3 rounded-full"
+        style={{ backgroundColor: team.colorHex }}
+      />
+      <Text className="type-meta flex-1">{taskCountLabel(team.taskCount)}</Text>
+      <IconButton
+        icon="more"
+        label={`Opções do time ${team.name}`}
+        onPress={() => setOptions(true)}
+      />
       <Sheet
         visible={options}
         title={team.name}
