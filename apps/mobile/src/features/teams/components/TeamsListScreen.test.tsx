@@ -231,6 +231,5 @@ describe('TeamsListScreen', () => {
     const { props } = await renderList();
     await fireEvent.press(screen.getByRole('button', { name: 'Novo time' }));
     expect(props.onCreateTeam).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('header', { name: 'Times' })).toBeOnTheScreen();
   });
 });

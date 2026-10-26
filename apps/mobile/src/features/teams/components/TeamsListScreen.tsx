@@ -139,11 +139,8 @@ export function TeamsListScreen({
   }
 
   return (
-    <Screen>
+    <Screen edges={[]}>
       <View className="gap-3 px-4 pb-3 pt-4">
-        <Text className="type-title" accessibilityRole="header">
-          Times
-        </Text>
         <SearchInput
           value={search}
           onChangeText={setSearch}
