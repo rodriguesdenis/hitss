@@ -13,6 +13,14 @@ jest.mock('expo-linking', () => ({
   createURL: (path: string) => `teamstasks://${path.replace(/^\//, '')}`,
 }));
 
+jest.mock('react-native/Libraries/Utilities/useColorScheme', () => ({
+  __esModule: true,
+  default: () =>
+    jest
+      .requireActual<typeof import('nativewind')>('nativewind')
+      .colorScheme.get(),
+}));
+
 server.listen({ onUnhandledRequest: 'error' });
 
 beforeEach(async () => {
