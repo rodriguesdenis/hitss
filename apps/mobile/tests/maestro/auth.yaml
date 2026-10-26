@@ -29,7 +29,8 @@ tags:
     visible:
       id: 'tab-tasks'
     timeout: 30000
-- assertVisible: 'Implement the offline cache'
+- scrollUntilVisible:
+    element: 'Implement the offline cache'
 - tapOn:
     id: 'tab-settings'
 - assertVisible: 'demo@teams-tasks.dev'
