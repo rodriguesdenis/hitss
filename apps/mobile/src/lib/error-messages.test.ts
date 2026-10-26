@@ -1,4 +1,4 @@
-import { ApiError } from '@hitss/api-client';
+import { ApiError, ApiNetworkError } from '@hitss/api-client';
 
 import { errorCode, errorMessage, errorMessages } from './error-messages';
 
@@ -64,6 +64,12 @@ describe('error messages', () => {
     expect(errorMessage(new TypeError('Network request failed'))).toBe(
       'Não foi possível conectar ao servidor. Verifique sua conexão.',
     );
+  });
+
+  it('maps an Expo fetch failure wrapped by the API client', () => {
+    expect(
+      errorCode(new ApiNetworkError(new Error('fetch failed: timeout'))),
+    ).toBe('NETWORK');
   });
 
   it('maps a timeout', () => {

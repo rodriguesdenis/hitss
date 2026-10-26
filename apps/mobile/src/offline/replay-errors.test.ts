@@ -1,4 +1,4 @@
-import { ApiError, ApiTimeoutError } from '@hitss/api-client';
+import { ApiError, ApiNetworkError, ApiTimeoutError } from '@hitss/api-client';
 import { QueryClient } from '@tanstack/react-query';
 
 import { afterQueueDrains, retryDelay } from './durable-mutation';
@@ -28,6 +28,11 @@ describe('classifyReplayError', () => {
     [api(500), 'delete', 'retry'],
     [api(503), 'create', 'retry'],
     [new TypeError('Network request failed'), 'update', 'retry'],
+    [
+      new ApiNetworkError(new Error('fetch failed: Unable to resolve host')),
+      'create',
+      'retry',
+    ],
     [new ApiTimeoutError(15_000), 'update', 'retry'],
     [new UnresolvedTempIdError('tmp-1'), 'status', 'dependency-failed'],
     [new Error('boom'), 'status', 'rejected'],
