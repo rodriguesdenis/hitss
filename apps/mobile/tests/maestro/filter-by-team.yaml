@@ -11,6 +11,9 @@ tags:
 - extendedWaitUntil:
     visible: 'Buscar em Backend'
     timeout: 20000
+- assertVisible:
+    text: 'Backend'
+    above: 'Buscar em Backend'
 - scrollUntilVisible:
     element: 'Write the API contract examples'
 - assertVisible: '.*Times: Backend, Mobile.*'
@@ -25,3 +28,11 @@ tags:
 - assertNotVisible: 'Write the API contract examples'
 - tapOn:
     id: 'status-filter-ALL'
+- tapOn: 'Voltar para todas as tarefas'
+- extendedWaitUntil:
+    visible: 'Buscar tarefas'
+    timeout: 10000
+- assertVisible:
+    text: 'Tarefas'
+    above: 'Buscar tarefas'
+- assertNotVisible: 'Voltar para todas as tarefas'
