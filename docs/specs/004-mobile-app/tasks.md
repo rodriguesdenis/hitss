@@ -191,8 +191,8 @@ T-007-10 (OpenAPI export without a database, `generate` script, contract drift j
 
 ## T-004-19 — Add Maestro flows for the main journeys
 
-- **Status:** in-progress
-- **Note:** flows written; the emulator run is pending (after M5).
+- **Status:** done
+- **Note:** 2026-10-25, Android emulator (API 35, 3 GB, 4 cores) in Expo Go 58.0.5, Maestro 2.11: all five flows (with `offline.yaml`) passed twice in a row after one DB reset, 430 s and 473 s. Taps that must hit a field's end use a point inside the element (`point: '95%,50%'`), never screen coordinates.
 - **Goal:** prove the brief's mobile journeys end to end against the seeded API (run locally, outside the CI gate).
 - **Changes:** `apps/mobile/tests/maestro/{config.yaml,auth.yaml,filter-by-team.yaml,task-crud.yaml,validation.yaml}`, missing `testID`s, script `pnpm --filter @hitss/mobile e2e`, notes for Expo Go (`openLink` to the Expo URL).
 - **Covers:** @AC-04.1.2, @AC-04.2.2, @AC-04.4.1, @AC-04.6.2, @AC-04.6.4, @AC-04.7.1, @AC-04.7.2, @AC-04.8.1.

@@ -106,6 +106,7 @@ All tasks ship in **one milestone PR** with one or more atomic commits per task 
 ## T-005-11 — Add restart/replay integration suite and Maestro offline flow
 
 - **Status:** done
+- **Note:** 2026-10-25, `offline.yaml` passed on an Android emulator twice in a row on a fresh seed, in the full Maestro run of T-004-19 (needed the `ApiNetworkError` fix: Expo's fetch rejects with a plain `Error`).
 - **Goal:** prove the offline journey end to end.
 - **Changes:** `tests/offline/restart-replay.test.tsx` (feature Background, all US-05.6 scenarios), `tests/maestro/offline.yaml` (airplane mode on an Android emulator; manual step documented for iOS), README section "Testing offline".
 - **Covers:** @AC-05.6.1, @AC-05.6.2, @AC-05.2.3 (E2E).
