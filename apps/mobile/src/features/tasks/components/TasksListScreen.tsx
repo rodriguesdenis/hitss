@@ -195,7 +195,6 @@ export function TasksListScreen({
         {teamId && team.data && (
           <TeamTasksHeader
             team={team.data}
-            onBack={onBackToTeams}
             onEditTeam={() => onEditTeam(teamId)}
             onShowAll={onShowAll}
           />
