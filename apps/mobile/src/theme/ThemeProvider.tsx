@@ -5,8 +5,8 @@ import {
   type Theme,
 } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
 import type { ReactNode } from 'react';
+import { useColorScheme } from 'react-native';
 
 import { tokens, type ColorScheme } from './tokens';
 
@@ -28,8 +28,7 @@ export function navigationTheme(scheme: ColorScheme): Theme {
 }
 
 export function useColorSchemeName(): ColorScheme {
-  const { colorScheme } = useColorScheme();
-  return colorScheme === 'dark' ? 'dark' : 'light';
+  return useColorScheme() === 'dark' ? 'dark' : 'light';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
