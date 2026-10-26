@@ -20,6 +20,7 @@ tags:
 - assertVisible: 'E-mail ou senha incorretos'
 - tapOn:
     id: 'sign-in-password'
+    point: '75%,50%'
 - eraseText: 40
 - inputText: 'Demo@1234'
 - hideKeyboard
