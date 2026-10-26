@@ -11,6 +11,7 @@ tags:
 - tapOn:
     id: 'sign-in-email'
 - inputText: 'demo@teams-tasks.dev'
+- hideKeyboard
 - tapOn:
     id: 'sign-in-password'
 - inputText: 'wrong-password'

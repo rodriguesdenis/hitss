@@ -8,6 +8,7 @@ appId: host.exp.exponent
       - tapOn:
           id: 'sign-in-email'
       - inputText: 'demo@teams-tasks.dev'
+      - hideKeyboard
       - tapOn:
           id: 'sign-in-password'
       - inputText: 'Demo@1234'
