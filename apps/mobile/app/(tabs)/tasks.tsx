@@ -13,7 +13,7 @@ export default function TasksRoute() {
     <>
       <Tabs.Screen
         options={{
-          headerTitle: teamId ? (team.data?.name ?? '') : undefined,
+          headerTitle: teamId ? (team.data?.name ?? 'Tarefas') : undefined,
           headerLeft: teamId
             ? () => (
                 <IconButton
