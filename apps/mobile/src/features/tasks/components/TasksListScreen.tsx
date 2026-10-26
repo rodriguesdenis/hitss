@@ -190,21 +190,15 @@ export function TasksListScreen({
   }
 
   return (
-    <Screen>
+    <Screen edges={[]}>
       <View className="gap-3 px-4 pb-3 pt-4">
-        {teamId ? (
-          team.data && (
-            <TeamTasksHeader
-              team={team.data}
-              onBack={onBackToTeams}
-              onEditTeam={() => onEditTeam(teamId)}
-              onShowAll={onShowAll}
-            />
-          )
-        ) : (
-          <Text className="type-title" accessibilityRole="header">
-            Tarefas
-          </Text>
+        {teamId && team.data && (
+          <TeamTasksHeader
+            team={team.data}
+            onBack={onBackToTeams}
+            onEditTeam={() => onEditTeam(teamId)}
+            onShowAll={onShowAll}
+          />
         )}
         <TaskFilterBar scope={scope} teamName={team.data?.name} />
       </View>
