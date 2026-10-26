@@ -1,4 +1,4 @@
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
 import { cx } from './cx';
 import { Icon, type IconName } from './Icon';
@@ -15,6 +15,7 @@ export interface SegmentedControlProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   disabled?: boolean;
+  scrollable?: boolean;
   testID?: string;
 }
 
@@ -24,14 +25,15 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   disabled = false,
+  scrollable = false,
   testID,
 }: SegmentedControlProps<T>) {
-  return (
+  const group = (
     <View
       testID={testID}
       accessibilityRole="radiogroup"
       accessibilityLabel={label}
-      className="segmented"
+      className={cx('segmented', scrollable && 'grow')}
     >
       {options.map((option) => {
         const active = option.value === value;
@@ -49,7 +51,8 @@ export function SegmentedControl<T extends string>({
             accessibilityLabel={option.label}
             accessibilityState={{ selected: active, checked: active, disabled }}
             className={cx(
-              'segment min-w-touch',
+              scrollable ? 'segment-fit' : 'segment',
+              'min-w-touch',
               active && 'segment-active',
               disabled && 'btn-disabled',
             )}
@@ -63,7 +66,7 @@ export function SegmentedControl<T extends string>({
             )}
             <Text
               className={active ? 'segment-label-active' : 'segment-label'}
-              numberOfLines={2}
+              numberOfLines={scrollable ? 1 : 2}
             >
               {option.label}
             </Text>
@@ -71,5 +74,18 @@ export function SegmentedControl<T extends string>({
         );
       })}
     </View>
+  );
+  if (!scrollable) {
+    return group;
+  }
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      className="-mx-4"
+      contentContainerClassName="grow px-4"
+    >
+      {group}
+    </ScrollView>
   );
 }

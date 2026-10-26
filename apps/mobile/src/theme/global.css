@@ -245,6 +245,9 @@
   .segment {
     @apply flex-1 min-h-touch flex-row items-center justify-center gap-1.5 rounded-full px-2;
   }
+  .segment-fit {
+    @apply grow min-h-touch flex-row items-center justify-center gap-1.5 rounded-full px-3;
+  }
   .segment-active {
     @apply bg-primary;
   }
