@@ -17,6 +17,7 @@ tags:
 - assertVisible: 'O título deve ter pelo menos 3 caracteres'
 - tapOn:
     id: 'task-title'
+    point: '95%,50%'
 - inputText: 'c'
 - hideKeyboard
 - assertNotVisible: 'O título deve ter pelo menos 3 caracteres'

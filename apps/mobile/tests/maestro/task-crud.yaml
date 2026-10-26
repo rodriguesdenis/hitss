@@ -26,6 +26,7 @@ tags:
     id: 'task-edit'
 - tapOn:
     id: 'task-title'
+    point: '95%,50%'
 - eraseText: 60
 - inputText: 'Tarefa editada pelo Maestro'
 - hideKeyboard
