@@ -3,8 +3,8 @@ flows:
 executionOrder:
   continueOnFailure: false
   flowsOrder:
-    - auth
-    - filter-by-team
-    - validation
-    - task-crud
-    - offline
+    - Sign in, wrong password, sign out
+    - Tapping a team shows only its tasks with team chips
+    - A short title is rejected and the draft can be discarded
+    - Create, change status, edit and delete a task
+    - Change tasks offline and sync when the connection returns
