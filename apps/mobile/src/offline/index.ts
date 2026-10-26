@@ -40,4 +40,8 @@ export {
   type EntitySnapshot,
 } from './optimistic';
 export { PENDING_LABEL, PendingSyncBadge } from './components/PendingSyncBadge';
-export { pendingLabel, usePendingSync } from './use-pending-sync';
+export {
+  pendingLabel,
+  tasksTabLabel,
+  usePendingSync,
+} from './use-pending-sync';

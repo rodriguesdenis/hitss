@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
 
-import { AppHeader, usePendingCount } from '@/offline';
+import { AppHeader, tasksTabLabel, usePendingCount } from '@/offline';
 import { tokens } from '@/theme/tokens';
 import { useColorSchemeName } from '@/theme/ThemeProvider';
 import { Icon, type IconName } from '@/ui';
@@ -48,9 +48,7 @@ export default function TabsLayout() {
             borderRadius: 5,
             backgroundColor: color.primary,
           },
-          tabBarAccessibilityLabel: pending
-            ? 'Tarefas, alterações aguardando sincronização'
-            : undefined,
+          tabBarAccessibilityLabel: tasksTabLabel(pending),
         }}
       />
       <Tabs.Screen

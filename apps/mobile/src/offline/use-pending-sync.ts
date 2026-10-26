@@ -19,6 +19,10 @@ export function pendingLabel(count: number): string {
     : `${count} alterações aguardando sincronização`;
 }
 
+export function tasksTabLabel(pending: boolean): string {
+  return pending ? 'Tarefas, alterações aguardando sincronização' : 'Tarefas';
+}
+
 export function usePendingSync(): {
   count: number;
   has: (id: string) => boolean;
