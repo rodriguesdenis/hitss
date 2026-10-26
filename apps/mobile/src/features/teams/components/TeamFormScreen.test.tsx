@@ -187,26 +187,20 @@ describe('TeamFormScreen — create', () => {
   it('AC-04.7.7 asks before discarding changes', async () => {
     const { props } = await renderForm();
     await fireEvent.changeText(nameInput(), 'Infra');
-    await fireEvent.press(
-      screen.getAllByRole('button', { name: 'Cancelar' })[0]!,
-    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
     expect(screen.getByText('Descartar alterações?')).toBeOnTheScreen();
     await fireEvent.press(
       screen.getByRole('button', { name: 'Continuar editando' }),
     );
     expect(props.onClose).not.toHaveBeenCalled();
-    await fireEvent.press(
-      screen.getAllByRole('button', { name: 'Cancelar' })[0]!,
-    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Descartar' }));
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 
   it('closes without asking when nothing changed', async () => {
     const { props } = await renderForm();
-    await fireEvent.press(
-      screen.getAllByRole('button', { name: 'Cancelar' })[0]!,
-    );
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 });

@@ -260,12 +260,6 @@ function TaskForm({
         )}
         <View className="form-footer">
           <Button
-            label="Cancelar"
-            variant="secondary"
-            onPress={cancel}
-            className="flex-1"
-          />
-          <Button
             testID="task-save"
             label={task ? 'Salvar alterações' : 'Criar tarefa'}
             loading={saving}

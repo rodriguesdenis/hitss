@@ -233,12 +233,6 @@ function TeamForm({
         )}
         <View className="form-footer">
           <Button
-            label="Cancelar"
-            variant="secondary"
-            onPress={cancel}
-            className="flex-1"
-          />
-          <Button
             testID="team-save"
             label={team ? 'Salvar alterações' : 'Criar time'}
             loading={saving}

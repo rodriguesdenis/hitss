@@ -84,7 +84,7 @@ export function TeamPicker({
     <Field
       label="Times"
       error={error}
-      help={full ? TEAMS_LIMIT : `${value.length} de ${TEAMS_MAX}`}
+      help={full ? TEAMS_LIMIT : `${value.length} de ${TEAMS_MAX} times`}
     >
       {content()}
       {onCreateTeam && (
