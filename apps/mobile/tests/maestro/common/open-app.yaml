@@ -1,7 +1,27 @@
 appId: host.exp.exponent
 ---
+- setAirplaneMode: disabled
 - launchApp:
     stopApp: true
+- extendedWaitUntil:
+    visible: 'Development servers|Entre para continuar|Tarefas'
+    timeout: 30000
+- runFlow:
+    when:
+      visible: 'Development servers'
+    commands:
+      - tapOn: 'Settings'
+      - runFlow:
+          when:
+            visible:
+              rightOf: 'Tools button'
+              below: '3 fingers long press'
+              checked: true
+          commands:
+            - tapOn:
+                rightOf: 'Tools button'
+                below: '3 fingers long press'
+                checked: true
 - openLink: ${MAESTRO_EXPO_URL}
 - extendedWaitUntil:
     visible: 'Entre para continuar|Tarefas|Continue|SDK version.*'
