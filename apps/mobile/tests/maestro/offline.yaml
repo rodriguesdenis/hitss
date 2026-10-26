@@ -50,3 +50,7 @@ tags:
 - assertVisible:
     id: 'status-badge'
 - assertVisible: 'Concluída'
+- tapOn:
+    id: 'task-delete'
+- tapOn: 'Excluir'
+- assertVisible: 'Tarefa excluída'
