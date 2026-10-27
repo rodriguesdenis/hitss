@@ -1,7 +1,7 @@
 # ADR-0020 — Simplify the architecture for the hiring test
 
 - **Status:** Accepted
-- **Date:** 2026-10-22 · **Amended:** 2026-10-26 (module layout and dependency rules, [spec 009](../../specs/009-backend-structure/spec.md))
+- **Date:** 2026-10-22 · **Amended:** 2026-10-26 (module layout and dependency rules, [spec 009](../../specs/009-backend-structure/spec.md); thin controllers, [spec 010](../../specs/010-thin-controllers/spec.md))
 - **Deciders:** user (product owner of the submission), software-architect, nestjs-specialist, database-specialist
 - **Supersedes in part:** [ADR-0002](0002-nestjs-clean-architecture-ddd-cqrs.md) (CQRS, buses, module contracts, unit of work), [ADR-0007](0007-better-auth.md) (cookie sessions and CSRF on `/api/v1`), [ADR-0013](archive/0013-opentelemetry-and-signoz.md) (custom telemetry machinery), [ADR-0015](archive/0015-optimistic-concurrency.md) (ETag / `If-Match`)
 
@@ -48,8 +48,9 @@ modules/<x>s/
 │   └── interfaces/<z>.interface.ts            # what the use cases need from outside: the read model
 │                                              # (views, pages) and, in tasks, TeamDirectory
 ├── presentation/
-│   ├── <x>s.controller.ts
-│   └── dto/                                   # class-validator requests (update extends create),
+│   ├── <x>s.controller.ts                     # per route: one docs decorator, execute + XResponseDto.from
+│   ├── docs/<x>s.docs.ts                      # one applyDecorators per route: envelope + error responses
+│   └── dto/                                   # class-validator requests (update extends create), params,
 │                                              # <x>-response.dto.ts with @ApiProperty and static from(view)
 ├── infrastructure/persistence/
 │   ├── <x>.prisma-repository.ts               # row ⇄ entity mapping as private functions in this file
