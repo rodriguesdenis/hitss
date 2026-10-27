@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import type { TeamView } from '../../../application/interfaces/team-read-model.interface';
 
 export class TeamResponseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
@@ -21,4 +22,17 @@ export class TeamResponseDto {
   version!: number;
   @ApiProperty({ format: 'date-time' }) createdAt!: string;
   @ApiProperty({ format: 'date-time' }) updatedAt!: string;
+
+  static from(team: TeamView): TeamResponseDto {
+    return {
+      id: team.id,
+      name: team.name,
+      colorHex: team.colorHex,
+      description: team.description,
+      taskCount: team.taskCount,
+      version: team.version,
+      createdAt: team.createdAt.toISOString(),
+      updatedAt: team.updatedAt.toISOString(),
+    };
+  }
 }

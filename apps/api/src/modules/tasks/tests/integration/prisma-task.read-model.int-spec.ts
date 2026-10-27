@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
 import { TaskStatus } from '../../domain/value-objects/task-status.vo';
-import { toTaskResponse } from '../../presentation/http/presenters/task.presenter';
+import { toTaskView } from '../../application/use-cases/task-view';
+import { TaskResponseDto } from '../../presentation/http/dto/task-response.dto';
 import { PrismaTaskReadModel } from '../../infrastructure/persistence/task.prisma-read';
 import { PrismaTaskRepository } from '../../infrastructure/persistence/task.prisma-repository';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
@@ -141,11 +142,13 @@ describe('PrismaTaskReadModel (integration, T-003-06a)', () => {
     directory.remove(archived);
 
     const record = (await readModel.findById(ownerId, task.id))!;
-    const view = toTaskResponse({
-      task: record,
-      teams: await directory.summaries(ownerId, record.teamIds),
-      today: DueDate.create('2026-10-21'),
-    });
+    const view = TaskResponseDto.from(
+      toTaskView(
+        record,
+        await directory.summaries(ownerId, record.teamIds),
+        DueDate.create('2026-10-21'),
+      ),
+    );
 
     expect(view.teams.map((t) => t.name)).toEqual(['Backend', 'mobile']);
     expect(view.isOverdue).toBe(true);

@@ -12,7 +12,7 @@ import {
 import { PaginationQueryDto } from '../../../../../shared/presentation/dto/pagination-query.dto';
 import { sortValues } from '../../../../../shared/presentation/sort';
 import { TASK_SORT_FIELDS } from '../../../application/interfaces/task-read-model.interface';
-import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
+import { TaskStatus } from '../../../application/interfaces/task-read-model.interface';
 
 export const TASK_SORTS = sortValues(TASK_SORT_FIELDS);
 

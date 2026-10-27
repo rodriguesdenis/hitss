@@ -5,7 +5,8 @@ import type {
 } from '../../../../shared/application/page';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import type { TeamSummary } from './team-directory.interface';
-import type { DueDate } from '../../domain/value-objects/due-date.vo';
+
+export { TaskStatus } from '../../domain/value-objects/task-status.vo';
 
 export interface TaskRecord {
   readonly id: string;
@@ -20,16 +21,9 @@ export interface TaskRecord {
   readonly updatedAt: Date;
 }
 
-export interface TaskView {
-  readonly task: TaskRecord;
+export interface TaskView extends Omit<TaskRecord, 'teamIds'> {
+  readonly isOverdue: boolean;
   readonly teams: readonly TeamSummary[];
-  readonly today: DueDate;
-}
-
-export interface TaskPageView {
-  readonly page: Page<TaskRecord>;
-  readonly teams: readonly TeamSummary[];
-  readonly today: DueDate;
 }
 
 export const TASK_SORT_FIELDS = [

@@ -7,6 +7,7 @@ import {
   TaskView,
 } from '../interfaces/task-read-model.interface';
 import { TeamDirectory } from '../interfaces/team-directory.interface';
+import { toTaskView } from './task-view';
 
 export interface GetTaskInput {
   readonly ownerId: string;
@@ -26,10 +27,10 @@ export class GetTaskUseCase {
     if (!task) {
       throw new TaskNotFound();
     }
-    return {
+    return toTaskView(
       task,
-      teams: await this.teams.summaries(ownerId, task.teamIds),
-      today: DueDate.todayFrom(this.clock.now()),
-    };
+      await this.teams.summaries(ownerId, task.teamIds),
+      DueDate.todayFrom(this.clock.now()),
+    );
   }
 }
