@@ -8,12 +8,12 @@ Brief requirement → epic → story (priority) → acceptance criteria → scen
 
 | Metric                                           | Value           |
 | ------------------------------------------------ | --------------- |
-| Specs / stories / acceptance criteria            | 9 / 75 / 399    |
+| Specs / stories / acceptance criteria            | 10 / 75 / 399   |
 | Scenarios                                        | 452             |
 | `MUST` ACs (with scenario / with task / total)   | 260 / 260 / 260 |
 | `SHOULD` ACs (with scenario / with task / total) | 3 / 3 / 3       |
 | `COULD` ACs (with scenario / with task / total)  | 136 / 136 / 136 |
-| Tasks                                            | 134             |
+| Tasks                                            | 138             |
 
 ## Gaps and findings
 
@@ -871,3 +871,5 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 ### 008-simplification
 
 ### 009-backend-structure
+
+### 010-thin-controllers

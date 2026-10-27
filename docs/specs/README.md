@@ -26,6 +26,7 @@ A task is **Ready** when its spec, scenarios and plan are approved. It is **Done
 | [007-ci-and-dx](007-ci-and-dx/spec.md)                 | EP-07 Quality, CI & Developer Experience | Docker one-command run, seeds, CI, architecture rules, contract drift                                                     |
 | [008-simplification](008-simplification/spec.md)       | ADR-0020                                 | Simplify the backend for the hiring test: Bearer-only, no CQRS/CLS/ETag, slim telemetry, fewer docs                       |
 | [009-backend-structure](009-backend-structure/spec.md) | ADR-0020 (amendment)                     | Flat module layout, `application/interfaces`, `TeamDirectory`, errors with kind, no presenters, stricter dependency rules |
+| [010-thin-controllers](010-thin-controllers/spec.md)   | ADR-0020 (amendment)                     | Route docs in `presentation/docs/`, `:id` param DTO, write use cases return the view                                      |
 
 ## ID conventions
 
