@@ -9,10 +9,9 @@ import {
   Post,
   Put,
   Query,
-  Res,
 } from '@nestjs/common';
-import type { ServerResponse } from 'node:http';
 import type { Owner } from '../../../shared/domain/owner';
+import { Location } from '../../../shared/presentation/decorators/location.decorator';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
 import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
 import { toPageMeta } from '../../../shared/presentation/page-meta';
@@ -54,14 +53,13 @@ export class TasksController {
 
   @Post()
   @HttpCode(201)
+  @Location()
   @ApiCreateTask()
   async create(
     @CurrentOwner() { ownerId }: Owner,
     @Body() body: CreateTaskDto,
-    @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<TaskResponseDto> {
     const view = await this.createTask.execute({ ...body, ownerId });
-    response.setHeader('Location', `/api/v1/tasks/${view.id}`);
     return TaskResponseDto.from(view);
   }
 

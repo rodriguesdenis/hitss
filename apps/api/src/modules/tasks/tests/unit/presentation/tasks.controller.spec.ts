@@ -1,4 +1,5 @@
-import type { ServerResponse } from 'node:http';
+import { INTERCEPTORS_METADATA } from '@nestjs/common/constants';
+import { LocationInterceptor } from '../../../../../shared/presentation/interceptors/location.interceptor';
 import type { ChangeTaskStatusUseCase } from '../../../application/use-cases/change-task-status.use-case';
 import type { CreateTaskUseCase } from '../../../application/use-cases/create-task.use-case';
 import type { DeleteTaskUseCase } from '../../../application/use-cases/delete-task.use-case';
@@ -47,23 +48,20 @@ describe('TasksController', () => {
 
   afterEach(() => useCases.get.mockClear());
 
-  it('AC-10.6 create maps the view the use case returns and sets Location', async () => {
-    const response = { setHeader: jest.fn() };
-
-    const body = await controller.create(
-      OWNER,
-      { title: 'Ship it' },
-      response as unknown as ServerResponse,
-    );
+  it('AC-10.6 create maps the view the use case returns and is marked @Location()', async () => {
+    const body = await controller.create(OWNER, { title: 'Ship it' });
 
     expect(useCases.create).toHaveBeenCalledWith({
       title: 'Ship it',
       ownerId: 'owner-1',
     });
-    expect(response.setHeader).toHaveBeenCalledWith(
-      'Location',
-      `/api/v1/tasks/${ID}`,
-    );
+    expect(
+      Reflect.getMetadata(
+        INTERCEPTORS_METADATA,
+        Object.getOwnPropertyDescriptor(TasksController.prototype, 'create')
+          ?.value as object,
+      ),
+    ).toEqual([LocationInterceptor]);
     expect(body).toEqual(TaskResponseDto.from(VIEW));
     expect(useCases.get).not.toHaveBeenCalled();
   });
