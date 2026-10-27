@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { TeamNotFound } from '../../domain/errors/team.errors';
-import { TeamReadModel, TeamView } from '../ports/team.read-model';
+import {
+  TeamReadModel,
+  TeamView,
+} from '../interfaces/team-read-model.interface';
 
 export interface GetTeamInput {
   readonly ownerId: string;

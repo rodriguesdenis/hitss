@@ -1,4 +1,4 @@
-import type { TeamReadModel } from '../../src/modules/teams/application/ports/team.read-model';
+import type { TeamReadModel } from '../../src/modules/teams/application/interfaces/team-read-model.interface';
 import {
   TeamLookup,
   TeamSummary,

@@ -3,7 +3,10 @@ import { Clock } from '../../../../shared/domain/clock';
 import { TeamLookup } from '../../../teams/team-lookup.service';
 import { TaskNotFound } from '../../domain/errors/task.errors';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
-import { TaskReadModel, TaskView } from '../ports/task.read-model';
+import {
+  TaskReadModel,
+  TaskView,
+} from '../interfaces/task-read-model.interface';
 
 export interface GetTaskInput {
   readonly ownerId: string;

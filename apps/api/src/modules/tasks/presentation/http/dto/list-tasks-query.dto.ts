@@ -11,7 +11,7 @@ import {
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../../shared/presentation/dto/pagination-query.dto';
 import { sortValues } from '../../../../../shared/presentation/sort';
-import { TASK_SORT_FIELDS } from '../../../application/ports/task.read-model';
+import { TASK_SORT_FIELDS } from '../../../application/interfaces/task-read-model.interface';
 import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
 
 export const TASK_SORTS = sortValues(TASK_SORT_FIELDS);

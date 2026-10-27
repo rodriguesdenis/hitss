@@ -2,7 +2,7 @@ import { TeamNotFound } from '../../../../domain/errors/team.errors';
 import type {
   TeamReadModel,
   TeamView,
-} from '../../../../application/ports/team.read-model';
+} from '../../../../application/interfaces/team-read-model.interface';
 import { GetTeamUseCase } from '../../../../application/use-cases/get-team.use-case';
 
 const VIEW: TeamView = {

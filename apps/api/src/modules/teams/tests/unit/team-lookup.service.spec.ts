@@ -1,4 +1,4 @@
-import { TeamReadModel } from '../../application/ports/team.read-model';
+import { TeamReadModel } from '../../application/interfaces/team-read-model.interface';
 import { TeamLookup } from '../../team-lookup.service';
 
 const MOBILE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';

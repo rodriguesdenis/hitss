@@ -3,7 +3,7 @@ import { Clock } from '../../shared/domain/clock';
 import { SystemClock } from '../../shared/infrastructure/system-clock';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
 import { TeamsModule } from '../teams/teams.module';
-import { TaskReadModel } from './application/ports/task.read-model';
+import { TaskReadModel } from './application/interfaces/task-read-model.interface';
 import { ChangeTaskStatusUseCase } from './application/use-cases/change-task-status.use-case';
 import { CreateTaskUseCase } from './application/use-cases/create-task.use-case';
 import { DeleteTaskUseCase } from './application/use-cases/delete-task.use-case';

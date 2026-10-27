@@ -4,7 +4,7 @@ import { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import type { Sort } from '../../../../shared/application/page';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
-import type { TeamSortField } from '../../application/ports/team.read-model';
+import type { TeamSortField } from '../../application/interfaces/team-read-model.interface';
 import { PrismaTeamReadModel } from '../../infrastructure/persistence/team.prisma-read';
 import { createTestApp } from '@test/support/app';
 import { useTestDatabase } from '@test/support/postgres';

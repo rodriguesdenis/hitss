@@ -6,7 +6,7 @@ import {
   ListTasksCriteria,
   TaskPageView,
   TaskReadModel,
-} from '../ports/task.read-model';
+} from '../interfaces/task-read-model.interface';
 
 export interface ListTasksInput {
   readonly ownerId: string;

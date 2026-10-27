@@ -25,7 +25,7 @@ import type { PageMeta } from '../../../../shared/presentation/openapi/api-envel
 import { toPageMeta } from '../../../../shared/presentation/page-meta';
 import { parseSort } from '../../../../shared/presentation/sort';
 import { ParseUuidPipe } from '../../../../shared/presentation/pipes/parse-uuid.pipe';
-import type { TaskSortField } from '../../application/ports/task.read-model';
+import type { TaskSortField } from '../../application/interfaces/task-read-model.interface';
 import { ChangeTaskStatusUseCase } from '../../application/use-cases/change-task-status.use-case';
 import { CreateTaskUseCase } from '../../application/use-cases/create-task.use-case';
 import { DeleteTaskUseCase } from '../../application/use-cases/delete-task.use-case';

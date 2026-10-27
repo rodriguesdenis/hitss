@@ -3,7 +3,7 @@ import { Transform, TransformFnParams } from 'class-transformer';
 import { IsIn, IsOptional, IsString, Length } from 'class-validator';
 import { PaginationQueryDto } from '../../../../../shared/presentation/dto/pagination-query.dto';
 import { sortValues } from '../../../../../shared/presentation/sort';
-import { TEAM_SORT_FIELDS } from '../../../application/ports/team.read-model';
+import { TEAM_SORT_FIELDS } from '../../../application/interfaces/team-read-model.interface';
 
 export const TEAM_SORTS = sortValues(TEAM_SORT_FIELDS);
 

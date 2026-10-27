@@ -6,7 +6,7 @@ import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.s
 import type {
   ListTasksCriteria,
   TaskSortField,
-} from '../../application/ports/task.read-model';
+} from '../../application/interfaces/task-read-model.interface';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import { PrismaTaskReadModel } from '../../infrastructure/persistence/task.prisma-read';
 import { createTestApp } from '@test/support/app';
