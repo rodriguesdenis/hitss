@@ -8,54 +8,53 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { SpanStatusCode } from '@opentelemetry/api';
-import { DomainError } from '../../../../../src/shared/domain/domain-error';
+import {
+  DomainError,
+  InvalidField,
+} from '../../../../../src/shared/domain/domain-error';
 import {
   ApiException,
   RequestValidationException,
 } from '../../../../../src/shared/presentation/filters/api-exception';
 import { ErrorCode } from '../../../../../src/shared/presentation/filters/error-codes';
 import {
-  DomainErrorMapping,
-  DomainErrorMappings,
-} from '../../../../../src/shared/presentation/filters/domain-error-mappings';
-import {
+  DOMAIN_ERROR_STATUS,
   ErrorEnvelope,
   GlobalExceptionFilter,
 } from '../../../../../src/shared/presentation/filters/global-exception.filter';
 
 class SampleNotFound extends DomainError {
+  readonly code = 'SAMPLE_NOT_FOUND';
+  readonly kind = 'not_found';
+
   constructor() {
-    super('Sample not found.');
+    super('The sample does not exist.');
   }
 }
 
 class SampleConflict extends DomainError {
-  constructor(readonly currentVersion: number) {
-    super('Sample changed.');
+  readonly code = 'SAMPLE_CHANGED';
+  readonly kind = 'conflict';
+
+  constructor(currentVersion: number) {
+    super('The sample was changed by someone else.', { currentVersion });
   }
 }
 
-class UnmappedDomainError extends DomainError {
+class SampleRule extends DomainError {
+  readonly code = 'SAMPLE_RULE';
+  readonly kind = 'rule';
+
   constructor() {
-    super('Unmapped.');
+    super('The sample breaks a rule.');
   }
 }
 
-const MAPPINGS: DomainErrorMapping[] = [
-  {
-    error: SampleNotFound,
-    status: 404,
-    code: 'SAMPLE_NOT_FOUND',
-    message: 'The sample does not exist.',
-  },
-  {
-    error: SampleConflict,
-    status: 412,
-    code: 'PRECONDITION_FAILED',
-    message: 'The sample was changed by someone else.',
-    details: (e) => ({ currentVersion: (e as SampleConflict).currentVersion }),
-  },
-];
+class InvalidSample extends InvalidField {
+  constructor() {
+    super('sample', 'sample must be a sample');
+  }
+}
 
 const REQUEST_ID = 'req-1.2_3';
 
@@ -97,10 +96,7 @@ function run(
     setAttribute: jest.fn(),
     recordException: jest.fn(),
   };
-  const mappings = new DomainErrorMappings();
-  mappings.register(MAPPINGS);
   const filter = new GlobalExceptionFilter({
-    mappings,
     logger,
     activeSpan: () => span,
   });
@@ -236,7 +232,25 @@ describe('GlobalExceptionFilter', () => {
     });
   });
 
-  it('a mapped domain error uses its status, code, message and details', () => {
+  it('AC-09.6 maps each domain error kind to its status in one place', () => {
+    expect(DOMAIN_ERROR_STATUS).toEqual({
+      validation: 400,
+      not_found: 404,
+      conflict: 409,
+      rule: 422,
+    });
+  });
+
+  it.each([
+    [new InvalidSample(), 400],
+    [new SampleNotFound(), 404],
+    [new SampleConflict(4), 409],
+    [new SampleRule(), 422],
+  ])('AC-09.6 a domain error %p answers %i', (error, status) => {
+    expect(run(error).sent.status).toBe(status);
+  });
+
+  it('AC-09.6 a domain error answers with its code, message and details', () => {
     expect(run(new SampleNotFound()).sent).toEqual({
       status: 404,
       body: {
@@ -248,39 +262,32 @@ describe('GlobalExceptionFilter', () => {
       },
     });
     expect(run(new SampleConflict(4)).sent.body?.error).toEqual({
-      code: 'PRECONDITION_FAILED',
+      code: 'SAMPLE_CHANGED',
       message: 'The sample was changed by someone else.',
       details: { currentVersion: 4 },
       traceId: REQUEST_ID,
     });
   });
 
-  it('Lynx S2: every registered mapping answers with its fixed message, never the exception message', () => {
-    const registry = new DomainErrorMappings();
-    registry.register(MAPPINGS);
+  it('AC-09.6 a validation error keeps the VALIDATION_FAILED envelope naming its field', () => {
+    expect(run(new InvalidSample()).sent.body?.error).toEqual({
+      code: 'VALIDATION_FAILED',
+      message: 'Request validation failed.',
+      details: [{ field: 'sample', message: 'sample must be a sample' }],
+      traceId: REQUEST_ID,
+    });
+  });
 
-    for (const mapping of registry.all()) {
-      const exception = Object.assign(
-        Object.create(mapping.error.prototype as object) as DomainError,
-        { message: 'row (email)=(marina@example.test) secret-value' },
-      );
-      const { sent } = run(exception);
+  it('a domain error is never logged as unexpected', () => {
+    const { logger, span } = run(new SampleRule());
 
-      expect(sent.status).toBe(mapping.status);
-      expect(sent.body?.error.code).toBe(mapping.code);
-      expect(sent.body?.error.message).toBe(mapping.message);
-      expect(JSON.stringify(sent.body)).not.toContain('secret-value');
-      expect(JSON.stringify(sent.body)).not.toContain('marina');
-    }
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(span.setStatus).not.toHaveBeenCalled();
   });
 
   describe('unexpected errors', () => {
-    it('AC-06.3.4 → 500 INTERNAL_ERROR with a generic message, even for an unmapped domain error', () => {
-      for (const exception of [
-        new Error('boom'),
-        new UnmappedDomainError(),
-        'a string',
-      ]) {
+    it('AC-06.3.4 → 500 INTERNAL_ERROR with a generic message', () => {
+      for (const exception of [new Error('boom'), 'a string']) {
         const { sent } = run(exception);
 
         expect(sent.status).toBe(500);

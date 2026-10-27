@@ -62,8 +62,13 @@ describe('TaskTitle', () => {
     expect(error).toBeInstanceOf(InvalidTaskTitle);
     expect(error).toMatchObject({
       field: 'title',
-      message:
-        'Title must be 3 to 120 characters long and contain no control characters.',
+      details: [
+        {
+          field: 'title',
+          message:
+            'title must be 3 to 120 characters with no control characters',
+        },
+      ],
     });
   });
 

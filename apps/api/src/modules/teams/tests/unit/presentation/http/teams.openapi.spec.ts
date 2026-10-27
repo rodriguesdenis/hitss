@@ -1,3 +1,9 @@
+import { placementOf } from '@test/support/openapi-errors';
+import {
+  InvalidTeamName,
+  TeamNameAlreadyExists,
+  TeamNotFound,
+} from '../../../../domain/errors/team.errors';
 import { VersioningType } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { buildOpenApiDocument } from '../../../../../../openapi/openapi-document';
@@ -144,5 +150,18 @@ describe('Teams in the OpenAPI document', () => {
       'updatedAt',
       'version',
     ]);
+  });
+
+  it('AC-09.6 documents every declared team error, only under the status of its kind', async () => {
+    expect(
+      placementOf(await document(), [
+        new InvalidTeamName(),
+        new TeamNotFound(),
+        new TeamNameAlreadyExists(),
+      ]),
+    ).toEqual({
+      undocumented: [],
+      misplaced: [],
+    });
   });
 });

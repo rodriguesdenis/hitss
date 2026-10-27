@@ -1,3 +1,10 @@
+import { placementOf } from '@test/support/openapi-errors';
+import {
+  InvalidTaskTitle,
+  TaskNotFound,
+  TooManyTeams,
+  UnknownTeams,
+} from '../../../../domain/errors/task.errors';
 import { VersioningType } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { buildOpenApiDocument } from '../../../../../../openapi/openapi-document';
@@ -143,5 +150,19 @@ describe('Tasks in the OpenAPI document', () => {
     ]) {
       expect(doc.components?.schemas?.[dto]).toHaveProperty('properties');
     }
+  });
+
+  it('AC-09.6 documents every declared task error, only under the status of its kind', async () => {
+    expect(
+      placementOf(await document(), [
+        new InvalidTaskTitle(),
+        new TaskNotFound(),
+        new TooManyTeams(10, 11),
+        new UnknownTeams([]),
+      ]),
+    ).toEqual({
+      undocumented: [],
+      misplaced: [],
+    });
   });
 });

@@ -377,8 +377,13 @@ describe('Task', () => {
       expect(() => description('d'.repeat(2001))).toThrow(
         expect.objectContaining({
           field: 'description',
-          message:
-            'Description must be at most 2000 characters long and contain no control characters other than line breaks.',
+          details: [
+            {
+              field: 'description',
+              message:
+                'description must be at most 2000 characters with no control characters other than line breaks',
+            },
+          ],
         }) as Error,
       );
     });

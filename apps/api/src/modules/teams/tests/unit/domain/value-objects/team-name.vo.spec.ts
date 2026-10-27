@@ -100,8 +100,12 @@ describe('TeamName', () => {
     expect(error).toBeInstanceOf(InvalidTeamName);
     expect(error).toMatchObject({
       field: 'name',
-      message:
-        'Team name must be 2 to 50 characters long and contain no control characters.',
+      details: [
+        {
+          field: 'name',
+          message: 'name must be 2 to 50 characters with no control characters',
+        },
+      ],
     });
   });
 
