@@ -11,16 +11,9 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
-import { ApiNoContentResponse, ApiTags } from '@nestjs/swagger';
 import type { ServerResponse } from 'node:http';
 import type { Owner } from '../../../shared/domain/owner';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
-import {
-  ApiCreatedEnvelope,
-  ApiOkEnvelope,
-  ApiPageEnvelope,
-} from '../../../shared/presentation/openapi/api-envelope';
-import { ApiErrorResponses } from '../../../shared/presentation/openapi/api-error';
 import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
 import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
@@ -35,11 +28,19 @@ import { UpdateTaskUseCase } from '../application/use-cases/update-task.use-case
 import { ChangeTaskStatusDto } from './dto/change-task-status.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
+import {
+  ApiTasks,
+  ApiCreateTask,
+  ApiListTasks,
+  ApiGetTask,
+  ApiChangeTaskStatus,
+  ApiReplaceTask,
+  ApiDeleteTask,
+} from './docs/tasks.docs';
 import { TaskResponseDto } from './dto/task-response.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
-@ApiTags('Tasks')
-@ApiErrorResponses([401, 429])
+@ApiTasks()
 @Controller('tasks')
 export class TasksController {
   constructor(
@@ -53,12 +54,7 @@ export class TasksController {
 
   @Post()
   @HttpCode(201)
-  @ApiCreatedEnvelope(TaskResponseDto)
-  @ApiErrorResponses({
-    400: 'VALIDATION_FAILED: an invalid or unknown field (teamIds malformed, duplicated or over 100 included); `details` names it.',
-    413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
-    422: 'TOO_MANY_TEAMS (`details: { max, received }`, more than 10 distinct teams) or UNKNOWN_TEAMS (`details: { teamIds }`, the ids that are not your live teams).',
-  })
+  @ApiCreateTask()
   async create(
     @CurrentOwner() { ownerId }: Owner,
     @Body() body: CreateTaskDto,
@@ -78,10 +74,7 @@ export class TasksController {
   }
 
   @Get()
-  @ApiPageEnvelope(TaskResponseDto)
-  @ApiErrorResponses({
-    400: 'VALIDATION_FAILED: limit, offset, teamId, status, search, sort or an unknown parameter. A teamId that is not your live team is an empty page, not an error.',
-  })
+  @ApiListTasks()
   async list(
     @CurrentOwner() { ownerId }: Owner,
     @Query() query: ListTasksQueryDto,
@@ -104,11 +97,7 @@ export class TasksController {
   }
 
   @Get(':id')
-  @ApiOkEnvelope(TaskResponseDto)
-  @ApiErrorResponses({
-    400: 'VALIDATION_FAILED: `id` is not a UUID.',
-    404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
-  })
+  @ApiGetTask()
   async get(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
@@ -117,12 +106,7 @@ export class TasksController {
   }
 
   @Patch(':id/status')
-  @ApiOkEnvelope(TaskResponseDto)
-  @ApiErrorResponses({
-    400: 'VALIDATION_FAILED: `id` is not a UUID, `status` is missing or invalid, or another field is sent.',
-    404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
-    413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
-  })
+  @ApiChangeTaskStatus()
   async changeStatus(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
@@ -133,13 +117,7 @@ export class TasksController {
   }
 
   @Put(':id')
-  @ApiOkEnvelope(TaskResponseDto)
-  @ApiErrorResponses({
-    400: 'VALIDATION_FAILED: an invalid or unknown field, or `id` not a UUID; `details` names it.',
-    404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which); wins over 422.',
-    413: 'PAYLOAD_TOO_LARGE: the JSON body is over 100 kB.',
-    422: 'TOO_MANY_TEAMS (`details: { max, received }`, more than 10 distinct teams) or UNKNOWN_TEAMS (`details: { teamIds }`, the ids that are not your live teams).',
-  })
+  @ApiReplaceTask()
   async replace(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
@@ -159,11 +137,7 @@ export class TasksController {
 
   @Delete(':id')
   @HttpCode(204)
-  @ApiNoContentResponse({ description: 'The task was deleted.' })
-  @ApiErrorResponses({
-    400: 'VALIDATION_FAILED: `id` is not a UUID.',
-    404: 'TASK_NOT_FOUND: unknown, deleted, or owned by another user (never revealed which).',
-  })
+  @ApiDeleteTask()
   async delete(
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
