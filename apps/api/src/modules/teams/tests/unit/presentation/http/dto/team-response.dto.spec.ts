@@ -1,8 +1,8 @@
-import { toTeamResponse } from '../../../../../presentation/http/presenters/team.presenter';
+import { TeamResponseDto } from '../../../../../presentation/http/dto/team-response.dto';
 
-describe('toTeamResponse', () => {
+describe('TeamResponseDto.from', () => {
   it('AC-02.1.1 serializes a team with ISO timestamps and only the documented fields', () => {
-    const response = toTeamResponse({
+    const response = TeamResponseDto.from({
       id: 'team-1',
       name: 'Mobile',
       colorHex: '#7C3AED',

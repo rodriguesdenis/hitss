@@ -41,25 +41,33 @@ describe('GetTaskUseCase', () => {
     };
   };
 
-  it("AC-03.8.1 returns the record, its live teams and today's UTC day from the clock", async () => {
+  it('AC-03.8.1 returns the task with its live teams', async () => {
     const { handler, findById } = handlerAt('2026-10-22T01:00:00.000Z', record);
 
     const view = await handler.execute({ ownerId: OWNER, id: record.id });
 
     expect(findById).toHaveBeenCalledWith(OWNER, record.id);
-    expect(view.task).toBe(record);
+    expect(view).toMatchObject({ id: record.id, title: record.title });
+    expect(view).not.toHaveProperty('teamIds');
     expect(view.teams).toEqual([
       { id: MOBILE, name: 'Mobile', colorHex: '#7C3AED' },
     ]);
-    expect(view.today.value).toBe('2026-10-22');
   });
 
-  it('today is still the due day one millisecond before UTC midnight', async () => {
+  it("AC-03.14.1 computes isOverdue against today's UTC day from the clock", async () => {
+    const { handler } = handlerAt('2026-10-22T01:00:00.000Z', record);
+
+    const view = await handler.execute({ ownerId: OWNER, id: record.id });
+
+    expect(view.isOverdue).toBe(true);
+  });
+
+  it('is not overdue one millisecond before UTC midnight of the due day', async () => {
     const { handler } = handlerAt('2026-10-21T23:59:59.999Z', record);
 
     const view = await handler.execute({ ownerId: OWNER, id: record.id });
 
-    expect(view.today.value).toBe('2026-10-21');
+    expect(view.isOverdue).toBe(false);
   });
 
   it('throws TaskNotFound when the read model has no such active task', async () => {

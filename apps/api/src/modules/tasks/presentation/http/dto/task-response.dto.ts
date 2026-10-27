@@ -1,5 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { TaskStatus } from '../../../domain/value-objects/task-status.vo';
+import {
+  TaskStatus,
+  type TaskView,
+} from '../../../application/interfaces/task-read-model.interface';
 
 export class TeamChipDto {
   @ApiProperty({ format: 'uuid' }) id!: string;
@@ -35,4 +38,24 @@ export class TaskResponseDto {
   @ApiProperty({ example: 3 }) version!: number;
   @ApiProperty({ format: 'date-time' }) createdAt!: string;
   @ApiProperty({ format: 'date-time' }) updatedAt!: string;
+
+  static from(view: TaskView): TaskResponseDto {
+    return {
+      id: view.id,
+      title: view.title,
+      description: view.description,
+      status: view.status,
+      dueDate: view.dueDate,
+      completedAt: view.completedAt?.toISOString() ?? null,
+      isOverdue: view.isOverdue,
+      teams: view.teams.map(({ id, name, colorHex }) => ({
+        id,
+        name,
+        colorHex,
+      })),
+      version: view.version,
+      createdAt: view.createdAt.toISOString(),
+      updatedAt: view.updatedAt.toISOString(),
+    };
+  }
 }

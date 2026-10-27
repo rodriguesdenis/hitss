@@ -37,7 +37,6 @@ import { CreateTeamDto } from './dto/create-team.dto';
 import { ListTeamsQueryDto } from './dto/list-teams-query.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { TeamResponseDto } from './dto/team-response.dto';
-import { toTeamResponse } from './presenters/team.presenter';
 
 @ApiTags('Teams')
 @ApiErrorResponses([401, 429])
@@ -66,7 +65,7 @@ export class TeamsController {
       sort: parseSort(query.sort as TeamSortField),
     });
     return {
-      data: items.map(toTeamResponse),
+      data: items.map((team) => TeamResponseDto.from(team)),
       meta: toPageMeta(page, items.length, total),
     };
   }
@@ -81,7 +80,7 @@ export class TeamsController {
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
   ): Promise<TeamResponseDto> {
-    return toTeamResponse(await this.getTeam.execute({ ownerId, id }));
+    return TeamResponseDto.from(await this.getTeam.execute({ ownerId, id }));
   }
 
   @Post()
@@ -105,7 +104,7 @@ export class TeamsController {
     });
     const team: TeamView = await this.getTeam.execute({ ownerId, id });
     response.setHeader('Location', `/api/v1/teams/${team.id}`);
-    return toTeamResponse(team);
+    return TeamResponseDto.from(team);
   }
 
   @Put(':id')
@@ -128,7 +127,7 @@ export class TeamsController {
       colorHex: body.colorHex,
       description: body.description,
     });
-    return toTeamResponse(await this.getTeam.execute({ ownerId, id }));
+    return TeamResponseDto.from(await this.getTeam.execute({ ownerId, id }));
   }
 
   @Delete(':id')

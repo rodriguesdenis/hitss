@@ -37,7 +37,6 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { toTaskResponse } from './presenters/task.presenter';
 
 @ApiTags('Tasks')
 @ApiErrorResponses([401, 429])
@@ -74,8 +73,8 @@ export class TasksController {
       teamIds: body.teamIds,
     });
     const view = await this.getTask.execute({ ownerId, id });
-    response.setHeader('Location', `/api/v1/tasks/${view.task.id}`);
-    return toTaskResponse(view);
+    response.setHeader('Location', `/api/v1/tasks/${view.id}`);
+    return TaskResponseDto.from(view);
   }
 
   @Get()
@@ -88,11 +87,7 @@ export class TasksController {
     @Query() query: ListTasksQueryDto,
   ): Promise<{ data: TaskResponseDto[]; meta: PageMeta }> {
     const page = { limit: query.limit, offset: query.offset };
-    const {
-      page: found,
-      teams,
-      today,
-    } = await this.listTasks.execute({
+    const found = await this.listTasks.execute({
       ownerId,
       criteria: {
         page,
@@ -103,7 +98,7 @@ export class TasksController {
       },
     });
     return {
-      data: found.items.map((task) => toTaskResponse({ task, teams, today })),
+      data: found.items.map((task) => TaskResponseDto.from(task)),
       meta: toPageMeta(page, found.items.length, found.total),
     };
   }
@@ -118,7 +113,7 @@ export class TasksController {
     @CurrentOwner() { ownerId }: Owner,
     @Param('id', ParseUuidPipe) id: string,
   ): Promise<TaskResponseDto> {
-    return toTaskResponse(await this.getTask.execute({ ownerId, id }));
+    return TaskResponseDto.from(await this.getTask.execute({ ownerId, id }));
   }
 
   @Patch(':id/status')
@@ -134,7 +129,7 @@ export class TasksController {
     @Body() body: ChangeTaskStatusDto,
   ): Promise<TaskResponseDto> {
     await this.changeTaskStatus.execute({ ownerId, id, status: body.status });
-    return toTaskResponse(await this.getTask.execute({ ownerId, id }));
+    return TaskResponseDto.from(await this.getTask.execute({ ownerId, id }));
   }
 
   @Put(':id')
@@ -159,7 +154,7 @@ export class TasksController {
       description: body.description,
       dueDate: body.dueDate,
     });
-    return toTaskResponse(await this.getTask.execute({ ownerId, id }));
+    return TaskResponseDto.from(await this.getTask.execute({ ownerId, id }));
   }
 
   @Delete(':id')

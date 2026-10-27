@@ -55,16 +55,19 @@ describe('ListTasksUseCase', () => {
     );
   });
 
-  it("AC-03.2.2 returns the page with its total, every live team on it and today's UTC day", async () => {
+  it("AC-03.2.2 returns the page with its total, each task with its live teams and isOverdue against today's UTC day", async () => {
     const view = await handler.execute({
       ownerId: OWNER,
       criteria: criteria(),
     });
 
-    expect(view.page.total).toBe(7);
-    expect(view.page.items.map((task) => task.id)).toEqual(['t1', 't2']);
-    expect(view.teams.map((t) => t.name).sort()).toEqual(['Backend', 'Mobile']);
-    expect(view.today.value).toBe('2026-10-22');
+    expect(view.total).toBe(7);
+    expect(view.items.map((task) => task.id)).toEqual(['t1', 't2']);
+    expect(view.items.map((task) => task.teams.map((t) => t.name))).toEqual([
+      ['Mobile'],
+      ['Backend', 'Mobile'],
+    ]);
+    expect(view.items.every((task) => task.isOverdue)).toBe(true);
   });
 
   it('asks the directory once per page, with every distinct team on it', async () => {
@@ -89,7 +92,7 @@ describe('ListTasksUseCase', () => {
         criteria: criteria({ teamId }),
       });
 
-      expect(view.page).toEqual({ items: [], total: 0 });
+      expect(view).toEqual({ items: [], total: 0 });
       expect(list).not.toHaveBeenCalled();
     },
   );

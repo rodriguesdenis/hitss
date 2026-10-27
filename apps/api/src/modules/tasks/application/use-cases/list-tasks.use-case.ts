@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { Clock } from '../../../../shared/domain/clock';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
+import type { Page } from '../../../../shared/application/page';
 import {
   ListTasksCriteria,
-  TaskPageView,
   TaskReadModel,
+  TaskView,
 } from '../interfaces/task-read-model.interface';
 import { TeamDirectory } from '../interfaces/team-directory.interface';
+import { toTaskView } from './task-view';
 
 export interface ListTasksInput {
   readonly ownerId: string;
@@ -21,20 +23,23 @@ export class ListTasksUseCase {
     private readonly clock: Clock,
   ) {}
 
-  async execute({ ownerId, criteria }: ListTasksInput): Promise<TaskPageView> {
+  async execute({
+    ownerId,
+    criteria,
+  }: ListTasksInput): Promise<Page<TaskView>> {
     const today = DueDate.todayFrom(this.clock.now());
     if (
       criteria.teamId !== undefined &&
       (await this.teams.findMissing(ownerId, [criteria.teamId])).length > 0
     ) {
-      return { page: { items: [], total: 0 }, teams: [], today };
+      return { items: [], total: 0 };
     }
     const page = await this.readModel.list(ownerId, criteria);
     const teamIds = [...new Set(page.items.flatMap((task) => task.teamIds))];
+    const teams = await this.teams.summaries(ownerId, teamIds);
     return {
-      page,
-      teams: await this.teams.summaries(ownerId, teamIds),
-      today,
+      items: page.items.map((task) => toTaskView(task, teams, today)),
+      total: page.total,
     };
   }
 }
