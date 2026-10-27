@@ -8,12 +8,12 @@ Brief requirement → epic → story (priority) → acceptance criteria → scen
 
 | Metric                                           | Value           |
 | ------------------------------------------------ | --------------- |
-| Specs / stories / acceptance criteria            | 8 / 75 / 399    |
+| Specs / stories / acceptance criteria            | 9 / 75 / 399    |
 | Scenarios                                        | 452             |
 | `MUST` ACs (with scenario / with task / total)   | 260 / 260 / 260 |
 | `SHOULD` ACs (with scenario / with task / total) | 3 / 3 / 3       |
 | `COULD` ACs (with scenario / with task / total)  | 136 / 136 / 136 |
-| Tasks                                            | 126             |
+| Tasks                                            | 134             |
 
 ## Gaps and findings
 
@@ -869,3 +869,5 @@ Rows of the traceability table in the [brief](../brief/README.md#traceability-en
 | AC-07.10.4 | `ci-and-dx.feature` › Commit and pull-request conventions are enforced › Pull requests start from the template and protection is documented | review           | T-007-15 |
 
 ### 008-simplification
+
+### 009-backend-structure
