@@ -6,18 +6,18 @@ Every significant or non-obvious decision in **Teams & Tasks** is recorded here,
 
 The decisions that shape the code as it is. Read ADR-0020 together with ADR-0002: it replaces the CQRS, module-contract and unit-of-work parts and gives the module layout in use.
 
-| ADR                                                       | Decision                                                                                   | Status                              | Date       |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------- | ---------- |
-| [0001](0001-monorepo-pnpm-turborepo.md)                   | Monorepo with pnpm workspaces + Turborepo                                                  | Accepted                            | 2026-10-20 |
-| [0002](0002-nestjs-clean-architecture-ddd-cqrs.md)        | NestJS with Clean Architecture and DDD (CQRS part superseded)                              | Accepted, partly superseded by 0020 | 2026-10-20 |
-| [0020](0020-simplify-architecture-for-the-hiring-test.md) | Simplify the architecture: use cases, `TeamLookup`, one transaction per write, Bearer only | Accepted                            | 2026-10-22 |
-| [0003](0003-postgresql.md)                                | PostgreSQL as the database                                                                 | Accepted                            | 2026-10-20 |
-| [0004](0004-prisma-migrations-and-seeding.md)             | Prisma ORM, migrations and deterministic seeding                                           | Accepted                            | 2026-10-20 |
-| [0005](0005-rest-openapi-and-response-envelope.md)        | REST + OpenAPI with response/error envelopes                                               | Accepted                            | 2026-10-20 |
-| [0006](0006-offset-pagination.md)                         | Offset pagination (vs cursor)                                                              | Accepted                            | 2026-10-20 |
-| [0007](0007-better-auth.md)                               | Better Auth for authentication (Bearer tokens on `/api/v1`)                                | Accepted, partly superseded by 0020 | 2026-10-20 |
-| [0014](0014-testing-strategy.md)                          | Testing strategy and tooling                                                               | Accepted                            | 2026-10-20 |
-| [0018](0018-docker-compose-one-command-run.md)            | Docker Compose one-command run                                                             | Accepted                            | 2026-10-20 |
+| ADR                                                       | Decision                                                                                                                                         | Status                              | Date       |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | ---------- |
+| [0001](0001-monorepo-pnpm-turborepo.md)                   | Monorepo with pnpm workspaces + Turborepo                                                                                                        | Accepted                            | 2026-10-20 |
+| [0002](0002-nestjs-clean-architecture-ddd-cqrs.md)        | NestJS with Clean Architecture and DDD (CQRS part superseded)                                                                                    | Accepted, partly superseded by 0020 | 2026-10-20 |
+| [0020](0020-simplify-architecture-for-the-hiring-test.md) | Simplify the architecture: use cases, `TeamDirectory` → `TeamLookup`, module layout and dependency rules, one transaction per write, Bearer only | Accepted, amended 2026-10-26        | 2026-10-22 |
+| [0003](0003-postgresql.md)                                | PostgreSQL as the database                                                                                                                       | Accepted                            | 2026-10-20 |
+| [0004](0004-prisma-migrations-and-seeding.md)             | Prisma ORM, migrations and deterministic seeding                                                                                                 | Accepted                            | 2026-10-20 |
+| [0005](0005-rest-openapi-and-response-envelope.md)        | REST + OpenAPI with response/error envelopes                                                                                                     | Accepted                            | 2026-10-20 |
+| [0006](0006-offset-pagination.md)                         | Offset pagination (vs cursor)                                                                                                                    | Accepted                            | 2026-10-20 |
+| [0007](0007-better-auth.md)                               | Better Auth for authentication (Bearer tokens on `/api/v1`)                                                                                      | Accepted, partly superseded by 0020 | 2026-10-20 |
+| [0014](0014-testing-strategy.md)                          | Testing strategy and tooling                                                                                                                     | Accepted                            | 2026-10-20 |
+| [0018](0018-docker-compose-one-command-run.md)            | Docker Compose one-command run                                                                                                                   | Accepted                            | 2026-10-20 |
 
 ### Archive
 
