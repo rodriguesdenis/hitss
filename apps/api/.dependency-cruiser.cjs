@@ -86,17 +86,47 @@ module.exports = {
       to: { path: `${LAYER}/domain/repositories/` },
     },
     {
+      name: 'presentation-not-to-domain',
+      comment:
+        'A4 (ADR-0020, AC-09.4): presentation talks to its application layer only, never to its own domain; the shared kernel (shared/domain) stays allowed.',
+      severity: 'error',
+      from: { path: '^src/modules/([^/]+)/presentation/', ...NON_SPEC },
+      to: { path: '^src/modules/$1/domain/' },
+    },
+    {
+      name: 'application-not-to-other-modules',
+      comment:
+        'A5 (ADR-0020, AC-09.5): use cases depend on interfaces their own module declares, never on another module.',
+      severity: 'error',
+      from: { path: '^src/modules/([^/]+)/application/', ...NON_SPEC },
+      to: { path: '^src/modules/[^/]+/', pathNot: '^src/modules/$1/' },
+    },
+    {
       name: 'contexts-isolated',
       comment:
-        'A5 (ADR-0020, AC-08.6): a module reaches another only through its exported lookup service and its module file.',
+        'A5 (ADR-0020, AC-09.3): only a module file reaches another module; every other file stays inside its own module.',
       severity: 'error',
-      from: { path: '^src/modules/([^/]+)/', ...NON_SPEC },
+      from: {
+        path: '^src/modules/([^/]+)/',
+        pathNot: [
+          ...NON_SPEC.pathNot,
+          '^src/modules/[^/]+/[^/]+\\.module\\.ts$',
+        ],
+      },
+      to: { path: '^src/modules/[^/]+/', pathNot: '^src/modules/$1/' },
+    },
+    {
+      name: 'context-wiring',
+      comment:
+        "A5 (ADR-0020, AC-09.3): a module file imports another module only through that module's file and the providers it exports (application/*.service.ts).",
+      severity: 'error',
+      from: { path: '^src/modules/([^/]+)/[^/]+\\.module\\.ts$' },
       to: {
         path: '^src/modules/[^/]+/',
         pathNot: [
           '^src/modules/$1/',
-          '^src/modules/[^/]+/application/[^/]+-lookup\\.service\\.ts$',
           '^src/modules/[^/]+/[^/]+\\.module\\.ts$',
+          '^src/modules/[^/]+/application/[^/]+\\.service\\.ts$',
         ],
       },
     },
