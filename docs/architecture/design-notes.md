@@ -24,6 +24,11 @@ Non-obvious facts about the API that the code no longer carries as comments ([AC
 - **DTOs get `TaskStatus` through `application/interfaces`**, which re-exports the domain value object: the enum is needed for `@IsEnum` and the OpenAPI schema, and the re-export keeps `presentation-not-to-domain` free of exceptions.
 - **Only module files cross modules.** `contexts-isolated` forbids any other file from importing another module; `context-wiring` lets a module file import only the other module's file and its exported providers (`application/*.service.ts`). The shared kernel (`shared/domain`: `DomainError`, `Owner`, `Clock`) is not a module and stays importable from every layer.
 
+- **Write use cases return the view through the get use case.** Create, update and change-status call their module's `Get…UseCase` after the write (also after a no-op), so the response is built by exactly the mapping a `GET` uses (team chips, `isOverdue`, `taskCount`) and the controller never reads twice. It costs the same second query the controller made before.
+- **Controller bodies are spread into the input** (`{ ...body, ownerId, id }`): the global pipe whitelists DTO fields, and `ownerId`/`id` come last so a body can never set them.
+- **`:id` is a param DTO.** `IdParamDto` uses `@IsUUID('loose')` because Nest's `ParseUUIDPipe` accepted any 8-4-4-4-12 hex string (no version or variant check); class-validator's default `'all'` would start rejecting ids such as version 0 or 9. The message is class-validator's `id must be a UUID`, the same text the old pipe built.
+- **Which error wins when both `:id` and the body are invalid is a race.** Nest resolves all arguments with `Promise.all`, so the first argument to reject decides the 400. With the old pipe and with `IdParamDto` the body error wins whenever the body is invalid (the id error shows only with a valid body); `id-param.dto.spec` pins that order.
+
 ## Logging and telemetry
 
 - **`route` is recorded by an accessor.** Express assigns `req.route` for every route layer and Nest's catch-all middleware route overwrites the handler's, so `route-template.ts` defines a setter on `req.route` before routing (in `genReqId`) and keeps the last non-wildcard template. It depends on Express 5 internals; the `/api/v1/tasks/:id` logger test guards it.

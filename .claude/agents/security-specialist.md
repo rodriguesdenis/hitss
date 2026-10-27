@@ -16,7 +16,7 @@ You own security for **Teams & Tasks**.
 
 - AuthN: Better Auth session required on every `/api/v1` route except health/docs/auth.
 - AuthZ / BOLA: every read/write scoped by `ownerId`; access to another user's resource returns **404** (no existence leak).
-- Input: class-validator whitelist + forbidNonWhitelisted; length limits on all strings; hex color regex; UUID params via `ParseUUIDPipe`; pagination `limit` capped.
+- Input: class-validator whitelist + forbidNonWhitelisted; length limits on all strings; hex color regex; UUID params via `IdParamDto` (`@IsUUID('loose')`); pagination `limit` capped.
 - Mass assignment: DTOs never accept `ownerId`, `id`, `version` except where explicitly designed.
 - Rate limiting (`@nestjs/throttler`, stricter on auth), `helmet`, explicit CORS allowlist, request size limits.
 - Errors never leak stack traces or SQL; logs never contain secrets, tokens or passwords (pino redaction).

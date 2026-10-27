@@ -98,7 +98,7 @@ Arrows are compile-time imports; everything points toward `domain/`, and present
 
 - **Write side.** A use case loads an entity through the repository (an `abstract class` in `domain/repositories/`, used directly as the Nest DI token), calls a domain method and saves the entity. Entities validate in `create()` and are rebuilt from storage with `restore()`; their change methods return `false` on a no-op, and then nothing is written. The repository increments `version` in SQL. Writes are last-write-wins (ADR-0020).
 - **Read side.** Lists and single views come from `application/interfaces/<x>-read-model.interface.ts`: plain view types and `Page<T>`, implemented by SQL in `<x>.prisma-read.ts` (filters, trigram search, whitelisted sort with an id tie-break, total from the same snapshot). Reads never build entities, so view and page types stay out of the domain. The use case finishes the view: `TaskView` leaves `GetTaskUseCase`/`ListTasksUseCase` with `isOverdue` (the domain rule `Task.isOverdue` against the clock's UTC day) and the task's live teams ordered by name.
-- **Presentation.** Controllers call use cases only, never repositories or Prisma. A write use case returns the new id (or nothing); the controller reads the result back through the get use case, so every single-resource response has the same shape. Each response DTO maps a view with `static from(view)`; presentation imports nothing from its module's domain (status values come through `application/interfaces`). The global envelope interceptor wraps the result in `{ data, meta? }`, and the exception filter turns a domain error into `{ error }` from the error's own code, kind, message and details.
+- **Presentation.** Controllers call use cases only, never repositories or Prisma. A write use case returns the view of what it wrote, read through its module's get use case, so every single-resource response has the same shape and a controller method is one call plus `XResponseDto.from(view)` (create also sets `Location`). Route OpenAPI decorators live in `presentation/docs/<x>s.docs.ts`, one composed decorator per route; `:id` is validated by `IdParamDto` through the global `ValidationPipe`. Each response DTO maps a view with `static from(view)`; presentation imports nothing from its module's domain (status values come through `application/interfaces`). The global envelope interceptor wraps the result in `{ data, meta? }`, and the exception filter turns a domain error into `{ error }` from the error's own code, kind, message and details.
 - **Composition root.** `<x>s.module.ts` binds each interface to its adapter (`{ provide: TeamRepository, useClass: PrismaTeamRepository }`) and, in Tasks, `TeamDirectory` to the `TeamLookup` that `TeamsModule` exports.
 
 ## 4. Domain
@@ -159,7 +159,7 @@ sequenceDiagram
   MW->>G: request (reqId and traceId in every log line)
   G->>PG: Better Auth resolves the session
   G->>C: ownerId via @CurrentOwner()
-  C->>C: ParseUuidPipe, ValidationPipe (ChangeTaskStatusDto)
+  C->>C: ValidationPipe (IdParamDto, ChangeTaskStatusDto)
   C->>UC: execute({ ownerId, id, status })
   UC->>R: findById(ownerId, id)
   R->>PG: SELECT … WHERE id AND owner_id AND deleted_at IS NULL
@@ -171,7 +171,9 @@ sequenceDiagram
   else same status
     Note over UC: no write, version unchanged
   end
-  C->>C: GetTaskUseCase → TaskView → TaskResponseDto.from
+  UC->>UC: GetTaskUseCase → TaskView
+  UC-->>C: TaskView
+  C->>C: TaskResponseDto.from(view)
   C-->>Client: 200 { data: task } + X-Request-Id
 ```
 
@@ -189,7 +191,7 @@ shared/
 ├── application/page.ts                      # Page<T>, PageRequest, Sort
 ├── infrastructure/                          # prisma/ (PrismaService, database probe), sql/, system-clock.ts
 ├── presentation/                            # envelope interceptor, exception filter (kind → status),
-│                                            # validation and UUID pipes, pagination DTO, sort, page meta,
+│                                            # validation pipe, pagination and id-param DTOs, sort, page meta,
 │                                            # @CurrentOwner(), @Public(), @RawResponse(), CORS,
 │                                            # validators/is-calendar-date.ts, OpenAPI envelope helpers
 │                                            # (they register their models; controllers add none)
@@ -211,7 +213,8 @@ modules/
 │   │   ├── team.prisma-repository.ts        # row ⇄ entity mapping as private functions; single-transaction delete
 │   │   └── team.prisma-read.ts              # lists with taskCount, summaries
 │   ├── presentation/
-│   │   ├── teams.controller.ts
+│   │   ├── teams.controller.ts              # routing only: one use case call per route
+│   │   ├── docs/teams.docs.ts               # one composed OpenAPI decorator per route
 │   │   └── dto/                             # create (update extends it), list query, response with from(view)
 │   └── teams.module.ts
 └── tasks/
@@ -222,7 +225,7 @@ modules/
     │   │   └── team-directory.interface.ts  # TeamDirectory + TeamSummary: what tasks needs from teams
     │   └── use-cases/                       # create, list, get, update, change-status, delete; task-view.ts builds TaskView
     ├── infrastructure/persistence/          # task.prisma-repository.ts (mapping as private functions), task.prisma-read.ts
-    ├── presentation/                        # tasks.controller.ts, dto/ (update extends create minus status/teamIds; TaskResponseDto.from)
+    ├── presentation/                        # tasks.controller.ts, docs/tasks.docs.ts, dto/ (update extends create minus status/teamIds; TaskResponseDto.from)
     └── tasks.module.ts                      # imports TeamsModule; { provide: TeamDirectory, useExisting: TeamLookup }
 ```
 
