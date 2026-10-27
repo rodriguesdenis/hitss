@@ -1,7 +1,7 @@
 # ADR-0020 — Simplify the architecture for the hiring test
 
 - **Status:** Accepted
-- **Date:** 2026-10-22
+- **Date:** 2026-10-22 · **Amended:** 2026-10-26 (module layout and dependency rules, [spec 009](../../specs/009-backend-structure/spec.md))
 - **Deciders:** user (product owner of the submission), software-architect, nestjs-specialist, database-specialist
 - **Supersedes in part:** [ADR-0002](0002-nestjs-clean-architecture-ddd-cqrs.md) (CQRS, buses, module contracts, unit of work), [ADR-0007](0007-better-auth.md) (cookie sessions and CSRF on `/api/v1`), [ADR-0013](archive/0013-opentelemetry-and-signoz.md) (custom telemetry machinery), [ADR-0015](archive/0015-optimistic-concurrency.md) (ETag / `If-Match`)
 
@@ -32,47 +32,56 @@ Each piece was reasoned and tested, but together they cost more reading time tha
 
 ## Decision outcome
 
-Option 3. Per module (amended 2026-10-22 twice: in T-008-09 to the tree the code settled on, then by the user-approved addendum T-008-10 to T-008-12, which removes policies, views and mapper files and moves tests into the module):
+Option 3. Per module (amended 2026-10-22 twice: in T-008-09 to the tree the code settled on, then by the user-approved addendum T-008-10 to T-008-12, which removes policies, views and mapper files and moves tests into the module; amended 2026-10-26 by [spec 009](../../specs/009-backend-structure/spec.md), which flattens presentation, renames ports to interfaces, removes presenters and per-module error tables, and inverts the tasks → teams dependency):
 
 ```
 modules/<x>s/
 ├── domain/
-│   ├── entities/<x>.entity.ts            # create() validates new data; restore() rebuilds from storage;
-│   │                                     # simple field rules and derived facts (Task.isOverdue) live here
-│   ├── value-objects/<y>.vo.ts           # only concepts with real rules: TaskTitle, TaskStatus, DueDate,
-│   │                                     # TeamName, ColorHex
-│   ├── errors/<x>.errors.ts
-│   └── repositories/<x>.repository.ts    # abstract class (DI token), domain types only
+│   ├── entities/<x>.entity.ts                 # create() validates new data; restore() rebuilds from storage;
+│   │                                          # simple field rules and derived facts (Task.isOverdue) live here
+│   ├── value-objects/<y>.vo.ts                # only concepts with real rules: TaskTitle, TaskStatus, DueDate,
+│   │                                          # TeamName, ColorHex
+│   ├── errors/<x>.errors.ts                   # each error declares code, kind, public message, details
+│   └── repositories/<x>.repository.ts         # abstract class (DI token), domain types only
 ├── application/
-│   ├── use-cases/<verb>-<x>.use-case.ts  # one class, execute(input: plain TS type)
-│   └── ports/<x>.read-model.ts           # query side: view types and pages, implemented by SQL
-├── presentation/http/
+│   ├── use-cases/<verb>-<x>.use-case.ts       # one class, execute(input: plain TS type), returns views
+│   └── interfaces/<z>.interface.ts            # what the use cases need from outside: the read model
+│                                              # (views, pages) and, in tasks, TeamDirectory
+├── presentation/
 │   ├── <x>s.controller.ts
-│   ├── dto/                              # class-validator requests (update extends create),
-│   │                                     # <x>-response.dto.ts with @ApiProperty
-│   └── presenters/<x>.presenter.ts       # explicit view → response mapping (and assembly, e.g. team chips)
+│   └── dto/                                   # class-validator requests (update extends create),
+│                                              # <x>-response.dto.ts with @ApiProperty and static from(view)
 ├── infrastructure/persistence/
-│   ├── <x>.prisma-repository.ts          # row ⇄ entity mapping as private functions in this file
-│   └── <x>.prisma-read.ts                # implements the read model
-├── tests/{unit,integration,e2e}/         # the module's own tests; cross-cutting ones stay in apps/api/test
-├── <x>-lookup.service.ts                 # only when other modules need it (teams: TeamLookup)
-└── <x>s.module.ts
+│   ├── <x>.prisma-repository.ts               # row ⇄ entity mapping as private functions in this file
+│   └── <x>.prisma-read.ts                     # implements the read model
+├── tests/{unit,integration,e2e}/              # the module's own tests; cross-cutting ones stay in apps/api/test
+└── <x>s.module.ts                             # composition root; the only file that names another module
+teams/application/team-lookup.service.ts       # TeamLookup, the only provider TeamsModule exports
 shared/
-├── domain/                               # DomainError, Clock, Owner
-├── application/page.ts                   # Page<T>, PageRequest, Sort
+├── domain/                                    # DomainError (code, kind), Clock, Owner
+├── application/page.ts                        # Page<T>, PageRequest, Sort
 ├── infrastructure/prisma/prisma.service.ts
-├── presentation/                         # envelope interceptor, exception filter + per-module error tables,
-│                                         # pipes, validators, pagination query DTO, @CurrentOwner(),
-│                                         # OpenAPI envelope decorators (they register their extra models)
-└── observability/                        # pino logger config
+├── presentation/                              # envelope interceptor, exception filter (kind → status), pipes,
+│                                              # validators, pagination query DTO, @CurrentOwner(),
+│                                              # OpenAPI envelope decorators (they register their extra models)
+└── observability/                             # pino logger config
 ```
+
+**Dependency rules** (amendment 2026-10-26, enforced by dependency-cruiser in `pnpm arch`, each with a violating fixture):
+
+- The domain imports no outer layer, no framework and no generated client.
+- Application imports no adapter and nothing from another module. When tasks needs teams, tasks declares what it needs (`TeamDirectory` in `application/interfaces`) and `tasks.module.ts` binds it to the exported `TeamLookup` with `useExisting`: the consumer owns the interface, the provider module never learns about it.
+- Presentation imports application and the shared kernel, never its module's domain: business facts such as `isOverdue` and the order of team chips come out of the use case in the view, and DTOs only shape them.
+- A module reaches another only from its own `<x>s.module.ts`, and only the other module file and the provider it exports.
+- Domain errors carry their public meaning (`code`, `kind`, message, `details`) but no HTTP; the global exception filter maps `validation → 400`, `not_found → 404`, `conflict → 409`, `rule → 422`, so a new error needs no table or registration.
+- `identity` is an adapter around Better Auth (guards, middleware, hooks) with no domain or use cases; it keeps its flat layout.
 
 **Removed**
 
 | Removed                                                                                                | Replaced by                                                                                                                |
 | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | `@nestjs/cqrs`, commands, queries, buses                                                               | Use-case classes injected into controllers                                                                                 |
-| Module `contracts/` and QueryBus adapters                                                              | `TeamsModule` exports a small `TeamLookup` service that `TasksModule` injects                                              |
+| Module `contracts/` and QueryBus adapters                                                              | `TeamsModule` exports a small `TeamLookup` service; `TasksModule` binds it to its own `TeamDirectory` interface            |
 | `nestjs-cls`, unit of work, in-transaction / after-commit events, advisory link lock                   | `DeleteTeam` runs one `prisma.$transaction`: soft-delete the team and delete its `task_teams` rows                         |
 | Cookie auth on `/api/v1`, CSRF guard, Origin checks, JSON-body guard (`415`), cookie scheme in OpenAPI | Bearer tokens only on `/api/v1` (Better Auth `bearer` plugin); Better Auth keeps its own cookie handling on `/api/auth/*`  |
 | ETag, `If-Match`, `412`, retry-once                                                                    | Plain last-write-wins updates; `version` stays as data                                                                     |
@@ -111,5 +120,5 @@ shared/
 
 ## Links
 
-- Specification and plan: [008 — Simplification](../../specs/008-simplification/spec.md)
+- Specification and plan: [008 — Simplification](../../specs/008-simplification/spec.md) · amendment: [009 — Backend structure](../../specs/009-backend-structure/spec.md)
 - Superseded parts: [ADR-0002](0002-nestjs-clean-architecture-ddd-cqrs.md) · [ADR-0007](0007-better-auth.md) · [ADR-0013](archive/0013-opentelemetry-and-signoz.md) · [ADR-0015](archive/0015-optimistic-concurrency.md)
