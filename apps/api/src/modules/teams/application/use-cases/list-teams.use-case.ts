@@ -6,15 +6,16 @@ import {
   TeamView,
 } from '../interfaces/team-read-model.interface';
 
-export interface ListTeamsInput extends ListTeamsCriteria {
+export interface ListTeamsInput {
   readonly ownerId: string;
+  readonly criteria: ListTeamsCriteria;
 }
 
 @Injectable()
 export class ListTeamsUseCase {
   constructor(private readonly readModel: TeamReadModel) {}
 
-  execute({ ownerId, ...criteria }: ListTeamsInput): Promise<Page<TeamView>> {
+  execute({ ownerId, criteria }: ListTeamsInput): Promise<Page<TeamView>> {
     return this.readModel.page(ownerId, criteria);
   }
 }

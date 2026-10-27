@@ -10,9 +10,13 @@ import {
   Length,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/presentation/dto/pagination-query.dto';
-import { sortValues } from '../../../../shared/presentation/sort';
-import { TASK_SORT_FIELDS } from '../../application/interfaces/task-read-model.interface';
-import { TaskStatus } from '../../application/interfaces/task-read-model.interface';
+import { parseSort, sortValues } from '../../../../shared/presentation/sort';
+import {
+  ListTasksCriteria,
+  TASK_SORT_FIELDS,
+  TaskSortField,
+  TaskStatus,
+} from '../../application/interfaces/task-read-model.interface';
 
 export const TASK_SORTS = sortValues(TASK_SORT_FIELDS);
 
@@ -59,4 +63,14 @@ export class ListTasksQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(TASK_SORTS, { message: `sort must be one of ${TASK_SORTS.join(', ')}` })
   sort: string = '-createdAt';
+
+  toCriteria(): ListTasksCriteria {
+    return {
+      page: { limit: this.limit, offset: this.offset },
+      teamId: this.teamId,
+      statuses: this.status && [...new Set(this.status)],
+      search: this.search,
+      sort: parseSort(this.sort as TaskSortField | `-${TaskSortField}`),
+    };
+  }
 }

@@ -11,12 +11,8 @@ import {
 } from '@nestjs/common';
 import type { Owner } from '../../../shared/domain/owner';
 import { IdParamDto } from '../../../shared/presentation/dto/id-param.dto';
-import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
-import { toPageMeta } from '../../../shared/presentation/page-meta';
-import { parseSort } from '../../../shared/presentation/sort';
 import { Location } from '../../../shared/presentation/decorators/location.decorator';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
-import type { TeamSortField } from '../application/interfaces/team-read-model.interface';
 import { CreateTeamUseCase } from '../application/use-cases/create-team.use-case';
 import { DeleteTeamUseCase } from '../application/use-cases/delete-team.use-case';
 import { GetTeamUseCase } from '../application/use-cases/get-team.use-case';
@@ -33,6 +29,7 @@ import {
   ApiReplaceTeam,
   ApiDeleteTeam,
 } from './docs/teams.docs';
+import { TeamPageResponseDto } from './dto/team-page-response.dto';
 import { TeamResponseDto } from './dto/team-response.dto';
 
 @ApiTeams()
@@ -51,18 +48,12 @@ export class TeamsController {
   async list(
     @CurrentOwner() { ownerId }: Owner,
     @Query() query: ListTeamsQueryDto,
-  ): Promise<{ data: TeamResponseDto[]; meta: PageMeta }> {
-    const page = { limit: query.limit, offset: query.offset };
-    const { items, total } = await this.listTeams.execute({
+  ): Promise<TeamPageResponseDto> {
+    const found = await this.listTeams.execute({
       ownerId,
-      page,
-      search: query.search,
-      sort: parseSort(query.sort as TeamSortField),
+      criteria: query.toCriteria(),
     });
-    return {
-      data: items.map((team) => TeamResponseDto.from(team)),
-      meta: toPageMeta(page, items.length, total),
-    };
+    return TeamPageResponseDto.from(found, query);
   }
 
   @Get(':id')

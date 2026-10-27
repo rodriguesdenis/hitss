@@ -13,11 +13,7 @@ import {
 import type { Owner } from '../../../shared/domain/owner';
 import { Location } from '../../../shared/presentation/decorators/location.decorator';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
-import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
-import { toPageMeta } from '../../../shared/presentation/page-meta';
-import { parseSort } from '../../../shared/presentation/sort';
 import { IdParamDto } from '../../../shared/presentation/dto/id-param.dto';
-import type { TaskSortField } from '../application/interfaces/task-read-model.interface';
 import { ChangeTaskStatusUseCase } from '../application/use-cases/change-task-status.use-case';
 import { CreateTaskUseCase } from '../application/use-cases/create-task.use-case';
 import { DeleteTaskUseCase } from '../application/use-cases/delete-task.use-case';
@@ -36,6 +32,7 @@ import {
   ApiReplaceTask,
   ApiDeleteTask,
 } from './docs/tasks.docs';
+import { TaskPageResponseDto } from './dto/task-page-response.dto';
 import { TaskResponseDto } from './dto/task-response.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -68,22 +65,12 @@ export class TasksController {
   async list(
     @CurrentOwner() { ownerId }: Owner,
     @Query() query: ListTasksQueryDto,
-  ): Promise<{ data: TaskResponseDto[]; meta: PageMeta }> {
-    const page = { limit: query.limit, offset: query.offset };
+  ): Promise<TaskPageResponseDto> {
     const found = await this.listTasks.execute({
       ownerId,
-      criteria: {
-        page,
-        teamId: query.teamId,
-        statuses: query.status && [...new Set(query.status)],
-        search: query.search,
-        sort: parseSort(query.sort as TaskSortField | `-${TaskSortField}`),
-      },
+      criteria: query.toCriteria(),
     });
-    return {
-      data: found.items.map((task) => TaskResponseDto.from(task)),
-      meta: toPageMeta(page, found.items.length, found.total),
-    };
+    return TaskPageResponseDto.from(found, query);
   }
 
   @Get(':id')

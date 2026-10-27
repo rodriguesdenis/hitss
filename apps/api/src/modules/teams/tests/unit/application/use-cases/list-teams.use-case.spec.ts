@@ -28,7 +28,7 @@ describe('ListTeamsUseCase', () => {
     const useCase = new ListTeamsUseCase({ page } as unknown as TeamReadModel);
 
     await expect(
-      useCase.execute({ ownerId: 'owner-1', ...CRITERIA }),
+      useCase.execute({ ownerId: 'owner-1', criteria: CRITERIA }),
     ).resolves.toEqual({ items: [VIEW], total: 1 });
     expect(page).toHaveBeenCalledWith('owner-1', CRITERIA);
   });
