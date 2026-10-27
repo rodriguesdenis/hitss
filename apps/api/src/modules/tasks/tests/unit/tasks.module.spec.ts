@@ -1,6 +1,4 @@
-import { Global, Module } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { DomainErrorMappings } from '../../../../shared/presentation/filters/domain-error-mappings';
 import { TeamLookup } from '../../../teams/application/team-lookup.service';
 import { TeamReadModel } from '../../../teams/application/interfaces/team-read-model.interface';
 import { TeamRepository } from '../../../teams/domain/repositories/team.repository';
@@ -10,19 +8,10 @@ import { CreateTaskUseCase } from '../../application/use-cases/create-task.use-c
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { TasksModule } from '../../tasks.module';
 
-@Global()
-@Module({
-  providers: [
-    { provide: DomainErrorMappings, useValue: { register: jest.fn() } },
-  ],
-  exports: [DomainErrorMappings],
-})
-class GlobalsStub {}
-
 describe('TasksModule', () => {
   it('compiles with its use cases wired and TeamLookup injected from TeamsModule', async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [GlobalsStub, TasksModule],
+      imports: [TasksModule],
     })
       .overrideProvider(TaskReadModel)
       .useValue({})
@@ -43,7 +32,7 @@ describe('TasksModule', () => {
 
   it('AC-09.7 resolves TeamDirectory to the TeamLookup exported by TeamsModule', async () => {
     const moduleRef = await Test.createTestingModule({
-      imports: [GlobalsStub, TasksModule],
+      imports: [TasksModule],
     })
       .overrideProvider(TaskReadModel)
       .useValue({})

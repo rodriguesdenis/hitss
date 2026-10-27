@@ -40,7 +40,12 @@ describe('ColorHex', () => {
       expect(error).toBeInstanceOf(InvalidColorHex);
       expect(error).toMatchObject({
         field: 'colorHex',
-        message: 'Color must be a hex color in the form #RRGGBB.',
+        details: [
+          {
+            field: 'colorHex',
+            message: 'colorHex must be a #RRGGBB hex color',
+          },
+        ],
       });
     });
   });

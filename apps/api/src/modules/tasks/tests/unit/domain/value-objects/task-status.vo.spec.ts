@@ -60,7 +60,12 @@ describe('TaskStatus', () => {
 
       expect(error).toMatchObject({
         field: 'status',
-        message: 'Status must be one of PENDING, IN_PROGRESS or DONE.',
+        details: [
+          {
+            field: 'status',
+            message: 'status must be one of PENDING, IN_PROGRESS, DONE',
+          },
+        ],
       });
     });
   });

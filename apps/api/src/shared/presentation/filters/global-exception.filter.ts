@@ -12,10 +12,9 @@ import {
   SpanStatusCode,
   trace,
 } from '@opentelemetry/api';
-import { DomainError } from '../../domain/domain-error';
+import { DomainError, DomainErrorKind } from '../../domain/domain-error';
 import { sanitizeUrl } from '../../observability/sanitize-url';
 import { ApiException } from './api-exception';
-import { DomainErrorMappings } from './domain-error-mappings';
 import { CodeAndMessage, describeClientError, UNEXPECTED } from './error-codes';
 
 export interface ErrorEnvelope {
@@ -40,6 +39,13 @@ interface HttpResponseLike {
   status(code: number): { json(body: ErrorEnvelope): unknown };
 }
 
+export const DOMAIN_ERROR_STATUS: Readonly<Record<DomainErrorKind, number>> = {
+  validation: 400,
+  not_found: 404,
+  conflict: 409,
+  rule: 422,
+};
+
 interface Described {
   status: number;
   error: CodeAndMessage & { details?: unknown };
@@ -47,18 +53,15 @@ interface Described {
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  private readonly mappings: DomainErrorMappings;
   private readonly logger: ErrorLogger;
   private readonly activeSpan: ActiveSpan;
 
   constructor(
     options: {
-      mappings?: DomainErrorMappings;
       logger?: ErrorLogger;
       activeSpan?: ActiveSpan;
     } = {},
   ) {
-    this.mappings = options.mappings ?? new DomainErrorMappings();
     this.logger = options.logger ?? new Logger(GlobalExceptionFilter.name);
     this.activeSpan = options.activeSpan ?? (() => trace.getActiveSpan());
   }
@@ -87,13 +90,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         ),
       };
     }
-    const mapping = this.mappings.find(exception);
-    if (mapping) {
+    if (exception instanceof DomainError) {
       return {
-        status: mapping.status,
+        status: DOMAIN_ERROR_STATUS[exception.kind],
         error: withDetails(
-          { code: mapping.code, message: mapping.message },
-          mapping.details?.(exception as DomainError),
+          { code: exception.code, message: exception.message },
+          exception.details,
         ),
       };
     }

@@ -52,8 +52,13 @@ describe('DueDate', () => {
       expect(error).toBeInstanceOf(InvalidDueDate);
       expect(error).toMatchObject({
         field: 'dueDate',
-        message:
-          'Due date must be a real calendar date in the form YYYY-MM-DD.',
+        details: [
+          {
+            field: 'dueDate',
+            message:
+              'dueDate must be a real calendar date in the form YYYY-MM-DD',
+          },
+        ],
       });
     });
   });

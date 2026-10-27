@@ -1,7 +1,6 @@
-import { Module, OnModuleInit, Provider } from '@nestjs/common';
+import { Module, Provider } from '@nestjs/common';
 import { Clock } from '../../shared/domain/clock';
 import { SystemClock } from '../../shared/infrastructure/system-clock';
-import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
 import { TeamLookup } from '../teams/application/team-lookup.service';
 import { TeamsModule } from '../teams/teams.module';
 import { TaskReadModel } from './application/interfaces/task-read-model.interface';
@@ -15,7 +14,6 @@ import { TeamDirectory } from './application/interfaces/team-directory.interface
 import { TaskRepository } from './domain/repositories/task.repository';
 import { PrismaTaskReadModel } from './infrastructure/persistence/task.prisma-read';
 import { PrismaTaskRepository } from './infrastructure/persistence/task.prisma-repository';
-import { TASK_ERROR_MAPPINGS } from './presentation/http/task-error.mapping';
 import { TasksController } from './presentation/http/tasks.controller';
 
 function bindExisting<T>(
@@ -41,10 +39,4 @@ function bindExisting<T>(
     { provide: Clock, useClass: SystemClock },
   ],
 })
-export class TasksModule implements OnModuleInit {
-  constructor(private readonly errorMappings: DomainErrorMappings) {}
-
-  onModuleInit(): void {
-    this.errorMappings.register(TASK_ERROR_MAPPINGS);
-  }
-}
+export class TasksModule {}
