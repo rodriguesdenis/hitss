@@ -2,8 +2,12 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, TransformFnParams } from 'class-transformer';
 import { IsIn, IsOptional, IsString, Length } from 'class-validator';
 import { PaginationQueryDto } from '../../../../shared/presentation/dto/pagination-query.dto';
-import { sortValues } from '../../../../shared/presentation/sort';
-import { TEAM_SORT_FIELDS } from '../../application/interfaces/team-read-model.interface';
+import { parseSort, sortValues } from '../../../../shared/presentation/sort';
+import {
+  ListTeamsCriteria,
+  TEAM_SORT_FIELDS,
+  TeamSortField,
+} from '../../application/interfaces/team-read-model.interface';
 
 export const TEAM_SORTS = sortValues(TEAM_SORT_FIELDS);
 
@@ -22,4 +26,12 @@ export class ListTeamsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsIn(TEAM_SORTS)
   sort: string = '-createdAt';
+
+  toCriteria(): ListTeamsCriteria {
+    return {
+      page: { limit: this.limit, offset: this.offset },
+      search: this.search,
+      sort: parseSort(this.sort as TeamSortField | `-${TeamSortField}`),
+    };
+  }
 }

@@ -103,4 +103,37 @@ describe('ListTasksQueryDto', () => {
   ])('AC-03.6.5 sort %p → 400 on sort', async (sort) => {
     expect((await parse({ sort })).fields).toEqual(['sort']);
   });
+
+  describe('toCriteria', () => {
+    it('AC-10.8 maps the query to the use case criteria, statuses deduplicated', async () => {
+      const { dto } = await parse({
+        limit: '5',
+        offset: '10',
+        teamId: '0d8f6a52-6c1e-4b8a-9f3e-5a7c2e1d4b90',
+        status: 'DONE,PENDING,DONE',
+        search: ' login ',
+        sort: '-dueDate',
+      });
+
+      expect(dto.toCriteria()).toEqual({
+        page: { limit: 5, offset: 10 },
+        teamId: '0d8f6a52-6c1e-4b8a-9f3e-5a7c2e1d4b90',
+        statuses: ['DONE', 'PENDING'],
+        search: 'login',
+        sort: { field: 'dueDate', direction: 'desc' },
+      });
+    });
+
+    it('AC-10.8 leaves absent filters undefined and sorts by -createdAt', async () => {
+      const { dto } = await parse({});
+
+      expect(dto.toCriteria()).toEqual({
+        page: { limit: 20, offset: 0 },
+        teamId: undefined,
+        statuses: undefined,
+        search: undefined,
+        sort: { field: 'createdAt', direction: 'desc' },
+      });
+    });
+  });
 });

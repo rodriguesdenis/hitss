@@ -82,4 +82,24 @@ describe('ListTeamsQueryDto', () => {
   it('AC-02.2.9 an unknown parameter → 400 naming it', async () => {
     expect(await failedFields({ color: 'red' })).toEqual(['color']);
   });
+
+  it('AC-10.8 toCriteria maps the query to the use case criteria', async () => {
+    const dto = await parse({
+      limit: '5',
+      offset: '10',
+      search: ' mob ',
+      sort: 'name',
+    });
+
+    expect(dto.toCriteria()).toEqual({
+      page: { limit: 5, offset: 10 },
+      search: 'mob',
+      sort: { field: 'name', direction: 'asc' },
+    });
+    expect((await parse({})).toCriteria()).toEqual({
+      page: { limit: 20, offset: 0 },
+      search: undefined,
+      sort: { field: 'createdAt', direction: 'desc' },
+    });
+  });
 });
