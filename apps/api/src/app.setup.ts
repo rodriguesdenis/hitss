@@ -6,13 +6,17 @@ import { APP_CONFIG, AppConfig } from './config/app-config';
 import { setupDocs } from './openapi/openapi-document';
 import { requestIdMiddleware } from './shared/observability/logging/request-id';
 import { corsOptions } from './shared/presentation/cors-options';
+import { DEFAULT_VERSION, GLOBAL_PREFIX } from './shared/presentation/routing';
 import { GlobalExceptionFilter } from './shared/presentation/filters/global-exception.filter';
 import { EnvelopeInterceptor } from './shared/presentation/interceptors/envelope.interceptor';
 import { AppValidationPipe } from './shared/presentation/pipes/validation.pipe';
 
 export function configureRouting(app: INestApplication): void {
-  app.setGlobalPrefix('api');
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
+  app.setGlobalPrefix(GLOBAL_PREFIX);
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: DEFAULT_VERSION,
+  });
 }
 
 export function setupApp<T extends INestApplication>(app: T): T {

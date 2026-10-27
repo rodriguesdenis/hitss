@@ -36,7 +36,7 @@ One PR, one commit per task, in this order. `docs/010-thin-controllers-spec` (T-
 
 ## T-010-04 — `@Location()`
 
-- **Changes:** `shared/presentation/decorators/location.decorator.ts` (`UseInterceptors(LocationInterceptor)`) and `interceptors/location.interceptor.ts`; tasks and teams create use `@Location()` and drop `@Res()` and `setHeader`; an interceptor unit spec covers paths with a query string and a trailing slash, and bodies without an `id`.
+- **Changes:** `shared/presentation/decorators/location.decorator.ts` (`UseInterceptors(LocationInterceptor)`) and `interceptors/location.interceptor.ts`; tasks and teams create use `@Location()` and drop `@Res()` and `setHeader`; the path comes from the declared route and the shared `GLOBAL_PREFIX`/`DEFAULT_VERSION`, never from the request; an interceptor unit spec covers an upper-case request with a trailing slash and a query string, a declared version, and bodies without an `id`.
 - **Covers:** AC-10.7.
 - **Done when:** the e2e `Location` assertions pass unchanged; `Location` is still in the CORS exposed headers.
 
