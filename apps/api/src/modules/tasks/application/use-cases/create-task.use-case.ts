@@ -6,7 +6,9 @@ import { TaskRepository } from '../../domain/repositories/task.repository';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
+import type { TaskView } from '../interfaces/task-read-model.interface';
 import { TeamDirectory } from '../interfaces/team-directory.interface';
+import { GetTaskUseCase } from './get-task.use-case';
 
 export interface CreateTaskInput {
   readonly ownerId: string;
@@ -23,9 +25,10 @@ export class CreateTaskUseCase {
     private readonly tasks: TaskRepository,
     private readonly teams: TeamDirectory,
     private readonly clock: Clock,
+    private readonly getTask: GetTaskUseCase,
   ) {}
 
-  async execute(input: CreateTaskInput): Promise<string> {
+  async execute(input: CreateTaskInput): Promise<TaskView> {
     const task = Task.create({
       ownerId: input.ownerId,
       title: TaskTitle.create(input.title),
@@ -46,6 +49,6 @@ export class CreateTaskUseCase {
       }
       throw error;
     }
-    return task.id;
+    return this.getTask.execute({ ownerId: input.ownerId, id: task.id });
   }
 }

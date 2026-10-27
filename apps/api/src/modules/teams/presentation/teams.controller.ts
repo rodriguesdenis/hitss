@@ -17,10 +17,7 @@ import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope
 import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
-import type {
-  TeamSortField,
-  TeamView,
-} from '../application/interfaces/team-read-model.interface';
+import type { TeamSortField } from '../application/interfaces/team-read-model.interface';
 import { CreateTeamUseCase } from '../application/use-cases/create-team.use-case';
 import { DeleteTeamUseCase } from '../application/use-cases/delete-team.use-case';
 import { GetTeamUseCase } from '../application/use-cases/get-team.use-case';
@@ -75,7 +72,8 @@ export class TeamsController {
     @CurrentOwner() { ownerId }: Owner,
     @Param() { id }: IdParamDto,
   ): Promise<TeamResponseDto> {
-    return TeamResponseDto.from(await this.getTeam.execute({ ownerId, id }));
+    const view = await this.getTeam.execute({ ownerId, id });
+    return TeamResponseDto.from(view);
   }
 
   @Post()
@@ -86,15 +84,9 @@ export class TeamsController {
     @Body() body: CreateTeamDto,
     @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<TeamResponseDto> {
-    const id = await this.createTeam.execute({
-      ownerId,
-      name: body.name,
-      colorHex: body.colorHex,
-      description: body.description,
-    });
-    const team: TeamView = await this.getTeam.execute({ ownerId, id });
-    response.setHeader('Location', `/api/v1/teams/${team.id}`);
-    return TeamResponseDto.from(team);
+    const view = await this.createTeam.execute({ ...body, ownerId });
+    response.setHeader('Location', `/api/v1/teams/${view.id}`);
+    return TeamResponseDto.from(view);
   }
 
   @Put(':id')
@@ -104,14 +96,8 @@ export class TeamsController {
     @Param() { id }: IdParamDto,
     @Body() body: UpdateTeamDto,
   ): Promise<TeamResponseDto> {
-    await this.updateTeam.execute({
-      ownerId,
-      id,
-      name: body.name,
-      colorHex: body.colorHex,
-      description: body.description,
-    });
-    return TeamResponseDto.from(await this.getTeam.execute({ ownerId, id }));
+    const view = await this.updateTeam.execute({ ...body, ownerId, id });
+    return TeamResponseDto.from(view);
   }
 
   @Delete(':id')

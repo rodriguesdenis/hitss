@@ -78,7 +78,7 @@ describe('UNKNOWN_TEAMS after a team-link FK violation (integration)', () => {
 
   it('AC-03.9.3 replace: UNKNOWN_TEAMS lists the id whose row is gone, and the task is unchanged', async () => {
     const live = await team();
-    const id = await createTask().execute({
+    const { id } = await createTask().execute({
       ownerId: owner,
       title: 'Draft',
       teamIds: [live],

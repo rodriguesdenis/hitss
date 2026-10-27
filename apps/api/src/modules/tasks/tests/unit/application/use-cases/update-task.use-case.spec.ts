@@ -14,6 +14,7 @@ import {
   UpdateTaskInput,
   UpdateTaskUseCase,
 } from '../../../../application/use-cases/update-task.use-case';
+import { GetTaskUseCase } from '../../../../application/use-cases/get-task.use-case';
 
 const OWNER = 'owner-1';
 const CREATED = new Date('2026-10-20T13:00:00.000Z');
@@ -26,9 +27,11 @@ describe('UpdateTaskUseCase', () => {
   let tasks: InMemoryTaskRepository;
   let directory: InMemoryTeamDirectory;
   let useCase: UpdateTaskUseCase;
+  let read: jest.Mock;
   let ID: string;
 
   beforeEach(() => {
+    read = jest.fn(({ id }: { id: string }) => Promise.resolve({ id }));
     tasks = new InMemoryTaskRepository();
     directory = new InMemoryTeamDirectory();
     for (let n = 1; n <= 11; n += 1) {
@@ -46,7 +49,9 @@ describe('UpdateTaskUseCase', () => {
     tasks.seed(draft);
     ID = draft.id;
     const clock: Clock = { now: () => NOW };
-    useCase = new UpdateTaskUseCase(tasks, directory, clock);
+    useCase = new UpdateTaskUseCase(tasks, directory, clock, {
+      execute: read,
+    } as unknown as GetTaskUseCase);
   });
 
   const replace = (
@@ -154,5 +159,17 @@ describe('UpdateTaskUseCase', () => {
     expect(error).toBeInstanceOf(UnknownTeams);
     expect((error as UnknownTeams).teamIds).toEqual([DESIGN]);
     expect(stored()?.version).toBe(1);
+  });
+
+  it('AC-10.5 returns the view of the replaced task, built by GetTaskUseCase', async () => {
+    await expect(replace({ title: 'Final' })).resolves.toEqual({ id: ID });
+    expect(read).toHaveBeenCalledWith({ ownerId: OWNER, id: ID });
+  });
+
+  it('AC-10.5 returns the view even when nothing changed', async () => {
+    const update = jest.spyOn(tasks, 'update');
+
+    await expect(replace()).resolves.toEqual({ id: ID });
+    expect(update).not.toHaveBeenCalled();
   });
 });
