@@ -72,7 +72,7 @@ shared/
 - The domain imports no outer layer, no framework and no generated client.
 - Application imports no adapter and nothing from another module. When tasks needs teams, tasks declares what it needs (`TeamDirectory` in `application/interfaces`) and `tasks.module.ts` binds it to the exported `TeamLookup` with `useExisting`: the consumer owns the interface, the provider module never learns about it.
 - Presentation imports application and the shared kernel, never its module's domain: business facts such as `isOverdue` and the order of team chips come out of the use case in the view, and DTOs only shape them.
-- A module reaches another only from its own `<x>s.module.ts`, and only the other module file and the provider it exports.
+- A module reaches another only from its own `<x>s.module.ts` (`contexts-isolated`), and from there only the other module file and the provider it exports from `application/*.service.ts` (`context-wiring`).
 - Domain errors carry their public meaning (`code`, `kind`, message, `details`) but no HTTP; the global exception filter maps `validation → 400`, `not_found → 404`, `conflict → 409`, `rule → 422`, so a new error needs no table or registration.
 - `identity` is an adapter around Better Auth (guards, middleware, hooks) with no domain or use cases; it keeps its flat layout.
 
