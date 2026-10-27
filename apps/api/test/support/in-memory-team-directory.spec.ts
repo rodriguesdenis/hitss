@@ -1,4 +1,4 @@
-import { InMemoryTeamLookup } from './in-memory-team-lookup';
+import { InMemoryTeamDirectory } from './in-memory-team-directory';
 
 const OWNER = 'owner-1';
 const STRANGER = 'owner-2';
@@ -14,11 +14,11 @@ const BACKEND = {
 };
 const UNKNOWN = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
-describe('InMemoryTeamLookup', () => {
-  let directory: InMemoryTeamLookup;
+describe('InMemoryTeamDirectory', () => {
+  let directory: InMemoryTeamDirectory;
 
   beforeEach(() => {
-    directory = new InMemoryTeamLookup();
+    directory = new InMemoryTeamDirectory();
     directory.add(OWNER, MOBILE);
     directory.add(OWNER, BACKEND);
   });

@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { Clock } from '../../../../shared/domain/clock';
-import { TeamLookup } from '../../../teams/team-lookup.service';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
 import {
   ListTasksCriteria,
   TaskPageView,
   TaskReadModel,
 } from '../interfaces/task-read-model.interface';
+import { TeamDirectory } from '../interfaces/team-directory.interface';
 
 export interface ListTasksInput {
   readonly ownerId: string;
@@ -17,7 +17,7 @@ export interface ListTasksInput {
 export class ListTasksUseCase {
   constructor(
     private readonly readModel: TaskReadModel,
-    private readonly teams: TeamLookup,
+    private readonly teams: TeamDirectory,
     private readonly clock: Clock,
   ) {}
 

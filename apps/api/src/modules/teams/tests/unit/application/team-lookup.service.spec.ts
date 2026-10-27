@@ -1,5 +1,5 @@
-import { TeamReadModel } from '../../application/interfaces/team-read-model.interface';
-import { TeamLookup } from '../../team-lookup.service';
+import { TeamReadModel } from '../../../application/interfaces/team-read-model.interface';
+import { TeamLookup } from '../../../application/team-lookup.service';
 
 const MOBILE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const BACKEND = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';

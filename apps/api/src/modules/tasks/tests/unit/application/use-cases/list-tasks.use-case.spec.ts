@@ -1,4 +1,4 @@
-import { InMemoryTeamLookup } from '@test/support/in-memory-team-lookup';
+import { InMemoryTeamDirectory } from '@test/support/in-memory-team-directory';
 import { Clock } from '../../../../../../shared/domain/clock';
 import { TaskStatus } from '../../../../domain/value-objects/task-status.vo';
 import type {
@@ -36,7 +36,7 @@ const criteria = (
 
 describe('ListTasksUseCase', () => {
   let list: jest.Mock;
-  let directory: InMemoryTeamLookup;
+  let directory: InMemoryTeamDirectory;
   let handler: ListTasksUseCase;
 
   beforeEach(() => {
@@ -44,7 +44,7 @@ describe('ListTasksUseCase', () => {
       items: [record('t1', [MOBILE, GONE]), record('t2', [MOBILE, BACKEND])],
       total: 7,
     });
-    directory = new InMemoryTeamLookup();
+    directory = new InMemoryTeamDirectory();
     directory.add(OWNER, { id: MOBILE, name: 'Mobile', colorHex: '#7C3AED' });
     directory.add(OWNER, { id: BACKEND, name: 'Backend', colorHex: '#0EA5E9' });
     const clock: Clock = { now: () => new Date('2026-10-22T01:00:00.000Z') };

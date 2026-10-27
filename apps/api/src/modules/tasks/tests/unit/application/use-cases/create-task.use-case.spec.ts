@@ -1,5 +1,5 @@
 import { InMemoryTaskRepository } from '@test/support/in-memory-task.repository';
-import { InMemoryTeamLookup } from '@test/support/in-memory-team-lookup';
+import { InMemoryTeamDirectory } from '@test/support/in-memory-team-directory';
 import { Clock } from '../../../../../../shared/domain/clock';
 import {
   InvalidTaskTitle,
@@ -19,12 +19,12 @@ const team = (n: number) =>
 
 describe('CreateTaskUseCase', () => {
   let tasks: InMemoryTaskRepository;
-  let directory: InMemoryTeamLookup;
+  let directory: InMemoryTeamDirectory;
   let useCase: CreateTaskUseCase;
 
   beforeEach(() => {
     tasks = new InMemoryTaskRepository();
-    directory = new InMemoryTeamLookup();
+    directory = new InMemoryTeamDirectory();
     for (let n = 1; n <= 11; n += 1) {
       directory.add(OWNER, { id: team(n), name: `T${n}`, colorHex: '#7C3AED' });
     }

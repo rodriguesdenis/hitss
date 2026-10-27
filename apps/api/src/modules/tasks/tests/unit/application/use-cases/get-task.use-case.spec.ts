@@ -1,5 +1,5 @@
 import { Clock } from '../../../../../../shared/domain/clock';
-import { InMemoryTeamLookup } from '@test/support/in-memory-team-lookup';
+import { InMemoryTeamDirectory } from '@test/support/in-memory-team-directory';
 import { TaskNotFound } from '../../../../domain/errors/task.errors';
 import { TaskStatus } from '../../../../domain/value-objects/task-status.vo';
 import type {
@@ -28,7 +28,7 @@ const record: TaskRecord = {
 describe('GetTaskUseCase', () => {
   const handlerAt = (now: string, found: TaskRecord | null) => {
     const findById = jest.fn().mockResolvedValue(found);
-    const directory = new InMemoryTeamLookup();
+    const directory = new InMemoryTeamDirectory();
     directory.add(OWNER, { id: MOBILE, name: 'Mobile', colorHex: '#7C3AED' });
     const clock: Clock = { now: () => new Date(now) };
     return {

@@ -2,9 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   TeamReadModel,
   TeamSummary,
-} from './application/interfaces/team-read-model.interface';
-
-export type { TeamSummary };
+} from './interfaces/team-read-model.interface';
 
 @Injectable()
 export class TeamLookup {
