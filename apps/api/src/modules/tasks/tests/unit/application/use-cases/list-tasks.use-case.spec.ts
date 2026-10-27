@@ -5,7 +5,7 @@ import type {
   ListTasksCriteria,
   TaskReadModel,
   TaskRecord,
-} from '../../../../application/ports/task.read-model';
+} from '../../../../application/interfaces/task-read-model.interface';
 import { ListTasksUseCase } from '../../../../application/use-cases/list-tasks.use-case';
 
 const OWNER = 'owner-1';

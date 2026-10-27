@@ -2,7 +2,7 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { Clock } from '../../shared/domain/clock';
 import { SystemClock } from '../../shared/infrastructure/system-clock';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
-import { TeamReadModel } from './application/ports/team.read-model';
+import { TeamReadModel } from './application/interfaces/team-read-model.interface';
 import { CreateTeamUseCase } from './application/use-cases/create-team.use-case';
 import { DeleteTeamUseCase } from './application/use-cases/delete-team.use-case';
 import { GetTeamUseCase } from './application/use-cases/get-team.use-case';

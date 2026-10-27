@@ -1,5 +1,5 @@
 import type { TeamSummary } from '../../../../../../teams/team-lookup.service';
-import type { TaskRecord } from '../../../../../application/ports/task.read-model';
+import type { TaskRecord } from '../../../../../application/interfaces/task-read-model.interface';
 import { DueDate } from '../../../../../domain/value-objects/due-date.vo';
 import { TaskStatus } from '../../../../../domain/value-objects/task-status.vo';
 import { toTaskResponse } from '../../../../../presentation/http/presenters/task.presenter';

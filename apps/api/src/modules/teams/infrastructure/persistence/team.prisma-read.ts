@@ -9,7 +9,7 @@ import {
   TeamSortField,
   TeamSummary,
   TeamView,
-} from '../../application/ports/team.read-model';
+} from '../../application/interfaces/team-read-model.interface';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

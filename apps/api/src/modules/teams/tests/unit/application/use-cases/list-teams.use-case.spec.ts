@@ -2,7 +2,7 @@ import type {
   ListTeamsCriteria,
   TeamReadModel,
   TeamView,
-} from '../../../../application/ports/team.read-model';
+} from '../../../../application/interfaces/team-read-model.interface';
 import { ListTeamsUseCase } from '../../../../application/use-cases/list-teams.use-case';
 
 const VIEW: TeamView = {

@@ -4,7 +4,7 @@ import {
   ListTeamsCriteria,
   TeamReadModel,
   TeamView,
-} from '../ports/team.read-model';
+} from '../interfaces/team-read-model.interface';
 
 export interface ListTeamsInput extends ListTeamsCriteria {
   readonly ownerId: string;

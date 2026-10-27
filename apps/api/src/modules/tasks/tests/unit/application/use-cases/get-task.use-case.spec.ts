@@ -5,7 +5,7 @@ import { TaskStatus } from '../../../../domain/value-objects/task-status.vo';
 import type {
   TaskReadModel,
   TaskRecord,
-} from '../../../../application/ports/task.read-model';
+} from '../../../../application/interfaces/task-read-model.interface';
 import { GetTaskUseCase } from '../../../../application/use-cases/get-task.use-case';
 
 const OWNER = 'owner-1';

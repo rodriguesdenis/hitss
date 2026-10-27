@@ -8,7 +8,7 @@ import {
   TaskReadModel,
   TaskRecord,
   TaskSortField,
-} from '../../application/ports/task.read-model';
+} from '../../application/interfaces/task-read-model.interface';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

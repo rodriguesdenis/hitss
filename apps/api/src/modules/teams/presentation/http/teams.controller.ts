@@ -27,7 +27,7 @@ import { CurrentOwner } from '../../../../shared/presentation/decorators/current
 import type {
   TeamSortField,
   TeamView,
-} from '../../application/ports/team.read-model';
+} from '../../application/interfaces/team-read-model.interface';
 import { CreateTeamUseCase } from '../../application/use-cases/create-team.use-case';
 import { DeleteTeamUseCase } from '../../application/use-cases/delete-team.use-case';
 import { GetTeamUseCase } from '../../application/use-cases/get-team.use-case';
