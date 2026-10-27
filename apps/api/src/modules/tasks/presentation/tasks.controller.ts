@@ -17,7 +17,7 @@ import { CurrentOwner } from '../../../shared/presentation/decorators/current-ow
 import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
 import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
-import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
+import { IdParamDto } from '../../../shared/presentation/dto/id-param.dto';
 import type { TaskSortField } from '../application/interfaces/task-read-model.interface';
 import { ChangeTaskStatusUseCase } from '../application/use-cases/change-task-status.use-case';
 import { CreateTaskUseCase } from '../application/use-cases/create-task.use-case';
@@ -100,7 +100,7 @@ export class TasksController {
   @ApiGetTask()
   async get(
     @CurrentOwner() { ownerId }: Owner,
-    @Param('id', ParseUuidPipe) id: string,
+    @Param() { id }: IdParamDto,
   ): Promise<TaskResponseDto> {
     return TaskResponseDto.from(await this.getTask.execute({ ownerId, id }));
   }
@@ -109,7 +109,7 @@ export class TasksController {
   @ApiChangeTaskStatus()
   async changeStatus(
     @CurrentOwner() { ownerId }: Owner,
-    @Param('id', ParseUuidPipe) id: string,
+    @Param() { id }: IdParamDto,
     @Body() body: ChangeTaskStatusDto,
   ): Promise<TaskResponseDto> {
     await this.changeTaskStatus.execute({ ownerId, id, status: body.status });
@@ -120,7 +120,7 @@ export class TasksController {
   @ApiReplaceTask()
   async replace(
     @CurrentOwner() { ownerId }: Owner,
-    @Param('id', ParseUuidPipe) id: string,
+    @Param() { id }: IdParamDto,
     @Body() body: UpdateTaskDto,
   ): Promise<TaskResponseDto> {
     await this.updateTask.execute({
@@ -140,7 +140,7 @@ export class TasksController {
   @ApiDeleteTask()
   async delete(
     @CurrentOwner() { ownerId }: Owner,
-    @Param('id', ParseUuidPipe) id: string,
+    @Param() { id }: IdParamDto,
   ): Promise<void> {
     await this.deleteTask.execute({ ownerId, id });
   }

@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Owner } from '../../src/shared/domain/owner';
 import { CurrentOwner } from '../../src/shared/presentation/decorators/current-owner.decorator';
-import { ParseUuidPipe } from '../../src/shared/presentation/pipes/parse-uuid.pipe';
+import { IdParamDto } from '../../src/shared/presentation/dto/id-param.dto';
 
 export const KNOWN_ID = '7d0c5e2a-3f1b-4c8e-9a6d-2b4f8e1c0a93';
 
@@ -26,7 +26,7 @@ class OwnerProbeController {
   }
 
   @Get('items/:id')
-  item(@Param('id', ParseUuidPipe) id: string, @CurrentOwner() owner: Owner) {
+  item(@Param() { id }: IdParamDto, @CurrentOwner() owner: Owner) {
     if (id !== KNOWN_ID) {
       throw new NotFoundException();
     }
