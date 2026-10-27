@@ -261,11 +261,14 @@ const VIOLATIONS = [
     'shared imports a context',
     {
       'src/shared/application/a.ts': importOf(
-        '../../modules/teams/team-lookup.service',
+        '../../modules/teams/application/team-lookup.service',
       ),
-      'src/modules/teams/team-lookup.service.ts': 'export {};\n',
+      'src/modules/teams/application/team-lookup.service.ts': 'export {};\n',
     },
-    ['src/shared/application/a.ts', 'src/modules/teams/team-lookup.service.ts'],
+    [
+      'src/shared/application/a.ts',
+      'src/modules/teams/application/team-lookup.service.ts',
+    ],
   ],
   [
     'shared-not-to-features',
@@ -336,13 +339,81 @@ const VIOLATIONS = [
     ['src/shared/application/a.ts', 'test/helper.ts'],
   ],
   [
-    'contexts-isolated',
-    'tasks imports a teams file at the module root that is neither its lookup service nor its module',
+    'context-wiring',
+    'tasks.module imports a teams file at the module root that is not its module',
     {
       'src/modules/tasks/tasks.module.ts': importOf('../teams/teams.helpers'),
       'src/modules/teams/teams.helpers.ts': 'export {};\n',
     },
     ['src/modules/tasks/tasks.module.ts', 'src/modules/teams/teams.helpers.ts'],
+  ],
+  [
+    'context-wiring',
+    'AC-09.8 tasks.module imports the teams domain',
+    {
+      'src/modules/tasks/tasks.module.ts': importOf(
+        '../teams/domain/repositories/team.repository',
+      ),
+      'src/modules/teams/domain/repositories/team.repository.ts':
+        'export {};\n',
+    },
+    [
+      'src/modules/tasks/tasks.module.ts',
+      'src/modules/teams/domain/repositories/team.repository.ts',
+    ],
+  ],
+  [
+    'contexts-isolated',
+    'AC-09.8 a tasks use case imports the teams lookup service (the old exception is gone)',
+    {
+      'src/modules/tasks/application/use-cases/a.use-case.ts': importOf(
+        '../../../teams/application/team-lookup.service',
+      ),
+      'src/modules/teams/application/team-lookup.service.ts': 'export {};\n',
+    },
+    [
+      'src/modules/tasks/application/use-cases/a.use-case.ts',
+      'src/modules/teams/application/team-lookup.service.ts',
+    ],
+  ],
+  [
+    'contexts-isolated',
+    'AC-09.8 tasks presentation imports the teams module file',
+    {
+      'src/modules/tasks/presentation/a.ts': importOf(
+        '../../teams/teams.module',
+      ),
+      'src/modules/teams/teams.module.ts': 'export {};\n',
+    },
+    [
+      'src/modules/tasks/presentation/a.ts',
+      'src/modules/teams/teams.module.ts',
+    ],
+  ],
+  [
+    'application-not-to-other-modules',
+    'AC-09.8 tasks application imports the teams module file',
+    {
+      'src/modules/tasks/application/a.ts': importOf(
+        '../../teams/teams.module',
+      ),
+      'src/modules/teams/teams.module.ts': 'export {};\n',
+    },
+    ['src/modules/tasks/application/a.ts', 'src/modules/teams/teams.module.ts'],
+  ],
+  [
+    'presentation-not-to-domain',
+    'AC-09.8 a tasks DTO imports a tasks value object',
+    {
+      'src/modules/tasks/presentation/dto/a.dto.ts': importOf(
+        '../../domain/value-objects/b.vo',
+      ),
+      'src/modules/tasks/domain/value-objects/b.vo.ts': 'export {};\n',
+    },
+    [
+      'src/modules/tasks/presentation/dto/a.dto.ts',
+      'src/modules/tasks/domain/value-objects/b.vo.ts',
+    ],
   ],
   [
     'not-to-dev-dep',
@@ -454,8 +525,10 @@ const COMPLIANT = {
   'src/modules/tasks/infrastructure/persistence/task.prisma-repository.ts':
     importOf('../../domain/repositories/task.repository') +
     importOf('@prisma/client'),
+  'src/shared/domain/owner.ts': 'export {};\n',
   'src/modules/tasks/presentation/tasks.controller.ts':
     importOf('../application/use-cases/create-task.use-case') +
+    importOf('../../../shared/domain/owner') +
     importOf('@nestjs/common'),
   'src/modules/teams/application/team-lookup.service.ts': 'export {};\n',
   'src/modules/teams/teams.module.ts': importOf(
@@ -498,7 +571,7 @@ describe('architecture rules', () => {
     });
   }
 
-  it('AC-08.6 a module reaching another through its lookup service and module file passes', async () => {
+  it('AC-08.6 AC-09.3 a module file reaching another through its module file and exported provider passes', async () => {
     const violations = await violationsOf(project(COMPLIANT));
     assert.deepEqual(
       violations.map((v) => `${v.rule.name} ${v.from} -> ${v.to}`),
