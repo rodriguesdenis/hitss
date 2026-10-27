@@ -5,7 +5,9 @@ import { TaskRepository } from '../../domain/repositories/task.repository';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
+import type { TaskView } from '../interfaces/task-read-model.interface';
 import { TeamDirectory } from '../interfaces/team-directory.interface';
+import { GetTaskUseCase } from './get-task.use-case';
 
 export interface UpdateTaskInput {
   readonly ownerId: string;
@@ -23,9 +25,10 @@ export class UpdateTaskUseCase {
     private readonly tasks: TaskRepository,
     private readonly teams: TeamDirectory,
     private readonly clock: Clock,
+    private readonly getTask: GetTaskUseCase,
   ) {}
 
-  async execute(input: UpdateTaskInput): Promise<void> {
+  async execute(input: UpdateTaskInput): Promise<TaskView> {
     const { ownerId, id } = input;
     const task = await this.tasks.findById(ownerId, id);
     if (!task) {
@@ -46,16 +49,16 @@ export class UpdateTaskUseCase {
     const unknown = (missing: string[]) => new UnknownTeams(missing);
     await this.teams.assertAllLive(ownerId, teamIds, unknown);
 
-    if (!changes.includes(true)) {
-      return;
-    }
-    try {
-      await this.tasks.update(task);
-    } catch (error) {
-      if (error instanceof UnknownTeams && error.teamIds.length === 0) {
-        await this.teams.assertAllLive(ownerId, teamIds, unknown);
+    if (changes.includes(true)) {
+      try {
+        await this.tasks.update(task);
+      } catch (error) {
+        if (error instanceof UnknownTeams && error.teamIds.length === 0) {
+          await this.teams.assertAllLive(ownerId, teamIds, unknown);
+        }
+        throw error;
       }
-      throw error;
     }
+    return this.getTask.execute({ ownerId, id });
   }
 }

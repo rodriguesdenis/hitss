@@ -6,6 +6,7 @@ import {
   TeamNameAlreadyExists,
 } from '../../../../domain/errors/team.errors';
 import { CreateTeamUseCase } from '../../../../application/use-cases/create-team.use-case';
+import { GetTeamUseCase } from '../../../../application/use-cases/get-team.use-case';
 
 const NOW = new Date('2026-10-22T10:00:00.000Z');
 const MARINA = 'owner-marina';
@@ -20,10 +21,14 @@ class FixedClock extends Clock {
 describe('CreateTeamUseCase', () => {
   let repository: InMemoryTeamRepository;
   let useCase: CreateTeamUseCase;
+  let read: jest.Mock;
 
   beforeEach(() => {
+    read = jest.fn(({ id }: { id: string }) => Promise.resolve({ id }));
     repository = new InMemoryTeamRepository();
-    useCase = new CreateTeamUseCase(repository, new FixedClock());
+    useCase = new CreateTeamUseCase(repository, new FixedClock(), {
+      execute: read,
+    } as unknown as GetTeamUseCase);
   });
 
   const create = (
@@ -34,7 +39,7 @@ describe('CreateTeamUseCase', () => {
   ) => useCase.execute({ ownerId, name, colorHex, description });
 
   it('AC-02.1.1 stores a version-1 team with normalized values and returns its new id', async () => {
-    const id = await create(MARINA, '  Mobile  ', '#7c3aed', '  Apps  ');
+    const { id } = await create(MARINA, '  Mobile  ', '#7c3aed', '  Apps  ');
 
     const [team] = repository.all();
     expect(team).toMatchObject({ id, ownerId: MARINA, version: 1 });
@@ -66,7 +71,9 @@ describe('CreateTeamUseCase', () => {
   it('AC-02.1.6 AC-02.11.4 the same name for another owner is created', async () => {
     await create(RAFAEL, 'Mobile');
 
-    await expect(create(MARINA, 'Mobile')).resolves.toEqual(expect.any(String));
+    await expect(create(MARINA, 'Mobile')).resolves.toMatchObject({
+      id: expect.any(String) as string,
+    });
     expect(
       repository
         .all()
@@ -76,12 +83,14 @@ describe('CreateTeamUseCase', () => {
   });
 
   it('AC-02.1.7 a deleted team does not reserve its name', async () => {
-    const id = await create(MARINA, 'Mobile');
+    const { id } = await create(MARINA, 'Mobile');
     const deleted = await repository.findById(MARINA, id);
     deleted?.delete(NOW);
     await repository.update(deleted!);
 
-    await expect(create(MARINA, 'Mobile')).resolves.toEqual(expect.any(String));
+    await expect(create(MARINA, 'Mobile')).resolves.toMatchObject({
+      id: expect.any(String) as string,
+    });
   });
 
   it('AC-02.1.9 the unique index decides a race the fast path missed', async () => {
@@ -100,5 +109,13 @@ describe('CreateTeamUseCase', () => {
       InvalidColorHex,
     );
     expect(repository.all()).toHaveLength(0);
+  });
+
+  it('AC-10.5 returns the view of the new team, built by GetTeamUseCase', async () => {
+    const view = await create(MARINA, 'Mobile');
+
+    const [team] = repository.all();
+    expect(read).toHaveBeenCalledWith({ ownerId: MARINA, id: team?.id });
+    expect(view).toEqual({ id: team?.id });
   });
 });

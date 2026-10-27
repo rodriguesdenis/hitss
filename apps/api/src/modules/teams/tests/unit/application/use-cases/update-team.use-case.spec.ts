@@ -8,6 +8,7 @@ import {
 import { ColorHex } from '../../../../domain/value-objects/color-hex.vo';
 import { TeamName } from '../../../../domain/value-objects/team-name.vo';
 import { UpdateTeamUseCase } from '../../../../application/use-cases/update-team.use-case';
+import { GetTeamUseCase } from '../../../../application/use-cases/get-team.use-case';
 
 const CREATED = new Date('2026-10-22T10:00:00.000Z');
 const LATER = new Date('2026-10-22T11:00:00.000Z');
@@ -37,12 +38,16 @@ const team = (id: string, name: string, description: string | null = 'Apps') =>
 describe('UpdateTeamUseCase', () => {
   let repository: InMemoryTeamRepository;
   let useCase: UpdateTeamUseCase;
+  let read: jest.Mock;
 
   beforeEach(() => {
+    read = jest.fn(({ id }: { id: string }) => Promise.resolve({ id }));
     repository = new InMemoryTeamRepository();
     repository.seed(team(MOBILE_ID, 'Mobile'));
     repository.seed(team(BACKEND_ID, 'Backend'));
-    useCase = new UpdateTeamUseCase(repository, new FixedClock());
+    useCase = new UpdateTeamUseCase(repository, new FixedClock(), {
+      execute: read,
+    } as unknown as GetTeamUseCase);
   });
 
   const replace = (
@@ -67,7 +72,7 @@ describe('UpdateTeamUseCase', () => {
         colorHex: '#0ea5e9',
         description: 'Infra',
       }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ id: MOBILE_ID });
 
     const after = await stored(MOBILE_ID);
     expect(after?.name.value).toBe('Platform');
@@ -137,5 +142,17 @@ describe('UpdateTeamUseCase', () => {
     await expect(
       replace(MOBILE_ID, { name: 'Platform' }),
     ).rejects.toBeInstanceOf(TeamNotFound);
+  });
+
+  it('AC-10.5 returns the view of the team, built by GetTeamUseCase, changed or not', async () => {
+    const values = { name: 'Platform', colorHex: '#0EA5E9', description: null };
+
+    await expect(replace(MOBILE_ID, values)).resolves.toEqual({
+      id: MOBILE_ID,
+    });
+    await expect(replace(MOBILE_ID, values)).resolves.toEqual({
+      id: MOBILE_ID,
+    });
+    expect(read).toHaveBeenCalledWith({ ownerId: MARINA, id: MOBILE_ID });
   });
 });

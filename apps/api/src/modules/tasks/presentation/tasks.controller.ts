@@ -60,15 +60,7 @@ export class TasksController {
     @Body() body: CreateTaskDto,
     @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<TaskResponseDto> {
-    const id = await this.createTask.execute({
-      ownerId,
-      title: body.title,
-      description: body.description,
-      status: body.status,
-      dueDate: body.dueDate,
-      teamIds: body.teamIds,
-    });
-    const view = await this.getTask.execute({ ownerId, id });
+    const view = await this.createTask.execute({ ...body, ownerId });
     response.setHeader('Location', `/api/v1/tasks/${view.id}`);
     return TaskResponseDto.from(view);
   }
@@ -102,7 +94,8 @@ export class TasksController {
     @CurrentOwner() { ownerId }: Owner,
     @Param() { id }: IdParamDto,
   ): Promise<TaskResponseDto> {
-    return TaskResponseDto.from(await this.getTask.execute({ ownerId, id }));
+    const view = await this.getTask.execute({ ownerId, id });
+    return TaskResponseDto.from(view);
   }
 
   @Patch(':id/status')
@@ -112,8 +105,8 @@ export class TasksController {
     @Param() { id }: IdParamDto,
     @Body() body: ChangeTaskStatusDto,
   ): Promise<TaskResponseDto> {
-    await this.changeTaskStatus.execute({ ownerId, id, status: body.status });
-    return TaskResponseDto.from(await this.getTask.execute({ ownerId, id }));
+    const view = await this.changeTaskStatus.execute({ ...body, ownerId, id });
+    return TaskResponseDto.from(view);
   }
 
   @Put(':id')
@@ -123,16 +116,8 @@ export class TasksController {
     @Param() { id }: IdParamDto,
     @Body() body: UpdateTaskDto,
   ): Promise<TaskResponseDto> {
-    await this.updateTask.execute({
-      ownerId,
-      id,
-      title: body.title,
-      status: body.status,
-      teamIds: body.teamIds,
-      description: body.description,
-      dueDate: body.dueDate,
-    });
-    return TaskResponseDto.from(await this.getTask.execute({ ownerId, id }));
+    const view = await this.updateTask.execute({ ...body, ownerId, id });
+    return TaskResponseDto.from(view);
   }
 
   @Delete(':id')

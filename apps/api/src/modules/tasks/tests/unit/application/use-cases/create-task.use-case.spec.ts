@@ -11,6 +11,7 @@ import {
   CreateTaskInput,
   CreateTaskUseCase,
 } from '../../../../application/use-cases/create-task.use-case';
+import { GetTaskUseCase } from '../../../../application/use-cases/get-task.use-case';
 
 const OWNER = 'owner-1';
 const NOW = new Date('2026-10-20T13:00:00.000Z');
@@ -21,15 +22,19 @@ describe('CreateTaskUseCase', () => {
   let tasks: InMemoryTaskRepository;
   let directory: InMemoryTeamDirectory;
   let useCase: CreateTaskUseCase;
+  let read: jest.Mock;
 
   beforeEach(() => {
+    read = jest.fn(({ id }: { id: string }) => Promise.resolve({ id }));
     tasks = new InMemoryTaskRepository();
     directory = new InMemoryTeamDirectory();
     for (let n = 1; n <= 11; n += 1) {
       directory.add(OWNER, { id: team(n), name: `T${n}`, colorHex: '#7C3AED' });
     }
     const clock: Clock = { now: () => NOW };
-    useCase = new CreateTaskUseCase(tasks, directory, clock);
+    useCase = new CreateTaskUseCase(tasks, directory, clock, {
+      execute: read,
+    } as unknown as GetTaskUseCase);
   });
 
   const create = (overrides: Partial<CreateTaskInput> = {}) =>
@@ -40,7 +45,7 @@ describe('CreateTaskUseCase', () => {
     });
 
   it('AC-03.1.1 inserts a pending task at version 1 for the owner and returns its new id', async () => {
-    const id = await create();
+    const { id } = await create();
 
     const [task] = tasks.all();
     expect(task?.id).toBe(id);
@@ -125,5 +130,13 @@ describe('CreateTaskUseCase', () => {
     jest.spyOn(tasks, 'insert').mockRejectedValueOnce(vague);
 
     await expect(create({ teamIds: [team(1)] })).rejects.toBe(vague);
+  });
+
+  it('AC-10.5 returns the view of the new task, built by GetTaskUseCase', async () => {
+    const view = await create();
+
+    const [task] = tasks.all();
+    expect(read).toHaveBeenCalledWith({ ownerId: OWNER, id: task?.id });
+    expect(view).toEqual({ id: task?.id });
   });
 });

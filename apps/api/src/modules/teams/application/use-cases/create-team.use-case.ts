@@ -5,6 +5,8 @@ import { TeamNameAlreadyExists } from '../../domain/errors/team.errors';
 import { TeamRepository } from '../../domain/repositories/team.repository';
 import { ColorHex } from '../../domain/value-objects/color-hex.vo';
 import { TeamName } from '../../domain/value-objects/team-name.vo';
+import type { TeamView } from '../interfaces/team-read-model.interface';
+import { GetTeamUseCase } from './get-team.use-case';
 
 export interface CreateTeamInput {
   readonly ownerId: string;
@@ -18,9 +20,10 @@ export class CreateTeamUseCase {
   constructor(
     private readonly teams: TeamRepository,
     private readonly clock: Clock,
+    private readonly getTeam: GetTeamUseCase,
   ) {}
 
-  async execute(input: CreateTeamInput): Promise<string> {
+  async execute(input: CreateTeamInput): Promise<TeamView> {
     const team = Team.create({
       ownerId: input.ownerId,
       name: TeamName.create(input.name),
@@ -32,6 +35,6 @@ export class CreateTeamUseCase {
       throw new TeamNameAlreadyExists();
     }
     await this.teams.insert(team);
-    return team.id;
+    return this.getTeam.execute({ ownerId: input.ownerId, id: team.id });
   }
 }

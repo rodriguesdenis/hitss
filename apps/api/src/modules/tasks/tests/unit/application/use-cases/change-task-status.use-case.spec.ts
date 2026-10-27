@@ -6,6 +6,7 @@ import { DueDate } from '../../../../domain/value-objects/due-date.vo';
 import { TaskStatus } from '../../../../domain/value-objects/task-status.vo';
 import { TaskTitle } from '../../../../domain/value-objects/task-title.vo';
 import { ChangeTaskStatusUseCase } from '../../../../application/use-cases/change-task-status.use-case';
+import { GetTaskUseCase } from '../../../../application/use-cases/get-task.use-case';
 
 const OWNER = 'owner-1';
 const CREATED = new Date('2026-10-20T13:00:00.000Z');
@@ -14,6 +15,7 @@ const NOW = new Date('2026-10-21T09:00:00.000Z');
 describe('ChangeTaskStatusUseCase', () => {
   let tasks: InMemoryTaskRepository;
   let useCase: ChangeTaskStatusUseCase;
+  let read: jest.Mock;
   let ID = '';
 
   const seed = (status: TaskStatus) => {
@@ -32,9 +34,12 @@ describe('ChangeTaskStatusUseCase', () => {
   const stored = () => tasks.all()[0];
 
   beforeEach(() => {
+    read = jest.fn(({ id }: { id: string }) => Promise.resolve({ id }));
     tasks = new InMemoryTaskRepository();
     const clock: Clock = { now: () => NOW };
-    useCase = new ChangeTaskStatusUseCase(tasks, clock);
+    useCase = new ChangeTaskStatusUseCase(tasks, clock, {
+      execute: read,
+    } as unknown as GetTaskUseCase);
   });
 
   const change = (status: TaskStatus, ownerId = OWNER) =>
@@ -81,5 +86,13 @@ describe('ChangeTaskStatusUseCase', () => {
       change(TaskStatus.DONE, 'someone-else'),
     ).rejects.toBeInstanceOf(TaskNotFound);
     expect(stored()?.version).toBe(1);
+  });
+
+  it('AC-10.5 returns the view of the task, built by GetTaskUseCase, changed or not', async () => {
+    seed(TaskStatus.PENDING);
+
+    await expect(change(TaskStatus.DONE)).resolves.toEqual({ id: ID });
+    await expect(change(TaskStatus.DONE)).resolves.toEqual({ id: ID });
+    expect(read).toHaveBeenCalledWith({ ownerId: OWNER, id: ID });
   });
 });
