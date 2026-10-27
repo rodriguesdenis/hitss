@@ -1,4 +1,5 @@
-import type { ServerResponse } from 'node:http';
+import { INTERCEPTORS_METADATA } from '@nestjs/common/constants';
+import { LocationInterceptor } from '../../../../../shared/presentation/interceptors/location.interceptor';
 import type { TeamView } from '../../../application/interfaces/team-read-model.interface';
 import type { CreateTeamUseCase } from '../../../application/use-cases/create-team.use-case';
 import type { DeleteTeamUseCase } from '../../../application/use-cases/delete-team.use-case';
@@ -34,20 +35,17 @@ describe('TeamsController', () => {
   );
   const body = { name: 'Mobile', colorHex: '#7C3AED' };
 
-  it('AC-10.6 create maps the view (with taskCount) and sets Location', async () => {
-    const response = { setHeader: jest.fn() };
-
-    const result = await controller.create(
-      OWNER,
-      body,
-      response as unknown as ServerResponse,
-    );
+  it('AC-10.6 create maps the view (with taskCount) and is marked @Location()', async () => {
+    const result = await controller.create(OWNER, body);
 
     expect(create).toHaveBeenCalledWith({ ...body, ownerId: 'owner-1' });
-    expect(response.setHeader).toHaveBeenCalledWith(
-      'Location',
-      `/api/v1/teams/${ID}`,
-    );
+    expect(
+      Reflect.getMetadata(
+        INTERCEPTORS_METADATA,
+        Object.getOwnPropertyDescriptor(TeamsController.prototype, 'create')
+          ?.value as object,
+      ),
+    ).toEqual([LocationInterceptor]);
     expect(result).toEqual(TeamResponseDto.from(VIEW));
     expect(result.taskCount).toBe(3);
     expect(get).not.toHaveBeenCalled();

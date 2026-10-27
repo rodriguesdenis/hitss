@@ -8,14 +8,13 @@ import {
   Post,
   Put,
   Query,
-  Res,
 } from '@nestjs/common';
-import type { ServerResponse } from 'node:http';
 import type { Owner } from '../../../shared/domain/owner';
 import { IdParamDto } from '../../../shared/presentation/dto/id-param.dto';
 import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
 import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
+import { Location } from '../../../shared/presentation/decorators/location.decorator';
 import { CurrentOwner } from '../../../shared/presentation/decorators/current-owner.decorator';
 import type { TeamSortField } from '../application/interfaces/team-read-model.interface';
 import { CreateTeamUseCase } from '../application/use-cases/create-team.use-case';
@@ -78,14 +77,13 @@ export class TeamsController {
 
   @Post()
   @HttpCode(201)
+  @Location()
   @ApiCreateTeam()
   async create(
     @CurrentOwner() { ownerId }: Owner,
     @Body() body: CreateTeamDto,
-    @Res({ passthrough: true }) response: ServerResponse,
   ): Promise<TeamResponseDto> {
     const view = await this.createTeam.execute({ ...body, ownerId });
-    response.setHeader('Location', `/api/v1/teams/${view.id}`);
     return TeamResponseDto.from(view);
   }
 
