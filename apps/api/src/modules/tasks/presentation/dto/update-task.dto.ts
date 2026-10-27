@@ -6,7 +6,7 @@ import {
   IsIn,
   IsUUID,
 } from 'class-validator';
-import { TaskStatus } from '../../../application/interfaces/task-read-model.interface';
+import { TaskStatus } from '../../application/interfaces/task-read-model.interface';
 import { CreateTaskDto, STATUS_RULE, TEAM_IDS_DOC } from './create-task.dto';
 
 export class UpdateTaskDto extends OmitType(CreateTaskDto, [

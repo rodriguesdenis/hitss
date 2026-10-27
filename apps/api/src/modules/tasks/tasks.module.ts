@@ -14,7 +14,7 @@ import { TeamDirectory } from './application/interfaces/team-directory.interface
 import { TaskRepository } from './domain/repositories/task.repository';
 import { PrismaTaskReadModel } from './infrastructure/persistence/task.prisma-read';
 import { PrismaTaskRepository } from './infrastructure/persistence/task.prisma-repository';
-import { TasksController } from './presentation/http/tasks.controller';
+import { TasksController } from './presentation/tasks.controller';
 
 function bindExisting<T>(
   provide: abstract new (...args: never[]) => T,

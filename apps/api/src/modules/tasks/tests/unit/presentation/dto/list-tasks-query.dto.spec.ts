@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { ListTasksQueryDto } from '../../../../../presentation/http/dto/list-tasks-query.dto';
+import { ListTasksQueryDto } from '../../../../presentation/dto/list-tasks-query.dto';
 
 const parse = async (query: Record<string, unknown>) => {
   const dto = plainToInstance(ListTasksQueryDto, query);

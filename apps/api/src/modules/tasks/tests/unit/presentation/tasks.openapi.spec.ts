@@ -4,18 +4,18 @@ import {
   TaskNotFound,
   TooManyTeams,
   UnknownTeams,
-} from '../../../../domain/errors/task.errors';
+} from '../../../domain/errors/task.errors';
 import { VersioningType } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { buildOpenApiDocument } from '../../../../../../openapi/openapi-document';
-import { openApiProblems } from '../../../../../../openapi/openapi-structure';
-import { ChangeTaskStatusUseCase } from '../../../../application/use-cases/change-task-status.use-case';
-import { CreateTaskUseCase } from '../../../../application/use-cases/create-task.use-case';
-import { DeleteTaskUseCase } from '../../../../application/use-cases/delete-task.use-case';
-import { GetTaskUseCase } from '../../../../application/use-cases/get-task.use-case';
-import { ListTasksUseCase } from '../../../../application/use-cases/list-tasks.use-case';
-import { UpdateTaskUseCase } from '../../../../application/use-cases/update-task.use-case';
-import { TasksController } from '../../../../presentation/http/tasks.controller';
+import { buildOpenApiDocument } from '../../../../../openapi/openapi-document';
+import { openApiProblems } from '../../../../../openapi/openapi-structure';
+import { ChangeTaskStatusUseCase } from '../../../application/use-cases/change-task-status.use-case';
+import { CreateTaskUseCase } from '../../../application/use-cases/create-task.use-case';
+import { DeleteTaskUseCase } from '../../../application/use-cases/delete-task.use-case';
+import { GetTaskUseCase } from '../../../application/use-cases/get-task.use-case';
+import { ListTasksUseCase } from '../../../application/use-cases/list-tasks.use-case';
+import { UpdateTaskUseCase } from '../../../application/use-cases/update-task.use-case';
+import { TasksController } from '../../../presentation/tasks.controller';
 
 describe('Tasks in the OpenAPI document', () => {
   async function document() {

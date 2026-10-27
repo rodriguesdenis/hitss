@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
 import { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import { toTaskView } from '../../application/use-cases/task-view';
-import { TaskResponseDto } from '../../presentation/http/dto/task-response.dto';
+import { TaskResponseDto } from '../../presentation/dto/task-response.dto';
 import { PrismaTaskReadModel } from '../../infrastructure/persistence/task.prisma-read';
 import { PrismaTaskRepository } from '../../infrastructure/persistence/task.prisma-repository';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';

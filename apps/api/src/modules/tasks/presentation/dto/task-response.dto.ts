@@ -2,7 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   TaskStatus,
   type TaskView,
-} from '../../../application/interfaces/task-read-model.interface';
+} from '../../application/interfaces/task-read-model.interface';
 
 export class TeamChipDto {
   @ApiProperty({ format: 'uuid' }) id!: string;

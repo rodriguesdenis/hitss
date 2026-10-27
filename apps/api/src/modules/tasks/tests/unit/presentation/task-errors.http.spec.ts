@@ -7,7 +7,7 @@ import {
   TaskNotFound,
   TooManyTeams,
   UnknownTeams,
-} from '../../../../domain/errors/task.errors';
+} from '../../../domain/errors/task.errors';
 
 const VALIDATION_FAILED = {
   code: 'VALIDATION_FAILED',

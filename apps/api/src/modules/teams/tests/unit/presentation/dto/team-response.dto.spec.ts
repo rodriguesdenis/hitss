@@ -1,4 +1,4 @@
-import { TeamResponseDto } from '../../../../../presentation/http/dto/team-response.dto';
+import { TeamResponseDto } from '../../../../presentation/dto/team-response.dto';
 
 describe('TeamResponseDto.from', () => {
   it('AC-02.1.1 serializes a team with ISO timestamps and only the documented fields', () => {

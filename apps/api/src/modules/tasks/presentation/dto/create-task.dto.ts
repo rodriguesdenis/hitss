@@ -16,8 +16,8 @@ import {
   Matches,
   MaxLength,
 } from 'class-validator';
-import { IsCalendarDate } from '../../../../../shared/presentation/validators/is-calendar-date';
-import { TaskStatus } from '../../../application/interfaces/task-read-model.interface';
+import { IsCalendarDate } from '../../../../shared/presentation/validators/is-calendar-date';
+import { TaskStatus } from '../../application/interfaces/task-read-model.interface';
 
 const CONTROL = /\p{Cc}/u;
 const CONTROL_EXCEPT_LINE_BREAK = /(?![\n\r])\p{Cc}/u;
