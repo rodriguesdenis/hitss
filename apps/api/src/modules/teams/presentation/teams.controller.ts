@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import type { ServerResponse } from 'node:http';
 import type { Owner } from '../../../shared/domain/owner';
-import { ParseUuidPipe } from '../../../shared/presentation/pipes/parse-uuid.pipe';
+import { IdParamDto } from '../../../shared/presentation/dto/id-param.dto';
 import type { PageMeta } from '../../../shared/presentation/openapi/api-envelope';
 import { toPageMeta } from '../../../shared/presentation/page-meta';
 import { parseSort } from '../../../shared/presentation/sort';
@@ -73,7 +73,7 @@ export class TeamsController {
   @ApiGetTeam()
   async findOne(
     @CurrentOwner() { ownerId }: Owner,
-    @Param('id', ParseUuidPipe) id: string,
+    @Param() { id }: IdParamDto,
   ): Promise<TeamResponseDto> {
     return TeamResponseDto.from(await this.getTeam.execute({ ownerId, id }));
   }
@@ -101,7 +101,7 @@ export class TeamsController {
   @ApiReplaceTeam()
   async replace(
     @CurrentOwner() { ownerId }: Owner,
-    @Param('id', ParseUuidPipe) id: string,
+    @Param() { id }: IdParamDto,
     @Body() body: UpdateTeamDto,
   ): Promise<TeamResponseDto> {
     await this.updateTeam.execute({
@@ -119,7 +119,7 @@ export class TeamsController {
   @ApiDeleteTeam()
   async remove(
     @CurrentOwner() { ownerId }: Owner,
-    @Param('id', ParseUuidPipe) id: string,
+    @Param() { id }: IdParamDto,
   ): Promise<void> {
     await this.deleteTeam.execute({ ownerId, id });
   }
