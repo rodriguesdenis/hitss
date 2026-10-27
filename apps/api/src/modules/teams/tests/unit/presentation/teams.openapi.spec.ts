@@ -3,17 +3,17 @@ import {
   InvalidTeamName,
   TeamNameAlreadyExists,
   TeamNotFound,
-} from '../../../../domain/errors/team.errors';
+} from '../../../domain/errors/team.errors';
 import { VersioningType } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { buildOpenApiDocument } from '../../../../../../openapi/openapi-document';
-import { openApiProblems } from '../../../../../../openapi/openapi-structure';
-import { CreateTeamUseCase } from '../../../../application/use-cases/create-team.use-case';
-import { DeleteTeamUseCase } from '../../../../application/use-cases/delete-team.use-case';
-import { GetTeamUseCase } from '../../../../application/use-cases/get-team.use-case';
-import { ListTeamsUseCase } from '../../../../application/use-cases/list-teams.use-case';
-import { UpdateTeamUseCase } from '../../../../application/use-cases/update-team.use-case';
-import { TeamsController } from '../../../../presentation/http/teams.controller';
+import { buildOpenApiDocument } from '../../../../../openapi/openapi-document';
+import { openApiProblems } from '../../../../../openapi/openapi-structure';
+import { CreateTeamUseCase } from '../../../application/use-cases/create-team.use-case';
+import { DeleteTeamUseCase } from '../../../application/use-cases/delete-team.use-case';
+import { GetTeamUseCase } from '../../../application/use-cases/get-team.use-case';
+import { ListTeamsUseCase } from '../../../application/use-cases/list-teams.use-case';
+import { UpdateTeamUseCase } from '../../../application/use-cases/update-team.use-case';
+import { TeamsController } from '../../../presentation/teams.controller';
 
 describe('Teams in the OpenAPI document', () => {
   async function document() {

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import type { TeamView } from '../../../application/interfaces/team-read-model.interface';
+import type { TeamView } from '../../application/interfaces/team-read-model.interface';
 
 export class TeamResponseDto {
   @ApiProperty({ format: 'uuid' }) id!: string;

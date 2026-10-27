@@ -5,7 +5,7 @@ import {
   InvalidTeamName,
   TeamNameAlreadyExists,
   TeamNotFound,
-} from '../../../../domain/errors/team.errors';
+} from '../../../domain/errors/team.errors';
 
 describe('Team errors over HTTP', () => {
   it.each([

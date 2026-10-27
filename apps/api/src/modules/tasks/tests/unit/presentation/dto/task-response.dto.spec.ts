@@ -1,9 +1,9 @@
 import {
   TaskStatus,
   type TaskView,
-} from '../../../../../application/interfaces/task-read-model.interface';
-import type { TeamSummary } from '../../../../../application/interfaces/team-directory.interface';
-import { TaskResponseDto } from '../../../../../presentation/http/dto/task-response.dto';
+} from '../../../../application/interfaces/task-read-model.interface';
+import type { TeamSummary } from '../../../../application/interfaces/team-directory.interface';
+import { TaskResponseDto } from '../../../../presentation/dto/task-response.dto';
 
 const A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 

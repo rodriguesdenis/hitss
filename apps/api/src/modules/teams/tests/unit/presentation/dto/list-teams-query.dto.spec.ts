@@ -1,6 +1,6 @@
-import { RequestValidationException } from '../../../../../../../shared/presentation/filters/api-exception';
-import { AppValidationPipe } from '../../../../../../../shared/presentation/pipes/validation.pipe';
-import { ListTeamsQueryDto } from '../../../../../presentation/http/dto/list-teams-query.dto';
+import { RequestValidationException } from '../../../../../../shared/presentation/filters/api-exception';
+import { AppValidationPipe } from '../../../../../../shared/presentation/pipes/validation.pipe';
+import { ListTeamsQueryDto } from '../../../../presentation/dto/list-teams-query.dto';
 
 const pipe = new AppValidationPipe();
 const parse = (query: Record<string, unknown>) =>

@@ -10,7 +10,7 @@ import { UpdateTeamUseCase } from './application/use-cases/update-team.use-case'
 import { TeamRepository } from './domain/repositories/team.repository';
 import { PrismaTeamReadModel } from './infrastructure/persistence/team.prisma-read';
 import { PrismaTeamRepository } from './infrastructure/persistence/team.prisma-repository';
-import { TeamsController } from './presentation/http/teams.controller';
+import { TeamsController } from './presentation/teams.controller';
 import { TeamLookup } from './application/team-lookup.service';
 
 @Module({

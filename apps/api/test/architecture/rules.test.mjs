@@ -405,13 +405,13 @@ VIOLATIONS.push(
     'presentation-not-to-repositories',
     'a controller uses a repository instead of a use case',
     {
-      'src/modules/teams/presentation/http/a.controller.ts': importOf(
-        '../../domain/repositories/b.repository',
+      'src/modules/teams/presentation/a.controller.ts': importOf(
+        '../domain/repositories/b.repository',
       ),
       'src/modules/teams/domain/repositories/b.repository.ts': 'export {};\n',
     },
     [
-      'src/modules/teams/presentation/http/a.controller.ts',
+      'src/modules/teams/presentation/a.controller.ts',
       'src/modules/teams/domain/repositories/b.repository.ts',
     ],
   ],
@@ -454,8 +454,8 @@ const COMPLIANT = {
   'src/modules/tasks/infrastructure/persistence/task.prisma-repository.ts':
     importOf('../../domain/repositories/task.repository') +
     importOf('@prisma/client'),
-  'src/modules/tasks/presentation/http/tasks.controller.ts':
-    importOf('../../application/use-cases/create-task.use-case') +
+  'src/modules/tasks/presentation/tasks.controller.ts':
+    importOf('../application/use-cases/create-task.use-case') +
     importOf('@nestjs/common'),
   'src/modules/teams/application/team-lookup.service.ts': 'export {};\n',
   'src/modules/teams/teams.module.ts': importOf(
@@ -468,7 +468,7 @@ const COMPLIANT = {
     importOf('./application/interfaces/team-directory.interface') +
     importOf('./infrastructure/persistence/task.prisma-repository') +
     importOf('../teams/application/team-lookup.service') +
-    importOf('./presentation/http/tasks.controller') +
+    importOf('./presentation/tasks.controller') +
     importOf('../teams/teams.module'),
   'src/modules/tasks/application/use-cases/create-task.use-case.spec.ts':
     importOf('./create-task.use-case'),

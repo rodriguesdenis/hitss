@@ -1,5 +1,5 @@
 // Architecture rules of ADR-0020 (enforced in CI by `pnpm arch`). Paths are the ADR's module
-// layout (domain/, application/use-cases/, presentation/http/, infrastructure/persistence/):
+// layout (domain/, application/use-cases/, presentation/, infrastructure/persistence/):
 // renaming a folder is an architecture change, amend the ADR first. The rule `name` is what the check prints and what the meta-tests assert
 // (test/architecture/rules.test.mjs); every rule needs a violating fixture there.
 
