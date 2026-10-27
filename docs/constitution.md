@@ -12,7 +12,7 @@ The non-negotiable principles of **Teams & Tasks**. Every spec, plan, task and p
 ## II. Domain-Driven Design
 
 1. **Ubiquitous language** (see [domain model](architecture/overview.md#ubiquitous-language)) is used identically in docs, code, API and UI copy.
-2. **Bounded contexts:** Identity, Team Management, Task Management. Contexts communicate through an exported application service (`TeamLookup`), never through another module's internals. Inside the one database, a read query may join another context's tables (a team's `taskCount`), and deleting a team removes its task links in the same transaction ([ADR-0020](architecture/adr/0020-simplify-architecture-for-the-hiring-test.md)).
+2. **Bounded contexts:** Identity, Team Management, Task Management. A context declares in its own `application/interfaces/` what it needs from another (`TeamDirectory` in Tasks) and its module file binds it to the provider the other context exports (`TeamLookup`); no other file imports another module. Inside the one database, a read query may join another context's tables (a team's `taskCount`), and deleting a team removes its task links in the same transaction ([ADR-0020](architecture/adr/0020-simplify-architecture-for-the-hiring-test.md)).
 3. **Aggregates protect invariants.** State changes go through aggregate methods; no public setters. Aggregates reference other aggregates **by id only**.
 4. **Value objects** model concepts with rules (`TaskTitle`, `TeamName`, `ColorHex`, `TaskStatus`). Invalid values cannot be constructed.
 

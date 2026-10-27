@@ -4,19 +4,19 @@ Everything about **Teams & Tasks** lives here. How to run it is in the [root REA
 
 ## Read these (the system as it is)
 
-| Document                                                   | What it covers                                                                                        |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| [Brief](brief/README.md)                                   | The hiring-test requirements this project answers.                                                    |
-| [Architecture overview](architecture/overview.md)          | Containers, modules and `TeamLookup`, layers, domain model, request lifecycle, folders, import rules. |
-| [Data model](architecture/data-model.md)                   | ERD, indexes and why, soft delete, versions, transactions and timeouts, migrations and seed.          |
-| [API contracts](architecture/api-contracts.md)             | Endpoints, envelopes, headers, pagination, sorting, error codes.                                      |
-| [ADR index](architecture/adr/README.md)                    | The essential decisions with the alternatives rejected; older ones in the archive.                    |
-| [Constitution](constitution.md)                            | The engineering principles every decision follows.                                                    |
-| [Threat model](security/threat-model.md)                   | STRIDE threats, mitigations and residual risks.                                                       |
-| [Test strategy](quality/test-strategy.md)                  | Test pyramid, tooling, test data, commands.                                                           |
-| [Observability](operations/observability.md)               | Logs, optional traces, health probes.                                                                 |
-| [Runbook](operations/runbook.md)                           | Run, reset and troubleshoot locally.                                                                  |
-| [Production readiness](operations/production-readiness.md) | What I'd do differently in production, and when.                                                      |
+| Document                                                   | What it covers                                                                                                        |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| [Brief](brief/README.md)                                   | The hiring-test requirements this project answers.                                                                    |
+| [Architecture overview](architecture/overview.md)          | Containers, modules and `TeamDirectory`/`TeamLookup`, layers, domain model, request lifecycle, folders, import rules. |
+| [Data model](architecture/data-model.md)                   | ERD, indexes and why, soft delete, versions, transactions and timeouts, migrations and seed.                          |
+| [API contracts](architecture/api-contracts.md)             | Endpoints, envelopes, headers, pagination, sorting, error codes.                                                      |
+| [ADR index](architecture/adr/README.md)                    | The essential decisions with the alternatives rejected; older ones in the archive.                                    |
+| [Constitution](constitution.md)                            | The engineering principles every decision follows.                                                                    |
+| [Threat model](security/threat-model.md)                   | STRIDE threats, mitigations and residual risks.                                                                       |
+| [Test strategy](quality/test-strategy.md)                  | Test pyramid, tooling, test data, commands.                                                                           |
+| [Observability](operations/observability.md)               | Logs, optional traces, health probes.                                                                                 |
+| [Runbook](operations/runbook.md)                           | Run, reset and troubleshoot locally.                                                                                  |
+| [Production readiness](operations/production-readiness.md) | What I'd do differently in production, and when.                                                                      |
 
 ## Process material (optional reading)
 
