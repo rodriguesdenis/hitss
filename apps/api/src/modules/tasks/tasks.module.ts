@@ -1,7 +1,8 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, Provider } from '@nestjs/common';
 import { Clock } from '../../shared/domain/clock';
 import { SystemClock } from '../../shared/infrastructure/system-clock';
 import { DomainErrorMappings } from '../../shared/presentation/filters/domain-error-mappings';
+import { TeamLookup } from '../teams/application/team-lookup.service';
 import { TeamsModule } from '../teams/teams.module';
 import { TaskReadModel } from './application/interfaces/task-read-model.interface';
 import { ChangeTaskStatusUseCase } from './application/use-cases/change-task-status.use-case';
@@ -10,11 +11,19 @@ import { DeleteTaskUseCase } from './application/use-cases/delete-task.use-case'
 import { GetTaskUseCase } from './application/use-cases/get-task.use-case';
 import { ListTasksUseCase } from './application/use-cases/list-tasks.use-case';
 import { UpdateTaskUseCase } from './application/use-cases/update-task.use-case';
+import { TeamDirectory } from './application/interfaces/team-directory.interface';
 import { TaskRepository } from './domain/repositories/task.repository';
 import { PrismaTaskReadModel } from './infrastructure/persistence/task.prisma-read';
 import { PrismaTaskRepository } from './infrastructure/persistence/task.prisma-repository';
 import { TASK_ERROR_MAPPINGS } from './presentation/http/task-error.mapping';
 import { TasksController } from './presentation/http/tasks.controller';
+
+function bindExisting<T>(
+  provide: abstract new (...args: never[]) => T,
+  useExisting: new (...args: never[]) => NoInfer<T>,
+): Provider {
+  return { provide, useExisting };
+}
 
 @Module({
   imports: [TeamsModule],
@@ -28,6 +37,7 @@ import { TasksController } from './presentation/http/tasks.controller';
     ListTasksUseCase,
     { provide: TaskRepository, useClass: PrismaTaskRepository },
     { provide: TaskReadModel, useClass: PrismaTaskReadModel },
+    bindExisting(TeamDirectory, TeamLookup),
     { provide: Clock, useClass: SystemClock },
   ],
 })

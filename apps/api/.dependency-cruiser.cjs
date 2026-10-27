@@ -95,7 +95,7 @@ module.exports = {
         path: '^src/modules/[^/]+/',
         pathNot: [
           '^src/modules/$1/',
-          '^src/modules/[^/]+/[^/]+-lookup\\.service\\.ts$',
+          '^src/modules/[^/]+/application/[^/]+-lookup\\.service\\.ts$',
           '^src/modules/[^/]+/[^/]+\\.module\\.ts$',
         ],
       },

@@ -4,7 +4,7 @@ import type {
   Sort,
 } from '../../../../shared/application/page';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
-import type { TeamSummary } from '../../../teams/team-lookup.service';
+import type { TeamSummary } from './team-directory.interface';
 import type { DueDate } from '../../domain/value-objects/due-date.vo';
 
 export interface TaskRecord {

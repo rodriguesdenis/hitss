@@ -13,7 +13,7 @@ import { PrismaTeamReadModel } from './infrastructure/persistence/team.prisma-re
 import { PrismaTeamRepository } from './infrastructure/persistence/team.prisma-repository';
 import { TeamsController } from './presentation/http/teams.controller';
 import { TEAM_ERROR_MAPPINGS } from './presentation/http/team-error.mapping';
-import { TeamLookup } from './team-lookup.service';
+import { TeamLookup } from './application/team-lookup.service';
 
 @Module({
   controllers: [TeamsController],

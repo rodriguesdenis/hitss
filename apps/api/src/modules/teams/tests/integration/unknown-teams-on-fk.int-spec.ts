@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { Client } from 'pg';
 import { CreateTaskUseCase } from '../../../tasks/application/use-cases/create-task.use-case';
 import { UpdateTaskUseCase } from '../../../tasks/application/use-cases/update-task.use-case';
-import { TeamLookup } from '../../team-lookup.service';
+import { TeamLookup } from '../../application/team-lookup.service';
 import { UnknownTeams } from '../../../tasks/domain/errors/task.errors';
 import { TaskStatus } from '../../../tasks/domain/value-objects/task-status.vo';
 import { createTestApp } from '@test/support/app';

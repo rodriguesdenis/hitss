@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { INestApplication } from '@nestjs/common';
 import { GetTaskUseCase } from '../../application/use-cases/get-task.use-case';
-import { TeamLookup } from '../../../teams/team-lookup.service';
+import { TeamLookup } from '../../../teams/application/team-lookup.service';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '@test/support/app';
 import { useTestDatabase } from '@test/support/postgres';

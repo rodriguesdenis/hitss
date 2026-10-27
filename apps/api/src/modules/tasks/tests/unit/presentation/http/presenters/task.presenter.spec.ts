@@ -1,4 +1,4 @@
-import type { TeamSummary } from '../../../../../../teams/team-lookup.service';
+import type { TeamSummary } from '../../../../../application/interfaces/team-directory.interface';
 import type { TaskRecord } from '../../../../../application/interfaces/task-read-model.interface';
 import { DueDate } from '../../../../../domain/value-objects/due-date.vo';
 import { TaskStatus } from '../../../../../domain/value-objects/task-status.vo';

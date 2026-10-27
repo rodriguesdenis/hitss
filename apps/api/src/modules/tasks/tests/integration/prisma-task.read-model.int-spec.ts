@@ -7,7 +7,7 @@ import { PrismaTaskReadModel } from '../../infrastructure/persistence/task.prism
 import { PrismaTaskRepository } from '../../infrastructure/persistence/task.prisma-repository';
 import { PrismaService } from '../../../../shared/infrastructure/prisma/prisma.service';
 import { createTestApp } from '@test/support/app';
-import { InMemoryTeamLookup } from '@test/support/in-memory-team-lookup';
+import { InMemoryTeamDirectory } from '@test/support/in-memory-team-directory';
 import { useTestDatabase } from '@test/support/postgres';
 import { aTask } from '@test/support/task-repository.contract';
 
@@ -126,7 +126,7 @@ describe('PrismaTaskReadModel (integration, T-003-06a)', () => {
       teamIds: [mobile, backend, archived],
     });
     await repository.insert(task);
-    const directory = new InMemoryTeamLookup();
+    const directory = new InMemoryTeamDirectory();
     directory.add(ownerId, { id: mobile, name: 'mobile', colorHex: '#7C3AED' });
     directory.add(ownerId, {
       id: backend,

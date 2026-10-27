@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Clock } from '../../../../shared/domain/clock';
-import { TeamLookup } from '../../../teams/team-lookup.service';
 import { TaskNotFound, UnknownTeams } from '../../domain/errors/task.errors';
 import { TaskRepository } from '../../domain/repositories/task.repository';
 import { DueDate } from '../../domain/value-objects/due-date.vo';
 import type { TaskStatus } from '../../domain/value-objects/task-status.vo';
 import { TaskTitle } from '../../domain/value-objects/task-title.vo';
+import { TeamDirectory } from '../interfaces/team-directory.interface';
 
 export interface UpdateTaskInput {
   readonly ownerId: string;
@@ -21,7 +21,7 @@ export interface UpdateTaskInput {
 export class UpdateTaskUseCase {
   constructor(
     private readonly tasks: TaskRepository,
-    private readonly teams: TeamLookup,
+    private readonly teams: TeamDirectory,
     private readonly clock: Clock,
   ) {}
 

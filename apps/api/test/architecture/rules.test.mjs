@@ -457,15 +457,17 @@ const COMPLIANT = {
   'src/modules/tasks/presentation/http/tasks.controller.ts':
     importOf('../../application/use-cases/create-task.use-case') +
     importOf('@nestjs/common'),
-  'src/modules/teams/team-lookup.service.ts': 'export {};\n',
-  'src/modules/teams/teams.module.ts': importOf('./team-lookup.service'),
-  'src/modules/tasks/infrastructure/persistence/team-directory.ts': importOf(
-    '../../../teams/team-lookup.service',
+  'src/modules/teams/application/team-lookup.service.ts': 'export {};\n',
+  'src/modules/teams/teams.module.ts': importOf(
+    './application/team-lookup.service',
   ),
+  'src/modules/tasks/application/interfaces/team-directory.interface.ts':
+    'export {};\n',
   'src/modules/tasks/tasks.module.ts':
     importOf('./application/use-cases/create-task.use-case') +
+    importOf('./application/interfaces/team-directory.interface') +
     importOf('./infrastructure/persistence/task.prisma-repository') +
-    importOf('./infrastructure/persistence/team-directory') +
+    importOf('../teams/application/team-lookup.service') +
     importOf('./presentation/http/tasks.controller') +
     importOf('../teams/teams.module'),
   'src/modules/tasks/application/use-cases/create-task.use-case.spec.ts':
